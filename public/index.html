@@ -520,8 +520,8 @@
             </p>
         </div>
 
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="bizModelGrid">
-            <!-- Rendered by JS -->
+        <div id="bizModelGrid" class="relative">
+            <!-- Rendered by JS — hub-and-spoke layout with Software at center -->
         </div>
 
         <!-- Market Signal -->
@@ -1077,15 +1077,133 @@ function renderLogoMarquee() {
 
 function renderBizModel() {
     const g = document.getElementById('bizModelGrid');
-    g.innerHTML = bizModel.map((b,i) => `
-        <div class="glass rounded-3xl p-8 reveal reveal-delay-${Math.min(i+1,4)}">
-            <div class="biz-icon ${b.bg} mb-5">${b.icon}</div>
-            <h3 class="text-lg font-bold headline mb-4">${b.title}</h3>
-            <ul class="space-y-2">
-                ${b.items.map(item => `<li class="flex items-start gap-2 text-sm text-gray-500"><span class="text-blue-400 mt-0.5 flex-shrink-0">+</span>${item}</li>`).join('')}
-            </ul>
+    // WHY: Software Platform is the core — pull it out as the center hub, remaining 5 are spokes
+    const core = bizModel.find(b => b.title === 'Software Platform');
+    const spokes = bizModel.filter(b => b.title !== 'Software Platform');
+
+    // Spoke connector colors matching each spoke's bg
+    const spokeColors = {
+        'Hardware & Distribution': '#3b82f6',
+        'Operations': '#10b981',
+        'Managed Services': '#06b6d4',
+        'Financing & Leasing': '#f59e0b',
+        'Data & Expansion': '#ec4899',
+    };
+
+    // WHY: Use CSS Grid with hub as a real grid item (not absolute) to avoid overlap issues
+    // Desktop layout: 3 cols × 3 rows — hub in center cell, 5 spokes around it
+    const gridPositions = [
+        'lg:col-start-1 lg:row-start-1',  // top-left
+        'lg:col-start-3 lg:row-start-1',  // top-right
+        'lg:col-start-1 lg:row-start-3',  // bottom-left
+        'lg:col-start-2 lg:row-start-3',  // bottom-center
+        'lg:col-start-3 lg:row-start-3',  // bottom-right
+    ];
+
+    g.innerHTML = `
+        <!-- ═══ Hub-and-Spoke Layout ═══ -->
+
+        <!-- SVG connector lines (desktop only) -->
+        <svg id="bizConnectors" class="absolute inset-0 w-full h-full pointer-events-none z-0 hidden lg:block"></svg>
+
+        <!-- CSS Grid: hub in center, spokes around it -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:grid-rows-3" id="bizSpokes">
+
+            <!-- Spoke 0: top-left -->
+            ${spokes.slice(0,2).map((b, i) => {
+                const color = spokeColors[b.title] || '#3b82f6';
+                return `
+                <div class="glass rounded-2xl p-6 reveal reveal-delay-${i+1} ${gridPositions[i]} relative group hover:shadow-xl transition-all duration-300" data-spoke="${i}">
+                    <div class="absolute top-0 left-0 w-full h-1 rounded-t-2xl" style="background: ${color}; opacity: 0.6;"></div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="biz-icon ${b.bg} !w-12 !h-12 !rounded-xl !text-xl">${b.icon}</div>
+                        <h3 class="text-base font-bold headline">${b.title}</h3>
+                    </div>
+                    <ul class="space-y-1.5">
+                        ${b.items.map(item => `<li class="flex items-start gap-2 text-sm text-gray-500"><span style="color:${color}" class="mt-0.5 flex-shrink-0 font-bold">+</span>${item}</li>`).join('')}
+                    </ul>
+                </div>`;
+            }).join('')}
+
+            <!-- Center Hub: Software Platform (grid row 2, col 2 on desktop) -->
+            <div class="flex justify-center sm:col-span-2 lg:col-span-1 lg:col-start-2 lg:row-start-2 z-10 reveal" id="bizHub">
+                <div class="w-full rounded-3xl p-8 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 text-white shadow-2xl shadow-blue-600/30 border border-blue-500/30 relative overflow-hidden">
+                    <div class="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
+                    <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-cyan-400/10 rounded-full blur-2xl"></div>
+                    <div class="relative">
+                        <div class="flex items-center gap-4 mb-5">
+                            <div class="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center text-3xl backdrop-blur-sm border border-white/20">
+                                ${core.icon}
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold uppercase tracking-wider text-blue-200">The Core</div>
+                                <h3 class="text-xl font-black headline">${core.title}</h3>
+                            </div>
+                        </div>
+                        <ul class="space-y-2.5">
+                            ${core.items.map(item => `<li class="flex items-start gap-2 text-sm text-blue-100"><span class="text-cyan-300 mt-0.5 flex-shrink-0 font-bold">+</span>${item}</li>`).join('')}
+                        </ul>
+                        <div class="mt-5 pt-4 border-t border-white/10 text-center">
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-blue-300">Every revenue stream flows through the platform</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom spokes -->
+            ${spokes.slice(2).map((b, i) => {
+                const idx = i + 2;
+                const color = spokeColors[b.title] || '#3b82f6';
+                return `
+                <div class="glass rounded-2xl p-6 reveal reveal-delay-${Math.min(idx+1,4)} ${gridPositions[idx]} relative group hover:shadow-xl transition-all duration-300" data-spoke="${idx}">
+                    <div class="absolute top-0 left-0 w-full h-1 rounded-t-2xl" style="background: ${color}; opacity: 0.6;"></div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="biz-icon ${b.bg} !w-12 !h-12 !rounded-xl !text-xl">${b.icon}</div>
+                        <h3 class="text-base font-bold headline">${b.title}</h3>
+                    </div>
+                    <ul class="space-y-1.5">
+                        ${b.items.map(item => `<li class="flex items-start gap-2 text-sm text-gray-500"><span style="color:${color}" class="mt-0.5 flex-shrink-0 font-bold">+</span>${item}</li>`).join('')}
+                    </ul>
+                </div>`;
+            }).join('')}
         </div>
-    `).join('');
+    `;
+
+    // WHY: Draw SVG connector lines from center hub to each spoke card on desktop
+    requestAnimationFrame(() => drawBizConnectors());
+    window.addEventListener('resize', drawBizConnectors);
+}
+
+function drawBizConnectors() {
+    const svg = document.getElementById('bizConnectors');
+    const hub = document.getElementById('bizHub');
+    const grid = document.getElementById('bizModelGrid');
+    if (!svg || !hub || !grid || window.innerWidth < 1024) { if(svg) svg.innerHTML = ''; return; }
+
+    const gridRect = grid.getBoundingClientRect();
+    const hubRect = hub.getBoundingClientRect();
+    const cx = hubRect.left + hubRect.width / 2 - gridRect.left;
+    const cy = hubRect.top + hubRect.height / 2 - gridRect.top;
+
+    const spokeColors = ['#3b82f6', '#10b981', '#06b6d4', '#f59e0b', '#ec4899'];
+    const spokes = grid.querySelectorAll('[data-spoke]');
+    let lines = '';
+    spokes.forEach((spoke, i) => {
+        const r = spoke.getBoundingClientRect();
+        const sx = r.left + r.width / 2 - gridRect.left;
+        const sy = r.top + r.height / 2 - gridRect.top;
+        const color = spokeColors[i] || '#3b82f6';
+        lines += `<line x1="${cx}" y1="${cy}" x2="${sx}" y2="${sy}" stroke="${color}" stroke-width="2" stroke-dasharray="6 4" opacity="0.2"/>`;
+        lines += `<circle cx="${sx}" cy="${sy}" r="4" fill="${color}" opacity="0.3"/>`;
+    });
+    // Center dot
+    lines += `<circle cx="${cx}" cy="${cy}" r="8" fill="url(#hubGrad)" opacity="0.5"/>`;
+    lines += `<defs><radialGradient id="hubGrad"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#7c3aed"/></radialGradient></defs>`;
+
+    svg.setAttribute('viewBox', `0 0 ${gridRect.width} ${gridRect.height}`);
+    svg.style.width = gridRect.width + 'px';
+    svg.style.height = gridRect.height + 'px';
+    svg.innerHTML = lines;
 }
 
 function renderEcosystem() {
