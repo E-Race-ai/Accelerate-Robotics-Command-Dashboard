@@ -73,6 +73,17 @@
         @keyframes spin-border { to { --angle: 360deg; } }
 
         .biz-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+
+        /* Stock ticker */
+        .ticker-scroll { animation: ticker-slide 40s linear infinite; }
+        .ticker-scroll:hover { animation-play-state: paused; }
+        @keyframes ticker-slide { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .ticker-up { color: #22c55e; }
+        .ticker-down { color: #ef4444; }
+        .ticker-item { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .ticker-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.1); flex-shrink: 0; }
+        .ticker-pulse { animation: ticker-pulse-glow 2s ease-in-out infinite; }
+        @keyframes ticker-pulse-glow { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
     </style>
 </head>
 <body class="bg-[#f7f8fc] text-[#0f172a]">
@@ -103,6 +114,22 @@
         </div>
     </div>
 </nav>
+
+<!-- ============================================================ -->
+<!-- STOCK TICKER -->
+<!-- ============================================================ -->
+<div id="stockTicker" class="fixed top-[57px] w-full z-40 bg-[#0a0e1a] border-b border-blue-900/30 overflow-hidden h-0 opacity-0 transition-all duration-500">
+    <div class="flex items-center h-10">
+        <!-- WHY: Aggregate total shown as a fixed badge on the left, then the scrolling tape next to it -->
+        <div id="tickerTotal" class="flex-shrink-0 px-4 h-full flex items-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-black tracking-wide z-10 shadow-lg shadow-blue-600/30">
+            <span class="opacity-70">ROBOTICS ECOSYSTEM</span>
+            <span id="tickerTotalValue" class="text-sm">...</span>
+        </div>
+        <div class="flex-1 overflow-hidden relative">
+            <div id="tickerTrack" class="flex items-center gap-8 ticker-scroll whitespace-nowrap h-10 px-4"></div>
+        </div>
+    </div>
+</div>
 
 <!-- ============================================================ -->
 <!-- HERO -->
@@ -523,6 +550,118 @@
                     </div>
                     <div class="text-xs text-gray-400 mt-2">Capital G + NVIDIA Ventures</div>
                 </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- IN THE NEWS — Fundraising & Strategic Announcements -->
+<!-- ============================================================ -->
+<section class="py-24 px-6 bg-gradient-to-b from-[#f7f8fc] to-white overflow-hidden">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-14 reveal">
+            <div class="inline-block px-4 py-1.5 rounded-full bg-cyan-50 text-cyan-600 text-sm font-bold mb-6">IN THE NEWS</div>
+            <h2 class="text-4xl md:text-5xl font-black headline leading-tight mb-4">
+                Capital is pouring<br><span class="gradient-text">into robotics.</span>
+            </h2>
+            <p class="text-lg text-gray-400 max-w-2xl mx-auto">
+                Billions in funding, blockbuster partnerships, and breakthrough milestones &mdash; the robotics ecosystem companies are making headlines.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5" id="newsGrid">
+            <!-- Fundraising -->
+            <div class="glass rounded-2xl p-6 reveal reveal-delay-1 group hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="/logos/figure-ai.svg" alt="Figure AI" class="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-100 p-1 object-contain">
+                    <div><div class="font-bold text-sm">Figure AI</div><div class="text-[10px] text-gray-400">Feb 2025</div></div>
+                    <span class="ml-auto px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold">FUNDRAISE</span>
+                </div>
+                <h4 class="font-bold headline text-lg mb-2 group-hover:text-blue-600 transition">$675M Series B at $2.6B Valuation</h4>
+                <p class="text-sm text-gray-500 leading-relaxed">Figure AI raised one of the largest rounds in humanoid robotics history, backed by Microsoft, NVIDIA, Jeff Bezos, and OpenAI. Building general-purpose humanoid robots for warehouse and manufacturing.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-6 reveal reveal-delay-2 group hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="/logos/nvidia.svg" alt="NVIDIA" class="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-100 p-1 object-contain">
+                    <div><div class="font-bold text-sm">NVIDIA</div><div class="text-[10px] text-gray-400">Mar 2025</div></div>
+                    <span class="ml-auto px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold">PLATFORM</span>
+                </div>
+                <h4 class="font-bold headline text-lg mb-2 group-hover:text-blue-600 transition">GR00T N1 — Foundation Model for Humanoids</h4>
+                <p class="text-sm text-gray-500 leading-relaxed">NVIDIA launched its GR00T N1 foundation model and Isaac GR00T robotics platform at GTC 2025, providing the AI backbone for humanoid robot development across the industry.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-6 reveal reveal-delay-3 group hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="/logos/tesla.svg" alt="Tesla" class="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-100 p-1 object-contain">
+                    <div><div class="font-bold text-sm">Tesla</div><div class="text-[10px] text-gray-400">2025</div></div>
+                    <span class="ml-auto px-2.5 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-bold">MILESTONE</span>
+                </div>
+                <h4 class="font-bold headline text-lg mb-2 group-hover:text-blue-600 transition">Optimus Humanoid Enters Factory Trials</h4>
+                <p class="text-sm text-gray-500 leading-relaxed">Tesla's Optimus humanoid robot began performing autonomous tasks in Tesla factories, with plans to sell externally. Elon Musk projects Optimus could become Tesla's most valuable product line.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-6 reveal reveal-delay-1 group hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="/logos/boston-dynamics.svg" alt="Boston Dynamics" class="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-100 p-1 object-contain">
+                    <div><div class="font-bold text-sm">Boston Dynamics</div><div class="text-[10px] text-gray-400">2025</div></div>
+                    <span class="ml-auto px-2.5 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-bold">MILESTONE</span>
+                </div>
+                <h4 class="font-bold headline text-lg mb-2 group-hover:text-blue-600 transition">Electric Atlas — Next-Gen Humanoid Platform</h4>
+                <p class="text-sm text-gray-500 leading-relaxed">Boston Dynamics unveiled its fully electric Atlas humanoid, purpose-built for real-world commercial applications. Hyundai is integrating Atlas into automotive manufacturing operations.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-6 reveal reveal-delay-2 group hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="/logos/1x.svg" alt="1X Technologies" class="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-100 p-1 object-contain">
+                    <div><div class="font-bold text-sm">1X Technologies</div><div class="text-[10px] text-gray-400">Jan 2025</div></div>
+                    <span class="ml-auto px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold">FUNDRAISE</span>
+                </div>
+                <h4 class="font-bold headline text-lg mb-2 group-hover:text-blue-600 transition">$100M Series C for NEO Humanoid</h4>
+                <p class="text-sm text-gray-500 leading-relaxed">Norwegian robotics company 1X Technologies raised $100M to scale production of NEO, their humanoid designed for home and workplace assistance. Backed by Samsung and EQT Ventures.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-6 reveal reveal-delay-3 group hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="/logos/intrinsic.svg" alt="Intrinsic" class="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-100 p-1 object-contain">
+                    <div><div class="font-bold text-sm">Intrinsic (Alphabet)</div><div class="text-[10px] text-gray-400">2025</div></div>
+                    <span class="ml-auto px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold">PARTNERSHIP</span>
+                </div>
+                <h4 class="font-bold headline text-lg mb-2 group-hover:text-blue-600 transition">Flowstate OS — Universal Robotics Software</h4>
+                <p class="text-sm text-gray-500 leading-relaxed">Alphabet's Intrinsic launched Flowstate, a software platform for programming and orchestrating industrial robots from multiple manufacturers. Backed by Google's full AI and compute infrastructure.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-6 reveal reveal-delay-1 group hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="/logos/serve-robotics.jpg" alt="Serve Robotics" class="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-100 p-0.5 object-contain">
+                    <div><div class="font-bold text-sm">Serve Robotics</div><div class="text-[10px] text-gray-400">2025</div></div>
+                    <span class="ml-auto px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold">PARTNERSHIP</span>
+                </div>
+                <h4 class="font-bold headline text-lg mb-2 group-hover:text-blue-600 transition">Uber Eats Expands Autonomous Delivery to 10+ Markets</h4>
+                <p class="text-sm text-gray-500 leading-relaxed">SERV expanded its autonomous sidewalk delivery fleet with Uber Eats, deploying robots across major US cities. The company went public via SPAC, making it the first publicly traded sidewalk delivery company.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-6 reveal reveal-delay-2 group hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="/logos/avidbots.svg" alt="Avidbots" class="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-100 p-1 object-contain">
+                    <div><div class="font-bold text-sm">Avidbots</div><div class="text-[10px] text-gray-400">2024</div></div>
+                    <span class="ml-auto px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold">FUNDRAISE</span>
+                </div>
+                <h4 class="font-bold headline text-lg mb-2 group-hover:text-blue-600 transition">$70M to Scale Autonomous Floor Cleaning Globally</h4>
+                <p class="text-sm text-gray-500 leading-relaxed">Avidbots raised $70M to expand its Neo autonomous floor scrubber across hospitals, airports, and commercial facilities globally. Deployed in 3,000+ locations across 30 countries.</p>
+            </div>
+
+            <div class="glass rounded-2xl p-6 reveal reveal-delay-3 group hover:shadow-xl transition-all duration-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-sm">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white"/></svg>
+                    </div>
+                    <div><div class="font-bold text-sm">Industry Total</div><div class="text-[10px] text-gray-400">2024-2025</div></div>
+                    <span class="ml-auto px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold">MOMENTUM</span>
+                </div>
+                <h4 class="font-bold headline text-lg mb-2 group-hover:text-blue-600 transition">$10T+ Combined Market Cap in Ecosystem Partners</h4>
+                <p class="text-sm text-gray-500 leading-relaxed">The publicly traded companies in the Accelerate Robotics ecosystem &mdash; Tesla, NVIDIA, Alphabet, Toyota, Intuitive Surgical, and Serve Robotics &mdash; represent over $10 trillion in combined market capitalization.</p>
             </div>
         </div>
     </div>
@@ -1165,5 +1304,78 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <script src="/js/inquiry-form.js"></script>
+<script>
+// ====== STOCK TICKER ======
+(async function initTicker() {
+    const tickerEl = document.getElementById('stockTicker');
+    const trackEl = document.getElementById('tickerTrack');
+    const totalEl = document.getElementById('tickerTotalValue');
+    if (!tickerEl || !trackEl) return;
+
+    try {
+        const res = await fetch('/api/stocks');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Format helpers
+        function fmtPrice(n) { return '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function fmtPct(n) { return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; }
+        function fmtCap(n) {
+            if (n >= 1e12) return '$' + (n / 1e12).toFixed(2) + 'T';
+            if (n >= 1e9) return '$' + (n / 1e9).toFixed(1) + 'B';
+            if (n >= 1e6) return '$' + (n / 1e6).toFixed(0) + 'M';
+            return '$' + n.toLocaleString();
+        }
+
+        // Build ticker items
+        const items = [];
+
+        // Public stocks
+        data.public.forEach(s => {
+            const dir = s.changePercent >= 0 ? 'ticker-up' : 'ticker-down';
+            const arrow = s.changePercent >= 0 ? '&#9650;' : '&#9660;';
+            items.push(`
+                <div class="ticker-item">
+                    <span class="text-[11px] font-black text-white/90">${s.symbol}</span>
+                    <span class="text-xs text-white/70 font-semibold">${fmtPrice(s.price)}</span>
+                    <span class="text-[11px] font-bold ${dir}">${arrow} ${fmtPct(s.changePercent)}</span>
+                    <span class="text-[10px] text-white/30 font-medium">${fmtCap(s.marketCap)}</span>
+                    <span class="text-[9px] text-blue-400/60 font-medium">${s.role}</span>
+                </div>
+            `);
+        });
+
+        // Private funding rounds
+        data.private.forEach(p => {
+            items.push(`
+                <div class="ticker-item">
+                    <span class="text-[11px] font-black text-cyan-300/90">${p.name}</span>
+                    <span class="text-[11px] font-bold text-emerald-400 ticker-pulse">${fmtCap(p.amount)} ${p.round}</span>
+                    ${p.valuation ? '<span class="text-[10px] text-white/30">Val: ' + fmtCap(p.valuation) + '</span>' : ''}
+                    <span class="text-[9px] text-amber-400/60 font-medium">PRIVATE</span>
+                </div>
+            `);
+        });
+
+        // Duplicate for seamless loop + add dividers
+        const divider = '<div class="ticker-divider"></div>';
+        const tape = items.join(divider);
+        trackEl.innerHTML = tape + divider + tape;
+
+        // Set total
+        totalEl.textContent = fmtCap(data.totals.publicMarketCap);
+
+        // WHY: Reveal the ticker with a smooth transition after data loads
+        tickerEl.style.height = '40px';
+        tickerEl.style.opacity = '1';
+
+        // WHY: Push hero section down to account for ticker height
+        document.querySelector('section.hero-mesh')?.style.setProperty('padding-top', 'calc(5rem + 40px)');
+
+    } catch (err) {
+        console.log('[ticker] Could not load stock data:', err.message);
+    }
+})();
+</script>
 </body>
 </html>
