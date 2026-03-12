@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Accelerate Robotics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-[#f7f8fc] min-h-screen">
+
+  <!-- Loading state -->
+  <div id="loading" class="flex items-center justify-center min-h-screen">
+    <p class="text-gray-400">Loading...</p>
+  </div>
+
+  <!-- Dashboard (hidden until auth verified) -->
+  <div id="dashboard" class="hidden">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-md">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white"/></svg>
+          </div>
+          <div>
+            <span class="font-bold headline text-lg">Admin Dashboard</span>
+            <span class="text-gray-300 mx-2">|</span>
+            <span id="adminEmail" class="text-sm text-gray-400"></span>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="/" class="text-sm text-gray-400 hover:text-blue-600 transition">View Site</a>
+          <button onclick="logout()" class="text-sm text-gray-400 hover:text-red-600 transition">Sign Out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+      <!-- Tabs -->
+      <div class="flex gap-2 mb-8">
+        <button onclick="switchTab('inquiries')" id="tab-inquiries"
+                class="px-5 py-2.5 rounded-xl text-sm font-semibold transition bg-blue-600 text-white shadow-md">
+          Inquiries
+        </button>
+        <button onclick="switchTab('recipients')" id="tab-recipients"
+                class="px-5 py-2.5 rounded-xl text-sm font-semibold transition bg-white text-gray-500 hover:bg-gray-50">
+          Notification Recipients
+        </button>
+      </div>
+
+      <!-- ═══ Inquiries Tab ═══ -->
+      <section id="panel-inquiries">
+        <!-- Filters -->
+        <div class="flex flex-wrap gap-2 mb-6">
+          <button onclick="filterInquiries('')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition" data-status="">All</button>
+          <button onclick="filterInquiries('new')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition" data-status="new">New</button>
+          <button onclick="filterInquiries('reviewed')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition" data-status="reviewed">Reviewed</button>
+          <button onclick="filterInquiries('contacted')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition" data-status="contacted">Contacted</button>
+          <button onclick="filterInquiries('archived')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition" data-status="archived">Archived</button>
+        </div>
+
+        <div id="inquiriesList" class="space-y-4"></div>
+        <p id="noInquiries" class="text-gray-400 text-center py-12 hidden">No inquiries found.</p>
+      </section>
+
+      <!-- ═══ Recipients Tab ═══ -->
+      <section id="panel-recipients" class="hidden">
+        <!-- Add recipient form -->
+        <form id="addRecipientForm" class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex flex-col sm:flex-row gap-4">
+          <input type="text" name="name" placeholder="Name (optional)"
+                 class="px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none flex-1">
+          <input type="email" name="email" placeholder="Email address" required
+                 class="px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none flex-1">
+          <button type="submit"
+                  class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition shadow-md whitespace-nowrap">
+            Add Recipient
+          </button>
+        </form>
+        <p id="recipientError" class="text-red-600 text-sm font-medium mb-4 hidden"></p>
+
+        <div id="recipientsList" class="space-y-3"></div>
+        <p id="noRecipients" class="text-gray-400 text-center py-12 hidden">No notification recipients configured.</p>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/admin-auth.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

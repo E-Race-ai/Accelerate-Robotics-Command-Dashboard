@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accelerate Robotics — One Brain. Many Bots.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --blue: #0055ff; --cyan: #00c8ff; --purple: #7c3aed; --teal: #06b6d4; }
+        * { font-family: 'Inter', system-ui, sans-serif; }
+        html { scroll-behavior: smooth; }
+        h1, h2, h3, h4, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+        .hero-mesh {
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 30%, rgba(0, 200, 255, 0.18), transparent),
+                radial-gradient(ellipse 60% 50% at 70% 20%, rgba(124, 58, 237, 0.12), transparent),
+                radial-gradient(ellipse 50% 40% at 50% 80%, rgba(0, 85, 255, 0.10), transparent),
+                radial-gradient(ellipse 40% 30% at 80% 70%, rgba(6, 182, 212, 0.10), transparent),
+                linear-gradient(180deg, #f0f4ff 0%, #f7f8fc 100%);
+            animation: mesh-shift 20s ease-in-out infinite alternate;
+        }
+        @keyframes mesh-shift {
+            0% { background-position: 0% 0%, 100% 0%, 50% 100%, 80% 70%, 0% 0%; }
+            100% { background-position: 30% 20%, 60% 30%, 40% 60%, 20% 50%, 0% 0%; }
+        }
+        .gradient-text { background: linear-gradient(135deg, var(--blue), var(--cyan), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .gradient-text-warm { background: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .glass {
+            background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 4px 30px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.08); transform: translateY(-3px); }
+        .glass-static { background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 4px 30px rgba(0,0,0,0.04); }
+
+        #particles { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+
+        .reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        .reveal-delay-1 { transition-delay: 0.1s; } .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; } .reveal-delay-4 { transition-delay: 0.4s; }
+
+        .float-1 { animation: f1 8s ease-in-out infinite; } .float-2 { animation: f2 10s ease-in-out infinite; } .float-3 { animation: f3 7s ease-in-out infinite; }
+        @keyframes f1 { 0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-20px) rotate(3deg)} }
+        @keyframes f2 { 0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-15px) rotate(-2deg)} }
+        @keyframes f3 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-25px)} }
+
+        .marquee-track { display: flex; gap: 3rem; animation: marquee 45s linear infinite; width: max-content; }
+        .marquee-track:hover { animation-play-state: paused; }
+        @keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+        .logo-img { filter: grayscale(100%) opacity(0.45); transition: all 0.4s; max-height: 32px; object-fit: contain; }
+        .logo-group:hover .logo-img { filter: grayscale(0%) opacity(1); }
+        .logo-text { color: #94a3b8; transition: color 0.3s; font-weight: 700; letter-spacing: -0.02em; }
+        .logo-group:hover .logo-text { color: #0f172a; }
+
+        .wave-divider { position: absolute; bottom: -1px; left: 0; width: 100%; overflow: hidden; line-height: 0; }
+        .wave-divider svg { position: relative; display: block; width: calc(100% + 1.3px); height: 60px; }
+
+        .vision-glow { background: radial-gradient(ellipse at 30% 50%, rgba(0,85,255,0.08), transparent 60%), radial-gradient(ellipse at 70% 50%, rgba(124,58,237,0.06), transparent 60%), linear-gradient(180deg, #eef2ff, #f7f8fc); }
+        .future-dark { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); }
+
+        .fda-pill { background: linear-gradient(135deg, #1e40af, #3b82f6); color: white; font-size: 0.6rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.08em; }
+
+        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+
+        .stat-ring { position: relative; }
+        .stat-ring::before { content: ''; position: absolute; inset: -3px; border-radius: 1.5rem; background: conic-gradient(from var(--angle, 0deg), var(--cyan), var(--blue), var(--purple), var(--cyan)); opacity: 0; transition: opacity 0.4s; z-index: -1; animation: spin-border 4s linear infinite; }
+        .stat-ring:hover::before { opacity: 0.25; }
+        @keyframes spin-border { to { --angle: 360deg; } }
+
+        .biz-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    </style>
+</head>
+<body class="bg-[#f7f8fc] text-[#0f172a]">
+
+<!-- ============================================================ -->
+<!-- NAV -->
+<!-- ============================================================ -->
+<nav class="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-xl border-b border-gray-200/50">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-3 group">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white" stroke="white" stroke-width="1.5"/></svg>
+            </div>
+            <div>
+                <div class="font-bold text-lg leading-tight headline">Accelerate<span class="text-blue-600"> Robotics</span></div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-[0.15em] font-medium">One Brain. Many Bots.</div>
+            </div>
+        </a>
+        <div class="hidden lg:flex items-center gap-6 text-sm font-medium text-gray-500">
+            <a href="#crisis" class="hover:text-blue-600 transition">The Crisis</a>
+            <a href="#thesis" class="hover:text-blue-600 transition">Thesis</a>
+            <a href="#platform" class="hover:text-blue-600 transition">Platform</a>
+            <a href="#business" class="hover:text-blue-600 transition">Business Model</a>
+            <a href="#ecosystem" class="hover:text-blue-600 transition">Ecosystem</a>
+            <a href="#roadmap" class="hover:text-blue-600 transition">Roadmap</a>
+            <a href="#directory" class="hover:text-blue-600 transition">Directory</a>
+            <a href="#contact" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition shadow-md shadow-blue-600/20 font-semibold">Get in Touch</a>
+        </div>
+    </div>
+</nav>
+
+<!-- ============================================================ -->
+<!-- HERO -->
+<!-- ============================================================ -->
+<section class="relative min-h-screen flex items-center hero-mesh overflow-hidden pt-20">
+    <canvas id="particles"></canvas>
+    <div class="absolute top-32 left-[10%] w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-400/20 to-cyan-300/20 blur-sm float-1"></div>
+    <div class="absolute top-48 right-[15%] w-16 h-16 rounded-full bg-gradient-to-br from-purple-400/15 to-pink-300/15 blur-sm float-2"></div>
+    <div class="absolute bottom-40 left-[20%] w-24 h-24 rounded-2xl bg-gradient-to-br from-teal-300/10 to-blue-300/10 blur-sm float-3"></div>
+    <div class="absolute bottom-32 right-[10%] w-14 h-14 rounded-full bg-gradient-to-br from-amber-300/15 to-orange-200/10 blur-sm float-1" style="animation-delay:-3s"></div>
+
+    <div class="relative z-10 max-w-6xl mx-auto px-6 text-center">
+        <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/60 backdrop-blur border border-white/80 shadow-sm text-sm font-semibold text-blue-700 mb-10">
+            <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+            The Operating System for Hospital Robotics
+        </div>
+
+        <h1 class="text-5xl sm:text-6xl md:text-8xl font-black leading-[0.95] tracking-tight mb-8 headline">
+            One brain.<br>
+            <span class="gradient-text">Many bots.</span>
+        </h1>
+
+        <p class="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto mb-6 leading-relaxed font-light">
+            A central orchestration platform that coordinates fleets of robots across healthcare environments &mdash;
+            logistics, cleaning, sensing, transport, and humanoids &mdash; managed by on-site human teams.
+        </p>
+        <p class="text-base text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed">
+            Robotics is becoming infrastructure inside hospitals, just as automation transformed warehouses.
+            The opportunity isn't in building more hardware &mdash; it's in the <strong class="text-gray-600">platform layer that orchestrates it all</strong>.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-4 justify-center mb-20">
+            <a href="#thesis" class="group px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg transition shadow-xl shadow-blue-600/25 flex items-center gap-2 justify-center">
+                See the Vision
+                <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+            </a>
+            <a href="#business" class="px-8 py-4 bg-white hover:bg-gray-50 text-gray-800 rounded-2xl font-bold text-lg transition shadow-lg border border-gray-200">
+                Investor Overview
+            </a>
+        </div>
+
+        <!-- Hero SVG diagram -->
+        <div class="relative max-w-4xl mx-auto">
+            <svg viewBox="0 0 900 280" class="w-full">
+                <defs>
+                    <radialGradient id="cG" cx="50%" cy="50%" r="40%"><stop offset="0%" stop-color="#0055ff" stop-opacity="0.12"/><stop offset="100%" stop-color="#0055ff" stop-opacity="0"/></radialGradient>
+                    <radialGradient id="nG" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#00c8ff" stop-opacity="0.2"/><stop offset="100%" stop-color="#00c8ff" stop-opacity="0"/></radialGradient>
+                    <linearGradient id="lG"><stop offset="0%" stop-color="#0055ff" stop-opacity="0.3"/><stop offset="50%" stop-color="#00c8ff" stop-opacity="0.6"/><stop offset="100%" stop-color="#0055ff" stop-opacity="0.3"/></linearGradient>
+                    <filter id="sg"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                </defs>
+                <circle cx="450" cy="140" r="80" fill="url(#cG)"/>
+                <circle cx="450" cy="140" r="52" fill="white" stroke="#0055ff" stroke-width="2" filter="url(#sg)" opacity="0.9"/>
+                <circle cx="450" cy="140" r="42" fill="none" stroke="#00c8ff" stroke-width="0.5" stroke-dasharray="4 4" opacity="0.5"><animateTransform attributeName="transform" type="rotate" from="0 450 140" to="360 450 140" dur="30s" repeatCount="indefinite"/></circle>
+                <text x="450" y="130" text-anchor="middle" fill="#0055ff" font-size="10" font-weight="800" font-family="Space Grotesk">ONE BRAIN</text>
+                <text x="450" y="145" text-anchor="middle" fill="#64748b" font-size="8" font-weight="600" font-family="Inter">ACCELERATE OS</text>
+                <text x="450" y="158" text-anchor="middle" fill="#94a3b8" font-size="6.5" font-weight="500" font-family="Inter">Fleet + Task + Safety</text>
+                <ellipse cx="450" cy="140" rx="180" ry="80" fill="none" stroke="#0055ff" stroke-width="0.6" opacity="0.08"/>
+                <ellipse cx="450" cy="140" rx="300" ry="110" fill="none" stroke="#7c3aed" stroke-width="0.4" opacity="0.06"/>
+
+                <!-- Nodes -->
+                <g id="heroNodes"></g>
+
+                <!-- Data pulses -->
+                <circle r="3" fill="#00c8ff" opacity="0.8"><animateMotion dur="3s" repeatCount="indefinite" path="M120,70 L400,130"/></circle>
+                <circle r="3" fill="#00c8ff" opacity="0.8"><animateMotion dur="3.5s" repeatCount="indefinite" path="M250,230 L410,155"/></circle>
+                <circle r="3" fill="#f59e0b" opacity="0.8"><animateMotion dur="2.8s" repeatCount="indefinite" path="M590,50 L490,120"/></circle>
+                <circle r="3" fill="#eab308" opacity="0.8"><animateMotion dur="3.2s" repeatCount="indefinite" path="M710,190 L500,148"/></circle>
+                <circle r="3" fill="#ef4444" opacity="0.8"><animateMotion dur="2.5s" repeatCount="indefinite" path="M800,60 L500,128"/></circle>
+            </svg>
+        </div>
+    </div>
+    <div class="wave-divider"><svg viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,40 C360,80 720,0 1440,40 L1440,60 L0,60 Z" fill="#f7f8fc"/></svg></div>
+</section>
+
+<!-- ============================================================ -->
+<!-- LOGO MARQUEE -->
+<!-- ============================================================ -->
+<section class="py-14 overflow-hidden bg-[#f7f8fc]">
+    <div class="text-center mb-8">
+        <p class="text-sm font-semibold text-gray-400 uppercase tracking-widest">Integrating the world's leading robotics companies</p>
+    </div>
+    <div class="relative overflow-hidden"><div class="marquee-track" id="logoMarquee"></div></div>
+</section>
+
+<!-- ============================================================ -->
+<!-- THE CRISIS — Four Structural Problems -->
+<!-- ============================================================ -->
+<section id="crisis" class="py-28 px-6">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-6 reveal">
+            <div class="inline-block px-4 py-1.5 rounded-full bg-red-50 text-red-600 text-sm font-bold mb-6">THE CRISIS</div>
+            <h2 class="text-4xl md:text-6xl font-black headline leading-tight mb-4">
+                Healthcare is breaking<br><span class="gradient-text-warm">under its own weight.</span>
+            </h2>
+            <p class="text-xl text-gray-400 max-w-3xl mx-auto">
+                Four structural problems are compounding inside every hospital in America.
+                Robots can solve them &mdash; but only if they work together.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6 mt-16">
+            <div class="glass rounded-3xl p-8 reveal reveal-delay-1">
+                <div class="flex items-start gap-5">
+                    <div class="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center text-3xl flex-shrink-0">👩‍⚕️</div>
+                    <div>
+                        <h3 class="text-xl font-bold headline mb-2">Workforce Shortages</h3>
+                        <p class="text-gray-500 leading-relaxed mb-3">Hospitals face persistent labor shortages across nursing, environmental services, logistics, and support roles. The pipeline isn't keeping up with demand.</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="text-xs font-bold bg-red-50 text-red-600 px-3 py-1 rounded-full">Nursing</span>
+                            <span class="text-xs font-bold bg-red-50 text-red-600 px-3 py-1 rounded-full">Environmental Services</span>
+                            <span class="text-xs font-bold bg-red-50 text-red-600 px-3 py-1 rounded-full">Logistics</span>
+                            <span class="text-xs font-bold bg-red-50 text-red-600 px-3 py-1 rounded-full">Support Staff</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass rounded-3xl p-8 reveal reveal-delay-2">
+                <div class="flex items-start gap-5">
+                    <div class="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center text-3xl flex-shrink-0">🤕</div>
+                    <div>
+                        <h3 class="text-xl font-bold headline mb-2">Worker Injuries</h3>
+                        <p class="text-gray-500 leading-relaxed mb-3">Healthcare workers &mdash; especially nurses &mdash; experience some of the highest workplace injury rates in the U.S., often related to patient mobility and repetitive physical tasks.</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="text-xs font-bold bg-orange-50 text-orange-600 px-3 py-1 rounded-full">Patient Handling</span>
+                            <span class="text-xs font-bold bg-orange-50 text-orange-600 px-3 py-1 rounded-full">Repetitive Tasks</span>
+                            <span class="text-xs font-bold bg-orange-50 text-orange-600 px-3 py-1 rounded-full">Musculoskeletal</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass rounded-3xl p-8 reveal reveal-delay-3">
+                <div class="flex items-start gap-5">
+                    <div class="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-3xl flex-shrink-0">⏳</div>
+                    <div>
+                        <h3 class="text-xl font-bold headline mb-2">Operational Inefficiency</h3>
+                        <p class="text-gray-500 leading-relaxed mb-3">Hospitals rely on manual logistics workflows &mdash; transporting linens, delivering meals, moving supplies, pharmacy runs, equipment transport. These tasks consume clinical time and increase staffing pressure.</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="text-xs font-bold bg-amber-50 text-amber-600 px-3 py-1 rounded-full">Linens</span>
+                            <span class="text-xs font-bold bg-amber-50 text-amber-600 px-3 py-1 rounded-full">Meals</span>
+                            <span class="text-xs font-bold bg-amber-50 text-amber-600 px-3 py-1 rounded-full">Pharmacy</span>
+                            <span class="text-xs font-bold bg-amber-50 text-amber-600 px-3 py-1 rounded-full">Supplies</span>
+                            <span class="text-xs font-bold bg-amber-50 text-amber-600 px-3 py-1 rounded-full">Equipment</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass rounded-3xl p-8 reveal reveal-delay-4">
+                <div class="flex items-start gap-5">
+                    <div class="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-3xl flex-shrink-0">🛏</div>
+                    <div>
+                        <h3 class="text-xl font-bold headline mb-2">Patient Safety</h3>
+                        <p class="text-gray-500 leading-relaxed mb-3">Hospital-acquired pressure injuries and immobility-related complications affect millions of patients annually and are associated with tens of thousands of deaths in the U.S. These represent both clinical and financial burdens.</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="text-xs font-bold bg-purple-50 text-purple-600 px-3 py-1 rounded-full">$26.8B HAPI Cost</span>
+                            <span class="text-xs font-bold bg-purple-50 text-purple-600 px-3 py-1 rounded-full">60K Deaths/Year</span>
+                            <span class="text-xs font-bold bg-purple-50 text-purple-600 px-3 py-1 rounded-full">95% Preventable</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- THE THESIS -->
+<!-- ============================================================ -->
+<section id="thesis" class="py-28 px-6 bg-white">
+    <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-16 reveal">
+            <div class="inline-block px-4 py-1.5 rounded-full bg-blue-50 text-blue-600 text-sm font-bold mb-6">THE THESIS</div>
+            <h2 class="text-4xl md:text-6xl font-black headline leading-tight mb-6">
+                Robotics is becoming<br><span class="gradient-text">hospital infrastructure.</span>
+            </h2>
+            <p class="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
+                Just as automation transformed warehouses, robotics will transform hospitals.
+                But the value isn't in the hardware &mdash; it's in the orchestration layer.
+            </p>
+        </div>
+
+        <!-- Warehouse → Hospital analogy -->
+        <div class="grid md:grid-cols-3 gap-6 mb-16 reveal">
+            <div class="glass rounded-3xl p-8 text-center">
+                <div class="text-5xl mb-4">🏭</div>
+                <h4 class="font-bold headline mb-2">Warehouses</h4>
+                <p class="text-sm text-gray-500">Amazon, Shopify, and others proved that coordinated robot fleets can transform operations at scale.</p>
+                <div class="mt-4 text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full inline-block">Proven model</div>
+            </div>
+            <div class="flex items-center justify-center">
+                <div class="text-center">
+                    <svg class="w-12 h-12 text-blue-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                    <div class="text-xs text-gray-400 mt-2 font-medium">Same playbook</div>
+                </div>
+            </div>
+            <div class="glass rounded-3xl p-8 text-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-cyan-50/50"></div>
+                <div class="relative">
+                    <div class="text-5xl mb-4">🏥</div>
+                    <h4 class="font-bold headline mb-2">Hospitals</h4>
+                    <p class="text-sm text-gray-500">Hospitals need the same thing: coordinated robot fleets across logistics, cleaning, sensing, transport &mdash; and eventually, patient care.</p>
+                    <div class="mt-4 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full inline-block">Massive opportunity</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key insight -->
+        <div class="glass-static rounded-3xl p-10 reveal relative overflow-hidden">
+            <div class="absolute -top-20 -right-20 w-60 h-60 bg-gradient-to-bl from-blue-100/40 to-transparent rounded-full"></div>
+            <div class="relative grid md:grid-cols-2 gap-10 items-center">
+                <div>
+                    <h3 class="text-2xl md:text-3xl font-black headline mb-4">The platform wins &mdash;<br>not the hardware.</h3>
+                    <p class="text-gray-500 leading-relaxed mb-4">Hospitals will deploy robots from multiple manufacturers. The long-term value sits in the <strong class="text-gray-700">software layer that coordinates them</strong> &mdash; not in building another robot.</p>
+                    <p class="text-gray-500 leading-relaxed">Think: <strong class="text-gray-700">Android for hospital robots</strong>. A multi-vendor operating system with a human management layer that keeps everything running.</p>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3 p-3 rounded-xl bg-blue-50/60">
+                        <span class="text-blue-500 font-bold text-lg">01</span>
+                        <span class="text-sm font-medium text-gray-700">Multi-vendor robot orchestration</span>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 rounded-xl bg-blue-50/60">
+                        <span class="text-blue-500 font-bold text-lg">02</span>
+                        <span class="text-sm font-medium text-gray-700">Software + human management layers</span>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 rounded-xl bg-blue-50/60">
+                        <span class="text-blue-500 font-bold text-lg">03</span>
+                        <span class="text-sm font-medium text-gray-700">Hospital system integration (EMR, facilities)</span>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 rounded-xl bg-blue-50/60">
+                        <span class="text-blue-500 font-bold text-lg">04</span>
+                        <span class="text-sm font-medium text-gray-700">FDA-aligned from Day 1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Narrative callout -->
+        <div class="mt-12 text-center reveal">
+            <div class="inline-block glass-static rounded-2xl px-8 py-5 max-w-2xl">
+                <p class="text-lg font-semibold text-gray-700 leading-relaxed">
+                    "Robots are not replacing healthcare workers. They <span class="text-blue-600">reduce injury</span>,
+                    handle <span class="text-blue-600">repetitive tasks</span>, expand <span class="text-blue-600">workforce capacity</span>,
+                    and improve <span class="text-blue-600">operational reliability</span>."
+                </p>
+                <p class="text-sm text-gray-400 mt-3">Support infrastructure &mdash; not labor replacement.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- STATS — Animated Counters -->
+<!-- ============================================================ -->
+<section class="py-20 px-6">
+    <div class="max-w-6xl mx-auto">
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 reveal">
+            <div class="text-center p-6 glass rounded-3xl stat-ring">
+                <div class="text-3xl md:text-4xl font-black gradient-text mb-1 headline" data-target="54" data-prefix="$" data-suffix="B">$0B</div>
+                <div class="text-gray-400 text-xs font-medium">Healthcare robotics market by 2030</div>
+            </div>
+            <div class="text-center p-6 glass rounded-3xl stat-ring">
+                <div class="text-3xl md:text-4xl font-black gradient-text mb-1 headline" data-target="6000" data-prefix="" data-suffix="+">0+</div>
+                <div class="text-gray-400 text-xs font-medium">US hospitals 100+ beds</div>
+            </div>
+            <div class="text-center p-6 glass rounded-3xl stat-ring">
+                <div class="text-3xl md:text-4xl font-black gradient-text mb-1 headline" data-target="270" data-prefix="$" data-suffix="M">$0M</div>
+                <div class="text-gray-400 text-xs font-medium">Bedrock Robotics Series B (fleet coordination)</div>
+            </div>
+            <div class="text-center p-6 glass rounded-3xl stat-ring">
+                <div class="text-3xl md:text-4xl font-black text-red-500 mb-1 headline" data-target="60" data-prefix="" data-suffix="K">0K</div>
+                <div class="text-gray-400 text-xs font-medium">Annual US deaths from pressure injuries</div>
+            </div>
+            <div class="text-center p-6 glass rounded-3xl stat-ring col-span-2 lg:col-span-1">
+                <div class="text-3xl md:text-4xl font-black gradient-text mb-1 headline">0</div>
+                <div class="text-gray-400 text-xs font-medium">Platforms unifying all robot vendors today</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- PLATFORM — Two Layers + Capabilities -->
+<!-- ============================================================ -->
+<section id="platform" class="py-28 px-6 vision-glow relative">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-20 reveal">
+            <div class="inline-block px-4 py-1.5 rounded-full bg-blue-50 text-blue-600 text-sm font-bold mb-6">THE PLATFORM</div>
+            <h2 class="text-4xl md:text-6xl font-black headline leading-tight">
+                Two layers.<br><span class="gradient-text">One autopilot.</span>
+            </h2>
+            <p class="text-xl text-gray-400 max-w-3xl mx-auto mt-6">Software intelligence orchestrates every robot. Human expertise keeps them running.</p>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-8 mb-16">
+            <!-- Software Layer -->
+            <div class="glass rounded-3xl p-10 reveal reveal-delay-1 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-blue-100/50 to-transparent rounded-bl-full"></div>
+                <div class="relative">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold headline">Intrinsic Software Layer</h3>
+                            <p class="text-sm text-blue-500 font-semibold">Powered by Intrinsic (Alphabet)</p>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-blue-50/50"><div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs flex-shrink-0">01</div><div><strong class="text-sm">Universal Robot API</strong><br><span class="text-xs text-gray-500">One interface for all vendors.</span></div></div>
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-blue-50/50"><div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs flex-shrink-0">02</div><div><strong class="text-sm">Fleet Orchestration</strong><br><span class="text-xs text-gray-500">Task routing, collision avoidance, shared maps.</span></div></div>
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-blue-50/50"><div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs flex-shrink-0">03</div><div><strong class="text-sm">EMR / Predictive Engine</strong><br><span class="text-xs text-gray-500">Trigger robots from clinical events. Discharge? Transport auto-dispatched.</span></div></div>
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-blue-50/50"><div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs flex-shrink-0">04</div><div><strong class="text-sm">Safety & Compliance</strong><br><span class="text-xs text-gray-500">FDA-aligned rules engine. HIPAA data flows. Joint Commission audit trails.</span></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Human Layer -->
+            <div class="glass rounded-3xl p-10 reveal reveal-delay-2 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-emerald-100/50 to-transparent rounded-bl-full"></div>
+                <div class="relative">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold headline">Human Management Layer</h3>
+                            <p class="text-sm text-emerald-600 font-semibold">Fleet Techs & Clinical Coordinators</p>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-emerald-50/50"><div class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-xs flex-shrink-0">01</div><div><strong class="text-sm">On-Site Fleet Technicians</strong><br><span class="text-xs text-gray-500">24/7 robot maintenance, charging, troubleshooting, repairs.</span></div></div>
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-emerald-50/50"><div class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-xs flex-shrink-0">02</div><div><strong class="text-sm">Clinical Coordinators</strong><br><span class="text-xs text-gray-500">Bridge between nursing staff and robot capabilities.</span></div></div>
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-emerald-50/50"><div class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-xs flex-shrink-0">03</div><div><strong class="text-sm">Change Management</strong><br><span class="text-xs text-gray-500">Training, adoption, workflow integration. Robots that actually get used.</span></div></div>
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-emerald-50/50"><div class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-xs flex-shrink-0">04</div><div><strong class="text-sm">Outsourced Robotics Department</strong><br><span class="text-xs text-gray-500">Hospitals don't hire roboticists. We are their robotics department.</span></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Platform Capabilities Grid -->
+        <div class="reveal">
+            <h3 class="text-center text-lg font-bold text-gray-400 mb-8 uppercase tracking-wider">Platform Capabilities</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass rounded-2xl p-5 text-center"><div class="text-2xl mb-2">📊</div><div class="font-bold text-sm">Fleet Management</div><div class="text-xs text-gray-400 mt-1">Real-time status of every robot</div></div>
+                <div class="glass rounded-2xl p-5 text-center"><div class="text-2xl mb-2">🎯</div><div class="font-bold text-sm">Task Orchestration</div><div class="text-xs text-gray-400 mt-1">Intelligent task routing & priority</div></div>
+                <div class="glass rounded-2xl p-5 text-center"><div class="text-2xl mb-2">🔧</div><div class="font-bold text-sm">Predictive Maintenance</div><div class="text-xs text-gray-400 mt-1">Fix problems before they happen</div></div>
+                <div class="glass rounded-2xl p-5 text-center"><div class="text-2xl mb-2">🛡</div><div class="font-bold text-sm">Compliance Auditing</div><div class="text-xs text-gray-400 mt-1">FDA, HIPAA, Joint Commission</div></div>
+                <div class="glass rounded-2xl p-5 text-center"><div class="text-2xl mb-2">🏥</div><div class="font-bold text-sm">Hospital Integration</div><div class="text-xs text-gray-400 mt-1">EMR, facilities, elevators, maps</div></div>
+                <div class="glass rounded-2xl p-5 text-center"><div class="text-2xl mb-2">💓</div><div class="font-bold text-sm">System Health</div><div class="text-xs text-gray-400 mt-1">Battery, connectivity, uptime</div></div>
+                <div class="glass rounded-2xl p-5 text-center"><div class="text-2xl mb-2">📈</div><div class="font-bold text-sm">Analytics & ROI</div><div class="text-xs text-gray-400 mt-1">Prove the value, measure savings</div></div>
+                <div class="glass rounded-2xl p-5 text-center"><div class="text-2xl mb-2">🔒</div><div class="font-bold text-sm">Safety Engine</div><div class="text-xs text-gray-400 mt-1">Collision avoidance, geofencing</div></div>
+            </div>
+        </div>
+
+        <!-- Integration Flow -->
+        <div class="glass-static rounded-3xl p-8 mt-12 reveal">
+            <h3 class="text-center text-sm font-bold text-gray-400 mb-6 uppercase tracking-wider">Data Flow</h3>
+            <div class="flex flex-col md:flex-row items-center justify-between gap-3 text-center">
+                <div class="flex-1 p-4 rounded-2xl bg-purple-50/80"><div class="text-2xl mb-1">🏥</div><div class="font-bold text-sm">EMR / EHR</div><div class="text-[11px] text-gray-400">Epic, Cerner, MEDITECH</div></div>
+                <svg class="w-6 h-6 text-gray-300 flex-shrink-0 rotate-90 md:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                <div class="flex-1 p-4 rounded-2xl bg-blue-50/80"><div class="text-2xl mb-1">🧠</div><div class="font-bold text-sm">Predictive Engine</div><div class="text-[11px] text-gray-400">AI task generation</div></div>
+                <svg class="w-6 h-6 text-gray-300 flex-shrink-0 rotate-90 md:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                <div class="flex-1 p-5 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-lg shadow-blue-500/20"><div class="text-2xl mb-1">⚡</div><div class="font-black text-sm">Accelerate OS</div><div class="text-[11px] text-blue-100">Orchestration</div></div>
+                <svg class="w-6 h-6 text-gray-300 flex-shrink-0 rotate-90 md:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                <div class="flex-1 p-4 rounded-2xl bg-emerald-50/80"><div class="text-2xl mb-1">🤖</div><div class="font-bold text-sm">Robot Fleet</div><div class="text-[11px] text-gray-400">All vendors</div></div>
+                <svg class="w-6 h-6 text-gray-300 flex-shrink-0 rotate-90 md:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                <div class="flex-1 p-4 rounded-2xl bg-amber-50/80"><div class="text-2xl mb-1">👨‍⚕️</div><div class="font-bold text-sm">Human Layer</div><div class="text-[11px] text-gray-400">On-site techs</div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- BUSINESS MODEL — Investor Section -->
+<!-- ============================================================ -->
+<section id="business" class="py-28 px-6 bg-white">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-20 reveal">
+            <div class="inline-block px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-sm font-bold mb-6">BUSINESS MODEL</div>
+            <h2 class="text-4xl md:text-6xl font-black headline leading-tight mb-4">
+                Five revenue<br><span class="gradient-text">engines.</span>
+            </h2>
+            <p class="text-xl text-gray-400 max-w-3xl mx-auto">
+                Multiple monetization paths &mdash; from hardware distribution to managed services to SaaS.
+                Each reinforces the others and creates compounding lock-in.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="bizModelGrid">
+            <!-- Rendered by JS -->
+        </div>
+
+        <!-- Market Signal -->
+        <div class="mt-16 glass-static rounded-3xl p-10 reveal relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-bl from-emerald-100/40 to-transparent rounded-full"></div>
+            <div class="relative grid md:grid-cols-3 gap-8 items-center">
+                <div class="md:col-span-2">
+                    <div class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2">Market Signal</div>
+                    <h3 class="text-2xl font-black headline mb-3">Investors are funding the platform layer.</h3>
+                    <p class="text-gray-500 leading-relaxed mb-4">
+                        <strong class="text-gray-700">Bedrock Robotics</strong> raised <strong class="text-gray-700">$270M in Series B</strong> funding
+                        with participation from Capital G (Alphabet) and NVIDIA's venture arm. Their thesis: construction faces severe labor shortages,
+                        large infrastructure projects require automation, and autonomous fleets need coordination.
+                    </p>
+                    <p class="text-gray-500 leading-relaxed">
+                        Investors are funding companies not just for robots themselves &mdash; but for <strong class="text-gray-700">platforms that coordinate fleets of machines</strong>.
+                        This mirrors the healthcare robotics thesis exactly.
+                    </p>
+                </div>
+                <div class="text-center">
+                    <div class="text-6xl font-black gradient-text headline">$270M</div>
+                    <div class="text-sm text-gray-400 mt-2">Bedrock Robotics Series B</div>
+                    <div class="flex items-center justify-center gap-3 mt-4">
+                        <img src="/logos/google.png" class="h-6 opacity-50" alt="Google" onerror="this.style.display='none'">
+                        <img src="/logos/nvidia.svg" class="h-6 opacity-50" alt="NVIDIA" onerror="this.style.display='none'">
+                    </div>
+                    <div class="text-xs text-gray-400 mt-2">Capital G + NVIDIA Ventures</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ECOSYSTEM — Categories + Logos -->
+<!-- ============================================================ -->
+<section id="ecosystem" class="py-28 px-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-20 reveal">
+            <div class="inline-block px-4 py-1.5 rounded-full bg-blue-50 text-blue-600 text-sm font-bold mb-6">THE ECOSYSTEM</div>
+            <h2 class="text-4xl md:text-6xl font-black headline leading-tight">
+                Seven robot types.<br><span class="gradient-text">Every vendor.</span>
+            </h2>
+            <p class="text-xl text-gray-400 max-w-3xl mx-auto mt-6">From delivering meds to assisting with patient lifts &mdash; we integrate them all.</p>
+        </div>
+        <div class="space-y-6" id="ecosystemGrid"></div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- EARLY USE CASES -->
+<!-- ============================================================ -->
+<section class="py-24 px-6 bg-white">
+    <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-16 reveal">
+            <div class="inline-block px-4 py-1.5 rounded-full bg-amber-50 text-amber-600 text-sm font-bold mb-6">FIRST DEPLOYMENTS</div>
+            <h2 class="text-3xl md:text-5xl font-black headline mb-4">Start where the ROI is clearest.</h2>
+            <p class="text-lg text-gray-400 max-w-2xl mx-auto">Initial deployments focus on low-risk operational tasks with clear ROI and minimal regulatory complexity.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-5 reveal">
+            <div class="glass rounded-2xl p-6 text-center">
+                <div class="text-4xl mb-3">🧹</div>
+                <h4 class="font-bold headline">Cleaning</h4>
+                <p class="text-xs text-gray-400 mt-1 mb-4">Floor scrubbing, UV disinfection, environmental monitoring</p>
+                <div class="flex items-center justify-center gap-2 flex-wrap">
+                    <img src="/logos/avidbots.svg" alt="Avidbots" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Avidbots" onerror="this.style.display='none'">
+                    <img src="/logos/pudu.svg" alt="Pudu" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Pudu Robotics" onerror="this.style.display='none'">
+                    <img src="/logos/keenon.webp" alt="Keenon" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Keenon" onerror="this.style.display='none'">
+                    <img src="/logos/blue-ocean-robotics.png" alt="Blue Ocean" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Blue Ocean Robotics" onerror="this.style.display='none'">
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-6 text-center">
+                <div class="text-4xl mb-3">🛏</div>
+                <h4 class="font-bold headline">Linen Transport</h4>
+                <p class="text-xs text-gray-400 mt-1 mb-4">Automated linen pickup and delivery between floors</p>
+                <div class="flex items-center justify-center gap-2 flex-wrap">
+                    <img src="/logos/keenon.webp" alt="Keenon" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Keenon" onerror="this.style.display='none'">
+                    <img src="/logos/aethon.png" alt="Aethon" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Aethon / ST Engineering" onerror="this.style.display='none'">
+                    <img src="/logos/diligent-robotics.webp" alt="Diligent" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Diligent Robotics" onerror="this.style.display='none'">
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-6 text-center">
+                <div class="text-4xl mb-3">🍽</div>
+                <h4 class="font-bold headline">Meal Delivery</h4>
+                <p class="text-xs text-gray-400 mt-1 mb-4">Tray delivery from kitchen to patient rooms</p>
+                <div class="flex items-center justify-center gap-2 flex-wrap">
+                    <img src="/logos/keenon.webp" alt="Keenon" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Keenon" onerror="this.style.display='none'">
+                    <img src="/logos/pudu.svg" alt="Pudu" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Pudu Robotics" onerror="this.style.display='none'">
+                    <img src="/logos/serve-robotics.jpg" alt="Serve" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Serve Robotics" onerror="this.style.display='none'">
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-6 text-center">
+                <div class="text-4xl mb-3">💊</div>
+                <h4 class="font-bold headline">Pharmacy Runs</h4>
+                <p class="text-xs text-gray-400 mt-1 mb-4">Medication transport from pharmacy to nursing stations</p>
+                <div class="flex items-center justify-center gap-2 flex-wrap">
+                    <img src="/logos/aethon.png" alt="Aethon" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Aethon / ST Engineering" onerror="this.style.display='none'">
+                    <img src="/logos/diligent-robotics.webp" alt="Diligent" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Diligent Robotics" onerror="this.style.display='none'">
+                    <img src="/logos/coco.svg" alt="Coco" class="w-7 h-7 rounded-lg object-contain bg-white shadow-sm border border-gray-100" title="Coco" onerror="this.style.display='none'">
+                </div>
+            </div>
+        </div>
+        <div class="text-center mt-8 reveal">
+            <p class="text-sm text-gray-400">No FDA required. Clear cost savings. Immediate workforce relief.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- REGULATORY -->
+<!-- ============================================================ -->
+<section class="py-24 px-6">
+    <div class="max-w-5xl mx-auto">
+        <div class="glass-static rounded-3xl p-12 reveal relative overflow-hidden">
+            <div class="absolute -top-20 -right-20 w-60 h-60 bg-gradient-to-bl from-blue-100/40 to-transparent rounded-full"></div>
+            <div class="relative">
+                <div class="text-center mb-10">
+                    <div class="inline-block px-4 py-1.5 rounded-full bg-blue-50 text-blue-600 text-sm font-bold mb-6">REGULATORY-FIRST</div>
+                    <h2 class="text-3xl md:text-4xl font-black headline">Built for compliance.</h2>
+                    <p class="text-gray-400 mt-4 max-w-2xl mx-auto">Patient-adjacent robots need FDA alignment. We build the compliance layer from Day 1.</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="p-6 rounded-2xl bg-blue-50/50 text-center"><div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-3xl mx-auto mb-4">🛡</div><h4 class="font-bold headline mb-2">FDA 510(k)</h4><p class="text-sm text-gray-500">Pre-built compliance for patient-sensing and patient-contact categories</p></div>
+                    <div class="p-6 rounded-2xl bg-purple-50/50 text-center"><div class="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center text-3xl mx-auto mb-4">🔒</div><h4 class="font-bold headline mb-2">HIPAA / HITECH</h4><p class="text-sm text-gray-500">All robot data through HIPAA-compliant infrastructure. Zero PHI exposure.</p></div>
+                    <div class="p-6 rounded-2xl bg-emerald-50/50 text-center"><div class="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-3xl mx-auto mb-4">📋</div><h4 class="font-bold headline mb-2">Joint Commission</h4><p class="text-sm text-gray-500">Audit trails, incident reporting, safety protocols for accreditation</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ROADMAP -->
+<!-- ============================================================ -->
+<section id="roadmap" class="py-28 px-6 vision-glow">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-20 reveal">
+            <div class="inline-block px-4 py-1.5 rounded-full bg-blue-50 text-blue-600 text-sm font-bold mb-6">THE ROADMAP</div>
+            <h2 class="text-4xl md:text-6xl font-black headline leading-tight">From delivery bots<br><span class="gradient-text">to humanoids.</span></h2>
+            <p class="text-xl text-gray-400 max-w-3xl mx-auto mt-6">Phased deployment: start with proven technology, build toward the frontier.</p>
+        </div>
+        <div class="relative" id="roadmapTimeline"></div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- WHY MIAMI -->
+<!-- ============================================================ -->
+<section class="py-24 px-6 bg-white">
+    <div class="max-w-5xl mx-auto">
+        <div class="glass-static rounded-3xl p-12 reveal relative overflow-hidden">
+            <div class="absolute -bottom-10 -left-10 w-48 h-48 bg-gradient-to-tr from-amber-100/50 to-transparent rounded-full"></div>
+            <div class="grid md:grid-cols-5 gap-10 items-center relative">
+                <div class="md:col-span-3">
+                    <div class="inline-block px-4 py-1.5 rounded-full bg-amber-50 text-amber-600 text-sm font-bold mb-6">HEADQUARTERS</div>
+                    <h2 class="text-3xl md:text-5xl font-black headline mb-6">Built in Miami.</h2>
+                    <p class="text-gray-500 leading-relaxed mb-6">The fastest-growing tech hub meets the highest hospital density in the Southeast. Not SF. On purpose.</p>
+                    <p class="text-gray-500 leading-relaxed mb-8">Healthcare robotics aligns with broader narratives around national competitiveness, healthcare modernization, worker safety, and infrastructure innovation. South Florida is positioning itself as the hub for scaling these companies.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-lg">🏥</div><span class="text-gray-600 text-sm font-medium">Top 10 hospital density in the US</span></div>
+                        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-lg">🌎</div><span class="text-gray-600 text-sm font-medium">Gateway to Latin American healthcare markets</span></div>
+                        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-lg">🚀</div><span class="text-gray-600 text-sm font-medium">#1 fastest-growing tech ecosystem in the US</span></div>
+                    </div>
+                </div>
+                <div class="md:col-span-2 text-center">
+                    <div class="text-[100px] leading-none mb-2">🌴</div>
+                    <div class="text-5xl font-black gradient-text headline">Miami</div>
+                    <div class="text-gray-400 mt-1 font-medium">Florida, USA</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- THE FUTURE — Dark Inspiring Section -->
+<!-- ============================================================ -->
+<section id="vision" class="future-dark py-32 px-6 text-white relative overflow-hidden">
+    <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute w-[500px] h-[500px] rounded-full bg-blue-500/5 -top-40 -left-40 blur-3xl"></div>
+        <div class="absolute w-[400px] h-[400px] rounded-full bg-purple-500/5 -bottom-20 -right-20 blur-3xl"></div>
+        <div class="absolute w-[300px] h-[300px] rounded-full bg-cyan-500/5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
+    </div>
+
+    <div class="max-w-5xl mx-auto relative z-10">
+        <div class="text-center reveal">
+            <div class="inline-block px-4 py-1.5 rounded-full bg-white/5 text-cyan-300 text-sm font-bold mb-8 border border-white/10">THE FUTURE WE'RE BUILDING</div>
+            <h2 class="text-4xl md:text-7xl font-black headline leading-tight mb-8">
+                Imagine a hospital<br>where every robot<br>
+                <span class="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">works as one.</span>
+            </h2>
+            <p class="text-xl text-gray-400 max-w-3xl mx-auto mb-16 leading-relaxed">
+                A delivery bot finishes a pharmacy run. The floor scrubber knows the hallway is clear. A sensor detects a patient
+                needs repositioning. An autonomous wheelchair is dispatched. A humanoid assistant helps with the lift.
+                All orchestrated. All managed. All safe.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-5 gap-4 reveal">
+            <div class="p-6 rounded-3xl bg-white/5 border border-white/10 text-center backdrop-blur-sm hover:bg-white/10 transition group">
+                <div class="text-4xl mb-3">📦</div><div class="font-bold mb-1">Deliver</div><p class="text-xs text-gray-400 mb-4">Autonomous logistics 24/7</p>
+                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                    <img src="/logos/keenon.webp" alt="Keenon" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Keenon" onerror="this.style.display='none'">
+                    <img src="/logos/aethon.png" alt="Aethon" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Aethon" onerror="this.style.display='none'">
+                    <img src="/logos/diligent-robotics.webp" alt="Diligent" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Diligent Robotics" onerror="this.style.display='none'">
+                    <img src="/logos/serve-robotics.jpg" alt="Serve" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Serve Robotics" onerror="this.style.display='none'">
+                </div>
+            </div>
+            <div class="p-6 rounded-3xl bg-white/5 border border-white/10 text-center backdrop-blur-sm hover:bg-white/10 transition group">
+                <div class="text-4xl mb-3">✨</div><div class="font-bold mb-1">Clean</div><p class="text-xs text-gray-400 mb-4">UV disinfection, no human exposure</p>
+                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                    <img src="/logos/avidbots.svg" alt="Avidbots" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Avidbots" onerror="this.style.display='none'">
+                    <img src="/logos/pudu.svg" alt="Pudu" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Pudu Robotics" onerror="this.style.display='none'">
+                    <img src="/logos/blue-ocean-robotics.png" alt="Blue Ocean" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Blue Ocean Robotics" onerror="this.style.display='none'">
+                </div>
+            </div>
+            <div class="p-6 rounded-3xl bg-white/5 border border-white/10 text-center backdrop-blur-sm hover:bg-white/10 transition group">
+                <div class="text-4xl mb-3">📡</div><div class="font-bold mb-1">Sense</div><p class="text-xs text-gray-400 mb-4">Predict falls, prevent injuries</p>
+                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                    <img src="/logos/atlas-mobility.svg" alt="Atlas Mobility" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition ring-1 ring-blue-400/50" title="Atlas Mobility" onerror="this.style.display='none'">
+                    <img src="/logos/corsano.png" alt="Corsano" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Corsano Health" onerror="this.style.display='none'">
+                </div>
+            </div>
+            <div class="p-6 rounded-3xl bg-white/5 border border-white/10 text-center backdrop-blur-sm hover:bg-white/10 transition group">
+                <div class="text-4xl mb-3">🦽</div><div class="font-bold mb-1">Transport</div><p class="text-xs text-gray-400 mb-4">EMR-triggered patient mobility</p>
+                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                    <img src="/logos/whill.png" alt="WHILL" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="WHILL" onerror="this.style.display='none'">
+                    <img src="/logos/toyota.svg" alt="Toyota" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Toyota" onerror="this.style.display='none'">
+                    <img src="/logos/daav.svg" alt="DAAV" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="DAAV" onerror="this.style.display='none'">
+                </div>
+            </div>
+            <div class="p-6 rounded-3xl bg-white/5 border border-white/10 text-center backdrop-blur-sm hover:bg-white/10 transition group">
+                <div class="text-4xl mb-3">🤖</div><div class="font-bold mb-1">Assist</div><p class="text-xs text-gray-400 mb-4">Humanoids alongside caregivers</p>
+                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                    <img src="/logos/tesla.svg" alt="Tesla" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Tesla Optimus" onerror="this.style.display='none'">
+                    <img src="/logos/figure-ai.svg" alt="Figure AI" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Figure AI" onerror="this.style.display='none'">
+                    <img src="/logos/boston-dynamics.svg" alt="Boston Dynamics" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="Boston Dynamics" onerror="this.style.display='none'">
+                    <img src="/logos/1x.svg" alt="1X" class="w-6 h-6 rounded-md object-contain bg-white/90 p-0.5 opacity-60 group-hover:opacity-100 transition" title="1X Technologies" onerror="this.style.display='none'">
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-16 reveal">
+            <p class="text-2xl md:text-3xl font-bold text-gray-300 headline leading-relaxed">
+                This isn't science fiction.<br>
+                <span class="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Every piece of this technology exists today.</span><br>
+                <span class="text-gray-500">It just needs an autopilot.</span>
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- COMPANY DIRECTORY -->
+<!-- ============================================================ -->
+<section id="directory" class="py-32 px-6 bg-gradient-to-b from-white to-gray-50/80">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16 reveal">
+            <span class="inline-block px-4 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600 mb-5 tracking-wider uppercase">Company Directory</span>
+            <h2 class="text-4xl md:text-6xl font-black headline leading-tight mb-6">
+                The Ecosystem<br><span class="gradient-text">Players</span>
+            </h2>
+            <p class="text-lg text-gray-500 max-w-2xl mx-auto">
+                Every robotics company in our ecosystem. Click any company to learn more &mdash; links open in a new window so you stay right here.
+            </p>
+        </div>
+        <div id="directoryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- CTA -->
+<!-- ============================================================ -->
+<section id="contact" class="py-32 px-6 hero-mesh relative overflow-hidden">
+    <div class="max-w-3xl mx-auto relative z-10 reveal">
+        <div class="text-center mb-12">
+            <h2 class="text-4xl md:text-6xl font-black headline leading-tight mb-6">
+                Ready to build the<br><span class="gradient-text">robotics OS?</span>
+            </h2>
+            <p class="text-xl text-gray-500 max-w-2xl mx-auto">
+                Whether you're a hospital deploying your first robot, a robotics company seeking distribution,
+                or an investor backing the platform layer &mdash; let's talk.
+            </p>
+        </div>
+
+        <!-- Investment Inquiry Form -->
+        <form id="inquiryForm" class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl p-8 md:p-10 space-y-5 max-w-2xl mx-auto border border-white/80">
+            <div class="grid md:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-400">*</span></label>
+                    <input type="text" name="name" required
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-400">*</span></label>
+                    <input type="email" name="email" required
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                    <input type="text" name="company"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input type="tel" name="phone"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Message <span class="text-red-400">*</span></label>
+                <textarea name="message" rows="4" required placeholder="Tell us about your interest — investment, partnership, deployment..."
+                          class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white resize-none"></textarea>
+            </div>
+            <button type="submit"
+                    class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg transition shadow-xl shadow-blue-600/25">
+                Submit Inquiry
+            </button>
+            <div id="inquiryFeedback" class="mt-4 text-sm font-medium text-center"></div>
+        </form>
+
+        <p class="text-center mt-8">
+            <a href="#thesis" class="text-gray-400 hover:text-blue-600 transition text-sm font-medium">Back to Top &uarr;</a>
+        </p>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- FOOTER -->
+<!-- ============================================================ -->
+<footer class="py-12 px-6 bg-white border-t border-gray-100">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-md">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white"/></svg>
+            </div>
+            <span class="font-bold headline text-lg">Accelerate<span class="text-blue-600"> Robotics</span></span>
+        </div>
+        <div class="text-sm text-gray-400">Miami, FL &mdash; One Brain. Many Bots.</div>
+        <div class="text-sm text-gray-300">&copy; 2026 Accelerate Robotics. All rights reserved.</div>
+    </div>
+</footer>
+
+<!-- ============================================================ -->
+<!-- JAVASCRIPT -->
+<!-- ============================================================ -->
+<script>
+// WHY: Local logo files sourced from each company's website, mapped by domain for lookup in render functions
+const logoMap = {
+  '1x.tech': '/logos/1x.svg',
+  'aethon.com': '/logos/aethon.png',
+  'atlaslifttech.com': '/logos/atlas-mobility.svg',
+  'avidbots.com': '/logos/avidbots.svg',
+  'blue-ocean-robotics.com': '/logos/blue-ocean-robotics.png',
+  'bostondynamics.com': '/logos/boston-dynamics.svg',
+  'cocodelivery.com': '/logos/coco.svg',
+  'corsano.com': '/logos/corsano.png',
+  'daav.co': '/logos/daav.svg',
+  'diligentrobots.com': '/logos/diligent-robotics.webp',
+  'figure.ai': '/logos/figure-ai.svg',
+  'google.com': '/logos/google.png',
+  'intrinsic.ai': '/logos/intrinsic.svg',
+  'keenon.com': '/logos/keenon.webp',
+  'kuka.com': '/logos/kuka.svg',
+  'lg.com': '/logos/lg.svg',
+  'naviarobotics.com': '/logos/navia.webp',
+  'nvidia.com': '/logos/nvidia.svg',
+  'pudurobotics.com': '/logos/pudu.svg',
+  'sebotics.com': '/logos/sebotics.png',
+  'serverobotics.com': '/logos/serve-robotics.jpg',
+  'tesla.com': '/logos/tesla.svg',
+  'toyota.com': '/logos/toyota.svg',
+  'whill.inc': '/logos/whill.png',
+};
+function logoUrl(domain) { return logoMap[domain] || '/logos/' + domain.split('.')[0] + '.svg'; }
+
+const allVendors = [
+    {n:'Keenon',d:'keenon.com',u:'https://www.keenon.com/'},{n:'Pudu',d:'pudurobotics.com',u:'https://www.pudurobotics.com/'},{n:'LG',d:'lg.com',u:'https://www.lg.com/global/business/robot'},{n:'Avidbots',d:'avidbots.com',u:'https://avidbots.com/'},
+    {n:'Tesla',d:'tesla.com',u:'https://www.tesla.com/AI'},{n:'Toyota',d:'toyota.com',u:'https://global.toyota/en/'},{n:'Boston Dynamics',d:'bostondynamics.com',u:'https://bostondynamics.com/'},{n:'KUKA',d:'kuka.com',u:'https://www.kuka.com/'},
+    {n:'Figure AI',d:'figure.ai',u:'https://www.figure.ai/'},{n:'Atlas Mobility',d:'atlaslifttech.com',u:'https://www.atlasmobility.com/'},{n:'Corsano',d:'corsano.com',u:'https://corsano.com/'},{n:'WHILL',d:'whill.inc',u:'https://whill.inc/'},
+    {n:'Serve Robotics',d:'serverobotics.com',u:'https://www.serverobotics.com/'},{n:'Diligent Robotics',d:'diligentrobots.com',u:'https://www.diligentrobots.com/'},{n:'Intrinsic',d:'intrinsic.ai',u:'https://www.intrinsic.ai/'},
+    {n:'Google',d:'google.com',u:'https://www.google.com/'},{n:'NVIDIA',d:'nvidia.com',u:'https://www.nvidia.com/'},{n:'1X Technologies',d:'1x.tech',u:'https://www.1x.tech/'},
+];
+
+const categories = [
+    { name:'Logistics', icon:'📦', phase:'Phase 1', phaseBg:'bg-emerald-50 text-emerald-700', fda:false, gradient:'from-emerald-50 to-teal-50', borderColor:'border-emerald-200',
+      desc:'Autonomous delivery of medications, lab specimens, supplies, linens, and food throughout the hospital.',
+      vendors:[{n:'Keenon',d:'keenon.com',t:'Multi-purpose delivery',u:'https://www.keenon.com/'},{n:'Aethon / ST Eng.',d:'aethon.com',t:'TUG delivery',u:'https://aethon.com/'},{n:'Coco',d:'cocodelivery.com',t:'Last-mile',u:'https://www.cocodelivery.com/'},{n:'Serve Robotics',d:'serverobotics.com',t:'Sidewalk delivery',u:'https://www.serverobotics.com/'},{n:'Diligent Robotics',d:'diligentrobots.com',t:'Moxi assistant',u:'https://www.diligentrobots.com/'},{n:'LG',d:'lg.com',t:'CLOi robots',u:'https://www.lg.com/global/business/robot'}]},
+    { name:'Environmental', icon:'✨', phase:'Phase 1', phaseBg:'bg-emerald-50 text-emerald-700', fda:false, gradient:'from-teal-50 to-cyan-50', borderColor:'border-teal-200',
+      desc:'Autonomous floor scrubbing, UV-C disinfection, and environmental monitoring without human pathogen exposure.',
+      vendors:[{n:'Keenon',d:'keenon.com',t:'Cleaning bots',u:'https://www.keenon.com/'},{n:'Pudu Robotics',d:'pudurobotics.com',t:'Commercial cleaning',u:'https://www.pudurobotics.com/'},{n:'Navia Robotics',d:'naviarobotics.com',t:'Floor care',u:'https://www.naviarobotics.com/'},{n:'Avidbots',d:'avidbots.com',t:'Neo scrubber',u:'https://avidbots.com/'},{n:'Sebotics',d:'sebotics.com',t:'Service robots',u:'https://sebotics.com/en/'},{n:'Blue Ocean',d:'blue-ocean-robotics.com',t:'UVD disinfection',u:'https://www.blue-ocean-robotics.com/'}]},
+    { name:'Patient Sensing', icon:'📡', phase:'Phase 1.5', phaseBg:'bg-amber-50 text-amber-700', fda:true, gradient:'from-amber-50 to-yellow-50', borderColor:'border-amber-200',
+      desc:'Wearable and ambient sensors for patient turn monitoring, fall detection, vitals, and pressure injury prevention.',
+      vendors:[{n:'Atlas Mobility',d:'atlaslifttech.com',t:'Turn monitoring & SPHM',h:true,u:'https://www.atlasmobility.com/'},{n:'Corsano Health',d:'corsano.com',t:'Medical wearables',u:'https://corsano.com/'}]},
+    { name:'Patient Transport', icon:'🦽', phase:'Phase 2', phaseBg:'bg-yellow-50 text-yellow-700', fda:true, gradient:'from-yellow-50 to-orange-50', borderColor:'border-yellow-200',
+      desc:'Autonomous wheelchairs, smart stretchers, and EMR-triggered patient transport systems.',
+      vendors:[{n:'WHILL',d:'whill.inc',t:'Autonomous wheelchairs',u:'https://whill.inc/'},{n:'Toyota',d:'toyota.com',t:'Human support robots',u:'https://global.toyota/en/'},{n:'DAAV',d:'daav.co',t:'Patient transport',u:'https://www.daav.ch/'}]},
+    { name:'Patient Touching', icon:'🤖', phase:'Phase 3', phaseBg:'bg-red-50 text-red-700', fda:true, gradient:'from-red-50 to-pink-50', borderColor:'border-red-200',
+      desc:'Humanoid robots for patient lifting, repositioning, rehabilitation, and physical assistance alongside caregivers.',
+      vendors:[{n:'Tesla',d:'tesla.com',t:'Optimus humanoid',u:'https://www.tesla.com/AI'},{n:'Figure AI',d:'figure.ai',t:'General-purpose',u:'https://www.figure.ai/'},{n:'Boston Dynamics',d:'bostondynamics.com',t:'Atlas humanoid',u:'https://bostondynamics.com/'},{n:'1X Technologies',d:'1x.tech',t:'NEO humanoid',u:'https://www.1x.tech/'},{n:'KUKA',d:'kuka.com',t:'Medical robotics',u:'https://www.kuka.com/'},{n:'Keenon',d:'keenon.com',t:'Service humanoids',u:'https://www.keenon.com/'}]},
+];
+
+const bizModel = [
+    { icon:'🤖', bg:'bg-blue-50', title:'Hardware & Distribution', items:['Robot sales & leasing','Multi-vendor distribution','Robotics-as-a-Service (RaaS)','Equipment financing via partner banks'] },
+    { icon:'💻', bg:'bg-purple-50', title:'Software Platform', items:['Fleet management SaaS','Workflow orchestration engine','Hospital robotics portal','Predictive analytics & compliance reporting'] },
+    { icon:'🔧', bg:'bg-emerald-50', title:'Operations', items:['Robot deployment & installation','Service, repair & maintenance contracts','Managed fleet operations','24/7 on-site support coverage'] },
+    { icon:'👥', bg:'bg-cyan-50', title:'Managed Services', items:['Outsourced robotics departments','On-site fleet technicians','Clinical coordinators','Training & change management'] },
+    { icon:'💰', bg:'bg-amber-50', title:'Financing & Leasing', items:['Loan programs via partner banks','Lease-to-own structures','Commission/referral revenue','OpEx-friendly pricing models'] },
+    { icon:'📊', bg:'bg-pink-50', title:'Data & Expansion', items:['Operational analytics & benchmarking','ROI measurement & reporting','Cross-industry deployments (hotels, commercial)','Advertising & data insights'] },
+];
+
+const phases = [
+    { phase:'Phase 1', title:'Logistics + Environmental', time:'Now — 12 months', dot:'bg-emerald-500', color:'emerald',
+      items:['Deploy delivery & cleaning bots (Keenon, Pudu, Avidbots)','Build unified fleet management dashboard','Hire on-site fleet technicians (24/7)','Establish universal vendor integration APIs','No FDA required — clear ROI, minimal regulatory complexity'],
+      vendors:[{n:'Keenon',d:'keenon.com'},{n:'Pudu',d:'pudurobotics.com'},{n:'Avidbots',d:'avidbots.com'},{n:'Aethon',d:'aethon.com'},{n:'LG',d:'lg.com'},{n:'Diligent',d:'diligentrobots.com'},{n:'Blue Ocean',d:'blue-ocean-robotics.com'}] },
+    { phase:'Phase 1.5', title:'Patient Sensing', time:'6 — 18 months', dot:'bg-amber-500', color:'amber',
+      items:['Integrate Atlas Mobility turn monitoring + Corsano wearables','Connect sensor data to EMR via HL7 FHIR','Build predictive alerting (turn reminders, fall risk)','FDA alignment for patient-adjacent devices','Feed sensor intelligence into robot task automation'],
+      vendors:[{n:'Atlas Mobility',d:'atlaslifttech.com',h:true},{n:'Corsano',d:'corsano.com'}] },
+    { phase:'Phase 2', title:'Patient Transport', time:'12 — 24 months', dot:'bg-yellow-500', color:'yellow',
+      items:['Integrate WHILL wheelchairs & DAAV transport','EMR-triggered transport (discharge, imaging, procedures)','Hospital floor map + elevator integration','FDA 510(k) for patient transport coordination'],
+      vendors:[{n:'WHILL',d:'whill.inc'},{n:'Toyota',d:'toyota.com'},{n:'DAAV',d:'daav.co'}] },
+    { phase:'Phase 3', title:'Humanoid Assistants', time:'24 — 48 months', dot:'bg-red-500', color:'red',
+      items:['Pilot humanoids for patient lifting & repositioning','Full FDA pathway for patient-contact robotics','Human-robot collaboration (nurse + humanoid pairs)','Scale across health systems with proven safety record'],
+      vendors:[{n:'Tesla',d:'tesla.com'},{n:'Figure AI',d:'figure.ai'},{n:'Boston Dynamics',d:'bostondynamics.com'},{n:'1X',d:'1x.tech'},{n:'KUKA',d:'kuka.com'}] },
+];
+
+// ====== RENDER ======
+
+function renderLogoMarquee() {
+    const t = document.getElementById('logoMarquee');
+    const d = [...allVendors, ...allVendors];
+    t.innerHTML = d.map(v => `
+        <a href="${v.u}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3.5 flex-shrink-0 logo-group cursor-pointer hover:opacity-80 transition">
+            <div class="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center p-1 flex-shrink-0">
+                <img src="${logoUrl(v.d)}" alt="${v.n}" class="logo-img h-7 w-7 rounded-lg" onerror="this.parentElement.style.display='none'">
+            </div>
+            <span class="logo-text text-lg">${v.n}</span>
+        </a>
+    `).join('');
+}
+
+function renderBizModel() {
+    const g = document.getElementById('bizModelGrid');
+    g.innerHTML = bizModel.map((b,i) => `
+        <div class="glass rounded-3xl p-8 reveal reveal-delay-${Math.min(i+1,4)}">
+            <div class="biz-icon ${b.bg} mb-5">${b.icon}</div>
+            <h3 class="text-lg font-bold headline mb-4">${b.title}</h3>
+            <ul class="space-y-2">
+                ${b.items.map(item => `<li class="flex items-start gap-2 text-sm text-gray-500"><span class="text-blue-400 mt-0.5 flex-shrink-0">+</span>${item}</li>`).join('')}
+            </ul>
+        </div>
+    `).join('');
+}
+
+function renderEcosystem() {
+    const g = document.getElementById('ecosystemGrid');
+    g.innerHTML = categories.map((c,i) => `
+        <div class="glass rounded-3xl p-8 md:p-10 reveal reveal-delay-${Math.min(i+1,4)} relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl ${c.gradient} rounded-bl-full opacity-60"></div>
+            <div class="relative">
+                <div class="flex flex-col md:flex-row md:items-center gap-5 mb-8">
+                    <div class="flex items-center gap-4 flex-1">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br ${c.gradient} border ${c.borderColor} flex items-center justify-center text-4xl flex-shrink-0 shadow-sm">${c.icon}</div>
+                        <div><h3 class="text-2xl font-black headline">${c.name}</h3><p class="text-sm text-gray-500 mt-1">${c.desc}</p></div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="${c.phaseBg} text-xs font-bold px-3 py-1.5 rounded-full">${c.phase}</span>
+                        ${c.fda ? '<span class="fda-pill">FDA REQUIRED</span>' : '<span class="text-xs text-gray-400 font-medium bg-gray-50 px-3 py-1.5 rounded-full">No FDA</span>'}
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                    ${c.vendors.map(v => `
+                        <a href="${v.u}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center gap-3 p-4 rounded-2xl hover:bg-white hover:shadow-lg transition-all duration-300 cursor-pointer group no-underline ${v.h?'ring-2 ring-blue-300 bg-blue-50/40 shadow-md':'bg-gray-50/50'}">
+                            <div class="w-14 h-14 rounded-xl bg-white shadow-md border border-gray-100 flex items-center justify-center p-1.5 group-hover:shadow-lg group-hover:scale-110 transition-all duration-300 ${v.h?'border-blue-200':''}">
+                                <img src="${logoUrl(v.d)}" alt="${v.n}" class="w-full h-full rounded-lg object-contain ${v.h?'':'group-hover:scale-105'} transition-transform" onerror="this.outerHTML='<div class=\\'w-full h-full rounded-lg bg-gray-50 flex items-center justify-center text-sm font-bold text-gray-400\\'>${v.n.substring(0,2)}</div>'">
+                            </div>
+                            <div class="text-center"><div class="text-xs font-bold text-gray-800 leading-tight ${v.h?'text-blue-700':''}">${v.n}</div><div class="text-[10px] text-gray-400 mt-0.5">${v.t}</div></div>
+                        </a>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderRoadmap() {
+    const t = document.getElementById('roadmapTimeline');
+    t.innerHTML = `
+        <div class="absolute left-6 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-300 via-amber-300 via-yellow-300 to-red-300 md:-translate-x-px"></div>
+        ${phases.map((p,i) => {
+            const r = i%2===0;
+            const vendorLogos = (p.vendors || []).map(v => `
+                <img src="${logoUrl(v.d)}" alt="${v.n}" title="${v.n}"
+                     class="w-8 h-8 rounded-lg object-contain bg-white shadow-sm border border-gray-100 ${v.h?'ring-2 ring-blue-300':''}"
+                     onerror="this.style.display='none'">
+            `).join('');
+            return `
+            <div class="relative flex items-start gap-6 mb-14 reveal reveal-delay-${Math.min(i+1,4)} ${r?'md:flex-row':'md:flex-row-reverse'} flex-row">
+                <div class="absolute left-6 md:left-1/2 w-4 h-4 rounded-full ${p.dot} shadow-lg z-10 -translate-x-1/2 mt-8 ring-4 ring-white"></div>
+                <div class="ml-14 md:ml-0 ${r?'md:pr-16 md:text-right md:w-1/2':'md:pl-16 md:text-left md:w-1/2'}">
+                    <div class="glass rounded-2xl p-6">
+                        <div class="flex items-center gap-3 ${r?'md:justify-end':''} mb-3">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold text-white ${p.dot}">${p.phase}</span>
+                            <span class="text-xs text-gray-400 font-medium">${p.time}</span>
+                        </div>
+                        <h3 class="text-xl font-black headline mb-3">${p.title}</h3>
+                        <div class="flex items-center gap-2 flex-wrap ${r?'md:justify-end':''} mb-4">
+                            ${vendorLogos}
+                        </div>
+                        <div class="space-y-2">
+                            ${p.items.map(item => `<div class="flex items-start gap-2 ${r?'md:justify-end':''}"><span class="text-${p.color}-500 font-bold flex-shrink-0">+</span><span class="text-sm text-gray-500 ${r?'md:text-right':''}">${item}</span></div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden md:block md:w-1/2"></div>
+            </div>`;
+        }).join('')}
+    `;
+}
+
+// ====== COMPANY DIRECTORY ======
+function renderDirectory() {
+    // WHY: Build a deduplicated master list from all category vendors so each company appears once with its richest data
+    const seen = new Set();
+    const companies = [];
+    categories.forEach(c => {
+        c.vendors.forEach(v => {
+            const key = v.d; // domain as unique key
+            if (!seen.has(key)) {
+                seen.add(key);
+                companies.push({ ...v, cat: c.name, phase: c.phase, phaseBg: c.phaseBg, gradient: c.gradient, borderColor: c.borderColor });
+            }
+        });
+    });
+    // Also add allVendors entries not yet in a category (e.g. Google, NVIDIA)
+    allVendors.forEach(v => {
+        if (!seen.has(v.d)) {
+            seen.add(v.d);
+            companies.push({ ...v, t: 'Technology partner', cat: 'Technology', phase: 'Partner', phaseBg: 'bg-blue-50 text-blue-700', gradient: 'from-blue-50 to-indigo-50', borderColor: 'border-blue-200' });
+        }
+    });
+
+    const g = document.getElementById('directoryGrid');
+    g.innerHTML = companies.map((v, i) => `
+        <a href="${v.u}" target="_blank" rel="noopener noreferrer"
+           class="glass rounded-2xl p-6 flex items-start gap-5 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 no-underline reveal reveal-delay-${Math.min((i % 4) + 1, 4)}">
+            <div class="flex-shrink-0">
+                <div class="w-16 h-16 rounded-2xl bg-white shadow-md border border-gray-100 flex items-center justify-center p-2 group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
+                    <img src="${logoUrl(v.d)}" alt="${v.n}"
+                         class="w-full h-full rounded-xl object-contain"
+                         onerror="this.outerHTML='<div class=\\'w-full h-full rounded-xl bg-gradient-to-br ${v.gradient} border ${v.borderColor} flex items-center justify-center text-lg font-bold text-gray-400\\'>${v.n.substring(0,2)}</div>'">
+                </div>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-lg text-gray-800 group-hover:text-blue-600 transition truncate">${v.n}</span>
+                    <svg class="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                </div>
+                <p class="text-sm text-gray-500 mb-2">${v.t || ''}</p>
+                <div class="flex items-center gap-2">
+                    <span class="${v.phaseBg} text-[10px] font-bold px-2.5 py-1 rounded-full">${v.phase}</span>
+                    <span class="text-[10px] text-gray-400 font-medium">${v.cat}</span>
+                </div>
+            </div>
+        </a>
+    `).join('');
+}
+
+// ====== HERO SVG NODES ======
+function renderHeroNodes() {
+    const g = document.getElementById('heroNodes');
+    // WHY: Each node shows the category emoji plus small orbiting company logos to convey multi-vendor breadth
+    const nodes = [
+        {x:120,y:70,emoji:'📦',label:'LOGISTICS',stroke:'#10b981',
+         logos:[{d:'keenon.com',n:'Keenon'},{d:'aethon.com',n:'Aethon'},{d:'diligentrobots.com',n:'Diligent'}]},
+        {x:250,y:230,emoji:'🧹',label:'CLEANING',stroke:'#10b981',
+         logos:[{d:'avidbots.com',n:'Avidbots'},{d:'pudurobotics.com',n:'Pudu'},{d:'blue-ocean-robotics.com',n:'Blue Ocean'}]},
+        {x:590,y:50,emoji:'📡',label:'SENSING',stroke:'#f59e0b',
+         logos:[{d:'atlaslifttech.com',n:'Atlas'},{d:'corsano.com',n:'Corsano'}]},
+        {x:710,y:190,emoji:'🦽',label:'TRANSPORT',stroke:'#eab308',
+         logos:[{d:'whill.inc',n:'WHILL'},{d:'toyota.com',n:'Toyota'},{d:'daav.co',n:'DAAV'}]},
+        {x:800,y:60,emoji:'🤖',label:'HUMANOID',stroke:'#ef4444',
+         logos:[{d:'tesla.com',n:'Tesla'},{d:'figure.ai',n:'Figure AI'},{d:'bostondynamics.com',n:'Boston Dynamics'}]},
+    ];
+    g.innerHTML = nodes.map(n => {
+        // Position small logo circles in an arc around the main node
+        const logoCircles = n.logos.map((l, i) => {
+            const count = n.logos.length;
+            // WHY: Spread logos in an arc from -60 to +60 degrees below the node, spaced evenly
+            const angleOffset = count === 1 ? 0 : (i / (count - 1) - 0.5) * 120;
+            const angle = (90 + angleOffset) * Math.PI / 180;
+            const orbitR = 42; // Distance from node center to logo center
+            const lx = n.x + Math.cos(angle) * orbitR;
+            const ly = n.y + Math.sin(angle) * orbitR;
+            return `
+                <circle cx="${lx}" cy="${ly}" r="11" fill="white" stroke="${n.stroke}" stroke-width="1" opacity="0.9"/>
+                <clipPath id="clip-${n.label}-${i}"><circle cx="${lx}" cy="${ly}" r="9"/></clipPath>
+                <image href="${logoUrl(l.d)}" x="${lx-9}" y="${ly-9}" width="18" height="18"
+                       clip-path="url(#clip-${n.label}-${i})" preserveAspectRatio="xMidYMid slice"/>
+            `;
+        }).join('');
+
+        return `
+        <line x1="${n.x}" y1="${n.y}" x2="${n.x>450?490:400}" y2="${n.y>140?155:130}" stroke="url(#lG)" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.4">
+            <animate attributeName="stroke-dashoffset" from="20" to="0" dur="${2.5+Math.random()*1.5}s" repeatCount="indefinite"/>
+        </line>
+        <circle cx="${n.x}" cy="${n.y}" r="30" fill="url(#nG)"/>
+        <circle cx="${n.x}" cy="${n.y}" r="24" fill="white" stroke="${n.stroke}" stroke-width="2" filter="url(#sg)"/>
+        <text x="${n.x}" y="${n.y-3}" text-anchor="middle" font-size="18">${n.emoji}</text>
+        <text x="${n.x}" y="${n.y+12}" text-anchor="middle" fill="${n.stroke}" font-size="6.5" font-weight="700">${n.label}</text>
+        ${logoCircles}
+    `;
+    }).join('');
+}
+
+// ====== PARTICLES ======
+function initParticles() {
+    const c = document.getElementById('particles'), ctx = c.getContext('2d');
+    let w, h, ps = [];
+    function resize() { const s = c.parentElement; w = c.width = s.offsetWidth; h = c.height = s.offsetHeight; }
+    function create() { ps = []; const n = Math.floor((w*h)/18000); for(let i=0;i<n;i++) ps.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,r:Math.random()*2+0.5}); }
+    function draw() {
+        ctx.clearRect(0,0,w,h);
+        for(let i=0;i<ps.length;i++) for(let j=i+1;j<ps.length;j++){
+            const dx=ps[i].x-ps[j].x,dy=ps[i].y-ps[j].y,d=Math.sqrt(dx*dx+dy*dy);
+            if(d<120){ctx.beginPath();ctx.moveTo(ps[i].x,ps[i].y);ctx.lineTo(ps[j].x,ps[j].y);ctx.strokeStyle=`rgba(0,100,255,${0.06*(1-d/120)})`;ctx.lineWidth=0.5;ctx.stroke();}
+        }
+        ps.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle='rgba(0,100,255,0.12)';ctx.fill();p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;});
+        requestAnimationFrame(draw);
+    }
+    resize(); create(); draw(); window.addEventListener('resize',()=>{resize();create();});
+}
+
+// ====== SCROLL REVEAL ======
+function initReveal() {
+    const o = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }), {threshold:0.08});
+    document.querySelectorAll('.reveal').forEach(el => o.observe(el));
+}
+
+// ====== COUNTERS ======
+function initCounters() {
+    const o = new IntersectionObserver(es => es.forEach(e => {
+        if(!e.isIntersecting) return;
+        const el=e.target, tgt=parseInt(el.dataset.target), pre=el.dataset.prefix||'', suf=el.dataset.suffix||'';
+        if(isNaN(tgt)) return;
+        let start=performance.now();
+        function step(now){
+            const p=Math.min((now-start)/2000,1), eased=1-Math.pow(1-p,3), cur=Math.round(eased*tgt);
+            el.textContent=pre+(tgt>=1000?cur.toLocaleString():cur)+suf;
+            if(p<1)requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step); o.unobserve(el);
+    }), {threshold:0.5});
+    document.querySelectorAll('[data-target]').forEach(el => o.observe(el));
+}
+
+// ====== INIT ======
+document.addEventListener('DOMContentLoaded', () => {
+    renderHeroNodes();
+    renderLogoMarquee();
+    renderBizModel();
+    renderEcosystem();
+    renderRoadmap();
+    renderDirectory();
+    initParticles();
+    initReveal();
+    initCounters();
+});
+</script>
+<script src="/js/inquiry-form.js"></script>
+</body>
+</html>
