@@ -24,8 +24,10 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:"],
+      imgSrc: ["'self'", "data:", "https://img.youtube.com"],
       connectSrc: ["'self'"],
+      // WHY: YouTube embeds require iframe permission for the video carousel
+      frameSrc: ["https://www.youtube.com", "https://www.youtube-nocookie.com"],
     },
   },
 }));
