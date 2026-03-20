@@ -26,8 +26,8 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https://img.youtube.com"],
       connectSrc: ["'self'"],
-      // WHY: YouTube embeds require iframe permission for the video carousel
-      frameSrc: ["https://www.youtube.com", "https://www.youtube-nocookie.com"],
+      // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) require iframe permission
+      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
     },
   },
 }));
