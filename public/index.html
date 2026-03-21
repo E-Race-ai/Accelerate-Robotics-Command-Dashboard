@@ -827,7 +827,7 @@
                             <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Guest Requests</span>
                             <span class="text-[9px] text-amber-600 font-bold" id="pendingCountMobile">0 pending</span>
                         </div>
-                        <div id="taskQueueListMobile" class="space-y-1 max-h-[250px] overflow-y-auto text-xs">
+                        <div id="taskQueueListMobile" class="space-y-1 max-h-[400px] overflow-y-auto text-xs">
                             <div class="text-center text-gray-400 py-2 text-[10px]">Deploy robots to start</div>
                         </div>
                     </div>
@@ -2022,7 +2022,9 @@
         ['taskQueueList', 'taskQueueListMobile'].forEach(listId => {
             const tql = document.getElementById(listId);
             if (!tql) return;
-            const active = G.tasks.filter(t => t.state === 'pending' || t.state === 'assigned').slice(0, 8);
+            /* WHY: Show fewer tasks on mobile so cards don't get clipped at the bottom */
+            const maxCards = listId === 'taskQueueListMobile' ? 4 : 8;
+            const active = G.tasks.filter(t => t.state === 'pending' || t.state === 'assigned').slice(0, maxCards);
             if (active.length === 0) {
                 if (tql.children.length !== 1 || !tql.querySelector('.tq-empty')) {
                     tql.innerHTML = '<div class="tq-empty text-center text-gray-400 py-2 text-[10px]">No pending requests</div>';
