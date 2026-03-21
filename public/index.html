@@ -995,7 +995,9 @@
         const floorGap = Math.min(H * 0.175, 155);
         const s = Math.min((W * 0.68) / (ISO.floorW + ISO.floorD * ISO.shearX),
                            (H * 0.96) / (floorGap * (NUM_FLOORS - 1) + ISO.floorD * ISO.shearY + 30));
-        const baseX = W * 0.02;
+        /* WHY: On mobile (W < 500) the isometric floor planes start too far left,
+           clipping labels and the building edge. 10% offset gives room for floor labels. */
+        const baseX = W < 500 ? W * 0.10 : W * 0.02;
         const baseY = H * 0.97;
         return {
             x: baseX + fy * ISO.shearX * s + fx * s,
