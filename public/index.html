@@ -1078,11 +1078,15 @@
     }
 
     function drawFloorLabel(f) {
-        const p = isoProject(-8, 85, f);
+        /* WHY: On mobile (W < 500) the label at fx=-8 falls off the left edge,
+           so we use fx=2 with left-align to keep it fully visible */
+        const mobile = W < 500;
+        const p = isoProject(mobile ? 2 : -8, 85, f);
         ctx.fillStyle = f === 0 ? 'rgba(30,100,160,0.9)' : 'rgba(60,80,110,0.75)';
         ctx.font = 'bold ' + Math.max(10, 11 * p.s) + 'px Inter, system-ui, sans-serif';
-        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-        ctx.fillText(floorNames[f], p.x - 6, p.y);
+        ctx.textAlign = mobile ? 'left' : 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(floorNames[f], mobile ? Math.max(6, p.x) : p.x - 6, p.y);
     }
 
     /* ── Task indicators on rooms ── */
@@ -1098,16 +1102,17 @@
             /* Pulsing urgency ring */
             const ringColor = urgency > 0.7 ? 'rgba(239,68,68,' : urgency > 0.4 ? 'rgba(251,191,36,' : 'rgba(34,211,238,';
             ctx.strokeStyle = ringColor + pulseAlpha + ')';
+            const ringSz = W < 500 ? Math.max(12, 10 * s) : 10 * s;
             ctx.lineWidth = 2 * s;
-            ctx.beginPath(); ctx.arc(p.x, p.y, 10 * s, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(p.x, p.y, ringSz, 0, Math.PI * 2); ctx.stroke();
 
             /* Background circle */
             ctx.fillStyle = ringColor + '0.15)';
-            ctx.beginPath(); ctx.arc(p.x, p.y, 10 * s, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(p.x, p.y, ringSz, 0, Math.PI * 2); ctx.fill();
 
             /* Robot icon — shows which bot type is needed */
             const icon = robotIcons[t.requiredBot];
-            const iSz = 16 * s;
+            const iSz = W < 500 ? Math.max(18, 16 * s) : 16 * s;
             if (icon && icon.complete && icon.naturalWidth > 0) {
                 ctx.drawImage(icon, p.x - iSz/2, p.y - iSz/2, iSz, iSz);
             }
@@ -1119,9 +1124,9 @@
         G.robots.filter(b => b.floor === f && b.state !== 'riding').forEach(bot => {
             const p = isoProject(bot.x, bot.y, f);
             const s = p.s;
-            /* WHY: 18px on-floor vs 44px in queue — robots visually "shrink" as
-               they enter the building, emphasizing the isometric miniature scale */
-            const sz = 18 * s;
+            /* WHY: On mobile the scale factor makes robots tiny and hard to see,
+               so we enforce a 20px minimum. Desktop keeps the 18*s miniature look. */
+            const sz = W < 500 ? Math.max(20, 18 * s) : 18 * s;
             const icon = robotIcons[bot.type];
             if (icon && icon.complete && icon.naturalWidth > 0) {
                 /* Glow */
@@ -1518,10 +1523,14 @@
 
     /* ── Robot state machine ── */
     function updateRobot(bot, gameDt) {
-        /* Track utilization per robot */
+        /* WHY: Only 'working' and task-assigned 'moving' count as productive.
+           Queuing, riding, scanning, returning are logistics overhead — counting
+           them inflates util to 100% on bots that haven't completed any tasks. */
         if (bot.stats) {
-            if (bot.state === 'idle') bot.stats.idleTime += gameDt;
-            else bot.stats.busyTime += gameDt;
+            const isProductive = bot.state === 'working' ||
+                                 (bot.state === 'moving' && bot.task);
+            if (isProductive) bot.stats.busyTime += gameDt;
+            else bot.stats.idleTime += gameDt;
         }
         const spd = bot.speed * gameDt;
         switch (bot.state) {
@@ -1536,8 +1545,17 @@
                     if (!G.elevator.queue.includes(bot)) {
                         G.elevator.queue.push(bot);
                     }
+                    bot.stateTimer += gameDt;
                     /* Try to board if elevator is at this floor and empty */
                     tryBoard(bot);
+                    /* WHY: Prevent permanent deadlock if elevator never arrives.
+                       After 15s, drop the task and return to idle on current floor. */
+                    if (bot.stateTimer > 15) {
+                        G.elevator.queue = G.elevator.queue.filter(b => b !== bot);
+                        if (bot.task) { bot.task.state = 'expired'; G.tasksFailed++; }
+                        bot.task = null;
+                        bot.state = 'idle';
+                    }
                 }
                 break;
             }
@@ -1562,7 +1580,9 @@
                     bot.floor = bot.targetFloor;
                     bot.x = ISO.floorW - 20;
                     bot.y = 85;
-                    bot.state = 'moving';
+                    /* WHY: If task expired mid-ride, bot.task is null. Go to return
+                       flow instead of moving to a nonexistent task destination. */
+                    bot.state = bot.task ? 'moving' : 'returning';
                     G.elevator.rider = null;
                     G.elevator.state = 'idle';
                     G.elevator.timer = 0;
@@ -1597,13 +1617,27 @@
                     bot.targetFloor = 0;
                     if (!G.elevator.queue.includes(bot)) G.elevator.queue.push(bot);
                     tryBoard(bot);
-                    if (bot.state === 'returning') bot.state = 'queuing_return';
+                    if (bot.state === 'returning') {
+                        bot.state = 'queuing_return';
+                        bot.stateTimer = 0;
+                    }
                 }
                 break;
             }
 
             case 'queuing_return': {
+                bot.stateTimer += gameDt;
                 tryBoard(bot);
+                /* WHY: Without a timeout, a robot can wait forever if the elevator
+                   is busy serving other floors. After 15s of waiting, give up and
+                   teleport back to lobby to avoid permanent deadlocks. */
+                if (bot.stateTimer > 15) {
+                    G.elevator.queue = G.elevator.queue.filter(b => b !== bot);
+                    bot.floor = 0;
+                    bot.x = ISO.floorW - 20;
+                    bot.y = 85;
+                    bot.state = 'returning_local';
+                }
                 break;
             }
 
@@ -1788,6 +1822,7 @@
                 idle.state = 'moving';
             } else {
                 idle.state = 'queuing';
+                idle.stateTimer = 0;
             }
         }
     }
@@ -1800,10 +1835,19 @@
                     t.state = 'expired';
                     G.tasksFailed++;
                     G.satisfaction = Math.max(0, G.satisfaction - 5);
-                    /* Free the assigned bot */
+                    /* Free the assigned bot — but only if it's NOT mid-elevator.
+                       WHY: Changing state while scanning/riding/riding_back corrupts
+                       the elevator state machine and causes permanent stuck robots. */
                     if (t.assignedBot) {
-                        t.assignedBot.task = null;
-                        t.assignedBot.state = t.assignedBot.floor === 0 ? 'returning_local' : 'returning';
+                        const safeToReset = !['scanning', 'riding', 'riding_back'].includes(t.assignedBot.state);
+                        if (safeToReset) {
+                            t.assignedBot.task = null;
+                            t.assignedBot.state = t.assignedBot.floor === 0 ? 'returning_local' : 'returning';
+                        } else {
+                            /* Let the robot finish the elevator ride, then it will
+                               find bot.task === null and go idle/return naturally */
+                            t.assignedBot.task = null;
+                        }
                     }
                 }
             }
