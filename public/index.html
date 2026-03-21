@@ -1993,38 +1993,64 @@
         const eq = document.getElementById('elevQueue');
         if (eq) eq.textContent = G.elevator.queue.length;
 
-        /* Task queue list */
-        const tql = document.getElementById('taskQueueList');
-        if (tql) {
-            const active = G.tasks.filter(t => t.state === 'pending' || t.state === 'assigned');
+        /* Task queue list — build cards once per task, then update in-place.
+           WHY: Rebuilding innerHTML every frame causes <img> and emoji elements to
+           flash on mobile as the browser re-renders them from scratch. */
+        const botIcons = { w3: '/assets/robots/keenon-w3.svg', m2: '/assets/robots/keenon-m2.svg', n5: '/assets/robots/keenon-n5.svg', s100: '/assets/robots/keenon-s100.svg' };
+        const botNames = { w3: 'ButlerBot', m2: 'SqueakyClean', n5: 'VacuumBot', s100: 'HeavyLoad' };
+        const typeEmoji = { delivery: '🍽', clean_hard: '🧹', clean_carpet: '🧹', transport: '🧳' };
+        const typeColors = { delivery: 'text-blue-600', clean_hard: 'text-emerald-600', clean_carpet: 'text-emerald-600', transport: 'text-purple-600' };
+        ['taskQueueList', 'taskQueueListMobile'].forEach(listId => {
+            const tql = document.getElementById(listId);
+            if (!tql) return;
+            const active = G.tasks.filter(t => t.state === 'pending' || t.state === 'assigned').slice(0, 8);
             if (active.length === 0) {
-                tql.innerHTML = '<div class="text-center text-gray-400 py-2 text-[10px]">No pending requests</div>';
-            } else {
-                /* WHY: Show the robot icon + name next to each task so users instantly
-                   know which robot type to deploy for each request */
-                const botIcons = { w3: '/assets/robots/keenon-w3.svg', m2: '/assets/robots/keenon-m2.svg', n5: '/assets/robots/keenon-n5.svg', s100: '/assets/robots/keenon-s100.svg' };
-                const botNames = { w3: 'ButlerBot', m2: 'SqueakyClean', n5: 'VacuumBot', s100: 'HeavyLoad' };
-                const typeEmoji = { delivery: '🍽', clean_hard: '🧹', clean_carpet: '🧹', transport: '🧳' };
-                const typeColors = { delivery: 'text-blue-600', clean_hard: 'text-emerald-600', clean_carpet: 'text-emerald-600', transport: 'text-purple-600' };
-                tql.innerHTML = active.slice(0, 8).map(t => {
-                    const urgency = t.elapsed / t.timeLimit;
-                    const timeLeft = Math.max(0, Math.ceil(t.timeLimit - t.elapsed));
-                    const borderClass = t.state === 'pending' ? 'border-amber-300 bg-amber-50' : 'border-blue-200 bg-blue-50';
-                    const timeColor = urgency > 0.7 ? 'text-red-500' : urgency > 0.4 ? 'text-amber-500' : 'text-gray-400';
-                    const statusLabel = t.state === 'assigned' ? '<span class="text-[9px] text-blue-600 font-bold">ASSIGNED</span>' : '<span class="text-[9px] text-amber-600 font-bold">NEEDS ' + botNames[t.requiredBot].toUpperCase() + '</span>';
-                    return '<div class="flex items-center gap-2 p-1.5 rounded-lg border ' + borderClass + '">' +
+                if (tql.children.length !== 1 || !tql.querySelector('.tq-empty')) {
+                    tql.innerHTML = '<div class="tq-empty text-center text-gray-400 py-2 text-[10px]">No pending requests</div>';
+                }
+                return;
+            }
+            /* Build card set if task count changed or task IDs differ */
+            const activeIds = active.map(t => t.id).join(',');
+            if (tql.dataset.taskIds !== activeIds) {
+                tql.dataset.taskIds = activeIds;
+                tql.innerHTML = active.map(t => {
+                    const tc = typeColors[t.type] || '';
+                    return '<div class="flex items-center gap-2 p-1.5 rounded-lg border tq-card" data-tid="' + t.id + '">' +
                         '<img src="' + botIcons[t.requiredBot] + '" class="w-6 h-6 flex-shrink-0" alt="">' +
                         '<div class="flex-1 min-w-0">' +
-                        '<div class="font-bold ' + (typeColors[t.type] || '') + ' truncate">' + (typeEmoji[t.type] || '') + ' ' + t.label + '</div>' +
+                        '<div class="font-bold ' + tc + ' truncate tq-label">' + (typeEmoji[t.type] || '') + ' ' + t.label + '</div>' +
                         '<div class="text-gray-500 truncate">' + t.targetLabel + '</div>' +
-                        statusLabel + '</div>' +
-                        '<div class="font-mono font-bold ' + timeColor + ' text-right">' + timeLeft + 's</div></div>';
+                        '<div class="tq-status text-[9px] font-bold"></div></div>' +
+                        '<div class="tq-time font-mono font-bold text-right"></div></div>';
                 }).join('');
             }
-            /* WHY: Mirror task queue to mobile panel so both stay in sync */
-            const tqlM = document.getElementById('taskQueueListMobile');
-            if (tqlM) tqlM.innerHTML = tql.innerHTML;
-        }
+            /* Update only changing values in-place */
+            active.forEach(t => {
+                const card = tql.querySelector('[data-tid="' + t.id + '"]');
+                if (!card) return;
+                const urgency = t.elapsed / t.timeLimit;
+                const timeLeft = Math.max(0, Math.ceil(t.timeLimit - t.elapsed));
+                const timeColor = urgency > 0.7 ? 'text-red-500' : urgency > 0.4 ? 'text-amber-500' : 'text-gray-400';
+                const borderClass = t.state === 'pending' ? 'border-amber-300 bg-amber-50' : 'border-blue-200 bg-blue-50';
+                /* Update border/bg */
+                card.className = 'flex items-center gap-2 p-1.5 rounded-lg border tq-card ' + borderClass;
+                /* Update timer */
+                const timeEl = card.querySelector('.tq-time');
+                if (timeEl) { timeEl.textContent = timeLeft + 's'; timeEl.className = 'tq-time font-mono font-bold text-right ' + timeColor; }
+                /* Update status */
+                const statusEl = card.querySelector('.tq-status');
+                if (statusEl) {
+                    if (t.state === 'assigned') {
+                        statusEl.textContent = 'ASSIGNED';
+                        statusEl.className = 'tq-status text-[9px] text-blue-600 font-bold';
+                    } else {
+                        statusEl.textContent = 'NEEDS ' + botNames[t.requiredBot].toUpperCase();
+                        statusEl.className = 'tq-status text-[9px] text-amber-600 font-bold';
+                    }
+                }
+            });
+        });
 
         /* ── Fleet Dashboard ── */
         /* WHY: Build cards once, then update only changing values in-place.
