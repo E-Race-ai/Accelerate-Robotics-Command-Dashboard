@@ -1159,8 +1159,8 @@
                 ctx.arc(p.x, p.y, sz * 0.4, -Math.PI/2, -Math.PI/2 + Math.PI * 2 * progress);
                 ctx.stroke();
             }
-            /* State label */
-            if (bot.state !== 'idle') {
+            /* State label — hidden on mobile where it's too small to read */
+            if (bot.state !== 'idle' && W >= 500) {
                 const stateLabels = { queuing:'→elev', scanning:'RFID', moving:'→task', working:'working', returning:'→lobby' };
                 ctx.fillStyle = 'rgba(40,60,90,0.6)';
                 ctx.font = Math.max(6, 6 * s) + 'px Inter, system-ui, sans-serif';
@@ -1270,75 +1270,83 @@
                 ctx.fillRect(shaftX - doorW/2, fp.y - doorH/2, doorW, doorH);
             }
 
-            /* RFID reader — small rounded panel with icon */
-            const rfidX = shaftX - shaftW/2 - 2;
-            const rfidY = fp.y;
-            /* Reader housing */
-            ctx.fillStyle = G.elevator.rider && Math.abs(cabinY - fp.y) < doorH ? 'rgba(34,197,94,0.6)' : 'rgba(245,158,11,0.5)';
-            const rfidW = 12 * s, rfidH = 8 * s;
-            ctx.beginPath();
-            ctx.roundRect(rfidX - rfidW, rfidY - rfidH/2, rfidW, rfidH, 2);
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(120,80,20,0.3)';
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-            /* RFID icon — tiny radio waves */
-            ctx.strokeStyle = G.elevator.rider && Math.abs(cabinY - fp.y) < doorH ? 'rgba(22,163,74,0.8)' : 'rgba(180,120,20,0.6)';
-            ctx.lineWidth = 0.8;
-            for (let arc = 1; arc <= 2; arc++) {
+            /* WHY: On mobile, RFID readers, radio arcs, and floor badges are too
+               small to read and create visual clutter. Only draw on desktop. */
+            if (W >= 500) {
+                /* RFID reader — small rounded panel with icon */
+                const rfidX = shaftX - shaftW/2 - 2;
+                const rfidY = fp.y;
+                /* Reader housing */
+                ctx.fillStyle = G.elevator.rider && Math.abs(cabinY - fp.y) < doorH ? 'rgba(34,197,94,0.6)' : 'rgba(245,158,11,0.5)';
+                const rfidW = 12 * s, rfidH = 8 * s;
                 ctx.beginPath();
-                ctx.arc(rfidX - rfidW * 0.7, rfidY, arc * 2.5 * s, -Math.PI * 0.4, Math.PI * 0.4);
+                ctx.roundRect(rfidX - rfidW, rfidY - rfidH/2, rfidW, rfidH, 2);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(120,80,20,0.3)';
+                ctx.lineWidth = 0.5;
                 ctx.stroke();
+                /* RFID icon — tiny radio waves */
+                ctx.strokeStyle = G.elevator.rider && Math.abs(cabinY - fp.y) < doorH ? 'rgba(22,163,74,0.8)' : 'rgba(180,120,20,0.6)';
+                ctx.lineWidth = 0.8;
+                for (let arc = 1; arc <= 2; arc++) {
+                    ctx.beginPath();
+                    ctx.arc(rfidX - rfidW * 0.7, rfidY, arc * 2.5 * s, -Math.PI * 0.4, Math.PI * 0.4);
+                    ctx.stroke();
+                }
+                ctx.fillStyle = G.elevator.rider && Math.abs(cabinY - fp.y) < doorH ? 'rgba(22,163,74,0.8)' : 'rgba(180,120,20,0.6)';
+                ctx.beginPath(); ctx.arc(rfidX - rfidW * 0.7, rfidY, 1.2 * s, 0, Math.PI * 2); ctx.fill();
+
+                /* Floor number badge */
+                const floorLabel = f === 0 ? 'L' : '' + (f+1);
+                ctx.fillStyle = 'rgba(60,90,130,0.7)';
+                ctx.font = 'bold ' + Math.max(8, 9 * s) + 'px Inter, system-ui, sans-serif';
+                ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                ctx.fillText(floorLabel, shaftX + shaftW/2 + 6, fp.y);
             }
-            ctx.fillStyle = G.elevator.rider && Math.abs(cabinY - fp.y) < doorH ? 'rgba(22,163,74,0.8)' : 'rgba(180,120,20,0.6)';
-            ctx.beginPath(); ctx.arc(rfidX - rfidW * 0.7, rfidY, 1.2 * s, 0, Math.PI * 2); ctx.fill();
-
-            /* Floor number badge */
-            const floorLabel = f === 0 ? 'L' : '' + (f+1);
-            ctx.fillStyle = 'rgba(60,90,130,0.7)';
-            ctx.font = 'bold ' + Math.max(8, 9 * s) + 'px Inter, system-ui, sans-serif';
-            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-            ctx.fillText(floorLabel, shaftX + shaftW/2 + 6, fp.y);
         }
 
-        /* E-BOX module at top — tech-looking box */
-        const eboxW = shaftW + 10 * s;
-        const eboxH = 14 * s;
-        const eboxY = shaftTop - eboxH - 8;
-        /* Box body */
-        const eboxGrad = ctx.createLinearGradient(0, eboxY, 0, eboxY + eboxH);
-        eboxGrad.addColorStop(0, 'rgba(20,100,160,0.7)');
-        eboxGrad.addColorStop(1, 'rgba(15,80,140,0.8)');
-        ctx.fillStyle = eboxGrad;
-        ctx.beginPath();
-        ctx.roundRect(shaftX - eboxW/2, eboxY, eboxW, eboxH, 3 * s);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(34,211,238,0.4)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        /* Status LED — pulses when active */
-        const ledActive = G.elevator.state === 'moving' || G.elevator.rider;
-        ctx.fillStyle = ledActive ? 'rgba(34,211,238,0.9)' : 'rgba(34,211,238,0.3)';
-        ctx.beginPath(); ctx.arc(shaftX - eboxW/2 + 5 * s, eboxY + eboxH/2, 2 * s, 0, Math.PI * 2); ctx.fill();
-        if (ledActive) {
-            ctx.fillStyle = 'rgba(34,211,238,0.15)';
-            ctx.beginPath(); ctx.arc(shaftX - eboxW/2 + 5 * s, eboxY + eboxH/2, 5 * s, 0, Math.PI * 2); ctx.fill();
-        }
-        /* Label */
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.font = 'bold ' + Math.max(6, 7 * s) + 'px Inter, system-ui, sans-serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('E-BOX', shaftX + 2 * s, eboxY + eboxH/2);
-        /* Antenna */
-        ctx.strokeStyle = 'rgba(34,211,238,0.5)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(shaftX, eboxY); ctx.lineTo(shaftX, eboxY - 10 * s); ctx.stroke();
-        /* WiFi arcs — animated pulse when active */
-        const wifiAlpha = ledActive ? 0.3 + Math.sin(G.time * 4) * 0.15 : 0.15;
-        ctx.strokeStyle = 'rgba(34,211,238,' + wifiAlpha + ')';
-        ctx.lineWidth = 1.2;
-        for (let i = 1; i <= 3; i++) {
-            ctx.beginPath(); ctx.arc(shaftX, eboxY - 10 * s, i * 4 * s, -Math.PI * 0.75, -Math.PI * 0.25); ctx.stroke();
+        /* WHY: E-BOX, antenna, and wifi arcs are too small and cluttered on mobile.
+           Only render on desktop where they add detail without confusion. */
+        if (W >= 500) {
+            /* E-BOX module at top — tech-looking box */
+            const eboxW = shaftW + 10 * s;
+            const eboxH = 14 * s;
+            const eboxY = shaftTop - eboxH - 8;
+            /* Box body */
+            const eboxGrad = ctx.createLinearGradient(0, eboxY, 0, eboxY + eboxH);
+            eboxGrad.addColorStop(0, 'rgba(20,100,160,0.7)');
+            eboxGrad.addColorStop(1, 'rgba(15,80,140,0.8)');
+            ctx.fillStyle = eboxGrad;
+            ctx.beginPath();
+            ctx.roundRect(shaftX - eboxW/2, eboxY, eboxW, eboxH, 3 * s);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(34,211,238,0.4)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            /* Status LED — pulses when active */
+            const ledActive = G.elevator.state === 'moving' || G.elevator.rider;
+            ctx.fillStyle = ledActive ? 'rgba(34,211,238,0.9)' : 'rgba(34,211,238,0.3)';
+            ctx.beginPath(); ctx.arc(shaftX - eboxW/2 + 5 * s, eboxY + eboxH/2, 2 * s, 0, Math.PI * 2); ctx.fill();
+            if (ledActive) {
+                ctx.fillStyle = 'rgba(34,211,238,0.15)';
+                ctx.beginPath(); ctx.arc(shaftX - eboxW/2 + 5 * s, eboxY + eboxH/2, 5 * s, 0, Math.PI * 2); ctx.fill();
+            }
+            /* Label */
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.font = 'bold ' + Math.max(6, 7 * s) + 'px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('E-BOX', shaftX + 2 * s, eboxY + eboxH/2);
+            /* Antenna */
+            ctx.strokeStyle = 'rgba(34,211,238,0.5)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(shaftX, eboxY); ctx.lineTo(shaftX, eboxY - 10 * s); ctx.stroke();
+            /* WiFi arcs — animated pulse when active */
+            const wifiAlpha = ledActive ? 0.3 + Math.sin(G.time * 4) * 0.15 : 0.15;
+            ctx.strokeStyle = 'rgba(34,211,238,' + wifiAlpha + ')';
+            ctx.lineWidth = 1.2;
+            for (let i = 1; i <= 3; i++) {
+                ctx.beginPath(); ctx.arc(shaftX, eboxY - 10 * s, i * 4 * s, -Math.PI * 0.75, -Math.PI * 0.25); ctx.stroke();
+            }
         }
 
         /* ── Cabin ── */
