@@ -101,6 +101,78 @@
         /* WHY: Hide native scrollbar on video carousel — arrows + dots handle navigation */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Slot machine spinner — cycles facility types like a jackpot reel */
+        /* ── Slot Machine Reel ── */
+        .slot-machine {
+            display: inline-block;
+            position: relative;
+            /* WHY: translateY pulls the box up so its vertical center aligns with the text cap-height center */
+            vertical-align: middle;
+            transform: translateY(-0.08em);
+            /* WHY: Golden metallic frame — darker gold outer edge, bright gold inner band */
+            background: linear-gradient(180deg, #8B6914, #b8860b, #daa520, #f0d060, #daa520, #b8860b, #8B6914);
+            border-radius: 12px;
+            padding: 4px 5px;
+            box-shadow:
+                0 6px 20px rgba(160, 120, 20, 0.45),
+                0 2px 4px rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255, 240, 180, 0.8),
+                inset 0 -1px 0 rgba(100, 70, 10, 0.6);
+            margin: 0 0.1em;
+            overflow: hidden;
+            /* WHY: Thin gold outline sharpens the frame edge */
+            border: 1.5px solid #8B6914;
+        }
+        .slot-window {
+            /* WHY: MUST be block — overflow:hidden is ignored on inline <span> elements */
+            display: block;
+            position: relative;
+            overflow: hidden;
+            /* WHY: Dark background like a real slot machine display panel */
+            background: linear-gradient(180deg, #0a0e1a, #0f172a 20%, #1a2035 50%, #0f172a 80%, #0a0e1a);
+            border-radius: 7px;
+            box-shadow: inset 0 3px 10px rgba(0,0,0,0.5), inset 0 -3px 10px rgba(0,0,0,0.4);
+            padding: 0 12px 2px;
+        }
+        /* WHY: Top/bottom dark fade simulates cylindrical reel curvature */
+        .slot-window::before,
+        .slot-window::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0;
+            height: 30%;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .slot-window::before {
+            top: 0;
+            background: linear-gradient(180deg, rgba(10,14,26,0.7), transparent);
+            border-radius: 7px 7px 0 0;
+        }
+        .slot-window::after {
+            bottom: 0;
+            background: linear-gradient(0deg, rgba(10,14,26,0.7), transparent);
+            border-radius: 0 0 7px 7px;
+        }
+        .slot-reel {
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+        .slot-item {
+            display: block;
+            white-space: nowrap;
+            line-height: 1;
+            /* WHY: Bottom padding gives room for descenders (y, g, p) so they don't clip */
+            padding: 0.08em 0 0.25em;
+            text-align: center;
+            /* WHY: Blue-cyan-purple gradient matches the subtitle "Scale your fleet in real time." */
+            background: linear-gradient(135deg, #3b82f6, #06b6d4, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
     </style>
 </head>
 <body class="bg-[#f7f8fc] text-[#0f172a]">
@@ -485,8 +557,8 @@
                 <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
                 INTERACTIVE DEMO
             </div>
-            <h2 class="text-4xl md:text-6xl lg:text-7xl font-black headline leading-[0.95] mb-8">
-                Run a robot-powered hotel.<br><span class="bg-gradient-to-r from-blue-600 via-cyan-600 to-purple-600 bg-clip-text text-transparent">Scale your fleet in real time.</span>
+            <h2 class="text-3xl md:text-5xl lg:text-6xl font-black headline leading-[1.6] mb-8">
+                Run a robot-powered <span class="slot-machine" id="slotMachine"><span class="slot-window"><span class="slot-reel" id="slotReel"><span class="slot-item">hotel</span><span class="slot-item">hospital</span><span class="slot-item">care facility</span><span class="slot-item">grocery store</span><span class="slot-item">restaurant</span><span class="slot-item">movie theater</span><span class="slot-item">apartment</span></span></span></span><br><span class="bg-gradient-to-r from-blue-600 via-cyan-600 to-purple-600 bg-clip-text text-transparent">Scale your fleet in real time.</span>
             </h2>
             <p class="text-xl md:text-2xl text-gray-500 max-w-3xl mx-auto font-light leading-relaxed">
                 Deploy robots. Fulfill guest requests. Manage the elevator. See how autonomous fleet coordination works across every floor.
@@ -536,22 +608,22 @@
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div class="p-3 rounded-xl bg-white border border-gray-200 text-center shadow-sm">
                                     <img src="/assets/robots/keenon-w3.svg" class="w-12 h-12 mx-auto mb-2" alt="W3">
-                                    <div class="text-xs font-bold text-blue-600">W3 Butler</div>
+                                    <div class="text-xs font-bold text-blue-600">ButlerBot</div>
                                     <div class="text-[10px] text-gray-400">Restaurant to room</div>
                                 </div>
                                 <div class="p-3 rounded-xl bg-white border border-gray-200 text-center shadow-sm">
                                     <img src="/assets/robots/keenon-m2.svg" class="w-12 h-12 mx-auto mb-2" alt="M2">
-                                    <div class="text-xs font-bold text-emerald-600">M2 Floor Clean</div>
+                                    <div class="text-xs font-bold text-emerald-600">SqueakyClean</div>
                                     <div class="text-[10px] text-gray-400">Tile & hardwood</div>
                                 </div>
                                 <div class="p-3 rounded-xl bg-white border border-gray-200 text-center shadow-sm">
                                     <img src="/assets/robots/keenon-n5.svg" class="w-12 h-12 mx-auto mb-2" alt="N5">
-                                    <div class="text-xs font-bold text-emerald-600">N5 Carpet Clean</div>
+                                    <div class="text-xs font-bold text-emerald-600">VacuumBot</div>
                                     <div class="text-[10px] text-gray-400">Carpet hallways</div>
                                 </div>
                                 <div class="p-3 rounded-xl bg-white border border-gray-200 text-center shadow-sm">
                                     <img src="/assets/robots/keenon-s100.svg" class="w-12 h-12 mx-auto mb-2" alt="S100">
-                                    <div class="text-xs font-bold text-purple-600">S100 Luggage</div>
+                                    <div class="text-xs font-bold text-purple-600">HeavyLoad</div>
                                     <div class="text-[10px] text-gray-400">Lobby to any floor</div>
                                 </div>
                             </div>
@@ -574,7 +646,8 @@
             <div class="relative">
                 <!-- Full-width canvas -->
                 <div class="relative rounded-3xl overflow-hidden border border-gray-200/80 shadow-xl" style="background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 50%, #f8fafc 100%);">
-                    <canvas id="hospitalSimCanvas" class="w-full block" style="height: 800px;"></canvas>
+                    <!-- WHY: Shorter canvas on mobile so floating controls don't overlap the floor plan -->
+                    <canvas id="hospitalSimCanvas" class="w-full block h-[500px] md:h-[650px] lg:h-[800px]"></canvas>
 
                     <!-- Satisfaction bar — thin strip at very top -->
                     <div class="absolute top-0 left-0 right-0 z-10 h-1.5 bg-gray-200/60 rounded-t-3xl overflow-hidden">
@@ -592,38 +665,39 @@
                     </div>
 
                     <!-- Top-right: Stats + Speed controls -->
-                    <div class="absolute top-4 right-4 z-20 flex flex-wrap items-center gap-2">
-                        <div class="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/90 backdrop-blur-lg border border-gray-200 shadow-sm">
+                    <!-- WHY: On mobile, stack stats and speed vertically and use smaller text to avoid overlap -->
+                    <div class="absolute top-4 right-4 z-20 flex flex-col lg:flex-row items-end lg:items-center gap-2">
+                        <div class="flex items-center gap-2 lg:gap-3 px-2 lg:px-4 py-1.5 lg:py-2 rounded-xl bg-white/90 backdrop-blur-lg border border-gray-200 shadow-sm">
                             <div class="text-center">
-                                <div class="text-[8px] text-gray-400 uppercase font-bold">Budget</div>
-                                <div class="text-sm font-black text-green-600" id="budgetDisplay">$500</div>
+                                <div class="text-[7px] lg:text-[8px] text-gray-400 uppercase font-bold">Budget</div>
+                                <div class="text-xs lg:text-sm font-black text-green-600" id="budgetDisplay">$500</div>
                             </div>
-                            <div class="w-px h-6 bg-gray-200"></div>
+                            <div class="w-px h-5 lg:h-6 bg-gray-200"></div>
                             <div class="text-center">
-                                <div class="text-[8px] text-gray-400 uppercase font-bold">Revenue</div>
-                                <div class="text-sm font-black text-blue-600" id="revenueDisplay">$0</div>
+                                <div class="text-[7px] lg:text-[8px] text-gray-400 uppercase font-bold">Revenue</div>
+                                <div class="text-xs lg:text-sm font-black text-blue-600" id="revenueDisplay">$0</div>
                             </div>
-                            <div class="w-px h-6 bg-gray-200"></div>
+                            <div class="w-px h-5 lg:h-6 bg-gray-200"></div>
                             <div class="text-center">
-                                <div class="text-[8px] text-gray-400 uppercase font-bold">Satisfaction</div>
-                                <div class="text-sm font-black text-emerald-600" id="satValue">100%</div>
+                                <div class="text-[7px] lg:text-[8px] text-gray-400 uppercase font-bold">Satisfaction</div>
+                                <div class="text-xs lg:text-sm font-black text-emerald-600" id="satValue">100%</div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-white/90 backdrop-blur-lg border border-gray-200 shadow-sm">
-                            <button id="pauseBtn" class="px-2.5 py-1 rounded-lg bg-gray-100 border border-gray-200 text-[10px] font-bold text-gray-600 hover:bg-gray-200 transition">⏸</button>
+                        <div class="flex items-center gap-1 px-2 py-1 lg:py-1.5 rounded-xl bg-white/90 backdrop-blur-lg border border-gray-200 shadow-sm">
+                            <button id="pauseBtn" class="px-2 lg:px-2.5 py-1 rounded-lg bg-gray-100 border border-gray-200 text-[10px] font-bold text-gray-600 hover:bg-gray-200 transition">⏸</button>
                             <button data-speed="1" id="speed1" class="px-2 py-1 rounded-lg bg-blue-100 border border-blue-200 text-[10px] font-bold text-blue-600">1x</button>
                             <button data-speed="2" id="speed2" class="px-2 py-1 rounded-lg bg-gray-50 border border-gray-200 text-[10px] font-bold text-gray-400 hover:bg-gray-100 transition">2x</button>
                             <button data-speed="3" id="speed3" class="px-2 py-1 rounded-lg bg-gray-50 border border-gray-200 text-[10px] font-bold text-gray-400 hover:bg-gray-100 transition">3x</button>
                         </div>
                     </div>
 
-                    <!-- Right floating: Deploy Robots -->
-                    <div class="absolute top-20 right-4 z-20 w-[195px] rounded-xl bg-white/92 backdrop-blur-lg border border-gray-200 shadow-lg p-3 space-y-1.5">
+                    <!-- Right floating: Deploy Robots — hidden on mobile, shown below canvas instead -->
+                    <div class="hidden lg:block absolute top-20 right-4 z-20 w-[195px] rounded-xl bg-white/92 backdrop-blur-lg border border-gray-200 shadow-lg p-3 space-y-1.5">
                         <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Deploy Robots</div>
                         <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50/80 border border-gray-100 hover:border-blue-300 transition-colors cursor-pointer" id="fleetRoster">
                             <img src="/assets/robots/keenon-w3.svg" class="w-7 h-7 flex-shrink-0" alt="W3">
                             <div class="flex-1 min-w-0">
-                                <div class="text-[10px] font-bold text-gray-700">W3 Butler</div>
+                                <div class="text-[10px] font-bold text-gray-700">ButlerBot</div>
                                 <div class="text-[8px] text-gray-400">$100</div>
                             </div>
                             <span class="text-[10px] font-black text-blue-500 w-3 text-center" id="w3Count">0</span>
@@ -632,7 +706,7 @@
                         <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50/80 border border-gray-100 hover:border-emerald-300 transition-colors">
                             <img src="/assets/robots/keenon-m2.svg" class="w-7 h-7 flex-shrink-0" alt="M2">
                             <div class="flex-1 min-w-0">
-                                <div class="text-[10px] font-bold text-gray-700">M2 Floor</div>
+                                <div class="text-[10px] font-bold text-gray-700">SqueakyClean</div>
                                 <div class="text-[8px] text-gray-400">$80</div>
                             </div>
                             <span class="text-[10px] font-black text-emerald-500 w-3 text-center" id="m2Count">0</span>
@@ -641,7 +715,7 @@
                         <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50/80 border border-gray-100 hover:border-emerald-300 transition-colors">
                             <img src="/assets/robots/keenon-n5.svg" class="w-7 h-7 flex-shrink-0" alt="N5">
                             <div class="flex-1 min-w-0">
-                                <div class="text-[10px] font-bold text-gray-700">N5 Carpet</div>
+                                <div class="text-[10px] font-bold text-gray-700">VacuumBot</div>
                                 <div class="text-[8px] text-gray-400">$80</div>
                             </div>
                             <span class="text-[10px] font-black text-emerald-500 w-3 text-center" id="n5Count">0</span>
@@ -650,7 +724,7 @@
                         <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50/80 border border-gray-100 hover:border-purple-300 transition-colors">
                             <img src="/assets/robots/keenon-s100.svg" class="w-7 h-7 flex-shrink-0" alt="S100">
                             <div class="flex-1 min-w-0">
-                                <div class="text-[10px] font-bold text-gray-700">S100 Luggage</div>
+                                <div class="text-[10px] font-bold text-gray-700">HeavyLoad</div>
                                 <div class="text-[8px] text-gray-400">$120</div>
                             </div>
                             <span class="text-[10px] font-black text-purple-500 w-3 text-center" id="s100Count">0</span>
@@ -658,8 +732,8 @@
                         </div>
                     </div>
 
-                    <!-- Right-side: Task queue (below deploy robots panel) -->
-                    <div class="absolute right-4 z-20 w-[195px]" style="top: 340px;">
+                    <!-- Right-side: Task queue — hidden on mobile, shown below canvas instead -->
+                    <div class="hidden lg:block absolute right-4 z-20 w-[195px]" style="top: 340px;">
                         <div class="rounded-xl bg-white/92 backdrop-blur-lg border border-gray-200 shadow-lg p-3">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Guest Requests</span>
@@ -681,8 +755,8 @@
                         </div>
                     </div>
 
-                    <!-- Bottom-right: Elevator + branding -->
-                    <div class="absolute bottom-4 right-4 z-20 flex items-end gap-2">
+                    <!-- Bottom-right: Elevator + branding — hidden on mobile to avoid overlap -->
+                    <div class="hidden md:flex absolute bottom-4 right-4 z-20 items-end gap-2">
                         <div class="rounded-xl bg-white/92 backdrop-blur-lg border border-gray-200 shadow-lg p-3">
                             <div class="flex items-center justify-between mb-1">
                                 <span class="text-[8px] font-bold text-gray-400 uppercase">RFID Elevator</span>
@@ -696,6 +770,60 @@
                         </div>
                         <div class="px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur-lg border border-gray-200 shadow-sm text-gray-600 text-[11px] font-bold">
                             Accelerate Robotics
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WHY: Mobile-only controls below canvas — avoids overlap that plagues floating panels on small screens -->
+                <div class="lg:hidden mt-3 grid grid-cols-2 gap-3">
+                    <!-- Deploy Robots (mobile) -->
+                    <div class="rounded-xl bg-white border border-gray-200 shadow-lg p-3 space-y-1.5">
+                        <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Deploy Robots</div>
+                        <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50/80 border border-gray-100">
+                            <img src="/assets/robots/keenon-w3.svg" class="w-6 h-6 flex-shrink-0" alt="W3">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[10px] font-bold text-gray-700">ButlerBot</div>
+                                <div class="text-[8px] text-gray-400">$100</div>
+                            </div>
+                            <span class="text-[10px] font-black text-blue-500 w-3 text-center" id="w3CountMobile">0</span>
+                            <button data-add-robot="w3" class="w-5 h-5 rounded-md bg-blue-100 text-blue-600 font-bold text-xs hover:bg-blue-200 transition flex items-center justify-center">+</button>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50/80 border border-gray-100">
+                            <img src="/assets/robots/keenon-m2.svg" class="w-6 h-6 flex-shrink-0" alt="M2">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[10px] font-bold text-gray-700">SqueakyClean</div>
+                                <div class="text-[8px] text-gray-400">$80</div>
+                            </div>
+                            <span class="text-[10px] font-black text-emerald-500 w-3 text-center" id="m2CountMobile">0</span>
+                            <button data-add-robot="m2" class="w-5 h-5 rounded-md bg-emerald-100 text-emerald-600 font-bold text-xs hover:bg-emerald-200 transition flex items-center justify-center">+</button>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50/80 border border-gray-100">
+                            <img src="/assets/robots/keenon-n5.svg" class="w-6 h-6 flex-shrink-0" alt="N5">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[10px] font-bold text-gray-700">VacuumBot</div>
+                                <div class="text-[8px] text-gray-400">$80</div>
+                            </div>
+                            <span class="text-[10px] font-black text-emerald-500 w-3 text-center" id="n5CountMobile">0</span>
+                            <button data-add-robot="n5" class="w-5 h-5 rounded-md bg-emerald-100 text-emerald-600 font-bold text-xs hover:bg-emerald-200 transition flex items-center justify-center">+</button>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50/80 border border-gray-100">
+                            <img src="/assets/robots/keenon-s100.svg" class="w-6 h-6 flex-shrink-0" alt="S100">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[10px] font-bold text-gray-700">HeavyLoad</div>
+                                <div class="text-[8px] text-gray-400">$120</div>
+                            </div>
+                            <span class="text-[10px] font-black text-purple-500 w-3 text-center" id="s100CountMobile">0</span>
+                            <button data-add-robot="s100" class="w-5 h-5 rounded-md bg-purple-100 text-purple-600 font-bold text-xs hover:bg-purple-200 transition flex items-center justify-center">+</button>
+                        </div>
+                    </div>
+                    <!-- Guest Requests (mobile) -->
+                    <div class="rounded-xl bg-white border border-gray-200 shadow-lg p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Guest Requests</span>
+                            <span class="text-[9px] text-amber-600 font-bold" id="pendingCountMobile">0 pending</span>
+                        </div>
+                        <div id="taskQueueListMobile" class="space-y-1 max-h-[250px] overflow-y-auto text-xs">
+                            <div class="text-center text-gray-400 py-2 text-[10px]">Deploy robots to start</div>
                         </div>
                     </div>
                 </div>
@@ -827,10 +955,10 @@
 
     /* ── Robot type definitions ── */
     const ROBOT_TYPES = {
-        w3:   { icon: 'w3',   color: '#22d3ee', glow: 'rgba(34,211,238,',  cost: 100, reward: 15, workTime: 3,  name: 'W3 Butler' },
-        m2:   { icon: 'm2',   color: '#34d399', glow: 'rgba(52,211,153,',  cost: 80,  reward: 10, workTime: 4,  name: 'M2 Floor' },
-        n5:   { icon: 'n5',   color: '#34d399', glow: 'rgba(52,211,153,',  cost: 80,  reward: 10, workTime: 4,  name: 'N5 Carpet' },
-        s100: { icon: 's100', color: '#a78bfa', glow: 'rgba(167,139,250,', cost: 120, reward: 20, workTime: 4,  name: 'S100 Luggage' },
+        w3:   { icon: 'w3',   color: '#22d3ee', glow: 'rgba(34,211,238,',  cost: 100, reward: 15, workTime: 3,  name: 'ButlerBot' },
+        m2:   { icon: 'm2',   color: '#34d399', glow: 'rgba(52,211,153,',  cost: 80,  reward: 10, workTime: 4,  name: 'SqueakyClean' },
+        n5:   { icon: 'n5',   color: '#34d399', glow: 'rgba(52,211,153,',  cost: 80,  reward: 10, workTime: 4,  name: 'VacuumBot' },
+        s100: { icon: 's100', color: '#a78bfa', glow: 'rgba(167,139,250,', cost: 120, reward: 20, workTime: 4,  name: 'HeavyLoad' },
     };
 
     /* ── Task event types ── */
@@ -1782,10 +1910,13 @@
         satBar.className = 'h-full transition-all duration-500 ' +
             (G.satisfaction > 60 ? 'bg-green-400' : G.satisfaction > 30 ? 'bg-amber-400' : 'bg-red-400');
 
-        /* Fleet counts */
+        /* Fleet counts — update both desktop and mobile panels */
         ['w3','m2','n5','s100'].forEach(t => {
+            const cnt = G.robots.filter(r => r.type === t).length;
             const el = document.getElementById(t + 'Count');
-            if (el) el.textContent = G.robots.filter(r => r.type === t).length;
+            if (el) el.textContent = cnt;
+            const elM = document.getElementById(t + 'CountMobile');
+            if (elM) elM.textContent = cnt;
         });
 
         /* Canvas HUD */
@@ -1794,10 +1925,12 @@
         const tc = document.getElementById('simTaskCount');
         if (tc) tc.textContent = G.tasksCompleted;
 
-        /* Pending count */
+        /* Pending count — update both desktop and mobile */
         const pending = G.tasks.filter(t => t.state === 'pending').length;
         const pe = document.getElementById('pendingCount');
         if (pe) pe.textContent = pending + ' pending';
+        const peM = document.getElementById('pendingCountMobile');
+        if (peM) peM.textContent = pending + ' pending';
 
         /* Elevator */
         const ef = document.getElementById('elevFloor');
@@ -1817,7 +1950,7 @@
                 /* WHY: Show the robot icon + name next to each task so users instantly
                    know which robot type to deploy for each request */
                 const botIcons = { w3: '/assets/robots/keenon-w3.svg', m2: '/assets/robots/keenon-m2.svg', n5: '/assets/robots/keenon-n5.svg', s100: '/assets/robots/keenon-s100.svg' };
-                const botNames = { w3: 'W3 Butler', m2: 'M2 Floor', n5: 'N5 Carpet', s100: 'S100 Luggage' };
+                const botNames = { w3: 'ButlerBot', m2: 'SqueakyClean', n5: 'VacuumBot', s100: 'HeavyLoad' };
                 const typeEmoji = { delivery: '🍽', clean_hard: '🧹', clean_carpet: '🧹', transport: '🧳' };
                 const typeColors = { delivery: 'text-blue-600', clean_hard: 'text-emerald-600', clean_carpet: 'text-emerald-600', transport: 'text-purple-600' };
                 tql.innerHTML = active.slice(0, 8).map(t => {
@@ -1835,9 +1968,14 @@
                         '<div class="font-mono font-bold ' + timeColor + ' text-right">' + timeLeft + 's</div></div>';
                 }).join('');
             }
+            /* WHY: Mirror task queue to mobile panel so both stay in sync */
+            const tqlM = document.getElementById('taskQueueListMobile');
+            if (tqlM) tqlM.innerHTML = tql.innerHTML;
         }
 
         /* ── Fleet Dashboard ── */
+        /* WHY: Build cards once, then update only changing values in-place.
+           Rebuilding innerHTML every frame causes <img> tags to reload and flash on mobile. */
         const dashGrid = document.getElementById('dashRobotGrid');
         if (dashGrid && G.robots.length > 0) {
             const stateColors = {
@@ -1855,48 +1993,85 @@
             const robotColors = { w3: 'from-blue-500 to-cyan-500', m2: 'from-emerald-500 to-teal-500', n5: 'from-emerald-500 to-green-500', s100: 'from-purple-500 to-indigo-500' };
             const robotAccent = { w3: 'text-blue-600', m2: 'text-emerald-600', n5: 'text-emerald-600', s100: 'text-purple-600' };
 
-            dashGrid.innerHTML = G.robots.map((bot, i) => {
+            /* Create cards only when robot count changes */
+            if (dashGrid.children.length !== G.robots.length) {
+                dashGrid.innerHTML = G.robots.map((bot) => {
+                    return '<div class="rounded-xl border border-gray-200 bg-white p-3 transition-shadow" data-dash-id="' + bot.id + '">' +
+                        '<div class="flex items-center gap-2 mb-3">' +
+                            '<div class="w-9 h-9 rounded-lg bg-gradient-to-br ' + robotColors[bot.type] + ' p-1.5 flex-shrink-0">' +
+                                '<img src="/assets/robots/keenon-' + bot.type + '.svg" class="w-full h-full" alt="">' +
+                            '</div>' +
+                            '<div class="min-w-0">' +
+                                '<div class="text-xs font-bold text-gray-800 truncate">' + ROBOT_TYPES[bot.type].name + '</div>' +
+                                '<div class="text-[9px] text-gray-400 dash-floor"></div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="flex items-center gap-1.5 px-2 py-1 rounded-md mb-3 dash-status-badge">' +
+                            '<span class="w-1.5 h-1.5 rounded-full dash-status-dot"></span>' +
+                            '<span class="text-[10px] font-bold dash-status-label"></span>' +
+                        '</div>' +
+                        '<div class="h-1 rounded-full bg-gray-100 mb-3 overflow-hidden dash-progress-wrap" style="display:none"><div class="h-full rounded-full bg-emerald-400 transition-all dash-progress-bar" style="width:0%"></div></div>' +
+                        '<div class="grid grid-cols-3 gap-1 text-center">' +
+                            '<div><div class="text-sm font-black ' + robotAccent[bot.type] + ' dash-tasks">0</div><div class="text-[8px] text-gray-400 uppercase font-medium">Tasks</div></div>' +
+                            '<div><div class="text-sm font-black text-green-600 dash-rev">$0</div><div class="text-[8px] text-gray-400 uppercase font-medium">Rev</div></div>' +
+                            '<div><div class="text-sm font-black dash-util">0%</div><div class="text-[8px] text-gray-400 uppercase font-medium">Util</div></div>' +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+            }
+
+            /* Update each card in-place — no innerHTML rebuild, no image flicker */
+            G.robots.forEach((bot, i) => {
+                const card = dashGrid.children[i];
+                if (!card) return;
                 const s = bot.stats;
                 const total = s.idleTime + s.busyTime;
                 const util = total > 0 ? Math.round((s.busyTime / total) * 100) : 0;
                 const sc = stateColors[bot.state] || stateColors.idle;
                 const floorLabel = bot.floor === 0 ? 'Lobby' : 'Floor ' + (bot.floor + 1);
-                const workProgress = bot.state === 'working' ? Math.round((bot.stateTimer / ROBOT_TYPES[bot.type].workTime) * 100) : -1;
 
-                return '<div class="rounded-xl border border-gray-200 bg-white p-3 hover:shadow-md transition-shadow">' +
-                    '<div class="flex items-center gap-2 mb-3">' +
-                        '<div class="w-9 h-9 rounded-lg bg-gradient-to-br ' + robotColors[bot.type] + ' p-1.5 flex-shrink-0">' +
-                            '<img src="/assets/robots/keenon-' + bot.type + '.svg" class="w-full h-full" alt="">' +
-                        '</div>' +
-                        '<div class="min-w-0">' +
-                            '<div class="text-xs font-bold text-gray-800 truncate">' + ROBOT_TYPES[bot.type].name + '</div>' +
-                            '<div class="text-[9px] text-gray-400">' + floorLabel + '</div>' +
-                        '</div>' +
-                    '</div>' +
-                    /* Status badge */
-                    '<div class="flex items-center gap-1.5 px-2 py-1 rounded-md ' + sc.bg + ' mb-3">' +
-                        '<span class="w-1.5 h-1.5 rounded-full ' + sc.dot + ' ' + (bot.state === 'working' ? 'animate-pulse' : '') + '"></span>' +
-                        '<span class="text-[10px] font-bold ' + sc.text + '">' + sc.label + '</span>' +
-                    '</div>' +
-                    /* Work progress bar (only when working) */
-                    (workProgress >= 0 ? '<div class="h-1 rounded-full bg-gray-100 mb-3 overflow-hidden"><div class="h-full rounded-full bg-emerald-400 transition-all" style="width:' + workProgress + '%"></div></div>' : '') +
-                    /* Stats grid */
-                    '<div class="grid grid-cols-3 gap-1 text-center">' +
-                        '<div>' +
-                            '<div class="text-sm font-black ' + robotAccent[bot.type] + '">' + s.tasksCompleted + '</div>' +
-                            '<div class="text-[8px] text-gray-400 uppercase font-medium">Tasks</div>' +
-                        '</div>' +
-                        '<div>' +
-                            '<div class="text-sm font-black text-green-600">$' + s.revenue + '</div>' +
-                            '<div class="text-[8px] text-gray-400 uppercase font-medium">Rev</div>' +
-                        '</div>' +
-                        '<div>' +
-                            '<div class="text-sm font-black ' + (util > 70 ? 'text-emerald-600' : util > 40 ? 'text-amber-500' : 'text-gray-400') + '">' + util + '%</div>' +
-                            '<div class="text-[8px] text-gray-400 uppercase font-medium">Util</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>';
-            }).join('');
+                /* Floor label */
+                const floorEl = card.querySelector('.dash-floor');
+                if (floorEl && floorEl.textContent !== floorLabel) floorEl.textContent = floorLabel;
+
+                /* Status badge — update classes and text */
+                const badge = card.querySelector('.dash-status-badge');
+                if (badge) {
+                    badge.className = 'flex items-center gap-1.5 px-2 py-1 rounded-md mb-3 dash-status-badge ' + sc.bg;
+                }
+                const dot = card.querySelector('.dash-status-dot');
+                if (dot) {
+                    dot.className = 'w-1.5 h-1.5 rounded-full dash-status-dot ' + sc.dot + (bot.state === 'working' ? ' animate-pulse' : '');
+                }
+                const label = card.querySelector('.dash-status-label');
+                if (label) {
+                    label.className = 'text-[10px] font-bold dash-status-label ' + sc.text;
+                    if (label.textContent !== sc.label) label.textContent = sc.label;
+                }
+
+                /* Work progress bar */
+                const progWrap = card.querySelector('.dash-progress-wrap');
+                if (progWrap) {
+                    if (bot.state === 'working') {
+                        progWrap.style.display = '';
+                        const bar = progWrap.querySelector('.dash-progress-bar');
+                        if (bar) bar.style.width = Math.round((bot.stateTimer / ROBOT_TYPES[bot.type].workTime) * 100) + '%';
+                    } else {
+                        progWrap.style.display = 'none';
+                    }
+                }
+
+                /* Stats */
+                const tasksEl = card.querySelector('.dash-tasks');
+                if (tasksEl) tasksEl.textContent = s.tasksCompleted;
+                const revEl = card.querySelector('.dash-rev');
+                if (revEl) revEl.textContent = '$' + s.revenue;
+                const utilEl = card.querySelector('.dash-util');
+                if (utilEl) {
+                    utilEl.textContent = util + '%';
+                    utilEl.className = 'text-sm font-black dash-util ' + (util > 70 ? 'text-emerald-600' : util > 40 ? 'text-amber-500' : 'text-gray-400');
+                }
+            });
 
             /* Dashboard summary stats */
             const df = document.getElementById('dashFleetSize');
@@ -2847,7 +3022,7 @@ function renderEcosystem() {
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <span class="${c.phaseBg} text-xs font-bold px-3 py-1.5 rounded-full">${c.phase}</span>
-                        ${c.fda ? '<span class="fda-pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5L12 1z" fill="white" opacity="0.25" stroke="white" stroke-width="0.5"/><text x="12" y="15" text-anchor="middle" font-size="8" font-weight="900" fill="white" font-family="Arial,sans-serif">FDA</text></svg>FDA REQUIRED</span>' : '<span class="text-xs text-gray-400 font-medium bg-gray-50 px-3 py-1.5 rounded-full">No FDA</span>'}
+                        ${c.fda ? '<a href="https://www.fda.gov/medical-devices" target="_blank" rel="noopener noreferrer" class="fda-pill hover:opacity-90 transition-opacity cursor-pointer">FDA REQUIRED</a>' : '<span class="text-xs text-gray-400 font-medium bg-gray-50 px-3 py-1.5 rounded-full">No FDA</span>'}
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
@@ -3176,7 +3351,128 @@ document.addEventListener('DOMContentLoaded', () => {
     initParticles();
     initReveal();
     initCounters();
+    initSlotMachine();
 });
+
+// ====== SLOT MACHINE SPINNER ======
+// WHY: Cycles "hotel / hospital / care facility" to show platform breadth — slot machine metaphor = excitement + versatility
+function initSlotMachine() {
+    const machine = document.getElementById('slotMachine');
+    const reel = document.getElementById('slotReel');
+    if (!machine || !reel) return;
+
+    const slotWindow = machine.querySelector('.slot-window');
+    const words = ['hotel', 'hospital', 'care facility', 'grocery store', 'restaurant', 'movie theater', 'apartment'];
+    /* WHY: 1.5s spin as requested, 4s display time between spins */
+    const SPIN_DURATION = 1500;
+    const DISPLAY_TIME = 4000;
+
+    let currentIdx = 0;
+    let itemH = 0;
+
+    function setup() {
+        /* WHY: Measure ALL words to find the widest one, then lock the window to that width.
+           Prevents the slot machine from resizing on each spin. */
+        reel.innerHTML = '';
+        var maxW = 0;
+        words.forEach(function(w) {
+            var span = document.createElement('span');
+            span.className = 'slot-item';
+            span.textContent = w;
+            reel.appendChild(span);
+            var sw = span.offsetWidth;
+            if (sw > maxW) maxW = sw;
+        });
+
+        /* Lock height to one item, width to the widest word + extra breathing room */
+        var firstItem = reel.querySelector('.slot-item');
+        itemH = firstItem.offsetHeight;
+        slotWindow.style.height = itemH + 'px';
+        /* WHY: Add 8px to measured width — accounts for gradient clip rounding and letter spacing */
+        slotWindow.style.width = (maxW + 8) + 'px';
+
+        /* Reset to show only the first word */
+        reel.innerHTML = '';
+        var s = document.createElement('span');
+        s.className = 'slot-item';
+        s.textContent = words[0];
+        reel.appendChild(s);
+    }
+
+    function spin() {
+        /* Pick a different word */
+        let nextIdx;
+        do { nextIdx = Math.floor(Math.random() * words.length); } while (nextIdx === currentIdx);
+
+        /* WHY: Build a long strip of words to scroll through — 3 full cycles + landing word
+           gives the visual of a fast spin decelerating to a stop */
+        const spinWords = [];
+        for (let cycle = 0; cycle < 3; cycle++) {
+            for (let i = 0; i < words.length; i++) {
+                spinWords.push(words[i]);
+            }
+        }
+        spinWords.push(words[nextIdx]); /* landing word at the end */
+
+        /* Build DOM — current word at position 0, then all spin-through words */
+        reel.innerHTML = '';
+        var frag = document.createDocumentFragment();
+        /* Start with current word visible */
+        var s = document.createElement('span');
+        s.className = 'slot-item';
+        s.textContent = words[currentIdx];
+        frag.appendChild(s);
+        /* Add all spin-through items */
+        for (var i = 0; i < spinWords.length; i++) {
+            s = document.createElement('span');
+            s.className = 'slot-item';
+            s.textContent = spinWords[i];
+            frag.appendChild(s);
+        }
+        reel.appendChild(frag);
+
+        /* Reset to top */
+        reel.style.transition = 'none';
+        reel.style.transform = 'translateY(0)';
+        /* WHY: Force browser to apply the reset before starting animation */
+        void reel.offsetHeight;
+
+        /* Animate — scroll down to the last item (landing word) */
+        var scrollDist = spinWords.length * itemH;
+        reel.style.transition = 'transform ' + (SPIN_DURATION / 1000) + 's cubic-bezier(0.2, 0.8, 0.3, 1)';
+        reel.style.transform = 'translateY(-' + scrollDist + 'px)';
+
+        /* After spin completes: clean up to show only the landed word */
+        setTimeout(function() {
+            reel.style.transition = 'none';
+            reel.innerHTML = '';
+            var final = document.createElement('span');
+            final.className = 'slot-item';
+            final.textContent = words[nextIdx];
+            reel.appendChild(final);
+            reel.style.transform = 'translateY(0)';
+            currentIdx = nextIdx;
+        }, SPIN_DURATION + 50);
+
+        /* Schedule next spin after display time */
+        setTimeout(spin, SPIN_DURATION + DISPLAY_TIME);
+    }
+
+    /* WHY: Wait for fonts to load so height measurement is accurate */
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function() {
+            setup();
+            /* 4s initial display before first spin */
+            setTimeout(spin, DISPLAY_TIME);
+        });
+    } else {
+        /* Fallback for browsers without font loading API */
+        setTimeout(function() {
+            setup();
+            setTimeout(spin, DISPLAY_TIME);
+        }, 500);
+    }
+}
 </script>
 <script src="/js/inquiry-form.js"></script>
 <script>
