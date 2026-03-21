@@ -1078,15 +1078,23 @@
     }
 
     function drawFloorLabel(f) {
-        /* WHY: On mobile (W < 500) the label at fx=-8 falls off the left edge,
-           so we use fx=2 with left-align to keep it fully visible */
-        const mobile = W < 500;
-        const p = isoProject(mobile ? 2 : -8, 85, f);
+        /* WHY: On mobile the isometric projection pushes labels off the left
+           edge of the canvas. Instead of projecting, we pin labels at a fixed
+           x=10 and derive the y from the floor's projected position. */
+        const p = isoProject(0, 50, f);
         ctx.fillStyle = f === 0 ? 'rgba(30,100,160,0.9)' : 'rgba(60,80,110,0.75)';
-        ctx.font = 'bold ' + Math.max(10, 11 * p.s) + 'px Inter, system-ui, sans-serif';
-        ctx.textAlign = mobile ? 'left' : 'right';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(floorNames[f], mobile ? Math.max(6, p.x) : p.x - 6, p.y);
+        if (W < 500) {
+            ctx.font = 'bold 13px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(floorNames[f], 10, p.y);
+        } else {
+            const pD = isoProject(-8, 85, f);
+            ctx.font = 'bold ' + Math.max(10, 11 * pD.s) + 'px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(floorNames[f], pD.x - 6, pD.y);
+        }
     }
 
     /* ── Task indicators on rooms ── */
