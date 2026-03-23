@@ -2796,10 +2796,72 @@
                     </div>
                 </div>
 
-                <a href="elevator-integration.html" class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/20 hover:shadow-xl hover:shadow-cyan-500/30 font-bold text-lg group">
+                <button onclick="document.getElementById('deeper-modal').classList.remove('hidden')" class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/20 hover:shadow-xl hover:shadow-cyan-500/30 font-bold text-lg group cursor-pointer">
                     Go deeper
                     <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
-                </a>
+                </button>
+
+                <!-- Password Gate Modal -->
+                <div id="deeper-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                    <div class="relative bg-[#0d1b2a] border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl shadow-cyan-500/10">
+                        <!-- Close button -->
+                        <button onclick="document.getElementById('deeper-modal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+
+                        <div class="text-center mb-6">
+                            <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-cyan-500/10 border border-cyan-500/20 mb-4">
+                                <svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">This section goes a lot deeper.</h3>
+                            <p class="text-gray-400 text-sm">You'll need a password to access the full elevator integration details. Text Eric to get it.</p>
+                        </div>
+
+                        <!-- Text Eric button -->
+                        <a href="sms:925-787-5517&body=Eric%2C%20please%20send%20me%20the%20password%20so%20we%20can%20go%20deeper%20on%20elevator%20integration." class="flex items-center justify-center gap-2 w-full px-6 py-3 mb-5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all font-semibold text-white text-sm shadow-lg shadow-cyan-500/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
+                            Text Eric for the password
+                        </a>
+
+                        <!-- Divider -->
+                        <div class="flex items-center gap-3 mb-5">
+                            <div class="flex-1 h-px bg-white/10"></div>
+                            <span class="text-xs text-gray-500 uppercase tracking-wider">Enter password</span>
+                            <div class="flex-1 h-px bg-white/10"></div>
+                        </div>
+
+                        <!-- Password input -->
+                        <div class="flex gap-2">
+                            <input id="deeper-password" type="text" placeholder="Password" autocomplete="off"
+                                class="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 text-sm"
+                                onkeydown="if(event.key==='Enter') checkDeeperPassword()">
+                            <button onclick="checkDeeperPassword()" class="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white font-semibold text-sm transition-all">
+                                Enter
+                            </button>
+                        </div>
+
+                        <!-- Error message -->
+                        <p id="deeper-error" class="hidden text-red-400 text-xs mt-2 text-center">Incorrect password. Text Eric to get the password.</p>
+                    </div>
+                </div>
+
+                <script>
+                function checkDeeperPassword() {
+                    var input = document.getElementById('deeper-password').value.trim().toUpperCase();
+                    if (input === 'RACE') {
+                        window.location.href = 'elevator-integration.html';
+                    } else {
+                        document.getElementById('deeper-error').classList.remove('hidden');
+                        document.getElementById('deeper-password').value = '';
+                        document.getElementById('deeper-password').focus();
+                    }
+                }
+
+                // Close modal on backdrop click
+                document.getElementById('deeper-modal').addEventListener('click', function(e) {
+                    if (e.target === this) this.classList.add('hidden');
+                });
+                </script>
             </div>
 
             <!-- Right: Detailed elevator shaft cross-section -->
