@@ -4,9 +4,12 @@ Vendor robot specs and software. Today the fleet is Keenon. As the platform grow
 
 | File | What it covers |
 |---|---|
-| [`keenon-c30.md`](keenon-c30.md) | C30 cleaning robot — vacuuming, dust push, floor care |
+| [`keenon-c30.md`](keenon-c30.md) | C30 cleaning robot — carpet vacuum, dust push, guest-floor workhorse |
+| [`keenon-c40.md`](keenon-c40.md) | C40 four-in-one hard-floor cleaner — sweep + vacuum + scrub + mop |
 | [`keenon-w3.md`](keenon-w3.md) | W3 (ButlerBot) — enclosed delivery, hotel/office |
 | [`keenon-t8.md`](keenon-t8.md) | T8 (Keenbot/Dinnerbot) — open-tray delivery |
+| [`keenon-s100.md`](keenon-s100.md) | S100 open service cart — light payload (luggage, small bins) |
+| [`keenon-s300.md`](keenon-s300.md) | S300 heavy service cart — bulk linens, food, supplies |
 | [`fleet-software.md`](fleet-software.md) | Keenon mobile app, PEANUT on-robot, DynaSky Cloud, no public API |
 
 ## Why Keenon first
