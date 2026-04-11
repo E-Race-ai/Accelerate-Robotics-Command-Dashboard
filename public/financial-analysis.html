@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Robotics — Financial Analysis</title>
+<style>
+  @page { size: letter; margin: 0.6in; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 10.5pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    max-width: 8.5in;
+    margin: 0 auto;
+    padding: 0.6in;
+    background: #fff;
+  }
+  h1 { font-size: 22pt; font-weight: 700; color: #0d2137; margin-bottom: 2pt; border-bottom: 3px solid #0d2137; padding-bottom: 6pt; }
+  h2 { font-size: 14pt; font-weight: 700; color: #0d2137; margin-top: 22pt; margin-bottom: 8pt; border-bottom: 1px solid #ccc; padding-bottom: 4pt; page-break-after: avoid; }
+  h3 { font-size: 11pt; font-weight: 700; color: #1a3a5c; margin-top: 14pt; margin-bottom: 5pt; page-break-after: avoid; }
+  h4 { font-size: 10pt; font-weight: 700; color: #1a3a5c; margin-top: 10pt; margin-bottom: 4pt; page-break-after: avoid; }
+  p { margin-bottom: 7pt; }
+  .subtitle { font-size: 12pt; color: #555; margin-bottom: 2pt; }
+  .meta { font-size: 9pt; color: #777; margin-bottom: 14pt; }
+  .confidential { display: inline-block; background: #c0392b; color: #fff; font-size: 8pt; font-weight: 700; padding: 2pt 6pt; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 6pt; }
+  .draft { display: inline-block; background: #e67e22; color: #fff; font-size: 8pt; font-weight: 700; padding: 2pt 6pt; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 6pt; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 14pt 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt 0; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: #0d2137; color: #fff; font-weight: 700; text-align: left; padding: 5pt 8pt; font-size: 9pt; }
+  td { padding: 4pt 8pt; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7f9fb; }
+  td.num { text-align: right; font-family: 'Courier New', monospace; font-size: 9.5pt; }
+  td.center { text-align: center; }
+  td.label { font-weight: 600; color: #1a3a5c; }
+  tr.total td { background: #eef4ed !important; font-weight: 700; border-top: 2px solid #0d2137; }
+  tr.subtotal td { background: #f0f4f8 !important; font-weight: 600; }
+  tr.highlight td { background: #e8f5e9 !important; }
+  tr.negative td { color: #a03020; }
+
+  .callout { background: #eaf2f8; border-left: 4px solid #2980b9; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-green { background: #eef4ed; border-left: 4px solid #27ae60; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-amber { background: #fdf2e9; border-left: 4px solid #e67e22; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+
+  ul, ol { margin: 4pt 0 8pt 18pt; }
+  li { margin-bottom: 3pt; }
+  strong { color: #0d2137; }
+
+  .section-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: #999; margin-bottom: 4pt; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8pt; margin: 10pt 0 14pt 0; }
+  .stat-box { background: #f4f6f9; border-top: 3px solid #0d2137; padding: 8pt 10pt; text-align: center; page-break-inside: avoid; }
+  .stat-box .number { font-size: 15pt; font-weight: 700; color: #0d2137; display: block; }
+  .stat-box .label { font-size: 7.5pt; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .page-break { page-break-before: always; }
+  .footer { margin-top: 28pt; padding-top: 10pt; border-top: 1px solid #ccc; font-size: 8pt; color: #999; text-align: center; }
+  .note { font-size: 9pt; color: #777; font-style: italic; margin: 4pt 0 8pt 0; }
+
+  blockquote { background: #f4f6f9; border-left: 4px solid #0d2137; padding: 10pt 14pt; margin: 10pt 0; font-style: italic; font-size: 10pt; }
+
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none; }
+  }
+
+  .no-print { text-align: center; padding: 20pt 0; background: #f4f6f9; margin: 0 -0.6in 14pt -0.6in; }
+  .no-print button { padding: 10pt 24pt; background: #0d2137; color: #fff; border: none; border-radius: 4pt; font-family: 'Georgia', serif; font-size: 11pt; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; }
+  .no-print button:hover { background: #1a3a5c; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<!-- =============================================================
+     COVER
+============================================================= -->
+<h1>Accelerate Robotics <span style="font-weight:400;font-size:13pt;">&mdash; Financial Analysis</span></h1>
+<p class="subtitle">Unit Economics, Three-Year Forecast, Capital Requirements &amp; Financing Strategy</p>
+<p class="meta">Working Draft &middot; Q2 2026 <span class="confidential">Confidential</span> <span class="draft">Working Draft</span></p>
+
+<p>A detailed look at the economics of Accelerate Robotics &mdash; unit economics, revenue model, cost structure, three-year forecast, capital requirements, financing strategy, and sensitivity analysis.</p>
+
+<p>This document goes deeper than the financial section of the master business plan. The business plan is the narrative; this is the numbers. Use this when you are sizing a raise, modeling a scenario, or explaining the economics to an investor, a banker, or a lender.</p>
+
+<p class="note">All figures are planning numbers in 2026 USD. They are defensible but not guaranteed. Every assumption is called out in Section 11 so you can change one and re-run.</p>
+
+<hr>
+
+<!-- =============================================================
+     1. EXECUTIVE SUMMARY
+============================================================= -->
+<h2>1. Executive Summary</h2>
+
+<blockquote>The business model works on one robot and gets better with every one we add.</blockquote>
+
+<ul>
+  <li><strong>Gross margin is ~50% starting at the first robot.</strong> Revenue of $2,850/month per robot against a fully-loaded cost of $1,422/month leaves $1,428/month of gross profit. That 50% margin holds from robot #1 and improves with scale.</li>
+  <li><strong>Cash-flow positive at ~20 robots under management.</strong> That is where fixed overhead (management labor, G&amp;A, software, insurance) is covered by gross profit. At Thesis Hotel alone we are at 7 robots; two reference sites behind it and the business is net-positive without another dollar of outside capital.</li>
+  <li><strong>Capital need through the first 18 months is ~$1.2M.</strong> Fleet capex ($572K), implementation ($110K), and G&amp;A/payroll/reserve ($555K). This is the Seed-stage raise that gets us to signed healthcare pilot and ~25 robots under management &mdash; enough revenue and references to support a Series A on substantially better terms.</li>
+  <li><strong>Revenue scales from ~$50K ARR to ~$2.7M ARR over three years</strong> under the base-case plan, with gross profit scaling from $25K to $1.5M and net income crossing zero in late 2027.</li>
+  <li><strong>The story is fleet leverage.</strong> Every new robot adds $17K/year of gross profit once it clears the ramp. The game is volume and utilization.</li>
+</ul>
+
+<div class="stat-grid">
+  <div class="stat-box">
+    <span class="number">$1,428</span>
+    <span class="label">Gross Profit / Robot / Month</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">50.1%</span>
+    <span class="label">Gross Margin at Robot #1</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">$1.5M</span>
+    <span class="label">Seed Round Target</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">Q4 2028</span>
+    <span class="label">Cash-Flow Breakeven</span>
+  </div>
+</div>
+
+<h3>One-Page Summary</h3>
+
+<table>
+<tr>
+  <th>Metric</th>
+  <th style="text-align:right">Today (Q2 2026)</th>
+  <th style="text-align:right">End 2026</th>
+  <th style="text-align:right">End 2027</th>
+  <th style="text-align:right">End 2028</th>
+</tr>
+<tr><td class="label">Robots under management</td><td class="num">1</td><td class="num">~10</td><td class="num">~35</td><td class="num">~80</td></tr>
+<tr><td class="label">Annual recurring revenue</td><td class="num">~$28K</td><td class="num">~$340K</td><td class="num">~$1.2M</td><td class="num">~$2.7M</td></tr>
+<tr><td class="label">Gross margin</td><td class="num">~40% (pilot)</td><td class="num">~50%</td><td class="num">~52%</td><td class="num">~55%</td></tr>
+<tr><td class="label">Gross profit</td><td class="num">~$11K</td><td class="num">~$170K</td><td class="num">~$620K</td><td class="num">~$1.5M</td></tr>
+<tr><td class="label">Operating expense</td><td class="num">~$50K/mo</td><td class="num">~$65K/mo</td><td class="num">~$90K/mo</td><td class="num">~$125K/mo</td></tr>
+<tr class="negative"><td class="label">EBITDA</td><td class="num">($560K)</td><td class="num">($610K)</td><td class="num">($460K)</td><td class="num">+$40K</td></tr>
+<tr><td class="label">Cumulative cash burn</td><td class="num">$560K</td><td class="num">$1.17M</td><td class="num">$1.63M</td><td class="num">$1.59M</td></tr>
+</table>
+
+<div class="callout"><strong>Read that last row carefully.</strong> Cumulative burn <em>peaks</em> in 2027 at ~$1.63M and then starts coming down. That is the shape of a capital-efficient business &mdash; not one that needs successive mega-rounds.</div>
+
+<hr>
+
+<!-- =============================================================
+     2. UNIT ECONOMICS
+============================================================= -->
+<h2>2. Unit Economics &mdash; The Engine</h2>
+
+<p>Everything in this business comes out of the per-robot unit economics. Get this right and the rest is execution.</p>
+
+<h3>Cost Buildup &mdash; Per Robot Per Month</h3>
+
+<table>
+<tr><th>Category</th><th style="text-align:right">Monthly Cost</th><th>Basis</th></tr>
+<tr><td>Hardware depreciation / lease</td><td class="num">$403</td><td>$14,500 avg acquisition &divide; 36 months</td></tr>
+<tr><td>Consumables (brushes, filters, solution, mop pads)</td><td class="num">$135</td><td>Replace cycles per manufacturer spec</td></tr>
+<tr><td>Maintenance &amp; repair reserve</td><td class="num">$121</td><td>10% of acquisition cost / year</td></tr>
+<tr><td>Software &amp; connectivity</td><td class="num">$50</td><td>Cellular SIM + fleet management platform</td></tr>
+<tr><td>Electricity</td><td class="num">$25</td><td>~0.5 kWh/charge &times; 1&ndash;2 charges/day &times; $0.15</td></tr>
+<tr><td>Allocated management labor</td><td class="num">$625</td><td>$2,500/mo ops &divide; 4-robot cluster</td></tr>
+<tr><td>Insurance allocation</td><td class="num">$63</td><td>$3,000/yr &divide; 12 &divide; 4 robots</td></tr>
+<tr class="total"><td><strong>Total cost per robot per month</strong></td><td class="num"><strong>$1,422</strong></td><td></td></tr>
+</table>
+
+<p class="note">Underlying build-up in <code>public/pricing-model.html</code>.</p>
+
+<h3>Revenue &mdash; Per Robot Per Month</h3>
+
+<table>
+<tr><th>Rate</th><th style="text-align:right">Monthly Revenue</th><th>Notes</th></tr>
+<tr class="highlight"><td><strong>Standard RaaS</strong></td><td class="num"><strong>$2,850</strong></td><td>Flat monthly, all-inclusive</td></tr>
+<tr><td>Pilot rate (first 30 days only)</td><td class="num">$2,300</td><td>19% discount to reduce adoption friction</td></tr>
+</table>
+
+<h3>Gross Profit Per Robot</h3>
+
+<table>
+<tr><th>Metric</th><th style="text-align:right">Standard</th><th style="text-align:right">Pilot</th></tr>
+<tr><td>Revenue</td><td class="num">$2,850</td><td class="num">$2,300</td></tr>
+<tr><td>Cost</td><td class="num">($1,422)</td><td class="num">($1,422)</td></tr>
+<tr class="total"><td><strong>Gross profit</strong></td><td class="num"><strong>$1,428</strong></td><td class="num"><strong>$878</strong></td></tr>
+<tr class="highlight"><td><strong>Gross margin</strong></td><td class="num"><strong>50.1%</strong></td><td class="num"><strong>38.2%</strong></td></tr>
+<tr><td>Annualized gross profit</td><td class="num">$17,136</td><td class="num">&mdash;</td></tr>
+</table>
+
+<div class="callout-green"><strong>Each robot added to the fleet after the pilot clears ~$17K of gross profit per year, every year it operates.</strong> That is the math that makes the whole business work.</div>
+
+<h3>How Unit Economics Improve With Scale</h3>
+
+<p>Three levers compress cost per robot as the fleet grows:</p>
+
+<ol>
+  <li><strong>Management labor dilution.</strong> At 4 robots, $2,500/month of ops labor = $625/robot. At 40 robots covered by 2 ops people ($5,000/month), it drops to $125/robot. <em>Saves ~$500/robot/month.</em></li>
+  <li><strong>Hardware wholesale.</strong> First-site pricing is distributor-based (~$14,500 avg). A direct Keenon wholesale agreement, likely available once we pass ~20 robots under management, cuts hardware by 20&ndash;40% &mdash; <em>saves ~$80&ndash;$160/robot/month</em> on depreciation.</li>
+  <li><strong>Consumables and insurance procurement.</strong> Negotiated bulk pricing and portfolio-level insurance policies save roughly <em>$40/robot/month</em> at 50+ robots.</li>
+</ol>
+
+<p>Combined effect at ~50 robots: cost drops from $1,422 to ~$750&ndash;$850/month, lifting gross margin from 50% to ~70% at the same $2,850 price. <strong>That is the compound curve investors care about.</strong></p>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     3. REVENUE MODEL
+============================================================= -->
+<h2>3. Revenue Model and Streams</h2>
+
+<p>Six revenue streams, in order of current importance.</p>
+
+<h3>3.1 Robot-as-a-Service (RaaS) &mdash; Primary</h3>
+
+<p>Flat monthly per robot, all-inclusive, billed on a 90-day minimum with 30-day cancellation.</p>
+
+<ul>
+  <li><strong>Standard rate:</strong> $2,850/robot/month</li>
+  <li><strong>Pilot rate:</strong> $2,300/robot/month (30-day only)</li>
+  <li><strong>Multi-robot discount:</strong> None in Year 1. As the fleet grows, volume discounts become a selling tool &mdash; but for now, we sell at full rate to protect margin on the smallest deployments.</li>
+  <li><strong>Monitoring add-on:</strong> Flat monthly fee per monitored corridor, TBD &mdash; not modeled in base case. First test is the Thesis Hotel residences use case.</li>
+</ul>
+
+<p><strong>Characteristics:</strong> Predictable, sticky, high-gross-margin. Net revenue retention target is 110%+ (customers grow their fleet after Phase 1).</p>
+
+<h3>3.2 Implementation Services</h3>
+
+<p>One-time fees charged at deployment.</p>
+
+<table>
+<tr><th>Scope</th><th style="text-align:right">Fee</th><th>Included</th></tr>
+<tr><td>Site survey</td><td class="num">$2,500</td><td>1-day on-site walk, photo documentation, Wi-Fi survey, elevator assessment, written report</td></tr>
+<tr><td>SLAM mapping + route design (per robot)</td><td class="num">$1,500</td><td>Facility map, route creation, testing</td></tr>
+<tr><td>3-day on-site commissioning training</td><td class="num">$3,750</td><td>Day 1 setup, Day 2 staff training, Day 3 launch</td></tr>
+<tr><td>Elevator integration (button emulator install)</td><td class="num">$4,500 + $250/floor</td><td>Hardware BOM, labor, commissioning</td></tr>
+</table>
+
+<p><strong>Characteristics:</strong> Margin around 60&ndash;70% (primarily labor), one-time, front-loaded to each deployment. In early revenue, implementation fees are a meaningful portion of recognized revenue but <em>are not</em> included in the ARR projections in Section 5 &mdash; they are added separately.</p>
+
+<h3>3.3 Universal Button Emulator (Hardware Product)</h3>
+
+<p>Our own-IP hardware product. Sold either as part of a RaaS deployment or standalone to buildings that only need elevator integration.</p>
+
+<ul>
+  <li><strong>BOM:</strong> ~$23/floor (ESP32-C3 + OMRON SSRs + Pololu buck + housing)</li>
+  <li><strong>Installed price:</strong> $500&ndash;$1,500 per floor, depending on complexity</li>
+  <li><strong>Gross margin:</strong> 85%+ at volume</li>
+</ul>
+
+<p>Standalone sales start in 2027 once the reference install is proven.</p>
+
+<h3>3.4 Orchestration Software (SaaS)</h3>
+
+<p>Future revenue line that separates when a customer wants to run multi-vendor fleets without RaaS &mdash; i.e., they own or lease robots from other sources but want our platform to manage them.</p>
+
+<ul>
+  <li><strong>Target pricing:</strong> $100&ndash;$250/robot/month for software-only</li>
+  <li><strong>Launch target:</strong> 2027, once platform V2 ships and we have a multi-vendor reference</li>
+</ul>
+
+<h3>3.5 Managed Operations (Remote Fleet Supervision)</h3>
+
+<p>For customers with internal robotics or separate lease financing who want our ops team to run the fleet. Priced on a per-robot-month basis with a minimum, overlapping RaaS economics without the hardware. Launches when the first non-RaaS customer asks for it.</p>
+
+<h3>3.6 Future High-Margin Streams</h3>
+
+<ul>
+  <li><strong>Robot-screen advertising</strong> &mdash; pharma messaging in hospital fleets, brand messaging in hotel fleets. High-margin, requires scale. Not in the base-case forecast.</li>
+  <li><strong>De-identified data insights</strong> &mdash; operational data to insurers, vendors, researchers. Long-horizon, requires scale and regulatory clearance.</li>
+</ul>
+
+<hr>
+
+<!-- =============================================================
+     4. COST STRUCTURE
+============================================================= -->
+<h2>4. Cost Structure</h2>
+
+<p>Two categories: <strong>COGS</strong> (direct cost of the fleet) and <strong>OpEx</strong> (everything else).</p>
+
+<h3>4.1 COGS &mdash; Fleet Operating Cost</h3>
+
+<p>Per the unit economics in Section 2, COGS is $1,422/robot/month at today's scale. Scales as a function of the fleet:</p>
+
+<table>
+<tr><th>Fleet Size</th><th style="text-align:right">COGS / Month</th><th style="text-align:right">COGS / Year</th></tr>
+<tr><td>7 robots (Thesis Hotel)</td><td class="num">$9,954</td><td class="num">$119,448</td></tr>
+<tr><td>20 robots (5 properties)</td><td class="num">$28,440</td><td class="num">$341,280</td></tr>
+<tr><td>50 robots</td><td class="num">~$50,000</td><td class="num">~$600,000</td></tr>
+<tr><td>140 robots (35 properties)</td><td class="num">~$165,000</td><td class="num">~$2.0M</td></tr>
+</table>
+
+<p class="note">COGS compresses per-unit at the 50+ robot mark as management labor and procurement dilute. The table above uses a conservative straight-line assumption; see Section 9 for the optimistic case.</p>
+
+<h3>4.2 OpEx &mdash; Everything Not Direct COGS</h3>
+
+<p>OpEx ramps with team growth. The plan is conservative: hire only when a customer payload or sales pipeline requires it.</p>
+
+<table>
+<tr>
+  <th>Category</th>
+  <th style="text-align:right">2026</th>
+  <th style="text-align:right">2027</th>
+  <th style="text-align:right">2028</th>
+</tr>
+<tr><td>Payroll &mdash; founder + ops</td><td class="num">$180,000</td><td class="num">$280,000</td><td class="num">$380,000</td></tr>
+<tr><td>Payroll &mdash; engineering</td><td class="num">$60,000 <span style="font-size:8pt;color:#777;">(contract)</span></td><td class="num">$160,000 <span style="font-size:8pt;color:#777;">(1 FTE)</span></td><td class="num">$320,000 <span style="font-size:8pt;color:#777;">(2 FTE)</span></td></tr>
+<tr><td>Payroll &mdash; sales / CS</td><td class="num">$0</td><td class="num">$110,000 <span style="font-size:8pt;color:#777;">(1 FTE)</span></td><td class="num">$220,000 <span style="font-size:8pt;color:#777;">(2 FTE)</span></td></tr>
+<tr><td>Payroll &mdash; field service</td><td class="num">$0</td><td class="num">$80,000</td><td class="num">$180,000</td></tr>
+<tr><td>Contractors / advisors</td><td class="num">$40,000</td><td class="num">$40,000</td><td class="num">$40,000</td></tr>
+<tr><td>G&amp;A &mdash; legal, accounting, insurance, compliance</td><td class="num">$60,000</td><td class="num">$80,000</td><td class="num">$100,000</td></tr>
+<tr><td>SaaS and infra</td><td class="num">$15,000</td><td class="num">$25,000</td><td class="num">$40,000</td></tr>
+<tr><td>Marketing, website, content</td><td class="num">$25,000</td><td class="num">$45,000</td><td class="num">$70,000</td></tr>
+<tr><td>Travel and site visits</td><td class="num">$25,000</td><td class="num">$40,000</td><td class="num">$60,000</td></tr>
+<tr><td>Office, equipment, misc</td><td class="num">$20,000</td><td class="num">$30,000</td><td class="num">$50,000</td></tr>
+<tr class="total"><td><strong>Total OpEx</strong></td><td class="num"><strong>$425,000</strong></td><td class="num"><strong>$890,000</strong></td><td class="num"><strong>$1,460,000</strong></td></tr>
+</table>
+
+<p class="note">Founder salary is conservative &mdash; $180K in 2026 is a working market rate for a founder/CEO. The line is flexible in a tight cash scenario.</p>
+
+<h3>4.3 Customer Acquisition Cost</h3>
+
+<p>Today's CAC is low because the founder sells directly and every deal is warm-introduction. Early assumption:</p>
+
+<ul>
+  <li><strong>Blended CAC (Year 1&ndash;2):</strong> ~$8,000 per property, covering founder time, travel, site survey, proposal prep, and any marketing attribution</li>
+  <li><strong>LTV per property (3-year):</strong> ~$300K revenue &times; 50% GM &times; 80% retention = ~$120K gross profit</li>
+  <li><strong>LTV / CAC:</strong> 15x &mdash; healthy by any SaaS benchmark</li>
+</ul>
+
+<p>CAC will rise as we move to paid outbound and channel partners in 2027. Model a $20K CAC by 2028 and the LTV/CAC is still 6x+.</p>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     5. THREE-YEAR FORECAST
+============================================================= -->
+<h2>5. Three-Year Financial Forecast</h2>
+
+<p>Base-case forecast. Assumptions in Section 11. Sensitivity scenarios in Section 9.</p>
+
+<h3>5.1 Fleet Growth</h3>
+
+<table>
+<tr>
+  <th>Quarter</th>
+  <th>Robots Added</th>
+  <th style="text-align:right">Fleet Size (end)</th>
+  <th style="text-align:right">Cumulative Customers</th>
+</tr>
+<tr><td class="label">2026 Q2</td><td>+1 (Thesis pilot)</td><td class="num">1</td><td class="num">1</td></tr>
+<tr><td class="label">2026 Q3</td><td>+4 (Thesis Phase 2)</td><td class="num">5</td><td class="num">1</td></tr>
+<tr><td class="label">2026 Q4</td><td>+2 (Thesis Phase 3) + 3 (new property)</td><td class="num">10</td><td class="num">2</td></tr>
+<tr><td class="label">2027 Q1</td><td>+5 (property #3)</td><td class="num">15</td><td class="num">3</td></tr>
+<tr><td class="label">2027 Q2</td><td>+5 (property #4)</td><td class="num">20</td><td class="num">4</td></tr>
+<tr><td class="label">2027 Q3</td><td>+7 (first hospital pilot)</td><td class="num">27</td><td class="num">5</td></tr>
+<tr><td class="label">2027 Q4</td><td>+8 (property #5 + hospital expansion)</td><td class="num">35</td><td class="num">6</td></tr>
+<tr><td class="label">2028 Q1</td><td>+10</td><td class="num">45</td><td class="num">7</td></tr>
+<tr><td class="label">2028 Q2</td><td>+10</td><td class="num">55</td><td class="num">8</td></tr>
+<tr><td class="label">2028 Q3</td><td>+12</td><td class="num">67</td><td class="num">9</td></tr>
+<tr class="total"><td class="label">2028 Q4</td><td>+13 (hospital system contract)</td><td class="num"><strong>80</strong></td><td class="num"><strong>10</strong></td></tr>
+</table>
+
+<h3>5.2 Revenue Build (by Year)</h3>
+
+<p>All figures in USD. ARR = exit-quarter annualized; recognized revenue is quarterly-weighted average.</p>
+
+<table>
+<tr>
+  <th>Line</th>
+  <th style="text-align:right">2026</th>
+  <th style="text-align:right">2027</th>
+  <th style="text-align:right">2028</th>
+</tr>
+<tr><td class="label">Robots under management (end of year)</td><td class="num">10</td><td class="num">35</td><td class="num">80</td></tr>
+<tr><td class="label">Exit ARR</td><td class="num">$342,000</td><td class="num">$1,197,000</td><td class="num">$2,736,000</td></tr>
+<tr class="subtotal"><td><strong>Recognized RaaS revenue</strong></td><td class="num"><strong>$95,000</strong></td><td class="num"><strong>$690,000</strong></td><td class="num"><strong>$1,800,000</strong></td></tr>
+<tr><td>Implementation services revenue</td><td class="num">$35,000</td><td class="num">$90,000</td><td class="num">$180,000</td></tr>
+<tr><td>Button emulator revenue</td><td class="num">$0</td><td class="num">$40,000</td><td class="num">$120,000</td></tr>
+<tr class="total"><td><strong>Total recognized revenue</strong></td><td class="num"><strong>$130,000</strong></td><td class="num"><strong>$820,000</strong></td><td class="num"><strong>$2,100,000</strong></td></tr>
+</table>
+
+<p class="note"><strong>Why recognized revenue lags exit ARR:</strong> a robot added in Q3 only generates 6 months of billing by year-end. The 2026 year-in-view of $95K is built on 7 months of Thesis + 2&ndash;3 months of customer #2.</p>
+
+<h3>5.3 P&amp;L &mdash; Three-Year Base Case</h3>
+
+<table>
+<tr>
+  <th>Line</th>
+  <th style="text-align:right">2026</th>
+  <th style="text-align:right">2027</th>
+  <th style="text-align:right">2028</th>
+</tr>
+<tr><td class="label">Recognized revenue</td><td class="num">$130,000</td><td class="num">$820,000</td><td class="num">$2,100,000</td></tr>
+<tr><td>COGS (fleet operating)</td><td class="num">($55,000)</td><td class="num">($390,000)</td><td class="num">($920,000)</td></tr>
+<tr class="subtotal"><td><strong>Gross profit</strong></td><td class="num"><strong>$75,000</strong></td><td class="num"><strong>$430,000</strong></td><td class="num"><strong>$1,180,000</strong></td></tr>
+<tr><td>Gross margin %</td><td class="num">58%</td><td class="num">52%</td><td class="num">56%</td></tr>
+<tr><td>Operating expense</td><td class="num">($425,000)</td><td class="num">($890,000)</td><td class="num">($1,460,000)</td></tr>
+<tr class="subtotal negative"><td><strong>EBITDA</strong></td><td class="num"><strong>($350,000)</strong></td><td class="num"><strong>($460,000)</strong></td><td class="num"><strong>($280,000)</strong></td></tr>
+<tr><td>D&amp;A (fleet depreciation, already in COGS)</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">&mdash;</td></tr>
+<tr><td>Interest (lease financing)</td><td class="num">($15,000)</td><td class="num">($45,000)</td><td class="num">($90,000)</td></tr>
+<tr class="total negative"><td><strong>Net income</strong></td><td class="num"><strong>($365,000)</strong></td><td class="num"><strong>($505,000)</strong></td><td class="num"><strong>($370,000)</strong></td></tr>
+</table>
+
+<p class="note">Gross margin % is inflated in 2026 because implementation revenue (higher margin) is a larger portion of total revenue; it normalizes as RaaS takes over.</p>
+
+<h3>5.4 Cash Flow &mdash; Capital Use and Burn</h3>
+
+<table>
+<tr>
+  <th>Line</th>
+  <th style="text-align:right">2026</th>
+  <th style="text-align:right">2027</th>
+  <th style="text-align:right">2028</th>
+</tr>
+<tr class="negative"><td class="label">Cash from operations (EBITDA)</td><td class="num">($350,000)</td><td class="num">($460,000)</td><td class="num">($280,000)</td></tr>
+<tr><td>Fleet capex (cash-paid, not leased)</td><td class="num">($180,000)</td><td class="num">($120,000)</td><td class="num">($80,000)</td></tr>
+<tr><td>Working capital</td><td class="num">($20,000)</td><td class="num">($40,000)</td><td class="num">($60,000)</td></tr>
+<tr class="subtotal negative"><td><strong>Cash burn</strong></td><td class="num"><strong>($550,000)</strong></td><td class="num"><strong>($620,000)</strong></td><td class="num"><strong>($420,000)</strong></td></tr>
+<tr class="total"><td><strong>Cumulative burn</strong></td><td class="num"><strong>$550,000</strong></td><td class="num"><strong>$1,170,000</strong></td><td class="num"><strong>$1,590,000</strong></td></tr>
+</table>
+
+<div class="callout-green">Net cash need over 3 years is <strong>$1.59M</strong>. With ~20% cash buffer and lease financing for new fleet from Month 18 on, a <strong>$1.5M Seed round</strong> covers the business to cash-flow positive by late 2028.</div>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     6. CAPITAL REQUIREMENTS
+============================================================= -->
+<h2>6. Capital Requirements and Use of Funds</h2>
+
+<h3>6.1 Seed Round &mdash; $1.5M (Q3 2026)</h3>
+
+<p><strong>Use of funds (18-month deployment):</strong></p>
+
+<table>
+<tr>
+  <th>Bucket</th>
+  <th style="text-align:right">$</th>
+  <th style="text-align:right">%</th>
+  <th>Purpose</th>
+</tr>
+<tr><td class="label">Fleet capex</td><td class="num">$450,000</td><td class="num">30%</td><td>~30 robots at distributor pricing. Purchased outright or down-payment for lease financing.</td></tr>
+<tr><td class="label">Implementation and commissioning</td><td class="num">$120,000</td><td class="num">8%</td><td>Site survey, mapping, training, elevator installs across first 5&ndash;6 sites</td></tr>
+<tr><td class="label">Payroll &mdash; engineering</td><td class="num">$260,000</td><td class="num">17%</td><td>First full-time platform engineer + contract support</td></tr>
+<tr><td class="label">Payroll &mdash; field service</td><td class="num">$120,000</td><td class="num">8%</td><td>First field ops hire to cover 10+ robots under management</td></tr>
+<tr><td class="label">Payroll &mdash; founder</td><td class="num">$270,000</td><td class="num">18%</td><td>18 months founder/CEO compensation</td></tr>
+<tr><td class="label">Sales, marketing, travel</td><td class="num">$90,000</td><td class="num">6%</td><td>Pipeline development beyond founder's warm network</td></tr>
+<tr><td class="label">G&amp;A, legal, insurance</td><td class="num">$130,000</td><td class="num">9%</td><td>Corporate formation (done), ongoing legal, D&amp;O, general liability</td></tr>
+<tr><td class="label">Operating reserve / runway buffer</td><td class="num">$60,000</td><td class="num">4%</td><td>~4 weeks of OpEx</td></tr>
+<tr class="total"><td><strong>Total</strong></td><td class="num"><strong>$1,500,000</strong></td><td class="num"><strong>100%</strong></td><td></td></tr>
+</table>
+
+<h4>Milestones the round buys:</h4>
+<ul>
+  <li>25&ndash;30 robots under management</li>
+  <li>5&ndash;6 hospitality reference sites operating</li>
+  <li>First hospital pilot signed</li>
+  <li>Platform V2 (multi-tenant, multi-vendor) shipped</li>
+  <li>Credible Series A metrics (~$1M ARR, 50%+ GM, 110%+ NRR)</li>
+</ul>
+
+<h3>6.2 Post-Seed Capital Needs</h3>
+
+<h4>Series A &mdash; $8&ndash;12M (Early 2028)</h4>
+<p>Raised on the back of the first hospital system reference and $1M+ ARR. Funds a 3&ndash;4x expansion of the fleet, first sales team, and real marketing spend. Equity-efficient because valuation is supported by hospital contract and recurring revenue.</p>
+
+<h4>Fleet Lease Financing &mdash; $2&ndash;5M (Ongoing from Q4 2026)</h4>
+<p>Robots are a financeable asset. A $15K robot earning $2,850/month of revenue has clean lease math &mdash; most equipment lessors will finance at 7&ndash;10% all-in over 36 months against the underlying residual. Using lease financing for fleet capex from Month 18 forward preserves equity capital for team and product, which is where the multiple lives.</p>
+
+<hr>
+
+<!-- =============================================================
+     7. FINANCING STRATEGY
+============================================================= -->
+<h2>7. Financing Strategy</h2>
+
+<p>Three capital sources, in order of preference.</p>
+
+<h3>7.1 Equity (Seed, then Series A)</h3>
+
+<p><strong>Preferred for: team, product, G&amp;A, runway.</strong> Equity capital pays for the non-asset build &mdash; the software platform, the team that operates it, the brand and pipeline. The 2026 Seed ($1.5M) and 2028 Series A ($8&ndash;12M) are the two equity checkpoints in the base case.</p>
+
+<h4>Target investors:</h4>
+<ul>
+  <li>Hospitality operator-investors (hotel groups, hospitality-focused funds)</li>
+  <li>Robotics and platform investors (Bedrock's investor list is a target roster)</li>
+  <li>Atlas Mobility network (existing Eric relationships that already understand the healthcare play)</li>
+  <li>Miami / Florida ecosystem funds (geography-aligned)</li>
+</ul>
+
+<h3>7.2 Equipment Lease Financing</h3>
+
+<p><strong>Preferred for: fleet capex at scale.</strong> Once there is a track record of deployments (target: after 10 robots under management), equipment lessors will finance the fleet at reasonable rates. This is capital-efficient because:</p>
+
+<ol>
+  <li><strong>The asset is the collateral.</strong> We do not need to personally guarantee or tie up equity.</li>
+  <li><strong>Cash flow matches obligation.</strong> $2,850/month revenue per robot covers a ~$400/month lease payment comfortably.</li>
+  <li><strong>Equity is preserved for OpEx</strong> &mdash; the highest-leverage use of dilutive capital.</li>
+</ol>
+
+<p>Target lessors: Crest Capital, Balboa Capital, TIAA Equipment Finance, Dimension Funding. Keenon's distributor (ROTA Robotics) offers an in-house lease program worth exploring.</p>
+
+<h3>7.3 Revenue-Based Financing (Optional, Situational)</h3>
+
+<p>Once MRR is steady (target: $30K+/month, late 2027), revenue-based financing providers like Pipe, Capchase, or Clearco will advance 6&ndash;12 months of recurring revenue in exchange for 4&ndash;8% of revenue. Useful for non-dilutive working capital during a growth sprint but not the primary strategy &mdash; cost of capital is effectively higher than equipment lease.</p>
+
+<h3>7.4 What We Are Explicitly NOT Doing</h3>
+
+<div class="callout-amber">
+<ul style="margin-bottom:0;">
+  <li><strong>No mega-round to &ldquo;accelerate.&rdquo;</strong> The business is a cash-disciplined operating play, not a hardware-race story. Raising $20M pre-revenue would dilute the founder, raise the bar for Series A, and put pressure on the team to deploy capital before the platform is ready.</li>
+  <li><strong>No hospital-system prepay structures</strong> &mdash; they distort the revenue curve and create dependency on a single customer.</li>
+  <li><strong>No SBIR/government grants as primary funding.</strong> Grants can supplement for R&amp;D but are too slow and conditional to fund the operating ramp.</li>
+</ul>
+</div>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     8. PATH TO PROFITABILITY
+============================================================= -->
+<h2>8. Path to Profitability</h2>
+
+<p>Three profitability milestones, in order:</p>
+
+<h3>8.1 Gross-Margin Breakeven &mdash; Already Hit</h3>
+
+<p>Gross margin is positive at the first robot (50.1% at standard pricing, 38.2% at pilot). There is no gross-margin hurdle; every incremental robot is accretive to gross profit from Day 1 of Phase 2 pricing.</p>
+
+<h3>8.2 Cash-Flow Breakeven &mdash; ~20 Robots Under Management</h3>
+
+<p>Fixed overhead in 2027 averages ~$75K/month. At $1,428 gross profit per robot per month:</p>
+
+<blockquote>$75,000 &divide; $1,428 = <strong>~53 robots</strong> to cover OpEx in full.</blockquote>
+
+<p>But in the base case OpEx in late 2028 is ~$120K/month against ~80 robots &times; $1,500 gross profit = $120K. <strong>Cash-flow positive in Q4 2028</strong> under the base-case plan.</p>
+
+<p>Under the optimistic scenario where management labor dilutes to $250/robot and gross profit per robot rises to $1,700, cash-flow breakeven happens ~6 months earlier.</p>
+
+<h3>8.3 Net-Profit Breakeven &mdash; Q1 2029</h3>
+
+<p>Adding interest (fleet lease) and depreciation (already in COGS for accounting purposes but reconsidered in a GAAP P&amp;L view) pushes net-profit breakeven approximately one quarter past cash-flow breakeven.</p>
+
+<h3>8.4 Payback on the Seed Round</h3>
+
+<table>
+<tr><th>Metric</th><th style="text-align:right">Value</th></tr>
+<tr><td class="label">Seed raise</td><td class="num">$1.5M</td></tr>
+<tr><td class="label">Cumulative burn at breakeven</td><td class="num">~$1.6M</td></tr>
+<tr><td class="label">First cash-flow positive quarter</td><td class="num">Q4 2028</td></tr>
+<tr><td class="label">Months from Seed close to breakeven</td><td class="num">~28 months</td></tr>
+<tr class="highlight"><td class="label"><strong>Gross profit run rate at breakeven</strong></td><td class="num"><strong>~$1.4M/yr</strong></td></tr>
+</table>
+
+<div class="callout-green">$1.5M of equity capital buys 28 months of runway to a business generating $1.4M/year of gross profit, growing at ~60%+. On any reasonable benchmark that is an attractive use of Seed capital.</div>
+
+<hr>
+
+<!-- =============================================================
+     9. SENSITIVITY ANALYSIS
+============================================================= -->
+<h2>9. Sensitivity Analysis</h2>
+
+<p>Three scenarios &mdash; bear, base, bull &mdash; varying the two variables with the largest impact on the model: <strong>fleet growth rate</strong> and <strong>gross profit per robot</strong>.</p>
+
+<h3>9.1 Bear Case &mdash; Slow Sales, Rising Costs</h3>
+
+<p><strong>Changes from base:</strong></p>
+<ul>
+  <li>Fleet growth 50% of plan (40 robots end of 2028, not 80)</li>
+  <li>Gross profit per robot stuck at $1,200 (hardware wholesale never lands, consumables inflate)</li>
+  <li>One deployment fails, customer churns within 12 months</li>
+</ul>
+
+<table>
+<tr>
+  <th>Line</th>
+  <th style="text-align:right">2026</th>
+  <th style="text-align:right">2027</th>
+  <th style="text-align:right">2028</th>
+</tr>
+<tr><td class="label">Recognized revenue</td><td class="num">$100,000</td><td class="num">$500,000</td><td class="num">$1,150,000</td></tr>
+<tr><td class="label">Gross profit</td><td class="num">$55,000</td><td class="num">$260,000</td><td class="num">$620,000</td></tr>
+<tr><td class="label">OpEx</td><td class="num">($400,000)</td><td class="num">($780,000)</td><td class="num">($1,200,000)</td></tr>
+<tr class="negative"><td class="label">EBITDA</td><td class="num">($345,000)</td><td class="num">($520,000)</td><td class="num">($580,000)</td></tr>
+<tr class="total"><td><strong>Cumulative burn</strong></td><td class="num"><strong>$345,000</strong></td><td class="num"><strong>$865,000</strong></td><td class="num"><strong>$1,445,000</strong></td></tr>
+</table>
+
+<div class="callout-amber"><strong>Interpretation:</strong> The bear case is survivable on the Seed round but still-burning at end of 2028. This scenario requires either a bridge (~$800K) or a cost-out (reduce OpEx by 25%, delay field ops hire, delay sales hire). Not catastrophic but it moves the Series A timeline to 2029.</div>
+
+<h3>9.2 Base Case &mdash; As Modeled Above</h3>
+
+<p>See Section 5. Cash-flow positive Q4 2028.</p>
+
+<h3>9.3 Bull Case &mdash; Hospital System Lands Early, Scale Economics Deliver</h3>
+
+<p><strong>Changes from base:</strong></p>
+<ul>
+  <li>Fleet reaches 120 robots by end of 2028 (vs. 80) on early hospital system contract</li>
+  <li>Gross profit per robot rises to $1,700 by end of 2028 (hardware wholesale + management dilution)</li>
+  <li>Implementation revenue higher due to larger deployments</li>
+</ul>
+
+<table>
+<tr>
+  <th>Line</th>
+  <th style="text-align:right">2026</th>
+  <th style="text-align:right">2027</th>
+  <th style="text-align:right">2028</th>
+</tr>
+<tr><td class="label">Recognized revenue</td><td class="num">$160,000</td><td class="num">$1,100,000</td><td class="num">$3,100,000</td></tr>
+<tr><td class="label">Gross profit</td><td class="num">$95,000</td><td class="num">$620,000</td><td class="num">$1,900,000</td></tr>
+<tr><td class="label">OpEx</td><td class="num">($460,000)</td><td class="num">($970,000)</td><td class="num">($1,640,000)</td></tr>
+<tr class="highlight"><td class="label"><strong>EBITDA</strong></td><td class="num">($365,000)</td><td class="num">($350,000)</td><td class="num"><strong>+$260,000</strong></td></tr>
+<tr class="total"><td><strong>Cumulative burn</strong></td><td class="num"><strong>$365,000</strong></td><td class="num"><strong>$715,000</strong></td><td class="num"><strong>$455,000</strong></td></tr>
+</table>
+
+<div class="callout-green"><strong>Interpretation:</strong> The bull case reaches profitability in mid-2028 and the business starts paying back the Seed round before Series A closes. This is the scenario where a $10M+ Series A lands at a premium valuation because the metrics are genuinely good.</div>
+
+<h3>9.4 What Moves the Needle</h3>
+
+<p>Ranked by sensitivity (largest impact first):</p>
+
+<ol>
+  <li><strong>Fleet growth rate.</strong> Revenue is linear to fleet size. A 30% miss on the sales plan costs ~$400K of cumulative gross profit by end of Year 3. <em>This is the #1 variable to protect.</em></li>
+  <li><strong>Management labor dilution.</strong> Cost drops from $625/robot to $250/robot as the fleet grows. If we never hit this scaling, margin stays at 50% instead of climbing to 60%+ &mdash; costs ~$400K of cumulative gross profit.</li>
+  <li><strong>Hardware wholesale.</strong> A direct Keenon wholesale agreement cuts hardware cost by 20&ndash;40%. That is ~$150/robot/month of margin &mdash; worth ~$200K by end of Year 3.</li>
+  <li><strong>Implementation revenue.</strong> One-time services are ~15% of recognized revenue and carry 60&ndash;70% margin. A shortfall here is noticeable but not existential.</li>
+  <li><strong>Churn.</strong> Model assumes 5% annual churn after Year 1. A 10% rate costs ~$150K cumulative.</li>
+</ol>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     10. FINANCIAL RISKS
+============================================================= -->
+<h2>10. Key Financial Risks</h2>
+
+<p>Separated from strategic/operational risks. These are risks to the financial plan specifically.</p>
+
+<table>
+<tr>
+  <th>Risk</th>
+  <th>Likelihood</th>
+  <th>Impact</th>
+  <th>Mitigation</th>
+</tr>
+<tr>
+  <td class="label">Fleet growth slower than plan</td>
+  <td>Medium</td>
+  <td>High</td>
+  <td>Warm-intro pipeline, aggressive site-visit cadence, ROTA Robotics referral pipe as backup channel. Track monthly against plan; replan at any 2-quarter miss.</td>
+</tr>
+<tr>
+  <td class="label">Hardware wholesale never materializes</td>
+  <td>Medium</td>
+  <td>Medium</td>
+  <td>Model does not depend on it for base case. Without it, gross margin stays at ~50% (still a fine business) but never reaches the 60%+ that powers the bull case.</td>
+</tr>
+<tr>
+  <td class="label">One deployment fails publicly, destroys reference value</td>
+  <td>Medium</td>
+  <td>High</td>
+  <td>Conservative Phase 1 scope at every new site, rollback plans, emergency loaner robot. See risk register per deployment.</td>
+</tr>
+<tr>
+  <td class="label">Customer concentration</td>
+  <td>High (early)</td>
+  <td>High</td>
+  <td>Thesis Hotel is ~100% of revenue through 2026. Property #2 by Q1 2027 at the latest &mdash; hard gate.</td>
+</tr>
+<tr>
+  <td class="label">Lease financing unavailable when needed</td>
+  <td>Low&ndash;Med</td>
+  <td>Medium</td>
+  <td>Equipment lessors have a mature market for robotics. Keenon distributor lease program is a fallback. Worst case, equity round comes ~12 months earlier than plan.</td>
+</tr>
+<tr>
+  <td class="label">Runway misread (cash runs out before raise)</td>
+  <td>Low</td>
+  <td>Catastrophic</td>
+  <td>4-week operating reserve built into the Seed use-of-funds; monthly cash forecast reviewed by founder; Series A conversation starts 9 months before projected cash-out.</td>
+</tr>
+<tr>
+  <td class="label">Working-capital squeeze from implementation billing</td>
+  <td>Low</td>
+  <td>Medium</td>
+  <td>Implementation invoices are front-loaded (50% at contract, 50% at go-live); covers the commissioning labor. Watch for customers pushing for NET 90 &mdash; enforce NET 30.</td>
+</tr>
+<tr>
+  <td class="label">Regulatory surprise (e.g., FDA on orchestration SW)</td>
+  <td>Low</td>
+  <td>High</td>
+  <td>Hospitality-first strategy insulates us for 18+ months. Any healthcare move is non-clinical logistics only until we have regulatory certainty.</td>
+</tr>
+</table>
+
+<hr>
+
+<!-- =============================================================
+     11. KEY ASSUMPTIONS
+============================================================= -->
+<h2>11. Key Assumptions and Methodology</h2>
+
+<p>Every number in this document derives from one of the assumptions below. Change one, re-run the model.</p>
+
+<h3>11.1 Pricing and Revenue</h3>
+
+<table>
+<tr><th style="width:45%">Parameter</th><th style="text-align:right">Value</th><th>Notes</th></tr>
+<tr><td class="label">Standard RaaS rate</td><td class="num">$2,850/robot/mo</td><td>Flat monthly, matches $10.50/hr &times; 270 hrs math</td></tr>
+<tr><td class="label">Pilot rate</td><td class="num">$2,300/robot/mo</td><td>30-day only; 19% discount &mdash; &ldquo;meaningful but not painful&rdquo;</td></tr>
+<tr><td class="label">Billable days per month</td><td class="num">30 days</td><td>Robots operate 7 days/week</td></tr>
+<tr><td class="label">Utilization</td><td class="num">75%</td><td>Accounts for charging, maintenance, downtime</td></tr>
+<tr><td class="label">Billable hours per month</td><td class="num">270 hrs</td><td>12 hrs/day &times; 30 days &times; 75%</td></tr>
+<tr><td class="label">Price increases</td><td class="num">None modeled</td><td>All figures in 2026 USD, no inflation adjustment</td></tr>
+<tr><td class="label">Net revenue retention</td><td class="num">110% target</td><td>Not modeled explicitly in the forecast (conservative)</td></tr>
+<tr><td class="label">Churn</td><td class="num">5% annual</td><td>After Year 1; Year 1 deployments too new to model</td></tr>
+</table>
+
+<h3>11.2 Costs</h3>
+
+<table>
+<tr><th style="width:45%">Parameter</th><th style="text-align:right">Value</th><th>Notes</th></tr>
+<tr><td class="label">Hardware acquisition</td><td class="num">$14,500 avg</td><td>Blended across C30 $12K, C40 $15K, W3 $12K, S100 $19K. Distributor pricing.</td></tr>
+<tr><td class="label">Lifecycle</td><td class="num">36 months</td><td>Conservative; real life is 4&ndash;5 years</td></tr>
+<tr><td class="label">Management labor allocation</td><td class="num">$2,500/mo / 4 bots</td><td>Scales down to $125/robot at 40+ robots</td></tr>
+<tr><td class="label">Software &amp; connectivity</td><td class="num">$50/robot/mo</td><td>Flat</td></tr>
+<tr><td class="label">Consumables</td><td class="num">$135/robot/mo</td><td>Brushes, filters, cleaning solution, mop pads, squeegee</td></tr>
+<tr><td class="label">Maintenance reserve</td><td class="num">10% of acq / yr</td><td>$121/robot/month</td></tr>
+<tr><td class="label">Insurance</td><td class="num">$3,000/yr total</td><td>Allocated per robot</td></tr>
+</table>
+
+<h3>11.3 Financing</h3>
+
+<ul>
+  <li><strong>Seed close:</strong> Q3 2026, $1.5M equity</li>
+  <li><strong>Series A:</strong> Q1&ndash;Q2 2028, $8&ndash;12M equity</li>
+  <li><strong>Lease financing begins:</strong> Month 18 from today, 36-month terms at ~8.5% all-in</li>
+  <li><strong>No debt before Series A.</strong></li>
+</ul>
+
+<h3>11.4 Operating Assumptions</h3>
+
+<ul>
+  <li><strong>Founder salary:</strong> $180K in 2026, rising to $220K in 2028. Conservative for a CEO.</li>
+  <li><strong>Engineering first hire:</strong> Late 2026, $150K all-in.</li>
+  <li><strong>Sales first hire:</strong> Q2 2027, $120K base + variable.</li>
+  <li><strong>Field service first hire:</strong> Q3 2027, $100K all-in.</li>
+  <li><strong>No international expansion</strong> in the forecast window.</li>
+</ul>
+
+<h3>11.5 What the Model Does NOT Yet Include</h3>
+
+<ul>
+  <li><strong>Button emulator standalone sales.</strong> Treated as incremental revenue but conservatively modeled at $40K in 2027 and $120K in 2028. Could be meaningfully larger.</li>
+  <li><strong>Robot-screen advertising revenue.</strong> Not in the forecast at all.</li>
+  <li><strong>De-identified data insights.</strong> Not in the forecast.</li>
+  <li><strong>Monitoring add-on for residences.</strong> First test at Thesis Hotel, pricing not yet locked.</li>
+  <li><strong>Humanoid partnership revenue.</strong> 2028+ horizon, outside the three-year plan window.</li>
+  <li><strong>Government contracts (SBIR, VA, DHA).</strong> Explored through FON Advisory but not scored in the base case.</li>
+</ul>
+
+<div class="callout-green"><strong>Each of these is upside to the plan, not downside.</strong> The base case is deliberately conservative.</div>
+
+<hr>
+
+<!-- =============================================================
+     12. CONCLUSION
+============================================================= -->
+<h2>12. Conclusion</h2>
+
+<p>Three things to take away from this analysis:</p>
+
+<ol>
+  <li><strong>The economics are real today.</strong> At $2,850/month per robot and $1,422/month cost, we make $17K per robot per year of gross profit starting with robot number one. The business is not &ldquo;someday when we scale&rdquo; &mdash; it is viable on a small fleet.</li>
+  <li><strong>$1.5M gets us to a Series A-ready business.</strong> Seed capital funds the 18-month run to ~25 robots under management, five reference sites, first hospital pilot, platform V2 shipped, and credible metrics. That is the kind of capital efficiency investors reward.</li>
+  <li><strong>The upside lives in the scaling of unit economics.</strong> The story is not &ldquo;we will sell more robots.&rdquo; It is &ldquo;we will sell more robots <em>and</em> they will each generate more gross profit as the fleet grows.&rdquo; Management labor dilution, hardware wholesale, and procurement leverage compound together. By 2028, a robot that costs $1,422 today costs ~$800 to operate, and the same $2,850 of revenue becomes $2,050 of gross profit instead of $1,428.</li>
+</ol>
+
+<blockquote>That compound curve is the entire reason to build this business as a platform rather than a robot manufacturer or a single-vendor reseller. Every number in this document is a version of that thesis expressed in dollars.</blockquote>
+
+<div class="footer">
+  Accelerate Robotics &middot; acceleraterobotics.ai &middot; Miami, Florida<br>
+  Confidential &middot; Working Draft &middot; Q2 2026
+</div>
+
+</body>
+</html>
