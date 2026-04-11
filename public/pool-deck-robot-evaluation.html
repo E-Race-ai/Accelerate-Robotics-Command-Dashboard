@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Robotics — Pool Deck Cleaning Robot Evaluation</title>
+<style>
+  @page { size: letter; margin: 0.6in; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 10.5pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    max-width: 8.5in;
+    margin: 0 auto;
+    padding: 0.6in;
+    background: #fff;
+  }
+  h1 { font-size: 22pt; font-weight: 700; color: #0d2137; margin-bottom: 2pt; border-bottom: 3px solid #0d2137; padding-bottom: 6pt; }
+  h2 { font-size: 14pt; font-weight: 700; color: #0d2137; margin-top: 22pt; margin-bottom: 8pt; border-bottom: 1px solid #ccc; padding-bottom: 4pt; page-break-after: avoid; }
+  h3 { font-size: 11pt; font-weight: 700; color: #1a3a5c; margin-top: 14pt; margin-bottom: 5pt; page-break-after: avoid; }
+  h4 { font-size: 10pt; font-weight: 700; color: #1a3a5c; margin-top: 10pt; margin-bottom: 4pt; page-break-after: avoid; }
+  p { margin-bottom: 7pt; }
+  .subtitle { font-size: 12pt; color: #555; margin-bottom: 2pt; }
+  .meta { font-size: 9pt; color: #777; margin-bottom: 14pt; }
+  .confidential { display: inline-block; background: #c0392b; color: #fff; font-size: 8pt; font-weight: 700; padding: 2pt 6pt; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 6pt; }
+  .draft { display: inline-block; background: #e67e22; color: #fff; font-size: 8pt; font-weight: 700; padding: 2pt 6pt; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 6pt; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 14pt 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt 0; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: #0d2137; color: #fff; font-weight: 700; text-align: left; padding: 5pt 8pt; font-size: 9pt; }
+  td { padding: 4pt 8pt; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7f9fb; }
+  td.num { text-align: right; font-family: 'Courier New', monospace; font-size: 9.5pt; }
+  td.center { text-align: center; }
+  td.label { font-weight: 600; color: #1a3a5c; }
+  tr.total td { background: #eef4ed !important; font-weight: 700; border-top: 2px solid #0d2137; }
+  tr.highlight td { background: #e8f5e9 !important; }
+  tr.amber td { background: #fef5e7 !important; }
+  tr.reject td { background: #fdeaea !important; color: #7a2020; }
+
+  .callout { background: #eaf2f8; border-left: 4px solid #2980b9; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-green { background: #eef4ed; border-left: 4px solid #27ae60; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-amber { background: #fdf2e9; border-left: 4px solid #e67e22; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-red { background: #fdeaea; border-left: 4px solid #c0392b; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+
+  ul, ol { margin: 4pt 0 8pt 18pt; }
+  li { margin-bottom: 3pt; }
+  strong { color: #0d2137; }
+
+  .section-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: #999; margin-bottom: 4pt; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8pt; margin: 10pt 0 14pt 0; }
+  .stat-box { background: #f4f6f9; border-top: 3px solid #0d2137; padding: 8pt 10pt; text-align: center; page-break-inside: avoid; }
+  .stat-box .number { font-size: 15pt; font-weight: 700; color: #0d2137; display: block; }
+  .stat-box .label { font-size: 7.5pt; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .robot-card {
+    border: 1px solid #d0d7de;
+    border-left: 4px solid #0d2137;
+    border-radius: 4pt;
+    padding: 12pt 14pt;
+    margin: 10pt 0 14pt 0;
+    page-break-inside: avoid;
+    background: #fafbfc;
+  }
+  .robot-card.top { border-left-color: #27ae60; background: #f4faf6; }
+  .robot-card.strong { border-left-color: #2980b9; }
+  .robot-card.weak { border-left-color: #e67e22; }
+  .robot-card.reject { border-left-color: #c0392b; background: #fdf6f6; }
+  .robot-card h3 { margin-top: 0; font-size: 12pt; }
+  .robot-card .tier-badge {
+    display: inline-block;
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 2pt 6pt;
+    border-radius: 3px;
+    color: #fff;
+    vertical-align: middle;
+    margin-left: 6pt;
+  }
+  .tier-badge.top { background: #27ae60; }
+  .tier-badge.strong { background: #2980b9; }
+  .tier-badge.weak { background: #e67e22; }
+  .tier-badge.reject { background: #c0392b; }
+
+  .spec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4pt 14pt;
+    font-size: 9.5pt;
+    margin: 6pt 0 8pt 0;
+  }
+  .spec-grid div { border-bottom: 1px dotted #d0d7de; padding: 2pt 0; }
+  .spec-grid strong { font-weight: 700; color: #0d2137; }
+
+  .pros-cons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10pt;
+    margin: 6pt 0 0 0;
+    font-size: 9.5pt;
+  }
+  .pros-cons .pros, .pros-cons .cons { padding: 6pt 10pt; border-radius: 3pt; }
+  .pros-cons .pros { background: #eef4ed; border-left: 3px solid #27ae60; }
+  .pros-cons .cons { background: #fdeaea; border-left: 3px solid #c0392b; }
+  .pros-cons h4 { margin-top: 0; font-size: 9pt; text-transform: uppercase; letter-spacing: 1px; color: #555; }
+  .pros-cons ul { margin: 4pt 0 0 14pt; }
+
+  .page-break { page-break-before: always; }
+  .footer { margin-top: 28pt; padding-top: 10pt; border-top: 1px solid #ccc; font-size: 8pt; color: #999; text-align: center; }
+  .note { font-size: 9pt; color: #777; font-style: italic; margin: 4pt 0 8pt 0; }
+
+  blockquote { background: #f4f6f9; border-left: 4px solid #0d2137; padding: 10pt 14pt; margin: 10pt 0; font-style: italic; font-size: 10pt; }
+
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none; }
+  }
+
+  .no-print { text-align: center; padding: 20pt 0; background: #f4f6f9; margin: 0 -0.6in 14pt -0.6in; }
+  .no-print button { padding: 10pt 24pt; background: #0d2137; color: #fff; border: none; border-radius: 4pt; font-family: 'Georgia', serif; font-size: 11pt; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; }
+  .no-print button:hover { background: #1a3a5c; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<!-- =============================================================
+     COVER
+============================================================= -->
+<h1>Accelerate Robotics <span style="font-weight:400;font-size:13pt;">&mdash; Pool Deck Cleaning Robot Evaluation</span></h1>
+<p class="subtitle">Thesis Hotel Pool Deck &mdash; Slip-Hazard Mitigation &amp; Wet Cleaning Market Scan, Q2 2026</p>
+<p class="meta">Working Draft <span class="confidential">Confidential</span> <span class="draft">Working Draft</span></p>
+
+<p>The Thesis Hotel pool deck is a textured concrete surround with continuous standing-water slip hazards, pool-edge fall risk, chlorine exposure, and daily debris accumulation. This document is a full market scan of every robot that could plausibly clean the deck surface &mdash; commercial wet scrubbers with squeegee recovery, 4-in-1 sweep/scrub/vacuum/mop robots, outdoor sweepers, in-pool cleaners (for comparison), and consumer wet-dry hybrids &mdash; with an honest market-gap assessment at the end.</p>
+
+<div class="callout-amber"><strong>Headline finding:</strong> There is currently <strong>no robot on the market purpose-built for outdoor textured pool-deck wet cleaning with standing-water recovery</strong>. Every viable candidate is an indoor commercial scrubber adapted to a semi-outdoor use, or an outdoor sweeper that only handles dry debris. The recommendation reflects this gap and proposes a pragmatic dual-deployment plus a product R&amp;D flag for Accelerate Robotics' own platform roadmap.</div>
+
+<p class="note">Every robot in this evaluation was verified against manufacturer spec sheets and current 2026 availability. Pricing is indicative only; quote every candidate before committing.</p>
+
+<hr>
+
+<!-- =============================================================
+     1. USE CASE
+============================================================= -->
+<h2>1. The Use Case</h2>
+
+<h3>The Space</h3>
+
+<p>The Thesis Hotel pool deck is a Florida resort-grade pool surround: a curved pool body with a waterfall feature, flagstone coping, a textured concrete deck in a knockdown ("Kool-Deck" style) finish, and a tree canopy above. It is a continuously guest-facing environment where slip-and-fall liability and visual polish matter as much as cleaning performance.</p>
+
+<div class="spec-grid">
+  <div><strong>Surface:</strong> Textured "knockdown" concrete (Kool-Deck style)</div>
+  <div><strong>Approximate area:</strong> 500&ndash;1,200 m² (est., pool surround)</div>
+  <div><strong>Pool edge:</strong> Flagstone coping, no raised curb</div>
+  <div><strong>Water features:</strong> Pool + rock waterfall (continuous overspray)</div>
+  <div><strong>Overhead:</strong> Tree canopy (leaf fall year-round)</div>
+  <div><strong>Access path:</strong> Gated pool area, guest traffic continuous daytime</div>
+</div>
+
+<h3>The Hazards</h3>
+
+<p>This is fundamentally a <em>safety</em> problem, not a cosmetic one. A pool deck is the single highest slip-hazard surface in a hotel. The cleaning robot's primary job is to reduce the standing-water dwell time on the deck, not just to look tidy.</p>
+
+<ul>
+  <li><strong>Standing water</strong> &mdash; splash from the pool, waterfall overspray, swimmer runoff, rain. Accumulates in the pockets of the knockdown texture and does not evaporate quickly in humid Florida air.</li>
+  <li><strong>Organic slick</strong> &mdash; sunscreen residue, pool-chemistry foam, algae on shaded areas of the deck</li>
+  <li><strong>Leaf and petal debris</strong> from the overhanging trees (mostly dry, but sticks to wet surfaces)</li>
+  <li><strong>Pool chemistry splash</strong> &mdash; chlorinated or salt water on robot chassis and internals</li>
+  <li><strong>Sand and grit</strong> tracked in from walking paths; wears squeegees and brushes fast</li>
+</ul>
+
+<h3>The Surface</h3>
+
+<p>The textured surface is the single biggest complication in this scan. A knockdown-finish pool deck has shallow pockets and ridges specifically engineered to provide barefoot grip when wet &mdash; exactly the feature that defeats a flat rubber squeegee blade. Water recovery on this surface is a hard engineering problem, not a configuration problem.</p>
+
+<div class="callout"><strong>Texture limitation:</strong> A standard rubber squeegee rides over the high points of a knockdown texture and cannot draw water out of the low points. This means any robot with a flat recovery squeegee will leave 10&ndash;30% residual standing water in the texture pockets. The only technology family that addresses this directly is ECOVACS Commercial's "water absorption" multi-port dispense-and-vacuum head. See Candidate 1.</div>
+
+<h3>The Climate</h3>
+
+<div class="spec-grid">
+  <div><strong>Summer high:</strong> 95&deg;F / 35&deg;C</div>
+  <div><strong>Humidity:</strong> 75&ndash;95% year-round</div>
+  <div><strong>Rain:</strong> Daily afternoon showers, June&ndash;Oct</div>
+  <div><strong>Sun exposure:</strong> Direct UV, 8+ hours most days</div>
+  <div><strong>Chemistry exposure:</strong> Chlorine aerosol, possible salt-chlorination</div>
+  <div><strong>Wind:</strong> Gulf storms, hurricane season</div>
+</div>
+
+<h3>No-Go Zones</h3>
+
+<ul>
+  <li>Pool body itself (falls risk &mdash; any robot must stop well clear of the coping)</li>
+  <li>Waterfall feature and rock cascade</li>
+  <li>Any raised flagstone edge where a drive wheel could catch</li>
+  <li>Guest-seating areas when occupied</li>
+  <li>Chaise lounges, umbrellas, towel bins</li>
+</ul>
+
+<hr>
+
+<!-- =============================================================
+     2. EVALUATION CRITERIA
+============================================================= -->
+<h2>2. Evaluation Criteria</h2>
+
+<p>Every candidate is scored against five hard gates and four preference factors. The hard gates are stricter than the outdoor courtyard evaluation because of the pool-edge fall risk and chlorine exposure.</p>
+
+<h3>Hard Gates (Must-Pass)</h3>
+
+<table>
+<tr><th style="width:26%">Gate</th><th>Requirement</th></tr>
+<tr><td class="label">Outdoor / wet tolerance</td><td>Must operate on a wet surface in humid outdoor conditions. Minimum IP54 is preferred but semi-outdoor indoor-class robots are acceptable if deployed under cover.</td></tr>
+<tr><td class="label">Standing-water recovery</td><td>Must actively recover water from the deck surface, not just push it around. Squeegee + vacuum, or water-absorption tech. Dry sweepers cannot pass this gate.</td></tr>
+<tr><td class="label">Pool-edge safety</td><td>Must detect and stop reliably before the pool coping. 3D LiDAR or equivalent drop/edge detection is required. No wheel slip over flagstone.</td></tr>
+<tr><td class="label">Textured surface compatibility</td><td>Must clean and recover from a textured (knockdown) concrete finish. Ideally multi-port water dispense or adaptive squeegee pressure.</td></tr>
+<tr><td class="label">Chemical resistance</td><td>Chassis, brushes, squeegees, and fittings must tolerate chlorine and salt water aerosol over 24-month service life.</td></tr>
+</table>
+
+<h3>Preference Factors (Weighted)</h3>
+
+<table>
+<tr><th style="width:25%">Factor</th><th style="width:18%">Weight</th><th>Why it matters</th></tr>
+<tr><td class="label">Water-recovery rate</td><td>High</td><td>The primary KPI for slip-hazard reduction is residual water after a pass</td></tr>
+<tr><td class="label">Coverage rate (m&sup2;/hr)</td><td>High</td><td>Full deck must be cleanable between guest rush periods</td></tr>
+<tr><td class="label">Guest-facing aesthetics &amp; noise</td><td>High</td><td>A luxury pool deck robot must not look or sound like a warehouse machine</td></tr>
+<tr><td class="label">Total cost of operation</td><td>Medium</td><td>Capex + chlorine-accelerated consumables + service, amortized 36 months</td></tr>
+</table>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     3. CATEGORIES
+============================================================= -->
+<h2>3. Robot Categories Considered</h2>
+
+<p>Seven product categories were scanned. Only Category A produced a candidate that directly addresses slip-hazard reduction. Category B is the pragmatic second choice. All other categories are either partial fits or outright wrong tools.</p>
+
+<table>
+<tr>
+  <th>Category</th>
+  <th>Typical Price</th>
+  <th>Fit for Use Case</th>
+  <th>Why</th>
+</tr>
+<tr class="highlight">
+  <td class="label">A. Water-absorption 4-in-1 commercial scrubbers</td>
+  <td class="num">$25K&ndash;$35K</td>
+  <td><strong>Best available fit</strong></td>
+  <td>Only family that actively prevents residual water on the deck (ECOVACS DEEBOT PRO M1)</td>
+</tr>
+<tr class="highlight">
+  <td class="label">B. Squeegee-recovery commercial scrubbers</td>
+  <td class="num">$25K&ndash;$55K</td>
+  <td><strong>Strong fallback</strong></td>
+  <td>Proven wet cleaning, but squeegee leaves residual water in texture pockets</td>
+</tr>
+<tr class="amber">
+  <td class="label">C. Outdoor-rated sweepers (dry only)</td>
+  <td class="num">$17K&ndash;$24K</td>
+  <td>Partial fit</td>
+  <td>Good for leaves and sand, but cannot remove standing water &mdash; covers the debris half of the job only</td>
+</tr>
+<tr class="amber">
+  <td class="label">D. Consumer wet-dry robot vacuums</td>
+  <td class="num">$600&ndash;$1,800</td>
+  <td>Weak fit</td>
+  <td>Indoor residential design, small tanks, no commercial SLA, will not survive chlorine</td>
+</tr>
+<tr class="reject">
+  <td class="label">E. In-pool cleaners (Aiper, Mammotion)</td>
+  <td class="num">$1,000&ndash;$3,000</td>
+  <td>Wrong category</td>
+  <td>Clean the pool interior, not the deck. Included only to clarify the boundary.</td>
+</tr>
+<tr class="reject">
+  <td class="label">F. Industrial street / warehouse scrubbers</td>
+  <td class="num">$50K&ndash;$150K+</td>
+  <td>Rejected</td>
+  <td>Too large, visually wrong, overkill for a 1,200 m&sup2; pool surround</td>
+</tr>
+<tr class="reject">
+  <td class="label">G. Robot lawn mowers / yard robots</td>
+  <td class="num">$700&ndash;$10K</td>
+  <td>Rejected</td>
+  <td>No water recovery, wrong drive system, irrelevant category</td>
+</tr>
+</table>
+
+<hr>
+
+<!-- =============================================================
+     4. DEEP-DIVE CANDIDATES
+============================================================= -->
+<h2>4. Candidate Deep-Dives</h2>
+
+<p>Twelve robots were evaluated individually. Each was graded <strong>Top Pick</strong>, <strong>Strong Candidate</strong>, <strong>Weak Fit</strong>, or <strong>Rejected</strong> against the hard gates in Section 2.</p>
+
+<!-- ======================= CANDIDATE 1 ======================= -->
+<div class="robot-card top">
+  <h3>1. ECOVACS DEEBOT PRO M1 <span class="tier-badge top">Top Pick (Slip-Hazard)</span></h3>
+  <p class="section-label">Category A &mdash; Water-Absorption 4-in-1 Commercial Scrubber &middot; Manufacturer: ECOVACS Commercial</p>
+
+  <p>The M1 is the closest robot on the market to a purpose-built pool-deck cleaner, because of one feature no competitor has matched: <strong>Water Absorption Technology</strong>. Instead of spraying water onto the floor and chasing it with a squeegee, the M1 dispenses controlled micro-doses of water through multiple ports while simultaneously scrubbing and vacuuming the liquid back up &mdash; eliminating the risk of secondary moisture accumulation. That is exactly the property a pool deck needs.</p>
+
+  <div class="spec-grid">
+    <div><strong>Modes:</strong> Sweep, scrub, vacuum, mop (4-in-1)</div>
+    <div><strong>Coverage rate:</strong> ~1,200 m&sup2;/hr</div>
+    <div><strong>Clean water tank:</strong> 35 L</div>
+    <div><strong>Waste water tank:</strong> 33 L</div>
+    <div><strong>Signature tech:</strong> Water Absorption (multi-port dispense + vacuum)</div>
+    <div><strong>Motor protection:</strong> Triple-sealed, anti-corrosion impeller</div>
+    <div><strong>Squeegee:</strong> Self-adjusting pressure</div>
+    <div><strong>Brush options:</strong> Multi-brush head, 10+ floor types</div>
+    <div><strong>IP rating:</strong> Not published (indoor-targeted)</div>
+    <div><strong>Indicative price:</strong> ~$28&ndash;$34K US (quote required)</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li><strong>Only robot in the scan that actively prevents residual water</strong> &mdash; directly solves the slip-hazard problem</li>
+        <li>Triple-sealed motor and anti-corrosion impeller handle chlorine aerosol better than peers</li>
+        <li>Multi-port dispense can reach into texture pockets a flat squeegee cannot</li>
+        <li>4-in-1 modes handle leaves, grit, and sunscreen residue in one pass</li>
+        <li>Published for 10+ floor types &mdash; textured concrete should be within tolerance</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>No published outdoor IP rating &mdash; must confirm durability under Florida humidity and direct UV</li>
+        <li>Indoor-targeted marketing; will need a written outdoor-use agreement from the distributor</li>
+        <li>Pool-edge detection must be validated on flagstone coping during demo</li>
+        <li>Chlorine exposure may still shorten consumable life; build 20% premium into the RaaS model</li>
+        <li>US distribution and service SLA still maturing</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 2 ======================= -->
+<div class="robot-card strong">
+  <h3>2. PUDU CC1 (4-in-1 Commercial Cleaner) <span class="tier-badge strong">Strong Candidate</span></h3>
+  <p class="section-label">Category B &mdash; Squeegee-Recovery 4-in-1 Scrubber &middot; Manufacturer: Pudu Robotics</p>
+
+  <p>PUDU's answer to ECOVACS M1 and Gausium Phantas. Sweeps, scrubs, vacuums, and mops. Larger tank system than most indoor scrubbers and an automatic water refill / drain docking station. Indoor-targeted but mechanically credible as a semi-outdoor operator if deployed under a loggia or shade structure.</p>
+
+  <div class="spec-grid">
+    <div><strong>Modes:</strong> Sweep, scrub, vacuum, mop (4-in-1)</div>
+    <div><strong>Clean water tank:</strong> 15 L</div>
+    <div><strong>Waste water tank:</strong> 15 L</div>
+    <div><strong>Autonomy:</strong> 9 hours per charge</div>
+    <div><strong>Navigation:</strong> SLAM + vision</div>
+    <div><strong>Docking:</strong> Auto water refill + drain</div>
+    <div><strong>IP rating:</strong> Indoor (not rated for rain)</div>
+    <div><strong>Recovery:</strong> Squeegee + vacuum</div>
+    <div><strong>Indicative price:</strong> ~$31,250 purchase, or $917/mo RaaS</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Proven 4-in-1 wet cleaning with auto refill/drain &mdash; closest to unattended operation</li>
+        <li>9-hour autonomy covers a full deck service window</li>
+        <li>Attractive RaaS pricing at ~$917/mo &mdash; slots into the existing Thesis bundle</li>
+        <li>Accelerate Robotics already knows the PUDU fleet management UX from indoor deployments</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Flat squeegee will leave residual water in knockdown texture pockets &mdash; does not fully address slip hazard</li>
+        <li>No outdoor weather rating; must be parked under cover during rain events</li>
+        <li>Smaller 15 L tanks require more dock cycles than the ECOVACS M1's 35/33 L</li>
+        <li>Chlorine aerosol tolerance unknown &mdash; confirm with distributor before committing</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ======================= CANDIDATE 3 ======================= -->
+<div class="robot-card strong">
+  <h3>3. Gausium Phantas <span class="tier-badge strong">Strong Candidate</span></h3>
+  <p class="section-label">Category B &mdash; Indoor 4-in-1 Cleaner &middot; Manufacturer: Gausium</p>
+
+  <p>Gausium's compact 4-in-1 is the quietest commercial robot in the evaluation and the best fit for a guest-facing pool environment &mdash; as long as the use case can tolerate its indoor-only design.</p>
+
+  <div class="spec-grid">
+    <div><strong>Modes:</strong> Vacuum, sweep, scrub, dust mop</div>
+    <div><strong>Width:</strong> 17.3 in (44 cm)</div>
+    <div><strong>Cleaning rate:</strong> 1,000&ndash;1,180 m&sup2;/hr</div>
+    <div><strong>Noise:</strong> &lt;65 dB (guest-friendly)</div>
+    <div><strong>Runtime:</strong> 4&ndash;14 hrs (mode dependent)</div>
+    <div><strong>Recharge:</strong> 2 hours to full</div>
+    <div><strong>IP rating:</strong> Indoor only</div>
+    <div><strong>Indicative price:</strong> ~$15&ndash;$20K US</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Quiet (&lt;65 dB) &mdash; can run during guest hours without complaints</li>
+        <li>Compact enough to weave between chaise lounges</li>
+        <li>Lowest capex in the strong-candidate tier</li>
+        <li>Proven in hotel lobby deployments worldwide</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Fundamentally indoor &mdash; no weather rating, no chlorine tolerance claim</li>
+        <li>Small tank capacity relative to a 1,000+ m&sup2; pool deck</li>
+        <li>Flat squeegee + small footprint means many passes and residual water in texture pockets</li>
+        <li>Suction-forward design can struggle with wet-leaf slicks on texture</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 4 ======================= -->
+<div class="robot-card strong">
+  <h3>4. Gausium Scrubber 50 / 50 Pro <span class="tier-badge strong">Strong Candidate</span></h3>
+  <p class="section-label">Category B &mdash; Mid-Size Commercial Scrubber &middot; Manufacturer: Gausium</p>
+
+  <p>A proper mid-size commercial floor scrubber. Larger tanks and wider scrub path than the Phantas, built for retail and hospitality main floors. Honestly deployed at a pool deck it would function but look slightly industrial.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Commercial wet scrubber</div>
+    <div><strong>Scrub width:</strong> ~500 mm</div>
+    <div><strong>Coverage rate:</strong> ~2,000 m&sup2;/hr</div>
+    <div><strong>Recovery:</strong> Squeegee + vacuum</div>
+    <div><strong>IP rating:</strong> Indoor only</div>
+    <div><strong>Indicative price:</strong> ~$25&ndash;$35K US</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Commercial-grade tank and scrub hardware sized for a full deck run</li>
+        <li>Gausium has strong US service footprint vs. newer brands</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Industrial aesthetic &mdash; less guest-friendly than the Phantas or a PUDU CC1</li>
+        <li>Same squeegee limitation on textured concrete</li>
+        <li>Indoor only</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 5 ======================= -->
+<div class="robot-card weak">
+  <h3>5. Gausium Scrubber 75 <span class="tier-badge weak">Weak Fit</span></h3>
+  <p class="section-label">Category F &mdash; Large Industrial Scrubber &middot; Manufacturer: Gausium</p>
+
+  <p>Heavy-duty industrial scrubber for warehouses and factories. Sweeps and scrubs in a single pass with serious capacity. Oversized for a pool deck and visually wrong for a luxury hospitality environment.</p>
+
+  <div class="spec-grid">
+    <div><strong>Scrub width:</strong> 750 mm</div>
+    <div><strong>Coverage rate:</strong> 3,000 m&sup2;/hr</div>
+    <div><strong>Clean water tank:</strong> 75 L</div>
+    <div><strong>Indicative price:</strong> ~$50&ndash;$75K US</div>
+  </div>
+
+  <div class="callout-amber"><strong>Watch-out:</strong> Right category, wrong scale. Could work for a resort with a truly large pool deck + adjacent terrace, but overkill and over-budget for the Thesis Hotel footprint.</div>
+</div>
+
+<!-- ======================= CANDIDATE 6 ======================= -->
+<div class="robot-card strong">
+  <h3>6. Navia Scrubber 60 <span class="tier-badge strong">Strong Candidate</span></h3>
+  <p class="section-label">Category B &mdash; Commercial Scrubber &middot; Manufacturer: Navia Robotics</p>
+
+  <p>Navia's commercial scrubber is positioned between the Gausium Phantas and the Scrubber 75 in capacity. Purpose-built for retail and hospitality main floors. ~55 lb of brush pressure is enough to scrub a textured deck meaningfully.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Commercial wet scrubber</div>
+    <div><strong>Brush pressure:</strong> ~55 lb</div>
+    <div><strong>Recovery:</strong> Squeegee + vacuum</div>
+    <div><strong>IP rating:</strong> Indoor only</div>
+    <div><strong>Indicative price:</strong> ~$30&ndash;$40K US</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Serious brush pressure delivers real scrub on textured surfaces</li>
+        <li>Commercial support and service contracts available</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Indoor only; exact same outdoor-deployment caveats as the PUDU CC1</li>
+        <li>Squeegee residual-water limitation remains</li>
+        <li>Less widely deployed in US hospitality than PUDU/Gausium</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ======================= CANDIDATE 7 ======================= -->
+<div class="robot-card weak">
+  <h3>7. Nilfisk Liberty SC50 <span class="tier-badge weak">Weak Fit</span></h3>
+  <p class="section-label">Category B &mdash; Autonomous Commercial Scrubber &middot; Manufacturer: Nilfisk</p>
+
+  <p>The only floor scrubber in the market with independent North American + EU safety certification. A serious enterprise machine &mdash; but priced and specced for long warehouse runs, not a 1,000 m&sup2; pool deck.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Autonomous floor scrubber</div>
+    <div><strong>Coverage:</strong> 55,000 sq ft / 6 hr runtime</div>
+    <div><strong>Scrub head:</strong> 20 in REV head</div>
+    <div><strong>Solution tank:</strong> 15 gal</div>
+    <div><strong>Safety cert:</strong> NA + EU third-party</div>
+    <div><strong>Indicative price:</strong> ~$40&ndash;$55K US</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Best-in-class safety certification &mdash; meaningful in a guest-facing public space</li>
+        <li>Very high coverage rate per charge</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Indoor only &mdash; no outdoor rating, no chlorine tolerance claim</li>
+        <li>Heavy and visually industrial in a luxury pool setting</li>
+        <li>Expensive for the actual footprint</li>
+        <li>Flat squeegee has the same residual-water limit on texture</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 8 ======================= -->
+<div class="robot-card weak">
+  <h3>8. Avidbots Kas / Neo 2W <span class="tier-badge weak">Weak Fit</span></h3>
+  <p class="section-label">Category B &mdash; Autonomous Commercial Scrubber &middot; Manufacturer: Avidbots</p>
+
+  <p>Avidbots is one of the strongest engineered autonomous scrubber platforms in the market. Neo 2W is the full-size version, Kas is the smaller retail-footprint version. Both are well-proven in commercial public spaces.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Autonomous floor scrubber</div>
+    <div><strong>Targets:</strong> Retail, transport, healthcare, education</div>
+    <div><strong>IP rating:</strong> Indoor only</div>
+    <div><strong>Fleet software:</strong> Avidbots Command Center</div>
+    <div><strong>Indicative price:</strong> ~$30&ndash;$50K US</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Strongest safety / enterprise support posture in the scrubber category</li>
+        <li>Mature fleet software &mdash; tracks performance and faults cleanly</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Indoor only &mdash; Avidbots explicitly targets indoor commercial spaces</li>
+        <li>Most expensive non-industrial option in the scan</li>
+        <li>Flat squeegee residual-water limit applies</li>
+        <li>Less configurable to textured concrete than ECOVACS M1's multi-port head</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 9 ======================= -->
+<div class="robot-card weak">
+  <h3>9. PUDU MT1 Max <span class="tier-badge weak">Partial Fit (Dry Only)</span></h3>
+  <p class="section-label">Category C &mdash; Outdoor Semi-Outdoor Sweeper &middot; Manufacturer: Pudu Robotics</p>
+
+  <p>The only robot in the scan that is genuinely outdoor-rated (IP54, rain-drop sensor, dual-disc brushes, 35 L bin). But it is a <em>dry sweeper</em>: Pudu explicitly documents it as not intended for liquids, wet spills, or floor scrubbing. Listed here because the pool-deck use case has two halves, and this robot cleanly solves the dry-debris half.</p>
+
+  <div class="spec-grid">
+    <div><strong>IP rating:</strong> IP54</div>
+    <div><strong>Sweep width:</strong> 27.5 in (70 cm)</div>
+    <div><strong>Waste bin:</strong> 9.2 gal (35 L)</div>
+    <div><strong>Brushes:</strong> Dual-disc + main roller</div>
+    <div><strong>Water recovery:</strong> None &mdash; dry sweeper only</div>
+    <div><strong>Indicative price:</strong> ~$24,000 US (list)</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Only genuinely outdoor-rated robot in the scan</li>
+        <li>Handles leaf and petal debris under the tree canopy with ease</li>
+        <li>Can run in parallel with a separate wet robot on the same deck</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li><strong>Does not address the slip-hazard problem at all</strong> &mdash; no water recovery of any kind</li>
+        <li>Cannot be the single-robot answer for a pool deck</li>
+        <li>Only valuable if paired with a wet robot (see dual-deployment recommendation)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ======================= CANDIDATE 10 ======================= -->
+<div class="robot-card reject">
+  <h3>10. Consumer Wet-Dry Robot Vacuums <span class="tier-badge reject">Rejected</span></h3>
+  <p class="section-label">Category D &mdash; Dyson Spot+Scrub AI, Eufy, Eureka, etc.</p>
+
+  <p>Residential wet-dry robot vacuums are marketed aggressively as "all surface" cleaners and occasionally as "pool patio compatible". None of them are commercial-grade, none are rated for chlorine, and none have the tanks or runtime to handle a 1,000 m&sup2; pool deck.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Consumer robot vacuum-mop</div>
+    <div><strong>Tanks:</strong> Typically &lt;1 L</div>
+    <div><strong>Weather rating:</strong> Splash only, indoor-focused</div>
+    <div><strong>Indicative price:</strong> $600&ndash;$1,800 US</div>
+  </div>
+
+  <div class="callout-red"><strong>Reject:</strong> These devices are built for a residential kitchen, not a 24/7 chlorinated guest-facing pool deck. They will fail fast and without a service SLA.</div>
+</div>
+
+<!-- ======================= CANDIDATE 11 ======================= -->
+<div class="robot-card reject">
+  <h3>11. Aiper Scuba V3 / EcoSurfer Senti <span class="tier-badge reject">Wrong Category</span></h3>
+  <p class="section-label">Category E &mdash; In-Pool Cleaner / Surface Skimmer &middot; Manufacturer: Aiper</p>
+
+  <p>Aiper has an impressive CES 2026 lineup of pool cleaning robots: the Scuba V3 series (submersible floor/wall cleaners) and EcoSurfer Senti (water-surface skimmer with "Cognitive AI" pool detection). Included in this scan only to rule out the confusion &mdash; these are pool <em>water</em> cleaners, not pool <em>deck</em> cleaners.</p>
+
+  <div class="callout-red"><strong>Wrong category:</strong> These robots operate in or on the water, not on the deck surface. They do not address slip hazards at all. No path from this product line to the Thesis Hotel use case.</div>
+</div>
+
+<!-- ======================= CANDIDATE 12 ======================= -->
+<div class="robot-card reject">
+  <h3>12. Mammotion Spino S1 Pro <span class="tier-badge reject">Wrong Category</span></h3>
+  <p class="section-label">Category E &mdash; In-Pool Cleaner &middot; Manufacturer: Mammotion</p>
+
+  <p>Mammotion, better known for outdoor lawn robots, entered the in-pool cleaner market with the Spino S1 Pro. Same category as Aiper Scuba &mdash; cleans pool floor and walls, not the deck.</p>
+
+  <div class="callout-red"><strong>Wrong category:</strong> In-pool cleaner. Not a deck robot.</div>
+</div>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     5. SIDE-BY-SIDE COMPARISON
+============================================================= -->
+<h2>5. Side-by-Side Comparison Table</h2>
+
+<p>All twelve candidates ranked by fit against the pool-deck use case. The first row (ECOVACS DEEBOT PRO M1) is the only robot with an engineering feature that directly addresses the slip-hazard problem. The second row (PUDU CC1) is the best pragmatic fallback if the ECOVACS distributor cannot commit to the outdoor use. The ninth row (PUDU MT1 Max) is an outdoor-rated dry robot that can pair with either.</p>
+
+<table>
+<tr>
+  <th>#</th>
+  <th>Model</th>
+  <th>Category</th>
+  <th style="text-align:center">Wet?</th>
+  <th style="text-align:center">Outdoor?</th>
+  <th style="text-align:right">Coverage</th>
+  <th style="text-align:right">Tanks</th>
+  <th style="text-align:right">Price (USD)</th>
+  <th style="text-align:center">Fit</th>
+</tr>
+<tr class="highlight">
+  <td>1</td>
+  <td class="label"><strong>ECOVACS DEEBOT PRO M1</strong></td>
+  <td>4-in-1 water-absorption</td>
+  <td class="center">Yes</td>
+  <td class="center">Indoor&#42;</td>
+  <td class="num">~1,200 m&sup2;/hr</td>
+  <td class="num">35 / 33 L</td>
+  <td class="num">~$28&ndash;34K</td>
+  <td class="center"><strong>8/10</strong></td>
+</tr>
+<tr class="highlight">
+  <td>2</td>
+  <td class="label">PUDU CC1</td>
+  <td>4-in-1 squeegee</td>
+  <td class="center">Yes</td>
+  <td class="center">Indoor</td>
+  <td class="num">~1,000 m&sup2;/hr</td>
+  <td class="num">15 / 15 L</td>
+  <td class="num">~$31K / $917&frasl;mo</td>
+  <td class="center"><strong>7/10</strong></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td class="label">Gausium Phantas</td>
+  <td>Indoor 4-in-1</td>
+  <td class="center">Yes</td>
+  <td class="center">No</td>
+  <td class="num">1,000&ndash;1,180 m&sup2;/hr</td>
+  <td class="num">Small</td>
+  <td class="num">~$15&ndash;20K</td>
+  <td class="center">6/10</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td class="label">Gausium Scrubber 50</td>
+  <td>Commercial scrubber</td>
+  <td class="center">Yes</td>
+  <td class="center">No</td>
+  <td class="num">~2,000 m&sup2;/hr</td>
+  <td class="num">Mid</td>
+  <td class="num">~$25&ndash;35K</td>
+  <td class="center">6/10</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td class="label">Navia Scrubber 60</td>
+  <td>Commercial scrubber</td>
+  <td class="center">Yes</td>
+  <td class="center">No</td>
+  <td class="num">Mid</td>
+  <td class="num">Mid</td>
+  <td class="num">~$30&ndash;40K</td>
+  <td class="center">5/10</td>
+</tr>
+<tr class="amber">
+  <td>6</td>
+  <td class="label">Gausium Scrubber 75</td>
+  <td>Industrial scrubber</td>
+  <td class="center">Yes</td>
+  <td class="center">No</td>
+  <td class="num">3,000 m&sup2;/hr</td>
+  <td class="num">75 L</td>
+  <td class="num">~$50&ndash;75K</td>
+  <td class="center">4/10</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td class="label">Nilfisk Liberty SC50</td>
+  <td>Indoor autonomous scrubber</td>
+  <td class="center">Yes</td>
+  <td class="center">No</td>
+  <td class="num">55K sqft / 6hr</td>
+  <td class="num">15 gal</td>
+  <td class="num">~$40&ndash;55K</td>
+  <td class="center">4/10</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td class="label">Avidbots Kas / Neo 2W</td>
+  <td>Indoor autonomous scrubber</td>
+  <td class="center">Yes</td>
+  <td class="center">No</td>
+  <td class="num">Mid</td>
+  <td class="num">Mid</td>
+  <td class="num">~$30&ndash;50K</td>
+  <td class="center">4/10</td>
+</tr>
+<tr class="amber">
+  <td>9</td>
+  <td class="label">PUDU MT1 Max</td>
+  <td>Outdoor dry sweeper</td>
+  <td class="center">No</td>
+  <td class="center"><strong>IP54</strong></td>
+  <td class="num">1,800&ndash;6,000 m&sup2;/hr</td>
+  <td class="num">35 L bin</td>
+  <td class="num">~$24K</td>
+  <td class="center">5/10 (dry only)</td>
+</tr>
+<tr class="reject">
+  <td>10</td>
+  <td class="label">Consumer wet-dry vacs</td>
+  <td>Residential vacuum-mop</td>
+  <td class="center">Yes</td>
+  <td class="center">No</td>
+  <td class="num">Small</td>
+  <td class="num">&lt;1 L</td>
+  <td class="num">$600&ndash;1.8K</td>
+  <td class="center">2/10</td>
+</tr>
+<tr class="reject">
+  <td>11</td>
+  <td class="label">Aiper Scuba / EcoSurfer</td>
+  <td>In-pool cleaner</td>
+  <td class="center">N/A</td>
+  <td class="center">N/A</td>
+  <td class="num">N/A (pool)</td>
+  <td class="num">N/A</td>
+  <td class="num">$1&ndash;3K</td>
+  <td class="center">0/10</td>
+</tr>
+<tr class="reject">
+  <td>12</td>
+  <td class="label">Mammotion Spino S1 Pro</td>
+  <td>In-pool cleaner</td>
+  <td class="center">N/A</td>
+  <td class="center">N/A</td>
+  <td class="num">N/A (pool)</td>
+  <td class="num">N/A</td>
+  <td class="num">$1&ndash;3K</td>
+  <td class="center">0/10</td>
+</tr>
+</table>
+
+<p class="note">&#42; ECOVACS DEEBOT PRO M1 is marketed as an indoor commercial robot. It has no published outdoor IP rating. Its suitability for a semi-outdoor pool deck must be confirmed in writing with the distributor as part of the pilot agreement.</p>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     6. RECOMMENDATION
+============================================================= -->
+<h2>6. Recommendation</h2>
+
+<div class="stat-grid">
+  <div class="stat-box">
+    <span class="number">ECOVACS M1</span>
+    <span class="label">Primary Wet Choice</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">PUDU MT1 Max</span>
+    <span class="label">Dry Partner</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">~$52K</span>
+    <span class="label">Dual Capex (List)</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">Market Gap</span>
+    <span class="label">R&amp;D Flag</span>
+  </div>
+</div>
+
+<h3>Honest Finding: The Market Has a Gap</h3>
+
+<blockquote>No robot on the market today was built for outdoor textured pool-deck wet cleaning with standing-water recovery. Every wet robot in this scan is indoor-targeted. Every outdoor robot is dry-only. The best available answer is an indoor commercial scrubber deployed semi-outdoors under a written outdoor-use agreement, paired with an outdoor-rated dry sweeper for the debris half of the job.</blockquote>
+
+<h3>Primary: ECOVACS DEEBOT PRO M1 (Wet / Slip Hazard)</h3>
+
+<p>The M1 is the <strong>only</strong> robot in the scan whose core engineering directly addresses the slip-hazard problem. Its multi-port water dispense + integrated vacuum ("Water Absorption Technology") is the closest any vendor gets to recovering water out of the pockets of a knockdown-texture concrete surface, rather than riding over them with a flat squeegee. Triple-sealed motor and anti-corrosion impeller give it the best chance of tolerating chlorine aerosol of any candidate in the scan.</p>
+
+<p>The M1's weakness is that ECOVACS does not publish an outdoor IP rating. This must be negotiated at the pilot stage: a written statement from the distributor confirming the M1 is covered for outdoor deck use at Thesis, or a loaner agreement structured so the unit can be returned if Florida humidity and UV cause a problem.</p>
+
+<h3>Secondary: PUDU CC1 (Wet / Pragmatic Fallback)</h3>
+
+<p>If the ECOVACS distributor will not commit to an outdoor-use statement, the PUDU CC1 is the next best wet robot. Same 4-in-1 mode set, auto water refill/drain docking, ~$917/mo RaaS. It uses a conventional squeegee + vacuum recovery so it will leave more residual water in the deck's texture pockets than the M1, but it is a known commercial-grade machine with established US service.</p>
+
+<h3>Paired Dry Partner: PUDU MT1 Max</h3>
+
+<p>Whichever wet robot is chosen, pair it with the PUDU MT1 Max from the outdoor courtyard evaluation. The MT1 Max is the only genuinely outdoor-rated robot in the scan &mdash; IP54, rain sensor, dual-disc brushes, 35 L bin &mdash; and it handles leaf and petal debris under the tree canopy natively. A dual-robot deployment is the clean answer: the MT1 Max covers the dry work (leaves, sand, grit), and the ECOVACS M1 or PUDU CC1 covers the wet work (standing water, sunscreen slick, pool splash).</p>
+
+<h3>R&amp;D Flag for Accelerate Robotics Platform Roadmap</h3>
+
+<div class="callout-green"><strong>Platform opportunity:</strong> This market gap is a first-party product opportunity for Accelerate Robotics, not just a procurement exercise. An outdoor-rated, chlorine-tolerant, texture-adaptive wet cleaning robot for hospitality pool decks does not exist today. A first-party reference design &mdash; or a co-development partnership with ECOVACS or PUDU &mdash; could become the second "wedge" product after the elevator integration layer. Worth tracking as a Phase 5 roadmap item and flagging to advisors at FON Advisory as part of the government/GSA hospitality opportunity set.</div>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     7. PILOT PATH
+============================================================= -->
+<h2>7. Pilot Path</h2>
+
+<p>This is the recommended 4-week sequence to evaluate and deploy a pool-deck wet robot at the Thesis Hotel. It mirrors the outdoor courtyard playbook so the hotel GM sees a consistent process across zones.</p>
+
+<h3>Week 1 &mdash; Site Survey &amp; Baseline</h3>
+
+<ul>
+  <li>On-site walk with ECOVACS Commercial and PUDU distributor representatives</li>
+  <li>Measure deck dimensions, flagstone coping geometry, chaise lounge layout, shade patterns</li>
+  <li><strong>Baseline wet test:</strong> pour measured water onto deck, time natural evaporation by zone (shade vs. sun), photograph residual water in texture pockets</li>
+  <li>Confirm pool chemistry (chlorine vs. salt chlorination) and daily aerosol exposure pattern</li>
+  <li>Identify dock location under cover / shade</li>
+</ul>
+
+<h3>Week 2 &mdash; Loaner Evaluation (Wet)</h3>
+
+<ul>
+  <li>7-day on-site loaner: ECOVACS DEEBOT PRO M1 (or PUDU CC1 if M1 unavailable)</li>
+  <li>Run morning and late-afternoon cycles</li>
+  <li><strong>Primary KPI:</strong> residual water measured at standard grid points 5 minutes after a pass (slip-hazard proxy)</li>
+  <li>Validate pool-edge detection on flagstone coping</li>
+  <li>Stress test: sunscreen spill, leaf slick, chlorine splash zone near waterfall</li>
+  <li>Document chassis condition daily &mdash; photograph any corrosion, discoloration, or squeegee wear</li>
+</ul>
+
+<h3>Week 3 &mdash; Dry Partner Loaner &amp; Dual-Robot Integration</h3>
+
+<ul>
+  <li>Overlap week with the PUDU MT1 Max loaner from the courtyard evaluation</li>
+  <li>Run both robots on the deck in sequence: MT1 Max dry pass first, wet robot second</li>
+  <li>Confirm the two robots can coexist in the same Accelerate fleet management view</li>
+  <li>Collect combined cleanliness + residual-water score for the dual-deployment</li>
+</ul>
+
+<h3>Week 4 &mdash; Commercial Proposal &amp; Commissioning</h3>
+
+<ul>
+  <li>Present dual-robot RaaS pricing to Thesis Hotel GM (bundled with existing indoor fleet + courtyard outdoor fleet)</li>
+  <li>Draft Phase 5 addendum to the existing proposal document &mdash; pool deck slip-hazard line item</li>
+  <li>Negotiate outdoor-use warranty statement from ECOVACS distributor (the critical contractual step)</li>
+  <li>Ship production units, 3-day on-site commissioning, staff training, go-live</li>
+</ul>
+
+<hr>
+
+<!-- =============================================================
+     8. RISKS
+============================================================= -->
+<h2>8. Deployment Risks Specific to Pool Deck Use</h2>
+
+<table>
+<tr>
+  <th>Risk</th>
+  <th>Likelihood</th>
+  <th>Impact</th>
+  <th>Mitigation</th>
+</tr>
+<tr>
+  <td class="label">Residual water in texture pockets still leaves slip hazard</td>
+  <td>High</td>
+  <td>High</td>
+  <td>This is the core risk. Use ECOVACS M1 water-absorption head over a conventional squeegee. Measure residual water during Week 2 pilot as the pass/fail KPI. Fall back to dual passes if single pass is insufficient.</td>
+</tr>
+<tr>
+  <td class="label">Robot drives off pool edge</td>
+  <td>Low</td>
+  <td>Catastrophic</td>
+  <td>Explicitly map the entire pool coping as a no-go boundary during commissioning. Test edge detection under wet conditions. Require 3D LiDAR edge detection, not 2D only. Place physical markers if needed.</td>
+</tr>
+<tr>
+  <td class="label">Chlorine aerosol corrodes chassis and internals</td>
+  <td>High</td>
+  <td>Medium</td>
+  <td>Daily post-cycle rinse with fresh water. Weekly full wipe-down. Negotiate corrosion warranty explicitly with distributor. Build 20% consumables premium into the RaaS model.</td>
+</tr>
+<tr>
+  <td class="label">Heavy rain exceeds robot weather tolerance</td>
+  <td>High</td>
+  <td>Medium</td>
+  <td>Dock under cover. Monitor rain-sensor-equipped units (MT1 Max) for the paired dry robot. The wet robot must return to dock on rain alert even though it is the "wet" robot.</td>
+</tr>
+<tr>
+  <td class="label">Indoor-only robot deployed outdoors voids warranty</td>
+  <td>Medium</td>
+  <td>High</td>
+  <td><strong>Critical:</strong> Get the outdoor-use statement in writing from the distributor before the commercial proposal is signed. If the distributor will not commit, escalate to regional sales or walk.</td>
+</tr>
+<tr>
+  <td class="label">Guest in pool splashes water onto operating robot</td>
+  <td>Medium</td>
+  <td>Medium</td>
+  <td>Schedule deep cleaning cycles before 8 AM and after 9 PM when pool is closed. Mid-day maintenance passes only in low-occupancy zones.</td>
+</tr>
+<tr>
+  <td class="label">Squeegee wear accelerated on abrasive knockdown texture</td>
+  <td>High</td>
+  <td>Low</td>
+  <td>Plan for 2&ndash;3x consumables vs. manufacturer indoor spec. Build into RaaS cost model. Keep a week of squeegee spares on site.</td>
+</tr>
+<tr>
+  <td class="label">Humidity condensation inside chassis damages electronics</td>
+  <td>Medium</td>
+  <td>High</td>
+  <td>Dehumidified dock enclosure. Full dry-down cycle before docking. Consider desiccant packs in service-accessible compartments.</td>
+</tr>
+<tr>
+  <td class="label">Guest collision / startle event in wet-floor zone</td>
+  <td>Medium</td>
+  <td>High</td>
+  <td>Robot must carry visual warning indicator and audible alert. Wet-deck "cleaning in progress" signage around the perimeter during cycles.</td>
+</tr>
+<tr>
+  <td class="label">Pool chemistry residue streaks the deck</td>
+  <td>Medium</td>
+  <td>Low</td>
+  <td>Rinse cycle using robot's own clean-water tank after every chlorine-exposure pass. Confirm no chemical cross-contamination with pool water chemistry.</td>
+</tr>
+</table>
+
+<hr>
+
+<!-- =============================================================
+     9. CONCLUSION
+============================================================= -->
+<h2>9. Conclusion</h2>
+
+<blockquote>Twelve robots looked at; zero were purpose-built for this job. The ECOVACS DEEBOT PRO M1 is the closest available match because its water-absorption head is the only technology in the market that directly prevents residual water on a textured deck surface. Everything else is indoor, dry-only, wrong-category, or wrong-scale. The honest recommendation is a dual-robot deployment &mdash; one wet, one dry &mdash; plus an R&amp;D flag for Accelerate Robotics to consider building a first-party answer to this gap.</blockquote>
+
+<p>The recommended path is (1) move to a site survey with ECOVACS Commercial and PUDU distributors, (2) run a 7-day wet loaner with residual-water measurement as the pass/fail KPI, (3) overlap with the PUDU MT1 Max loaner from the outdoor courtyard evaluation for a combined dual-deployment demo, and (4) propose a Phase 5 addendum to the Thesis Hotel proposal that bundles wet + dry robot service into a single pool-deck slip-hazard line item.</p>
+
+<p>If no robot in the current market can meet the residual-water KPI on the knockdown deck, Accelerate Robotics should treat that finding as a product roadmap signal, not a dead end. The first hotel to solve the pool-deck slip-hazard problem with robotics wins a category that currently does not have a vendor.</p>
+
+<div class="footer">
+  Accelerate Robotics &middot; acceleraterobotics.ai &middot; Miami, Florida<br>
+  Pool Deck Robot Evaluation &middot; Q2 2026 &middot; Confidential &middot; Working Draft
+</div>
+
+</body>
+</html>
