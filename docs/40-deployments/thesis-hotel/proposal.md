@@ -27,7 +27,7 @@ See [`fleet-composition.md`](fleet-composition.md) for the detailed per-robot op
 
 ### The commercial structure
 
-**Robot-as-a-Service, all-inclusive hourly rate.** The hotel pays one number per robot per billable hour; Accelerate Robotics provides hardware, deployment, training, software, maintenance, consumables, and support. No capital purchase, no multi-year lock-in.
+**Robot-as-a-Service, flat monthly rate.** The hotel pays one predictable number per robot per month; Accelerate Robotics provides hardware, deployment, training, software, maintenance, consumables, and support. No capital purchase, no multi-year lock-in, no variable billing.
 
 ### The phasing
 
@@ -37,9 +37,9 @@ See [`fleet-composition.md`](fleet-composition.md) for the detailed per-robot op
 
 ### The value
 
-**Annual RaaS cost (Year 1, full fleet):** ~$238,000
-**Equivalent hospitality labor cost displaced:** ~$400,000–$550,000 per year
-**Net operational savings:** ~$160,000–$310,000 per year
+**Flat RaaS cost (full fleet, steady state):** $19,950 / month ≈ $239,400 / year
+**Equivalent hospitality labor displaced:** ~$29,800 / month (conservative) up to ~$45,800 / month (with overtime, weekends, turnover)
+**Net operational savings:** ~$10,000–$26,000 per month
 **Payback:** Immediate — no upfront investment, savings start Month 1 of full fleet
 
 ---
@@ -179,7 +179,9 @@ Details: [`phase-1-c30.md`](phase-1-c30.md).
 
 ### Pricing structure
 
-**Robot-as-a-Service — $10.50 per robot per billable hour**, all-inclusive.
+**Robot-as-a-Service — $2,850 per robot per month**, all-inclusive, flat rate.
+
+One predictable line item per robot per month. No hourly meters, no utilization-based true-ups, no surprise variable bills — the hotel knows exactly what next month looks like.
 
 "All-inclusive" means:
 
@@ -187,34 +189,33 @@ Details: [`phase-1-c30.md`](phase-1-c30.md).
 - Deployment and commissioning (site survey, SLAM mapping, training)
 - Elevator integration (button emulator install + operation)
 - Ongoing fleet management software
-- Remote monitoring and on-call response
-- Scheduled maintenance
+- 24/7 remote monitoring and on-call response
+- Scheduled preventive maintenance
 - Consumables (brushes, filters, squeegee, mop pads, etc.)
 - Break-fix repair
 - Loaner robot if a primary is out for repair
-- Annual safety inspections and reporting
-
-The hotel pays **one line item** per month based on billable hours actually operated.
+- Extended warranty beyond the Keenon manufacturer coverage
+- Annual safety inspection and reporting
+- Monthly business review and performance reporting
 
 ### Pilot discount (Phase 1 only)
 
-**$8.50 per robot per billable hour** for the 30-day Phase 1 pilot. This is a 19% discount against the standard rate, intended to lower the barrier to getting started. Pricing returns to $10.50/hr at the start of Phase 2.
+**$2,300 per robot per month** for the 30-day Phase 1 pilot — a 19% discount against the standard rate, intended to lower the barrier to getting started. Pricing returns to $2,850/mo at the start of Phase 2.
 
-### Monthly cost projection
+### Monthly cost by phase
 
-Assumptions: 75% utilization, 12 billable hours per day per robot (some robots less — see fleet composition for per-robot schedules).
+| Phase | Months | Robots added | Fleet size | Monthly cost | Rate |
+|---|---|---|---|---|---|
+| **Phase 1 — pilot** | Month 1 | 1 × C30 | 1 | **$2,300** | Pilot |
+| **Phase 2 — ramp** | Month 2–3 | +C40, W3, S100, S300 #1 | 5 | **$14,250** | $2,850/robot/mo |
+| **Phase 3 — full fleet** | Month 4+ | +C30 #2, S300 #2 | 7 | **$19,950** | $2,850/robot/mo |
 
-| Phase | Months active | Robots | Monthly revenue (to Accelerate) | Notes |
-|---|---|---|---|---|
-| **Phase 1 (pilot)** | Month 1 | 1 × C30 | ~$2,300 | At $8.50/hr pilot rate |
-| **Phase 2 ramp** | Month 2–3 | +C40, W3, S100, S300 #1 (= 5 total) | ~$14,200 | At $10.50/hr |
-| **Phase 3 full fleet** | Month 4+ | +C30 #2, S300 #2 (= 7 total) | ~$19,900 | Full rate |
-| **Annualized (Year 1 full fleet)** | — | 7 | **~$238,000** | |
+**Steady-state (Phase 3 onward):** $19,950 / month
+**Annualized full-fleet cost:** ~$239,400 / year
 
-**Phase 3 total monthly spend:** ~$19,900 / month
-**Year 1 full-fleet revenue:** ~$238,000
+Year 1 ramped total lands around $210,000 — the hotel only pays for 5 robots in Phase 2 and one robot in the Phase 1 pilot month. Once the fleet is fully deployed in Month 4, the steady-state monthly cost is $19,950, and the hotel can plan around that number indefinitely.
 
-*(These are planning numbers. Final billing is based on actual operated hours. Robots that operate fewer than 12 hours per day bill proportionally lower.)*
+*(Flat monthly rates. Robots added or removed at phase boundaries prorate to the day. No variable billing.)*
 
 ### Comparison to current labor cost
 
@@ -231,12 +232,12 @@ Target labor displaced by the 7-robot fleet (conservative estimates):
 | S300 #2 | Pool kitchen runner | 5 | $22 | $3,300 |
 | **Total human-labor equivalent** | | | | **~$29,800 / month** |
 
-**Current equivalent labor:** ~$357,600 / year (conservative, single-shift)
-**Upper estimate with overtime, no-shows, benefits, comp claims, turnover, weekends:** ~$500,000–$550,000 / year
+**Current equivalent labor:** ~$29,800 / month ≈ $357,600 / year (conservative, single-shift)
+**Upper estimate with overtime, no-shows, benefits, comp claims, turnover, weekends:** ~$41,600–$45,800 / month ≈ $500,000–$550,000 / year
 
-**Accelerate Robotics full fleet:** ~$238,000 / year
+**Accelerate Robotics full fleet:** $19,950 / month ≈ $239,400 / year
 
-**Net savings:** $120,000–$310,000 per year, with the higher end tied to the reality of how much premium hotels pay to cover nights, weekends, and last-minute staffing gaps.
+**Net savings:** ~$10,000–$26,000 / month, or $118,000–$310,000 / year — with the higher end tied to the reality of how much premium hotels pay to cover nights, weekends, and last-minute staffing gaps.
 
 ### What the hotel does NOT pay for
 
