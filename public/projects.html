@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Robotics — Sub-Projects</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --card: #111827;
+    --card-hover: #1a2332;
+    --border: #1e293b;
+    --gold: #d4a040;
+    --cyan: #22d3ee;
+    --green: #34d399;
+    --red: #f87171;
+    --orange: #fb923c;
+    --purple: #a78bfa;
+    --pink: #f472b6;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --dim: #475569;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--gold), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.3rem;
+  }
+  .header .subtitle { color: var(--muted); font-size: 1rem; }
+
+  /* Stats bar */
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat .value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .stat .label {
+    font-size: 0.7rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Sub-project sections */
+  .section {
+    margin-bottom: 2.5rem;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .section-badge {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .badge-hotel { background: rgba(212, 160, 64, 0.2); color: var(--gold); }
+  .badge-elevator { background: rgba(34, 211, 238, 0.2); color: var(--cyan); }
+  .badge-fleet { background: rgba(52, 211, 153, 0.2); color: var(--green); }
+  .badge-strategy { background: rgba(167, 139, 250, 0.2); color: var(--purple); }
+  .badge-platform { background: rgba(248, 113, 113, 0.2); color: var(--red); }
+  .badge-ops { background: rgba(251, 146, 60, 0.2); color: var(--orange); }
+  .badge-automation { background: rgba(244, 114, 182, 0.2); color: var(--pink); }
+
+  .section h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+  .section-desc {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin-bottom: 1rem;
+    margin-left: 0.25rem;
+  }
+
+  /* Cards grid */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .card:hover {
+    background: var(--card-hover);
+    border-color: var(--dim);
+  }
+  .card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+  .card-title a {
+    color: var(--text);
+  }
+  .card-title a:hover {
+    color: var(--cyan);
+    text-decoration: none;
+  }
+  .card-desc {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+  }
+  .card-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .card-link {
+    display: inline-block;
+    padding: 3px 10px;
+    background: rgba(34, 211, 238, 0.08);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    border-radius: 5px;
+    font-size: 0.75rem;
+    color: var(--cyan);
+    transition: background 0.15s;
+  }
+  .card-link:hover {
+    background: rgba(34, 211, 238, 0.18);
+    text-decoration: none;
+  }
+  .card-link.doc {
+    background: rgba(167, 139, 250, 0.08);
+    border-color: rgba(167, 139, 250, 0.2);
+    color: var(--purple);
+  }
+  .card-link.doc:hover { background: rgba(167, 139, 250, 0.18); }
+
+  /* File list inside cards */
+  .file-list {
+    list-style: none;
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+  }
+  .file-list li {
+    padding: 0.2rem 0;
+    color: var(--muted);
+  }
+  .file-list li::before {
+    content: '';
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+  .file-list.gold li::before { background: var(--gold); }
+  .file-list.cyan li::before { background: var(--cyan); }
+  .file-list.green li::before { background: var(--green); }
+  .file-list.purple li::before { background: var(--purple); }
+  .file-list.red li::before { background: var(--red); }
+  .file-list.orange li::before { background: var(--orange); }
+
+  .footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--dim);
+    font-size: 0.75rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Accelerate Robotics</h1>
+  <div class="subtitle">Sub-Project Dashboard — One Brain, Many Bots</div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="value">3</div><div class="label">Repos</div></div>
+  <div class="stat"><div class="value">7</div><div class="label">Workstreams</div></div>
+  <div class="stat"><div class="value">10</div><div class="label">Platform Pages</div></div>
+  <div class="stat"><div class="value">12</div><div class="label">API Endpoints</div></div>
+  <div class="stat"><div class="value">5</div><div class="label">ADRs</div></div>
+  <div class="stat"><div class="value">5</div><div class="label">Runbooks</div></div>
+</div>
+
+<!-- ========== 1. THESIS HOTEL ========== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-hotel">Sub-Project 1</span>
+    <h2>Thesis Hotel Deployment</h2>
+  </div>
+  <div class="section-desc">First customer. 10-story Miami hotel. 7-robot fleet across 3 phases. <strong>Now in its own repo: <code>accelerate-thesis-hotel/</code></strong></div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-title">Separate Repo</div>
+      <div class="card-desc">All Thesis Hotel docs, proposals, site profiles, phase plans, checklists, and HTML pages now live in their own repository for clean delegation and focused Claude Code context.</div>
+      <div class="card-links">
+        <a class="card-link" href="../../accelerate-thesis-hotel/pages/proposal.html">Proposal</a>
+        <a class="card-link" href="../../accelerate-thesis-hotel/pages/site-profile.html">Site Profile</a>
+        <a class="card-link" href="../../accelerate-thesis-hotel/pages/robot-solutions.html">Robot Solutions</a>
+        <a class="card-link" href="../../accelerate-thesis-hotel/pages/onepager.html">One-Pager</a>
+        <a class="card-link" href="../../accelerate-thesis-hotel/pages/agenda.html">Agenda</a>
+        <a class="card-link" href="../../accelerate-thesis-hotel/pages/playbook.html">Playbook</a>
+      </div>
+      <ul class="file-list gold" style="margin-top: 0.75rem;">
+        <li>Repo path: <code>/Users/ericrace/Code/accelerate-thesis-hotel/</code></li>
+        <li>7 HTML pages, 11 docs, site photos + floor plans</li>
+        <li>Phase 1 (C30 pilot), Phase 2 (elevator), Phase 3 (full fleet)</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== 2. ELEVATOR INTEGRATION ========== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-elevator">Sub-Project 2</span>
+    <h2>Elevator Integration (The Wedge)</h2>
+  </div>
+  <div class="section-desc">Universal button emulator — $23/floor, vendor-agnostic, no OEM API required. <strong>Now in its own repo: <code>accelerate-elevator/</code></strong></div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-title">Separate Repo</div>
+      <div class="card-desc">All elevator emulator docs, design specs, BOM, reference material, interactive HTML pages, and Claude Code automation (elevator-expert agent + simulator skill) now live in their own repository.</div>
+      <div class="card-links">
+        <a class="card-link" href="../../accelerate-elevator/pages/button-emulator-sim.html">Simulator</a>
+        <a class="card-link" href="../../accelerate-elevator/pages/bom-order-guide.html">BOM Order Guide</a>
+        <a class="card-link" href="../../accelerate-elevator/pages/integration-overview.html">Overview</a>
+        <a class="card-link" href="../../accelerate-elevator/pages/install-guide.html">Install Guide</a>
+        <a class="card-link" href="../../accelerate-elevator/pages/shaft-diagram.html">Shaft Diagram</a>
+      </div>
+      <ul class="file-list cyan" style="margin-top: 0.75rem;">
+        <li>Repo path: <code>/Users/ericrace/Code/accelerate-elevator/</code></li>
+        <li>5 HTML pages, 7 docs, 25 teardown photos</li>
+        <li>Design spec, BOM (~$650), patent analysis, E-Box + TAC32T reference</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== 3. ROBOT FLEET ========== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-fleet">Sub-Project 3</span>
+    <h2>Robot Fleet & Evaluations</h2>
+  </div>
+  <div class="section-desc">Keenon fleet specs (C30, C40, S100, S300, W3, T8) plus competitive market evaluations for outdoor, pool deck, and specialty use cases.</div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-title"><a href="outdoor-robot-evaluation.html">Outdoor Robot Evaluation</a></div>
+      <div class="card-desc">14-candidate market scan. Comparison matrix across cleaning, delivery, patrol, and maintenance categories.</div>
+      <div class="card-links">
+        <a class="card-link" href="outdoor-robot-evaluation.html">Evaluation (HTML)</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><a href="pool-deck-robot-evaluation.html">Pool Deck Robot Evaluation</a></div>
+      <div class="card-desc">Wet environment analysis. Slip resistance, sanitization, candidate vendors for pool/deck areas.</div>
+      <div class="card-links">
+        <a class="card-link" href="pool-deck-robot-evaluation.html">Evaluation (HTML)</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><a href="robot-preview.html">Robot Vendor Icons</a></div>
+      <div class="card-desc">SVG logo reference for all robot vendors and partners.</div>
+      <div class="card-links">
+        <a class="card-link" href="robot-preview.html">Icons (HTML)</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Keenon Fleet Specs</div>
+      <div class="card-desc">Individual spec sheets for each robot model in the fleet.</div>
+      <ul class="file-list green">
+        <li><a href="../docs/30-integrations/robots/keenon-c30.md">C30 — Corridor Cleaning</a></li>
+        <li><a href="../docs/30-integrations/robots/keenon-c40.md">C40 — Large Area Cleaning</a></li>
+        <li><a href="../docs/30-integrations/robots/keenon-s100.md">S100 — Logistics Platform</a></li>
+        <li><a href="../docs/30-integrations/robots/keenon-s300.md">S300 — Heavy Logistics</a></li>
+        <li><a href="../docs/30-integrations/robots/keenon-w3.md">W3 — Enclosed Delivery</a></li>
+        <li><a href="../docs/30-integrations/robots/keenon-t8.md">T8 — Open Tray Service</a></li>
+        <li><a href="../docs/30-integrations/robots/fleet-software.md">Fleet Software (PEANUT, APIs)</a></li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== 4. STRATEGY & BUSINESS ========== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-strategy">Sub-Project 4</span>
+    <h2>Strategy & Business</h2>
+  </div>
+  <div class="section-desc">Strategic thesis, business model, financial projections, competitive landscape, fundraising roadmap. The "why" and "how we make money."</div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-title"><a href="financial-analysis.html">Financial Analysis</a></div>
+      <div class="card-desc">Unit economics, cost breakdown, RaaS pricing, 5-year forecast, financing scenarios.</div>
+      <div class="card-links">
+        <a class="card-link" href="financial-analysis.html">Analysis (HTML)</a>
+        <a class="card-link doc" href="../docs/10-strategy/financial-analysis.md">financial-analysis.md</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><a href="pricing-model.html">Pricing Model</a></div>
+      <div class="card-desc">Per-robot pricing tiers, add-ons, RaaS vs. SaaS comparison.</div>
+      <div class="card-links">
+        <a class="card-link" href="pricing-model.html">Pricing (HTML)</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Strategy Docs</div>
+      <div class="card-desc">Core strategic documents — thesis, model, plan, market landscape, narrative.</div>
+      <ul class="file-list purple">
+        <li><a href="../docs/10-strategy/thesis.md">Strategic Thesis — "One Brain, Many Bots"</a></li>
+        <li><a href="../docs/10-strategy/business-model.md">Business Model — RaaS + SaaS</a></li>
+        <li><a href="../docs/10-strategy/business-plan.md">Business Plan — GTM + Cap Table</a></li>
+        <li><a href="../docs/10-strategy/narrative.md">Founding Narrative</a></li>
+        <li><a href="../docs/10-strategy/phased-approach.md">Phased Approach — Wedge to Humanoids</a></li>
+        <li><a href="../docs/10-strategy/market-landscape.md">Market Landscape & Competitors</a></li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== 5. PLATFORM & APP ========== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-platform">Sub-Project 5</span>
+    <h2>Platform & Application</h2>
+  </div>
+  <div class="section-desc">Express + SQLite backend. Admin dashboard, inquiry management, email notifications, market data API. Live on Railway.</div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-title"><a href="index.html">Marketing Site</a></div>
+      <div class="card-desc">Public landing page with inquiry form and market visualization.</div>
+      <div class="card-links">
+        <a class="card-link" href="index.html">Landing Page</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><a href="admin.html">Admin Dashboard</a></div>
+      <div class="card-desc">Inquiry management, notification recipients, robot monitoring. JWT-gated.</div>
+      <div class="card-links">
+        <a class="card-link" href="admin-login.html">Admin Login</a>
+        <a class="card-link" href="admin.html">Dashboard</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><a href="architecture.html">Architecture Diagram</a></div>
+      <div class="card-desc">V1 platform architecture: edge firmware, robot adapters, facility integration, cloud backend.</div>
+      <div class="card-links">
+        <a class="card-link" href="architecture.html">Architecture (HTML)</a>
+        <a class="card-link doc" href="../docs/20-architecture/software-stack.md">software-stack.md</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Architecture Docs</div>
+      <div class="card-desc">API reference, database schema, security model, and architecture decision records.</div>
+      <ul class="file-list red">
+        <li><a href="../docs/20-architecture/api-reference.md">API Reference (12 endpoints)</a></li>
+        <li><a href="../docs/20-architecture/database-schema.md">Database Schema (3 tables)</a></li>
+        <li><a href="../docs/20-architecture/security-model.md">Security Model</a></li>
+        <li><a href="../docs/20-architecture/frontend-architecture.md">Frontend Architecture</a></li>
+        <li><a href="../docs/20-architecture/adr/0001-sqlite-over-postgres.md">ADR-0001: SQLite over Postgres</a></li>
+        <li><a href="../docs/20-architecture/adr/0002-no-frontend-build-step.md">ADR-0002: No Build Step</a></li>
+        <li><a href="../docs/20-architecture/adr/0003-jwt-in-httponly-cookie.md">ADR-0003: JWT in httpOnly Cookie</a></li>
+        <li><a href="../docs/20-architecture/adr/0004-anchor-in-miami.md">ADR-0004: Anchor in Miami</a></li>
+        <li><a href="../docs/20-architecture/adr/0005-button-emulator-vs-oem-api.md">ADR-0005: Button Emulator vs OEM API</a></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Source Code</div>
+      <div class="card-desc">8 files: Express server, 4 route modules, auth middleware, SQLite DB, email service.</div>
+      <ul class="file-list red">
+        <li>src/server.js — Entry point, CSP, rate limiting</li>
+        <li>src/routes/auth.js — Login / logout / me</li>
+        <li>src/routes/inquiries.js — Public POST + admin CRUD</li>
+        <li>src/routes/recipients.js — Notification recipients</li>
+        <li>src/routes/stocks.js — Market data (15-min cache)</li>
+        <li>src/middleware/auth.js — JWT requireAuth</li>
+        <li>src/db/database.js — SQLite schema + seed</li>
+        <li>src/services/email.js — Resend integration</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== 6. OPERATIONS ========== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-ops">Sub-Project 6</span>
+    <h2>Operations & Playbooks</h2>
+  </div>
+  <div class="section-desc">Runbooks, deployment procedures, monitoring, incident response. Everything needed to keep the system running.</div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-title"><a href="deployment-playbook.html">Deployment Playbook</a></div>
+      <div class="card-desc">Step-by-step guide for deploying C30, W3, T8 at any facility. Pre/during/post checklists.</div>
+      <div class="card-links">
+        <a class="card-link" href="deployment-playbook.html">Playbook (HTML)</a>
+        <a class="card-link" href="deployment-playbook-print.html">Print Version</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Runbooks</div>
+      <div class="card-desc">5 executable procedures for production operations.</div>
+      <ul class="file-list orange">
+        <li><a href="../docs/50-operations/runbooks/deploy-production.md">Deploy to Production</a></li>
+        <li><a href="../docs/50-operations/runbooks/rollback-release.md">Rollback a Release</a></li>
+        <li><a href="../docs/50-operations/runbooks/backup-database.md">Backup Database</a></li>
+        <li><a href="../docs/50-operations/runbooks/incident-response.md">Incident Response</a></li>
+        <li><a href="../docs/50-operations/runbooks/rotate-secrets.md">Rotate Secrets</a></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Infrastructure Docs</div>
+      <div class="card-desc">Environment configs, monitoring, on-call rotation, facility networking.</div>
+      <ul class="file-list orange">
+        <li><a href="../docs/50-operations/environments.md">Environments (dev/staging/prod)</a></li>
+        <li><a href="../docs/50-operations/monitoring.md">Monitoring & Alerts</a></li>
+        <li><a href="../docs/50-operations/on-call.md">On-Call Rotation</a></li>
+        <li><a href="../docs/30-integrations/facilities/network-topology.md">Network Topology</a></li>
+        <li><a href="../docs/30-integrations/facilities/wifi-requirements.md">WiFi Requirements</a></li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== 7. CLAUDE AUTOMATION ========== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-automation">Sub-Project 7</span>
+    <h2>Claude Code Automation</h2>
+  </div>
+  <div class="section-desc">7 rules, 4 skills, 3 agents — the AI engineering layer that enforces quality and enables rapid iteration.</div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-title">Rules (always active)</div>
+      <div class="card-desc">Auto-loaded standards that Claude follows on every task.</div>
+      <ul class="file-list purple">
+        <li>code-quality.md — Clarity, error handling, WHY: comments</li>
+        <li>git-safety.md — Branch isolation, PR workflow</li>
+        <li>testing.md — Test before commit, real DB</li>
+        <li>security.md — JWT, bcrypt, CSP, input validation</li>
+        <li>wiring-verification.md — Verify reachability</li>
+        <li>database-migrations.md — Schema change policy</li>
+        <li>domain-vocabulary.md — 40+ standardized terms</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Skills (invoke with /command)</div>
+      <div class="card-desc">Reusable workflows triggered on demand.</div>
+      <ul class="file-list purple">
+        <li>/deploy-check — Pre-flight validation (8 steps)</li>
+        <li>/elevator-sim — Button emulator simulator scenarios</li>
+        <li>/new-route — Scaffold Express API route + tests</li>
+        <li>/schema-diff — Preview DB schema changes</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Agents (specialized delegation)</div>
+      <div class="card-desc">Domain experts Claude can delegate to.</div>
+      <ul class="file-list purple">
+        <li>architect — Multi-file design, ADRs</li>
+        <li>security-reviewer — Auth, CSP, input validation</li>
+        <li>elevator-expert — E-Box, OEM APIs, safety, ASME compliance</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Roadmap</div>
+      <div class="card-desc">Current priorities and future plans.</div>
+      <ul class="file-list purple">
+        <li><a href="../docs/60-roadmap/current-quarter.md">Q2 2026 Priorities</a></li>
+        <li><a href="../docs/60-roadmap/backlog.md">Feature Backlog</a></li>
+        <li><a href="../docs/60-roadmap/open-questions.md">Open Questions</a></li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  Accelerate Robotics — Sub-Project Dashboard — April 2026
+</div>
+
+</body>
+</html>

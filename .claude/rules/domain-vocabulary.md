@@ -33,16 +33,7 @@ See also: [`docs/00-overview/glossary.md`](../../docs/00-overview/glossary.md) f
 
 ## Elevator
 
-| Term | Meaning |
-|---|---|
-| **Cab / Cabin** | The box you ride in |
-| **Car call** | A request from inside the cab to go to a specific floor |
-| **Destination dispatch** | Modern elevator UX where you enter your floor outside; the system tells you which cab |
-| **Hall call** | A request at the elevator lobby (up or down button) |
-| **Relay-parallel integration** | Wiring a dry contact across an existing button so the robot can "press" it |
-| **Signal fixture** | The physical button panel at each floor |
-| **TAC32T** | ThyssenKrupp traction elevator control system (what Thesis Hotel has) |
-| **UIT** | User Interface Tool — service menu on the TAC32T CPUA card |
+Elevator-specific terms (E-Box, signal fixture, TAC32T, relay-parallel, etc.) have moved to the [`accelerate-elevator`](/Users/ericrace/Code/accelerate-elevator/) repo's CLAUDE.md.
 
 ## Business
 
@@ -58,5 +49,5 @@ See also: [`docs/00-overview/glossary.md`](../../docs/00-overview/glossary.md) f
 
 | Term | Meaning |
 |---|---|
-| **The wedge** | The universal button emulator — our $23/floor product that gets us into buildings |
+| **The wedge** | The universal button emulator — see `accelerate-elevator` repo |
 | **One brain, many bots** | The strategic thesis — software orchestration over vendor lock-in |

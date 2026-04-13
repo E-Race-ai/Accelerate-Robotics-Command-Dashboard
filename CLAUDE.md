@@ -17,10 +17,18 @@ All institutional knowledge is committed to this repo. Nothing lives in Claude's
 |---|---|
 | Strategy, thesis, business model | [`docs/10-strategy/`](docs/10-strategy/) |
 | Architecture, API, database, ADRs | [`docs/20-architecture/`](docs/20-architecture/) |
-| Elevators, robots, facilities | [`docs/30-integrations/`](docs/30-integrations/) |
-| Deployments (Thesis Hotel, etc.) | [`docs/40-deployments/`](docs/40-deployments/) |
+| Robots, fleet specs, facilities | [`docs/30-integrations/`](docs/30-integrations/) |
 | Runbooks, monitoring, on-call | [`docs/50-operations/`](docs/50-operations/) |
 | Roadmap and open questions | [`docs/60-roadmap/`](docs/60-roadmap/) |
+
+## Related Repos (field projects)
+
+These were split out from this repo on 2026-04-13 because they have independent lifecycles:
+
+| Repo | Type | What's in it |
+|---|---|---|
+| [`accelerate-elevator`](/Users/ericrace/Code/accelerate-elevator/) | Hardware product | Universal button emulator — design, BOM, firmware, install guides, patent analysis |
+| [`accelerate-thesis-hotel`](/Users/ericrace/Code/accelerate-thesis-hotel/) | Deployment project | First customer — site profile, proposals, phases, checklists, playbook |
 
 ## Rules (auto-loaded, always active)
 
@@ -32,7 +40,7 @@ These define the non-negotiable standards for code and collaboration in this rep
 - [`@.claude/rules/wiring-verification.md`](.claude/rules/wiring-verification.md) — verify user-reachability before calling a feature done
 - [`@.claude/rules/security.md`](.claude/rules/security.md) — auth, secrets, CSP, rate limiting
 - [`@.claude/rules/database-migrations.md`](.claude/rules/database-migrations.md) — schema change policy
-- [`@.claude/rules/domain-vocabulary.md`](.claude/rules/domain-vocabulary.md) — hospital + robotics + elevator terms
+- [`@.claude/rules/domain-vocabulary.md`](.claude/rules/domain-vocabulary.md) — hospital + robotics terms (elevator terms moved to `accelerate-elevator`)
 
 ## Before a non-trivial change
 
