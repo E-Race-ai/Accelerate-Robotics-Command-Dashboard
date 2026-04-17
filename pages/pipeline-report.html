@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deal Pipeline — Accelerate Robotics</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #252530;
+    --text: #e8e4df;
+    --dim: #8a8a9a;
+    --accent: #00d4ff;
+    --green: #00e676;
+    --amber: #ffab00;
+    --red: #ff5252;
+    --blue: #448aff;
+    --purple: #b388ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    position: relative;
+    padding: 72px 40px 56px;
+    text-align: center;
+    background: linear-gradient(135deg, #0a0a0f 0%, #0d1015 50%, #0a0a0f 100%);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(ellipse at 30% 40%, rgba(0,212,255,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 60%, rgba(0,230,118,0.03) 0%, transparent 50%);
+    animation: drift 25s ease-in-out infinite alternate;
+  }
+  @keyframes drift { 0%{transform:translate(0,0)} 100%{transform:translate(-20px,15px)} }
+  .hero h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    position: relative; z-index: 1;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero .subtitle {
+    color: var(--dim);
+    font-size: 1rem;
+    margin-top: 10px;
+    position: relative; z-index: 1;
+  }
+  .hero .datestamp {
+    display: inline-block;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    color: var(--accent);
+    padding: 6px 18px;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 20px;
+    position: relative; z-index: 1;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── Container ── */
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── KPI Strip ── */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: -32px 24px 0;
+    position: relative; z-index: 2;
+  }
+  .kpi {
+    background: var(--surface);
+    padding: 24px 16px;
+    text-align: center;
+  }
+  .kpi-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+  .kpi-value.green { color: var(--green); }
+  .kpi-value.amber { color: var(--amber); }
+  .kpi-label {
+    font-size: 0.75rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* ── Stage Funnel ── */
+  .funnel-section {
+    margin: 48px 0 32px;
+    padding: 0 24px;
+  }
+  .section-title {
+    font-size: 0.8rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .funnel {
+    display: flex;
+    gap: 2px;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 48px;
+  }
+  .funnel-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+    position: relative;
+    white-space: nowrap;
+  }
+  .funnel-stage .count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .funnel-stage.research { background: #334155; flex: 0; min-width: 0; padding: 0; }
+  .funnel-stage.proposal { background: #1e40af; flex: 9; }
+  .funnel-stage.outreach { background: #7c3aed; flex: 0; min-width: 0; padding: 0; }
+  .funnel-stage.pilot    { background: #b45309; flex: 0; min-width: 0; padding: 0; }
+  .funnel-stage.active   { background: #15803d; flex: 0; min-width: 0; padding: 0; }
+
+  /* ── Market Sections ── */
+  .market-section {
+    margin: 48px 0;
+    padding: 0 24px;
+  }
+  .market-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .market-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  .market-badge {
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .market-stats {
+    margin-left: auto;
+    display: flex;
+    gap: 24px;
+    font-size: 0.85rem;
+    color: var(--dim);
+  }
+  .market-stats strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ── Deal Cards ── */
+  .deal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 16px;
+  }
+  .deal-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+    overflow: hidden;
+  }
+  .deal-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .deal-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    border-radius: 12px 0 0 12px;
+  }
+  .deal-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .deal-monogram {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .deal-identity {
+    flex: 1;
+    min-width: 0;
+  }
+  .deal-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .deal-location {
+    font-size: 0.8rem;
+    color: var(--dim);
+    margin-top: 2px;
+  }
+  .deal-opp {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--dim);
+    opacity: 0.7;
+  }
+  .deal-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .deal-status.proposal {
+    background: rgba(30,64,175,0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(30,64,175,0.3);
+  }
+  .deal-status.planning {
+    background: rgba(180,83,9,0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(180,83,9,0.3);
+  }
+  .deal-status .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+  .deal-status.proposal .dot { background: #60a5fa; }
+  .deal-status.planning .dot { background: #fbbf24; }
+
+  .deal-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .deal-metric {
+    text-align: center;
+  }
+  .deal-metric-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .deal-metric-label {
+    font-size: 0.65rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  .deal-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .deal-tag {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    color: var(--dim);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .deal-tag strong { color: var(--text); font-weight: 600; }
+
+  .deal-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+  .deal-link:hover { opacity: 1; }
+  .deal-link svg { width: 14px; height: 14px; fill: currentColor; }
+
+  /* ── Notes + Strategic Connections ── */
+  .strategic-section {
+    margin: 48px 0;
+    padding: 0 24px;
+  }
+  .connection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+  .connection-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .connection-card h4 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  .connection-card p {
+    font-size: 0.85rem;
+    color: var(--dim);
+    line-height: 1.5;
+  }
+  .connection-card .bridge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .connection-card .bridge .arrow { color: var(--accent); }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 40px 24px;
+    color: var(--dim);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+    margin-top: 48px;
+  }
+  .footer strong { color: var(--text); font-weight: 600; }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .kpi-strip { grid-template-columns: repeat(3, 1fr); margin: -24px 16px 0; }
+    .kpi:nth-child(4), .kpi:nth-child(5) { grid-column: span 1; }
+    .deal-grid { grid-template-columns: 1fr; }
+    .deal-metrics { grid-template-columns: repeat(2, 1fr); }
+    .market-header { flex-wrap: wrap; }
+    .market-stats { margin-left: 0; width: 100%; margin-top: 8px; }
+    .hero h1 { font-size: 1.6rem; }
+  }
+
+  /* ── Print ── */
+  @media print {
+    body { background: #fff; color: #1a1a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .hero { background: #fff; border-bottom: 2px solid #1a1a1a; padding: 24px; }
+    .hero::before { display: none; }
+    .hero h1 { color: #1a1a1a; font-size: 1.6rem; }
+    .hero h1 span { color: #0077b6; }
+    .hero .subtitle { color: #555; }
+    .hero .datestamp { background: #f0f0f0; border-color: #ccc; color: #333; }
+    .kpi-strip { margin-top: 0; background: #e0e0e0; }
+    .kpi { background: #fff; }
+    .kpi-value { color: #0077b6; }
+    .kpi-value.green { color: #15803d; }
+    .kpi-value.amber { color: #b45309; }
+    .kpi-label { color: #666; }
+    .funnel-stage { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .deal-card { background: #fff; border: 1px solid #ccc; break-inside: avoid; }
+    .deal-card::before { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .deal-card:hover { transform: none; border-color: #ccc; }
+    .deal-monogram { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .deal-tag { background: #f5f5f5; border-color: #ddd; color: #555; }
+    .deal-tag strong { color: #1a1a1a; }
+    .deal-link { color: #0077b6; }
+    .market-name { color: #1a1a1a; }
+    .market-header { border-bottom-color: #ccc; }
+    .section-title { color: #555; }
+    .connection-card { background: #fff; border: 1px solid #ccc; break-inside: avoid; }
+    .connection-card h4 { color: #0077b6; }
+    .deal-status.proposal { background: #e8f0fe; color: #1e40af; border-color: #93c5fd; }
+    .deal-status.planning { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+    .deal-status .dot { print-color-adjust: exact; -webkit-print-color-adjust: exact; border-radius: 50% !important; -webkit-border-radius: 50% !important; }
+    .footer { border-top-color: #ccc; color: #888; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <h1>Accelerate Robotics <span>Deal Pipeline</span></h1>
+  <div class="subtitle">Active deployment opportunities across three markets</div>
+  <div class="datestamp">April 2026</div>
+</div>
+
+<!-- ── KPI Strip ── -->
+<div class="container">
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-value">9</div>
+      <div class="kpi-label">Active Deals</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value">1,747</div>
+      <div class="kpi-label">Total Keys</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value">88</div>
+      <div class="kpi-label">Robots Proposed</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value green">$234.8K</div>
+      <div class="kpi-label">Monthly RaaS</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value amber">$2.82M</div>
+      <div class="kpi-label">Annualized</div>
+    </div>
+  </div>
+
+  <!-- ── Stage Funnel ── -->
+  <div class="funnel-section">
+    <div class="section-title">Pipeline Stage</div>
+    <div class="funnel">
+      <div class="funnel-stage proposal" style="flex:9">Proposal Built <span class="count">9</span></div>
+      <div class="funnel-stage outreach" style="flex:0;min-width:0;padding:0"></div>
+      <div class="funnel-stage pilot" style="flex:0;min-width:0;padding:0"></div>
+      <div class="funnel-stage active" style="flex:0;min-width:0;padding:0"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- FLORIDA (3 deals) -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="market-section">
+    <div class="market-header">
+      <div class="market-name">Florida</div>
+      <div class="market-badge" style="background:rgba(255,171,0,0.12);color:var(--amber);border:1px solid rgba(255,171,0,0.25)">Home Market</div>
+      <div class="market-stats">
+        <span><strong>3</strong> deals</span>
+        <span><strong>420</strong> keys</span>
+        <span><strong>32</strong> robots</span>
+        <span><strong>$89,200</strong>/mo</span>
+      </div>
+    </div>
+    <div class="deal-grid">
+
+      <!-- OPP-001: Thesis Hotel -->
+      <div class="deal-card" style="border-left: none;">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#d4a040;border-radius:12px 0 0 12px;"></div>
+        <div class="deal-card-header">
+          <div class="deal-monogram" style="background:#d4a040;">T</div>
+          <div class="deal-identity">
+            <div class="deal-name">Thesis Hotel Miami</div>
+            <div class="deal-location">Miami, FL &middot; Curio Collection by Hilton</div>
+          </div>
+          <div style="text-align:right">
+            <div class="deal-opp">OPP-001</div>
+            <div class="deal-status planning"><span class="dot"></span>Planning</div>
+          </div>
+        </div>
+        <div class="deal-metrics">
+          <div class="deal-metric">
+            <div class="deal-metric-value">245</div>
+            <div class="deal-metric-label">Keys</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">10</div>
+            <div class="deal-metric-label">Floors</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">14</div>
+            <div class="deal-metric-label">Robots</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value" style="color:var(--green);">$39.9K</div>
+            <div class="deal-metric-label">Monthly</div>
+          </div>
+        </div>
+        <div class="deal-details">
+          <div class="deal-tag"><strong>GM:</strong> Vikash Maharaj</div>
+          <div class="deal-tag"><strong>Owner:</strong> Brent Reynolds</div>
+          <div class="deal-tag"><strong>Rate:</strong> $2,850/robot</div>
+          <div class="deal-tag"><strong>Elevator:</strong> 2x ThyssenKrupp TAC32T</div>
+        </div>
+        <a class="deal-link" href="../../accelerate-thesis-hotel/pages/proposal-interactive.html">
+          <svg viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/><path d="M5 5v14h14v-7h-2v5H7V7h5V5H5z"/></svg>
+          View Proposal
+        </a>
+      </div>
+
+      <!-- OPP-002: The Moore -->
+      <div class="deal-card">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#3a3025;border-radius:12px 0 0 12px;"></div>
+        <div class="deal-card-header">
+          <div class="deal-monogram" style="background:#3a3025;">M</div>
+          <div class="deal-identity">
+            <div class="deal-name">The Moore &mdash; Miami Design District</div>
+            <div class="deal-location">Miami, FL &middot; Independent Members' Club</div>
+          </div>
+          <div style="text-align:right">
+            <div class="deal-opp">OPP-002</div>
+            <div class="deal-status proposal"><span class="dot"></span>Proposal</div>
+          </div>
+        </div>
+        <div class="deal-metrics">
+          <div class="deal-metric">
+            <div class="deal-metric-value">13</div>
+            <div class="deal-metric-label">Residences</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">4</div>
+            <div class="deal-metric-label">Floors</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">10</div>
+            <div class="deal-metric-label">Robots</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value" style="color:var(--green);">$28.5K</div>
+            <div class="deal-metric-label">Monthly</div>
+          </div>
+        </div>
+        <div class="deal-details">
+          <div class="deal-tag"><strong>GM:</strong> TBD</div>
+          <div class="deal-tag"><strong>Owner:</strong> Independent</div>
+          <div class="deal-tag"><strong>Rate:</strong> $2,850/robot</div>
+          <div class="deal-tag"><strong>Michelin Key 2025</strong></div>
+          <div class="deal-tag"><strong>F&B:</strong> Torno Subito (Bottura)</div>
+        </div>
+        <a class="deal-link" href="../../accelerate-moore-miami/pages/proposal-interactive.html">
+          <svg viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/><path d="M5 5v14h14v-7h-2v5H7V7h5V5H5z"/></svg>
+          View Proposal
+        </a>
+      </div>
+
+      <!-- OPP-003: Art Ovation -->
+      <div class="deal-card">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c4654a;border-radius:12px 0 0 12px;"></div>
+        <div class="deal-card-header">
+          <div class="deal-monogram" style="background:#c4654a;">A</div>
+          <div class="deal-identity">
+            <div class="deal-name">Art Ovation Hotel</div>
+            <div class="deal-location">Sarasota, FL &middot; Autograph Collection (Marriott)</div>
+          </div>
+          <div style="text-align:right">
+            <div class="deal-opp">OPP-003</div>
+            <div class="deal-status proposal"><span class="dot"></span>Proposal</div>
+          </div>
+        </div>
+        <div class="deal-metrics">
+          <div class="deal-metric">
+            <div class="deal-metric-value">162</div>
+            <div class="deal-metric-label">Keys</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">6</div>
+            <div class="deal-metric-label">Floors</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">8</div>
+            <div class="deal-metric-label">Robots</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value" style="color:var(--green);">$20.8K</div>
+            <div class="deal-metric-label">Monthly</div>
+          </div>
+        </div>
+        <div class="deal-details">
+          <div class="deal-tag"><strong>GM:</strong> Todd Kucharski</div>
+          <div class="deal-tag"><strong>Owner:</strong> Palm Ave Hospitality</div>
+          <div class="deal-tag"><strong>Operator:</strong> Shaner Hotels (75+)</div>
+          <div class="deal-tag"><strong>Rate:</strong> $2,600/robot</div>
+        </div>
+        <a class="deal-link" href="../../accelerate-art-ovation/pages/proposal-interactive.html">
+          <svg viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/><path d="M5 5v14h14v-7h-2v5H7V7h5V5H5z"/></svg>
+          View Proposal
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- EAST BAY (3 deals) -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="market-section">
+    <div class="market-header">
+      <div class="market-name">East Bay, California</div>
+      <div class="market-badge" style="background:rgba(68,138,255,0.12);color:var(--blue);border:1px solid rgba(68,138,255,0.25)">Cluster Strategy</div>
+      <div class="market-stats">
+        <span><strong>3</strong> deals</span>
+        <span><strong>780</strong> keys</span>
+        <span><strong>33</strong> robots</span>
+        <span><strong>$85,800</strong>/mo</span>
+      </div>
+    </div>
+    <div class="deal-grid">
+
+      <!-- OPP-004: San Ramon Marriott -->
+      <div class="deal-card">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#3a6fa0;border-radius:12px 0 0 12px;"></div>
+        <div class="deal-card-header">
+          <div class="deal-monogram" style="background:#3a6fa0;">SR</div>
+          <div class="deal-identity">
+            <div class="deal-name">San Ramon Marriott</div>
+            <div class="deal-location">San Ramon, CA &middot; Marriott</div>
+          </div>
+          <div style="text-align:right">
+            <div class="deal-opp">OPP-004</div>
+            <div class="deal-status proposal"><span class="dot"></span>Proposal</div>
+          </div>
+        </div>
+        <div class="deal-metrics">
+          <div class="deal-metric">
+            <div class="deal-metric-value">368</div>
+            <div class="deal-metric-label">Keys</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">6</div>
+            <div class="deal-metric-label">Floors</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">12</div>
+            <div class="deal-metric-label">Robots</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value" style="color:var(--green);">$31.2K</div>
+            <div class="deal-metric-label">Monthly</div>
+          </div>
+        </div>
+        <div class="deal-details">
+          <div class="deal-tag"><strong>Owner:</strong> Hudson / Lone Star</div>
+          <div class="deal-tag"><strong>Operator:</strong> HEI Hotels</div>
+          <div class="deal-tag"><strong>Rate:</strong> $2,600/robot</div>
+          <div class="deal-tag"><strong>Bishop Ranch / Tech Corridor</strong></div>
+        </div>
+        <a class="deal-link" href="proposal-san-ramon-marriott.html">
+          <svg viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/><path d="M5 5v14h14v-7h-2v5H7V7h5V5H5z"/></svg>
+          View Proposal
+        </a>
+      </div>
+
+      <!-- OPP-005: Lafayette Park -->
+      <div class="deal-card">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#b08d57;border-radius:12px 0 0 12px;"></div>
+        <div class="deal-card-header">
+          <div class="deal-monogram" style="background:#b08d57;">LP</div>
+          <div class="deal-identity">
+            <div class="deal-name">Lafayette Park Hotel & Spa</div>
+            <div class="deal-location">Lafayette, CA &middot; Independent (AAA Four Diamond)</div>
+          </div>
+          <div style="text-align:right">
+            <div class="deal-opp">OPP-005</div>
+            <div class="deal-status proposal"><span class="dot"></span>Proposal</div>
+          </div>
+        </div>
+        <div class="deal-metrics">
+          <div class="deal-metric">
+            <div class="deal-metric-value">136</div>
+            <div class="deal-metric-label">Keys</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">4</div>
+            <div class="deal-metric-label">Floors</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">7</div>
+            <div class="deal-metric-label">Robots</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value" style="color:var(--green);">$18.2K</div>
+            <div class="deal-metric-label">Monthly</div>
+          </div>
+        </div>
+        <div class="deal-details">
+          <div class="deal-tag"><strong>Owner:</strong> Woodside Hospitality</div>
+          <div class="deal-tag"><strong>Portfolio:</strong> 7+ NorCal properties</div>
+          <div class="deal-tag"><strong>Rate:</strong> $2,600/robot</div>
+          <div class="deal-tag"><strong>Recommended 1st Target</strong></div>
+        </div>
+        <a class="deal-link" href="proposal-lafayette-park.html">
+          <svg viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/><path d="M5 5v14h14v-7h-2v5H7V7h5V5H5z"/></svg>
+          View Proposal
+        </a>
+      </div>
+
+      <!-- OPP-006: Claremont Resort -->
+      <div class="deal-card">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#2e7d6a;border-radius:12px 0 0 12px;"></div>
+        <div class="deal-card-header">
+          <div class="deal-monogram" style="background:#2e7d6a;">CR</div>
+          <div class="deal-identity">
+            <div class="deal-name">Claremont Resort & Club</div>
+            <div class="deal-location">Berkeley, CA &middot; Independent (ex-Fairmont)</div>
+          </div>
+          <div style="text-align:right">
+            <div class="deal-opp">OPP-006</div>
+            <div class="deal-status proposal"><span class="dot"></span>Proposal</div>
+          </div>
+        </div>
+        <div class="deal-metrics">
+          <div class="deal-metric">
+            <div class="deal-metric-value">276</div>
+            <div class="deal-metric-label">Keys</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">10</div>
+            <div class="deal-metric-label">Floors</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">14</div>
+            <div class="deal-metric-label">Robots</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value" style="color:var(--green);">$36.4K</div>
+            <div class="deal-metric-label">Monthly</div>
+          </div>
+        </div>
+        <div class="deal-details">
+          <div class="deal-tag"><strong>Owner:</strong> Ohana Real Estate</div>
+          <div class="deal-tag"><strong>Operator:</strong> HEI Hotels</div>
+          <div class="deal-tag"><strong>Rate:</strong> $2,600/robot</div>
+          <div class="deal-tag" style="border-color:rgba(255,82,82,0.3);color:var(--red);">Elevator survey required</div>
+        </div>
+        <a class="deal-link" href="proposal-claremont-resort.html">
+          <svg viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/><path d="M5 5v14h14v-7h-2v5H7V7h5V5H5z"/></svg>
+          View Proposal
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SACRAMENTO (3 deals) -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="market-section">
+    <div class="market-header">
+      <div class="market-name">Sacramento, California</div>
+      <div class="market-badge" style="background:rgba(179,136,255,0.12);color:var(--purple);border:1px solid rgba(179,136,255,0.25)">HHM Bridge to East Bay</div>
+      <div class="market-stats">
+        <span><strong>3</strong> deals</span>
+        <span><strong>547</strong> keys</span>
+        <span><strong>23</strong> robots</span>
+        <span><strong>$59,800</strong>/mo</span>
+      </div>
+    </div>
+    <div class="deal-grid">
+
+      <!-- OPP-007: Kimpton Sawyer -->
+      <div class="deal-card">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c96b3c;border-radius:12px 0 0 12px;"></div>
+        <div class="deal-card-header">
+          <div class="deal-monogram" style="background:#c96b3c;">S</div>
+          <div class="deal-identity">
+            <div class="deal-name">Kimpton Sawyer Hotel</div>
+            <div class="deal-location">Sacramento, CA &middot; IHG / Kimpton</div>
+          </div>
+          <div style="text-align:right">
+            <div class="deal-opp">OPP-007</div>
+            <div class="deal-status proposal"><span class="dot"></span>Proposal</div>
+          </div>
+        </div>
+        <div class="deal-metrics">
+          <div class="deal-metric">
+            <div class="deal-metric-value">250</div>
+            <div class="deal-metric-label">Keys</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">16</div>
+            <div class="deal-metric-label">Floors</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">10</div>
+            <div class="deal-metric-label">Robots</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value" style="color:var(--green);">$26.0K</div>
+            <div class="deal-metric-label">Monthly</div>
+          </div>
+        </div>
+        <div class="deal-details">
+          <div class="deal-tag"><strong>Owner:</strong> JMA + Mohari</div>
+          <div class="deal-tag"><strong>Rate:</strong> $2,600/robot</div>
+          <div class="deal-tag"><strong>Golden 1 Center arena hotel</strong></div>
+        </div>
+        <a class="deal-link" href="proposal-kimpton-sawyer.html">
+          <svg viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/><path d="M5 5v14h14v-7h-2v5H7V7h5V5H5z"/></svg>
+          View Proposal
+        </a>
+      </div>
+
+      <!-- OPP-008: The Citizen -->
+      <div class="deal-card">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#2c4a6e;border-radius:12px 0 0 12px;"></div>
+        <div class="deal-card-header">
+          <div class="deal-monogram" style="background:#2c4a6e;">C</div>
+          <div class="deal-identity">
+            <div class="deal-name">The Citizen Hotel</div>
+            <div class="deal-location">Sacramento, CA &middot; Autograph Collection (Marriott)</div>
+          </div>
+          <div style="text-align:right">
+            <div class="deal-opp">OPP-008</div>
+            <div class="deal-status proposal"><span class="dot"></span>Proposal</div>
+          </div>
+        </div>
+        <div class="deal-metrics">
+          <div class="deal-metric">
+            <div class="deal-metric-value">196</div>
+            <div class="deal-metric-label">Keys</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">14</div>
+            <div class="deal-metric-label">Floors</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">8</div>
+            <div class="deal-metric-label">Robots</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value" style="color:var(--green);">$20.8K</div>
+            <div class="deal-metric-label">Monthly</div>
+          </div>
+        </div>
+        <div class="deal-details">
+          <div class="deal-tag"><strong>Owner:</strong> Cambridge Landmark (Miami PE)</div>
+          <div class="deal-tag"><strong>Operator:</strong> Aimbridge</div>
+          <div class="deal-tag"><strong>Rate:</strong> $2,600/robot</div>
+          <div class="deal-tag"><strong>Grange — Michelin Guide</strong></div>
+        </div>
+        <a class="deal-link" href="proposal-citizen-hotel.html">
+          <svg viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/><path d="M5 5v14h14v-7h-2v5H7V7h5V5H5z"/></svg>
+          View Proposal
+        </a>
+      </div>
+
+      <!-- OPP-009: Westin Sacramento -->
+      <div class="deal-card">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#5a8f6e;border-radius:12px 0 0 12px;"></div>
+        <div class="deal-card-header">
+          <div class="deal-monogram" style="background:#5a8f6e;">W</div>
+          <div class="deal-identity">
+            <div class="deal-name">Westin Sacramento Riverfront</div>
+            <div class="deal-location">Sacramento, CA &middot; Marriott / Westin</div>
+          </div>
+          <div style="text-align:right">
+            <div class="deal-opp">OPP-009</div>
+            <div class="deal-status proposal"><span class="dot"></span>Proposal</div>
+          </div>
+        </div>
+        <div class="deal-metrics">
+          <div class="deal-metric">
+            <div class="deal-metric-value">101</div>
+            <div class="deal-metric-label">Keys</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">3</div>
+            <div class="deal-metric-label">Floors</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value">5</div>
+            <div class="deal-metric-label">Robots</div>
+          </div>
+          <div class="deal-metric">
+            <div class="deal-metric-value" style="color:var(--green);">$13.0K</div>
+            <div class="deal-metric-label">Monthly</div>
+          </div>
+        </div>
+        <div class="deal-details">
+          <div class="deal-tag"><strong>Owner:</strong> Monarch Alt Capital</div>
+          <div class="deal-tag"><strong>Operator:</strong> HHM Hotels</div>
+          <div class="deal-tag"><strong>Rate:</strong> $2,600/robot</div>
+          <div class="deal-tag"><strong>Non-union &middot; 2024 renovation</strong></div>
+          <div class="deal-tag" style="border-color:rgba(0,230,118,0.3);color:var(--green);">Recommended beachhead</div>
+        </div>
+        <a class="deal-link" href="proposal-westin-sacramento.html">
+          <svg viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/><path d="M5 5v14h14v-7h-2v5H7V7h5V5H5z"/></svg>
+          View Proposal
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- STRATEGIC CONNECTIONS -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="strategic-section">
+    <div class="section-title">Strategic Connections</div>
+    <div class="connection-grid">
+
+      <div class="connection-card">
+        <h4>HHM Hotels Bridge</h4>
+        <p>HHM operates both Westin Sacramento and San Ramon Marriott. One relationship opens two markets.</p>
+        <div class="bridge">OPP-009 Westin Sac <span class="arrow">&rarr;</span> OPP-004 San Ramon</div>
+      </div>
+
+      <div class="connection-card">
+        <h4>HEI Hotels Pair</h4>
+        <p>HEI manages both San Ramon Marriott and Claremont Resort. One operations team, two properties.</p>
+        <div class="bridge">OPP-004 San Ramon <span class="arrow">&harr;</span> OPP-006 Claremont</div>
+      </div>
+
+      <div class="connection-card">
+        <h4>Woodside Portfolio Multiplier</h4>
+        <p>Lafayette Park's owner operates 7+ NorCal properties. One deal unlocks Monterey Plaza, Stanford Park, Napa Valley Lodge, Hotel Drisco, Harvest Inn, Lodge at Bodega Bay.</p>
+        <div class="bridge">OPP-005 Lafayette <span class="arrow">&rarr;</span> 7+ properties</div>
+      </div>
+
+      <div class="connection-card">
+        <h4>Shaner Hotels Portfolio</h4>
+        <p>Art Ovation's operator manages 75+ properties. A clean deployment here is the reference for the entire fleet.</p>
+        <div class="bridge">OPP-003 Art Ovation <span class="arrow">&rarr;</span> 75+ properties</div>
+      </div>
+
+      <div class="connection-card">
+        <h4>Cambridge Landmark — Miami Connection</h4>
+        <p>The Citizen's owner is Miami-based PE. Same city as Eric &mdash; in-person pitch advantage.</p>
+        <div class="bridge">OPP-008 Citizen <span class="arrow">&harr;</span> Miami HQ</div>
+      </div>
+
+      <div class="connection-card">
+        <h4>Aimbridge Cross-Sell</h4>
+        <p>Aimbridge operates The Citizen and Hyatt Centric Sacramento. Second property in same city, same operator.</p>
+        <div class="bridge">OPP-008 Citizen <span class="arrow">&rarr;</span> Hyatt Centric Sac</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Footer ── -->
+<div class="footer">
+  <strong>Accelerate Robotics</strong> &middot; Deal Pipeline &middot; April 2026<br>
+  <span style="opacity:0.6;font-size:0.75rem;margin-top:4px;display:inline-block;">One brain, many bots.</span>
+</div>
+
+</body>
+</html>
