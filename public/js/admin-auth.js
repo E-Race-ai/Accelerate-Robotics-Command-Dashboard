@@ -1,6 +1,6 @@
 /**
  * Admin authentication helpers.
- * Used by both admin-login.html and admin.html.
+ * Used by admin pages. Returns { email, role } or null.
  */
 
 async function checkAuth() {
