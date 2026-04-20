@@ -174,4 +174,14 @@ function seedAdmin() {
 
 seedAdmin();
 
+// ── Seed deals ──────────────────────────────────────────────────
+// WHY: Pre-populate with existing hotel pipeline. Idempotent — skips if deals exist.
+try {
+  const { seedDeals } = require('./seed-deals');
+  seedDeals(db);
+} catch (e) {
+  // WHY: seed-deals may not exist yet during early development
+  if (!e.message.includes('Cannot find module')) throw e;
+}
+
 module.exports = db;
