@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deal Pipeline — Accelerate Robotics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+    /* ── Stats row ─────────────────────────────────────────── */
+    #deal-stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: white;
+      border-radius: 14px;
+      padding: 14px 22px;
+      min-width: 80px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .stat-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-top: 4px;
+    }
+
+    /* ── Kanban ────────────────────────────────────────────── */
+    #deal-kanban {
+      display: grid;
+      /* WHY: 6 pipeline stages in kanban; minmax ensures columns compress gracefully on smaller screens */
+      grid-template-columns: repeat(6, minmax(170px, 1fr));
+      gap: 14px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .kanban-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .kanban-header {
+      background: white;
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .kanban-count {
+      background: #f3f4f6;
+      color: #6b7280;
+      border-radius: 20px;
+      padding: 1px 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .kanban-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 48px;
+    }
+    .deal-card {
+      display: block;
+      background: white;
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      text-decoration: none;
+      transition: box-shadow 0.15s, transform 0.1s;
+      border: 1px solid transparent;
+    }
+    .deal-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-1px);
+      border-color: #e5e7eb;
+    }
+    .deal-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 3px;
+      line-height: 1.2;
+    }
+    .deal-meta {
+      font-size: 0.72rem;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+    .deal-value {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #2563eb;
+      margin-bottom: 3px;
+    }
+    .deal-owner {
+      font-size: 0.68rem;
+      color: #d1d5db;
+      font-weight: 500;
+    }
+
+    /* ── Nav active state ──────────────────────────────────── */
+    .nav-active {
+      color: #2563eb;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="bg-[#f7f8fc] min-h-screen">
+
+  <!-- Loading state -->
+  <div id="loading" class="flex items-center justify-center min-h-screen">
+    <p class="text-gray-400">Loading...</p>
+  </div>
+
+  <!-- Dashboard (hidden until auth verified) -->
+  <div id="dashboard" class="hidden">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-md">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white"/></svg>
+          </div>
+          <nav class="flex items-center gap-1">
+            <a href="/admin" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Dashboard</a>
+            <a href="/admin/deals" class="px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 bg-blue-50">Deals</a>
+          </nav>
+          <span class="text-gray-200 select-none">|</span>
+          <span id="adminEmail" class="text-sm text-gray-400"></span>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="/" class="text-sm text-gray-400 hover:text-blue-600 transition">View Site</a>
+          <button onclick="logout()" class="text-sm text-gray-400 hover:text-red-600 transition">Sign Out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+
+      <!-- Page heading -->
+      <div class="mb-6">
+        <h1 class="headline text-2xl font-bold text-gray-900">Deal Pipeline</h1>
+        <p class="text-gray-400 text-sm mt-1">Track opportunities from first contact to active deployment</p>
+      </div>
+
+      <!-- Stats row -->
+      <div id="deal-stats" class="mb-8"></div>
+
+      <!-- Controls: view toggle + search + new deal -->
+      <div class="flex flex-wrap items-center gap-3 mb-6">
+        <!-- View toggle -->
+        <div class="flex rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+          <button id="view-kanban"
+                  class="px-4 py-2 text-sm font-semibold transition bg-blue-600 text-white">
+            Kanban
+          </button>
+          <button id="view-table"
+                  class="px-4 py-2 text-sm font-semibold transition text-gray-500 hover:bg-gray-50">
+            Table
+          </button>
+        </div>
+
+        <!-- Search -->
+        <div class="relative flex-1 min-w-48 max-w-sm">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input id="deal-search" type="text" placeholder="Search deals, facilities, cities…"
+                 class="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
+        </div>
+
+        <!-- New Deal button -->
+        <button onclick="openNewDealModal()"
+                class="ml-auto px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-md transition">
+          + New Deal
+        </button>
+      </div>
+
+      <!-- Kanban view -->
+      <div id="deal-kanban"></div>
+
+      <!-- Table view (hidden by default) -->
+      <div id="deal-table-wrap" class="hidden">
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                <th class="px-4 py-3 text-left">ID</th>
+                <th class="px-4 py-3 text-left">Name</th>
+                <th class="px-4 py-3 text-left">Stage</th>
+                <th class="px-4 py-3 text-left">Type</th>
+                <th class="px-4 py-3 text-left">Location</th>
+                <th class="px-4 py-3 text-left">Owner</th>
+                <th class="px-4 py-3 text-left">Monthly Value</th>
+                <th class="px-4 py-3 text-left">Updated</th>
+              </tr>
+            </thead>
+            <tbody id="deal-table-body"></tbody>
+          </table>
+          <p id="deal-table-empty" class="text-gray-400 text-center py-10 hidden">No deals found.</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── New Deal Modal ─────────────────────────────────────────── -->
+  <div id="new-deal-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="headline text-lg font-bold text-gray-900">New Deal</h2>
+        <button onclick="closeNewDealModal()" class="text-gray-300 hover:text-gray-500 transition">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="new-deal-form" class="px-6 py-5 space-y-4">
+        <!-- Deal name (required) -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Deal Name <span class="text-red-400">*</span></label>
+          <input type="text" name="name" required placeholder="e.g. Marriott San Ramon"
+                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <!-- Source -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Source</label>
+          <select name="source"
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white">
+            <option value="">— Select source —</option>
+            <option value="inbound">Inbound</option>
+            <option value="referral">Referral</option>
+            <option value="outbound">Outbound</option>
+            <option value="event">Event</option>
+          </select>
+        </div>
+        <!-- Owner -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Owner</label>
+          <input type="text" name="owner" placeholder="e.g. Eric Race"
+                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <!-- Notes -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notes</label>
+          <textarea name="notes" rows="3" placeholder="Any context worth capturing…"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"></textarea>
+        </div>
+        <!-- Actions -->
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeNewDealModal()"
+                  class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md transition">
+            Create Deal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/admin-auth.js"></script>
+  <script src="/js/deals.js"></script>
+</body>
+</html>

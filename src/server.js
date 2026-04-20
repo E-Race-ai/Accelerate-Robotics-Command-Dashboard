@@ -73,6 +73,13 @@ app.get('/admin', (req, res) => {
 app.get('/admin-login', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-login.html'));
 });
+app.get('/admin/deals', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-deals.html'));
+});
+// WHY: Placeholder for deal detail page — route registered so links work even before the page file exists
+app.get('/admin/deals/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-deal-detail.html'));
+});
 
 // ── Start ───────────────────────────────────────────────────────
 app.listen(PORT, () => {
