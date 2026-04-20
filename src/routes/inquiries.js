@@ -33,6 +33,24 @@ router.post('/', async (req, res) => {
     // Fire-and-forget email notification — don't block the response
     notifyNewInquiry({ name, email, company, phone, message }).catch(() => {});
 
+    // WHY: Auto-create a deal from each inquiry so no lead falls through the cracks
+    try {
+      const { generateDealId, generateId } = require('../services/id-generator');
+      const dealId = generateDealId(db);
+      db.prepare(`
+        INSERT INTO deals (id, name, stage, source, notes)
+        VALUES (?, ?, 'lead', 'inbound', ?)
+      `).run(dealId, `Inquiry: ${company || name}`, `Auto-created from inquiry #${result.lastInsertRowid}. Contact: ${name} <${email}>`);
+
+      db.prepare(`
+        INSERT INTO activities (id, deal_id, actor, action, detail)
+        VALUES (?, ?, 'system', 'deal_created', ?)
+      `).run(generateId(), dealId, JSON.stringify({ source: 'inquiry', inquiry_id: result.lastInsertRowid, name, email, company }));
+    } catch (dealErr) {
+      // WHY: Don't fail the inquiry submission if deal creation fails
+      console.error('[inquiries] Auto-deal creation failed:', dealErr.message);
+    }
+
     res.status(201).json({ id: result.lastInsertRowid, message: 'Inquiry submitted successfully' });
   } catch (err) {
     console.error('[inquiries] Insert error:', err.message);
