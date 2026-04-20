@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deal Detail — Accelerate Robotics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+    /* ── Stage bar ─────────────────────────────────────────────── */
+    .stage-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .stage-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .stage-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      transition: box-shadow 0.2s;
+    }
+    .stage-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .stage-line {
+      height: 2px;
+      flex: 1;
+      min-width: 16px;
+      margin-bottom: 20px; /* WHY: Align line vertically with dots (dot+label stack = ~34px, dot is at top) */
+      flex-shrink: 0;
+    }
+
+    /* ── Facility grid ─────────────────────────────────────────── */
+    .facility-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 24px;
+    }
+
+    /* ── Challenge items ───────────────────────────────────────── */
+    .challenge-item {
+      background: #f9fafb;
+      border: 1px solid #f3f4f6;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .category-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Contact items ─────────────────────────────────────────── */
+    .contact-item {
+      background: #f9fafb;
+      border: 1px solid #f3f4f6;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .contact-role {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 20px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: #ede9fe;
+      color: #6d28d9;
+      text-transform: capitalize;
+    }
+
+    /* ── Activity timeline ─────────────────────────────────────── */
+    .activity-list {
+      position: relative;
+      padding-left: 20px;
+    }
+    .activity-list::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: #e5e7eb;
+    }
+    .activity-item {
+      position: relative;
+      margin-bottom: 14px;
+    }
+    .activity-dot {
+      position: absolute;
+      left: -17px;
+      top: 4px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #2563eb;
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px #e5e7eb;
+    }
+
+    /* ── Nav active state ──────────────────────────────────────── */
+    .nav-active {
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    /* ── Card ──────────────────────────────────────────────────── */
+    .detail-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .card-heading {
+      font-family: 'Space Grotesk', 'Inter', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 14px;
+    }
+  </style>
+</head>
+<body class="bg-[#f7f8fc] min-h-screen">
+
+  <!-- Loading state -->
+  <div id="loading" class="flex items-center justify-center min-h-screen">
+    <p class="text-gray-400">Loading...</p>
+  </div>
+
+  <!-- Dashboard (hidden until auth verified) -->
+  <div id="dashboard" class="hidden">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-md">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white"/></svg>
+          </div>
+          <nav class="flex items-center gap-1">
+            <a href="/admin" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Dashboard</a>
+            <a href="/admin/deals" class="px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 bg-blue-50">Deals</a>
+          </nav>
+          <span class="text-gray-200 select-none">|</span>
+          <span id="adminEmail" class="text-sm text-gray-400"></span>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="/" class="text-sm text-gray-400 hover:text-blue-600 transition">View Site</a>
+          <button onclick="logout()" class="text-sm text-gray-400 hover:text-red-600 transition">Sign Out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+
+      <!-- Back link -->
+      <a href="/admin/deals" class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-blue-600 transition mb-5">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Deals
+      </a>
+
+      <!-- Deal header -->
+      <div id="deal-header" class="mb-6"></div>
+
+      <!-- Stage progression bar -->
+      <div class="detail-card mb-6">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Pipeline Stage</p>
+        <div id="stage-bar" class="stage-bar"></div>
+      </div>
+
+      <!-- Two-column layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left: 2 cols -->
+        <div class="lg:col-span-2 space-y-6">
+
+          <!-- Facility profile card -->
+          <div class="detail-card">
+            <h3 class="card-heading">Facility Profile</h3>
+            <div id="facility-card"></div>
+          </div>
+
+          <!-- Operational challenges -->
+          <div class="detail-card">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="card-heading mb-0">Operational Challenges</h3>
+              <button onclick="openChallengeModal()"
+                      class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition">
+                + Add Challenge
+              </button>
+            </div>
+            <div id="challenges-list" class="space-y-3"></div>
+          </div>
+
+          <!-- Contacts -->
+          <div class="detail-card">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="card-heading mb-0">Contacts</h3>
+              <button onclick="openContactModal()"
+                      class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition">
+                + Add Contact
+              </button>
+            </div>
+            <div id="contacts-list" class="space-y-3"></div>
+          </div>
+
+        </div>
+
+        <!-- Right: 1 col -->
+        <div class="space-y-6">
+
+          <!-- Activity timeline -->
+          <div class="detail-card">
+            <h3 class="card-heading">Activity</h3>
+            <div id="activity-timeline" class="activity-list"></div>
+          </div>
+
+          <!-- Notes -->
+          <div class="detail-card">
+            <h3 class="card-heading">Notes</h3>
+            <p id="notes-content" class="text-sm text-gray-600 whitespace-pre-line"></p>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── Add Challenge Modal ──────────────────────────────────────── -->
+  <div id="challenge-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="headline text-lg font-bold text-gray-900">Add Operational Challenge</h2>
+        <button onclick="closeChallengeModal()" class="text-gray-300 hover:text-gray-500 transition">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="challenge-form" class="px-6 py-5 space-y-4">
+        <!-- Category -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category <span class="text-red-400">*</span></label>
+          <select name="category" required
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white">
+            <option value="">— Select category —</option>
+            <option value="cleaning">Cleaning</option>
+            <option value="delivery">Delivery</option>
+            <option value="transport">Transport</option>
+            <option value="security">Security</option>
+            <option value="disinfection">Disinfection</option>
+            <option value="mobility">Mobility</option>
+            <option value="guidance">Guidance</option>
+            <option value="outdoor">Outdoor</option>
+            <option value="inventory">Inventory</option>
+          </select>
+        </div>
+        <!-- Description -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Description <span class="text-red-400">*</span></label>
+          <textarea name="description" required rows="3" placeholder="Describe the challenge…"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"></textarea>
+        </div>
+        <!-- Priority -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Priority</label>
+          <select name="priority"
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white">
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <!-- Cost + Area -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Monthly Cost ($)</label>
+            <input type="number" name="current_cost_monthly" min="0" placeholder="e.g. 8000"
+                   class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Area (sqft)</label>
+            <input type="number" name="area_sqft" min="0" placeholder="e.g. 15000"
+                   class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+          </div>
+        </div>
+        <!-- Actions -->
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeChallengeModal()"
+                  class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md transition">
+            Add Challenge
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Add Contact Modal ────────────────────────────────────────── -->
+  <div id="contact-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="headline text-lg font-bold text-gray-900">Add Contact</h2>
+        <button onclick="closeContactModal()" class="text-gray-300 hover:text-gray-500 transition">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="contact-form" class="px-6 py-5 space-y-4">
+        <!-- Name -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Name <span class="text-red-400">*</span></label>
+          <input type="text" name="contact_name" required placeholder="e.g. Maria Garcia"
+                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <!-- Title -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Title</label>
+          <input type="text" name="title" placeholder="e.g. General Manager"
+                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <!-- Email + Phone -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Email</label>
+            <input type="email" name="email" placeholder="name@hotel.com"
+                   class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Phone</label>
+            <input type="tel" name="phone" placeholder="(305) 555-0100"
+                   class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+          </div>
+        </div>
+        <!-- Role -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Role</label>
+          <select name="role"
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white">
+            <option value="">— Select role —</option>
+            <option value="decision_maker">Decision Maker</option>
+            <option value="champion">Champion</option>
+            <option value="influencer">Influencer</option>
+            <option value="end_user">End User</option>
+            <option value="blocker">Blocker</option>
+          </select>
+        </div>
+        <!-- Actions -->
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeContactModal()"
+                  class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md transition">
+            Add Contact
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/admin-auth.js"></script>
+  <script src="/js/deal-detail.js"></script>
+</body>
+</html>
