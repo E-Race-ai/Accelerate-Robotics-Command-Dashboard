@@ -12,6 +12,7 @@ const authRoutes = require('./routes/auth');
 const inquiryRoutes = require('./routes/inquiries');
 const recipientRoutes = require('./routes/recipients');
 const stockRoutes = require('./routes/stocks');
+const dealRoutes = require('./routes/deals');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +61,7 @@ app.use('/api/inquiries', (req, res, next) => {
 }, inquiryRoutes);
 app.use('/api/recipients', recipientRoutes);
 app.use('/api/stocks', stockRoutes);
+app.use('/api/deals', dealRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
 // WHY: Direct navigation to /admin or /admin-login should serve the HTML files
