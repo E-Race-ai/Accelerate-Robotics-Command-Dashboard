@@ -732,7 +732,7 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
 
 .slot-swap:hover { text-decoration:underline; }
 
-/* ── Comparison cards ── */
+/* ── Comparison cards — rich catalog-style ── */
 .comparison {
     padding:16px;
     border-radius:12px;
@@ -753,79 +753,341 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
 
 .comp-grid {
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
-    gap:10px;
+    grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+    gap:12px;
 }
 
 .comp-card {
-    padding:14px;
-    border-radius:10px;
+    border-radius:12px;
     background:var(--card);
     border:1px solid var(--border);
     cursor:pointer;
     transition:all 0.15s;
     display:flex;
     flex-direction:column;
-    gap:6px;
+    overflow:hidden;
 }
 
 .comp-card:hover {
     background:var(--card-hover);
-    box-shadow:0 2px 12px rgba(0,0,0,0.06);
+    box-shadow:0 4px 16px rgba(0,0,0,0.07);
 }
 
 .comp-card.selected {
     border-color:var(--blue);
-    box-shadow:0 0 0 2px rgba(0,85,255,0.15);
+    box-shadow:0 0 0 2px rgba(0,85,255,0.12);
 }
 
-.comp-card .name {
+/* Card header with image */
+.cc-header {
+    display:flex;
+    gap:12px;
+    padding:14px 14px 0;
+    align-items:flex-start;
+}
+
+.cc-img-wrap {
+    width:72px;
+    height:72px;
+    border-radius:8px;
+    background:rgba(0,0,0,0.03);
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+}
+
+.cc-img-wrap img {
+    width:100%;
+    height:100%;
+    object-fit:contain;
+}
+
+.cc-img-placeholder {
+    font-size:0.7rem;
+    color:var(--muted);
+    font-weight:600;
+    text-align:center;
+    line-height:1.2;
+}
+
+.cc-identity {
+    flex:1;
+    min-width:0;
+}
+
+.cc-model {
     font-family:'Space Grotesk',sans-serif;
     font-weight:700;
-    font-size:0.85rem;
+    font-size:0.92rem;
+    color:var(--text);
+    line-height:1.2;
+}
+
+.cc-company {
+    font-size:0.68rem;
+    color:var(--muted);
+    margin-top:2px;
+    display:flex;
+    align-items:center;
+    gap:4px;
+}
+
+.cc-company img {
+    width:14px;
+    height:14px;
+    border-radius:3px;
+}
+
+.cc-origin {
+    font-size:0.65rem;
+    color:var(--text);
+    margin-top:3px;
+    display:flex;
+    align-items:center;
+    gap:4px;
+}
+
+.cc-origin .flag {
+    font-size:1rem;
+    line-height:1;
+}
+
+.cc-score-badge {
+    flex-shrink:0;
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.78rem;
+    color:white;
+}
+
+.cc-score-badge.score-high { background:var(--green); }
+.cc-score-badge.score-mid { background:var(--amber); }
+.cc-score-badge.score-low { background:var(--red); }
+
+/* Card body — specs grid */
+.cc-body {
+    padding:10px 14px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    flex:1;
+}
+
+.cc-status {
+    display:inline-block;
+    padding:2px 7px;
+    border-radius:5px;
+    font-size:0.56rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    align-self:flex-start;
+}
+
+.cc-status.st-available { background:rgba(22,163,74,0.08); color:var(--green); }
+.cc-status.st-limited { background:rgba(217,119,6,0.08); color:var(--amber); }
+.cc-status.st-early { background:rgba(124,58,237,0.08); color:var(--purple); }
+
+.cc-price-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:6px 0;
+    border-bottom:1px solid rgba(0,0,0,0.06);
+}
+
+.cc-price-est {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1rem;
     color:var(--text);
 }
 
-.comp-card .company {
-    font-size:0.65rem;
+.cc-price-est .unit {
+    font-size:0.6rem;
+    font-weight:500;
     color:var(--muted);
-    margin-bottom:4px;
 }
 
-.comp-stat {
+.cc-price-raw {
+    font-size:0.56rem;
+    color:var(--muted);
+    max-width:55%;
+    text-align:right;
+    line-height:1.3;
+}
+
+.cc-specs {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:2px 12px;
+}
+
+.cc-spec {
     display:flex;
     justify-content:space-between;
-    font-size:0.65rem;
+    font-size:0.62rem;
     padding:3px 0;
-    border-bottom:1px solid rgba(0,0,0,0.04);
+    border-bottom:1px solid rgba(0,0,0,0.03);
 }
 
-.comp-stat .k {
-    color:var(--muted);
-}
-
-.comp-stat span:last-child {
+.cc-spec .k { color:var(--muted); }
+.cc-spec .v {
     font-weight:600;
     font-family:'JetBrains Mono',monospace;
-    font-size:0.62rem;
+    font-size:0.58rem;
+    text-align:right;
 }
 
-.comp-diff {
-    font-size:0.6rem;
+.cc-spec .v.yes { color:var(--green); }
+.cc-spec .v.no { color:var(--muted); opacity:0.5; }
+
+/* Use cases */
+.cc-uses {
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+}
+
+.cc-use {
+    padding:2px 6px;
+    border-radius:4px;
+    background:rgba(0,85,255,0.05);
+    font-size:0.56rem;
+    font-weight:500;
+    color:var(--blue);
+}
+
+/* Badges row */
+.cc-badges {
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+}
+
+.cc-badge {
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:0.56rem;
+    font-weight:600;
+}
+
+.cc-badge.b-elev { background:rgba(0,85,255,0.06); color:var(--blue); }
+.cc-badge.b-fleet { background:rgba(0,85,255,0.06); color:var(--blue); }
+.cc-badge.b-outdoor { background:rgba(22,163,74,0.06); color:var(--green); }
+.cc-badge.b-ip { background:rgba(0,0,0,0.04); color:var(--muted); }
+
+/* Import risk bar */
+.cc-risk {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 8px;
+    border-radius:6px;
+    background:rgba(0,0,0,0.02);
+}
+
+.cc-risk-score {
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:0.62rem;
+    color:white;
+    flex-shrink:0;
+}
+
+.cc-risk-score.risk-low { background:var(--green); }
+.cc-risk-score.risk-med { background:var(--amber); }
+.cc-risk-score.risk-high { background:var(--red); }
+
+.cc-risk-info {
+    flex:1;
+    min-width:0;
+}
+
+.cc-risk-label {
+    font-size:0.58rem;
+    font-weight:600;
+}
+
+.cc-risk-label.risk-low { color:var(--green); }
+.cc-risk-label.risk-med { color:var(--amber); }
+.cc-risk-label.risk-high { color:var(--red); }
+
+.cc-risk-detail {
+    font-size:0.52rem;
+    color:var(--muted);
+    line-height:1.3;
+    margin-top:1px;
+}
+
+.cc-risk-tariff {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.52rem;
+    font-weight:600;
+    color:var(--muted);
+    white-space:nowrap;
+}
+
+/* Key differentiators */
+.cc-diffs {
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+}
+
+.cc-diff {
+    font-size:0.58rem;
     color:var(--muted);
     line-height:1.4;
-    padding-left:4px;
+    padding-left:8px;
+    position:relative;
 }
 
+.cc-diff::before {
+    content:'';
+    position:absolute;
+    left:0;
+    top:6px;
+    width:3px;
+    height:3px;
+    border-radius:50%;
+    background:var(--blue);
+}
+
+/* Notes */
+.cc-notes {
+    font-size:0.55rem;
+    color:var(--muted);
+    line-height:1.4;
+    font-style:italic;
+    border-top:1px solid rgba(0,0,0,0.04);
+    padding-top:6px;
+}
+
+/* Pick button */
 .pick-btn {
-    margin-top:6px;
-    padding:6px;
-    border-radius:6px;
+    padding:8px;
+    border-radius:8px;
     text-align:center;
-    font-size:0.65rem;
+    font-size:0.68rem;
     font-weight:700;
     cursor:pointer;
     transition:all 0.12s;
+    margin-top:auto;
 }
 
 .comp-card.selected .pick-btn {
@@ -1375,6 +1637,9 @@ const DEFAULT_RAAS_MONTHLY = 2850;
 // Module-level state for the current fleet recommendation
 let currentSlots = [];
 
+// Country flags — shared with robot-catalog.html
+const FLAGS = {"China":"\ud83c\udde8\ud83c\uddf3","USA":"\ud83c\uddfa\ud83c\uddf8","United States":"\ud83c\uddfa\ud83c\uddf8","Canada":"\ud83c\udde8\ud83c\udde6","South Korea":"\ud83c\uddf0\ud83c\uddf7","Japan":"\ud83c\uddef\ud83c\uddf5","Germany":"\ud83c\udde9\ud83c\uddea","Norway":"\ud83c\uddf3\ud83c\uddf4","Switzerland":"\ud83c\udde8\ud83c\udded","Denmark":"\ud83c\udde9\ud83c\uddf0","Austria":"\ud83c\udde6\ud83c\uddf9","Singapore":"\ud83c\uddf8\ud83c\uddec","Israel":"\ud83c\uddee\ud83c\uddf1","Taiwan":"\ud83c\uddf9\ud83c\uddfc","France":"\ud83c\uddeb\ud83c\uddf7","United Kingdom":"\ud83c\uddec\ud83c\udde7","Australia":"\ud83c\udde6\ud83c\uddfa","India":"\ud83c\uddee\ud83c\uddf3","Sweden":"\ud83c\uddf8\ud83c\uddea","Finland":"\ud83c\uddeb\ud83c\uddee","Netherlands":"\ud83c\uddf3\ud83c\uddf1","Italy":"\ud83c\uddee\ud83c\uddf9"};
+
 // ── GOALS constant — maps each goal ID to filtering/scoring config ──
 const GOALS = {
     'goal-roomservice': {
@@ -1801,6 +2066,22 @@ function renderComparison(slotIdx) {
     const all = [slot.selected, ...slot.alternatives].filter(Boolean);
     const el = document.getElementById('comp-' + slotIdx);
 
+    // Helper: format a value with unit, or em-dash if missing
+    function fv(v, unit) { return v != null ? v + (unit || '') : '\u2014'; }
+
+    // Helper: status label
+    function statusLabel(s) {
+        if (s === 'commercially_available') return 'Available';
+        if (s === 'limited_production') return 'Limited';
+        if (s === 'early_access') return 'Early Access';
+        return s || '';
+    }
+    function statusClass(s) {
+        if (s === 'commercially_available') return 'st-available';
+        if (s === 'limited_production') return 'st-limited';
+        return 'st-early';
+    }
+
     el.innerHTML = `
         <div class="comp-header">Top ${all.length} candidates for ${slot.label} (${slot.allCandidates} evaluated)</div>
         <div class="comp-grid">
@@ -1810,19 +2091,77 @@ function renderComparison(slotIdx) {
                 const riskScore = r.import_risk_score != null ? r.import_risk_score : 5;
                 const riskClass = riskScore <= 3 ? 'risk-low' : riskScore <= 6 ? 'risk-med' : 'risk-high';
                 const riskLabel = r.import_risk_level || (riskScore <= 3 ? 'Low' : riskScore <= 6 ? 'Medium' : 'High');
-                const diffs = (r.key_differentiators || []).slice(0, 2);
+                const scoreClass = c.score >= 75 ? 'score-high' : c.score >= 50 ? 'score-mid' : 'score-low';
+                const flag = FLAGS[r.country] || '';
+                const diffs = (r.key_differentiators || []).slice(0, 3);
+                const useCases = (r.primary_use_cases || []).slice(0, 4);
+                const el_yes = r.elevator_integration === true;
+
+                const imgHtml = r.image_url
+                    ? `<img src="${r.image_url}" alt="${r.model_name}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=cc-img-placeholder>${r.model_name.substring(0,6)}</div>'">`
+                    : `<div class="cc-img-placeholder">${r.model_name.substring(0,6)}</div>`;
+
+                const logoHtml = r.logo_url
+                    ? `<img src="${r.logo_url}" alt="">`
+                    : '';
+
+                const companyLink = r.company_website
+                    ? `<a href="${r.company_website}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none" onclick="event.stopPropagation()">${r.company}</a>`
+                    : r.company;
 
                 return `<div class="comp-card ${isSelected ? 'selected' : ''}" data-slot="${slotIdx}" data-candidate="${ci}">
-                    <div class="name">${r.model_name}</div>
-                    <div class="company">${r.company}</div>
-                    <div class="comp-stat"><span class="k">Score</span><span>${c.score}/100</span></div>
-                    <div class="comp-stat"><span class="k">Monthly</span><span>$${(c.monthlyEstimate || 0).toLocaleString('en-US')}</span></div>
-                    <div class="comp-stat"><span class="k">Payload</span><span>${r.payload_kg ? r.payload_kg + ' kg' : '—'}</span></div>
-                    <div class="comp-stat"><span class="k">Runtime</span><span>${r.runtime_hours ? r.runtime_hours + 'h' : '—'}</span></div>
-                    <div class="comp-stat"><span class="k">Elevator</span><span style="color:${r.elevator_integration ? 'var(--green)' : 'var(--red)'}">${r.elevator_integration ? 'Yes' : 'No'}</span></div>
-                    <div class="comp-stat"><span class="k">Risk</span><span class="${riskClass}">${riskLabel}</span></div>
-                    ${diffs.map(d => `<div class="comp-diff">&bull; ${d}</div>`).join('')}
-                    <div class="pick-btn">${isSelected ? 'Selected' : 'Swap to this'}</div>
+                    <div class="cc-header">
+                        <div class="cc-img-wrap">${imgHtml}</div>
+                        <div class="cc-identity">
+                            <div class="cc-model">${r.product_url ? `<a href="${r.product_url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none" onclick="event.stopPropagation()">${r.model_name}</a>` : r.model_name}</div>
+                            <div class="cc-company">${logoHtml} ${companyLink}</div>
+                            <div class="cc-origin"><span class="flag">${flag}</span> ${r.country}${r.hq_city ? ' \u00b7 ' + r.hq_city : ''}</div>
+                        </div>
+                        <div class="cc-score-badge ${scoreClass}">${c.score}</div>
+                    </div>
+
+                    <div class="cc-body">
+                        <span class="cc-status ${statusClass(r.status)}">${statusLabel(r.status)}</span>
+
+                        <div class="cc-price-row">
+                            <span class="cc-price-est">$${(c.monthlyEstimate || 0).toLocaleString('en-US')} <span class="unit">/mo est.</span></span>
+                            <span class="cc-price-raw">${r.public_price && r.public_price !== 'not_publicly_listed' ? r.public_price : 'Price not listed'}</span>
+                        </div>
+
+                        <div class="cc-specs">
+                            <div class="cc-spec"><span class="k">Payload</span><span class="v">${fv(r.payload_kg, ' kg')}</span></div>
+                            <div class="cc-spec"><span class="k">Runtime</span><span class="v">${fv(r.runtime_hours, 'h')}</span></div>
+                            <div class="cc-spec"><span class="k">Speed</span><span class="v">${fv(r.max_speed_mps, ' m/s')}</span></div>
+                            <div class="cc-spec"><span class="k">Weight</span><span class="v">${fv(r.weight_kg, ' kg')}</span></div>
+                            <div class="cc-spec"><span class="k">Elevator</span><span class="v ${el_yes ? 'yes' : 'no'}">${el_yes ? 'Yes' : 'No'}</span></div>
+                            <div class="cc-spec"><span class="k">Nav</span><span class="v" style="font-size:0.52rem">${r.navigation_method || '\u2014'}</span></div>
+                        </div>
+
+                        ${useCases.length ? `<div class="cc-uses">${useCases.map(u => `<span class="cc-use">${u}</span>`).join('')}</div>` : ''}
+
+                        <div class="cc-badges">
+                            ${el_yes ? '<span class="cc-badge b-elev">Elevator</span>' : ''}
+                            ${r.fleet_management ? `<span class="cc-badge b-fleet">${r.fleet_management}</span>` : ''}
+                            ${r.outdoor_capable ? '<span class="cc-badge b-outdoor">Outdoor</span>' : ''}
+                            ${r.ip_rating ? `<span class="cc-badge b-ip">${r.ip_rating}</span>` : ''}
+                        </div>
+
+                        ${r.import_risk_score != null ? `
+                        <div class="cc-risk">
+                            <div class="cc-risk-score ${riskClass}">${r.import_risk_score}</div>
+                            <div class="cc-risk-info">
+                                <div class="cc-risk-label ${riskClass}">Import Risk: ${riskLabel}</div>
+                                ${r.import_risk_summary ? `<div class="cc-risk-detail">${r.import_risk_summary}</div>` : ''}
+                            </div>
+                            ${r.import_tariff_rate ? `<div class="cc-risk-tariff">${r.import_tariff_rate}</div>` : ''}
+                        </div>` : ''}
+
+                        ${diffs.length ? `<div class="cc-diffs">${diffs.map(d => `<div class="cc-diff">${d}</div>`).join('')}</div>` : ''}
+
+                        ${r.notes ? `<div class="cc-notes">${r.notes}</div>` : ''}
+
+                        <div class="pick-btn">${isSelected ? 'Selected' : 'Swap to this'}</div>
+                    </div>
                 </div>`;
             }).join('')}
         </div>
