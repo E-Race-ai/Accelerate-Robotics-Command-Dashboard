@@ -14,6 +14,7 @@ const recipientRoutes = require('./routes/recipients');
 const stockRoutes = require('./routes/stocks');
 const dealRoutes = require('./routes/deals');
 const facilityRoutes = require('./routes/facilities');
+const assessmentRoutes = require('./routes/assessments');
 const narrateRoutes = require('./routes/narrate');
 
 const app = express();
@@ -107,6 +108,7 @@ app.use('/api/recipients', recipientRoutes);
 app.use('/api/stocks', stockRoutes);
 app.use('/api/deals', dealRoutes);
 app.use('/api/facilities', facilityRoutes);
+app.use('/api/assessments', assessmentRoutes);
 app.use('/api/narrate', narrateLimiter, narrateRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
