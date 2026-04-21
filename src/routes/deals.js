@@ -13,10 +13,21 @@ const CLOSING_STAGES = ['won', 'lost'];
 // ── List deals ─────────────────────────────────────────────────
 router.get('/', requireAuth, (req, res) => {
   const { stage, owner } = req.query;
+  // WHY: Subquery grabs the most recent activity per deal so the table view can show "who did what" inline
   let sql = `
-    SELECT d.*, f.name as facility_name, f.type as facility_type, f.city, f.state
+    SELECT d.*, f.name as facility_name, f.type as facility_type, f.city, f.state,
+      f.rooms_or_units, f.floors as facility_floors, f.elevator_count,
+      f.brand as facility_brand, f.operator as facility_operator,
+      f.gm_name, f.gm_email,
+      a.actor as last_activity_actor, a.action as last_activity_action,
+      a.detail as last_activity_detail, a.created_at as last_activity_at,
+      dm.name as decision_maker_name, dm.title as decision_maker_title
     FROM deals d
     LEFT JOIN facilities f ON d.facility_id = f.id
+    LEFT JOIN activities a ON a.id = (
+      SELECT a2.id FROM activities a2 WHERE a2.deal_id = d.id ORDER BY a2.created_at DESC LIMIT 1
+    )
+    LEFT JOIN contacts dm ON dm.facility_id = f.id AND dm.role = 'decision_maker'
   `;
   const conditions = [];
   const params = [];
@@ -134,8 +145,12 @@ router.patch('/:id', requireAuth, requireRole('admin', 'sales'), (req, res) => {
 
 // ── Delete deal ────────────────────────────────────────────────
 router.delete('/:id', requireAuth, requireRole('admin'), (req, res) => {
-  const result = db.prepare('DELETE FROM deals WHERE id = ?').run(req.params.id);
-  if (result.changes === 0) return res.status(404).json({ error: 'Deal not found' });
+  const existing = db.prepare('SELECT id FROM deals WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Deal not found' });
+
+  // WHY: Activities have a FK to deals — delete them first to avoid constraint violation
+  db.prepare('DELETE FROM activities WHERE deal_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM deals WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
 

@@ -269,6 +269,33 @@
       color: #2563eb; text-decoration: none;
     }
     .map-popup .popup-link:hover { text-decoration: underline; }
+    .map-popup .popup-stats {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px;
+      margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9;
+    }
+    .map-popup .popup-stat {
+      display: flex; flex-direction: column;
+    }
+    .map-popup .popup-stat-val {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700; font-size: 0.88rem; color: #111827;
+    }
+    .map-popup .popup-stat-lbl {
+      font-size: 0.68rem; color: #9ca3af; text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    /* ── Map legend ──────────────────────────────────────── */
+    .map-legend {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    }
+    .map-legend-item {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 0.72rem; font-weight: 600; color: #6b7280;
+    }
+    .map-legend-dot {
+      width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid white;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    }
   </style>
 </head>
 <body class="bg-[#f7f8fc] min-h-screen">
@@ -290,6 +317,7 @@
           <nav class="flex items-center gap-1">
             <a href="/admin" class="px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 bg-blue-50">Command Center</a>
             <a href="/admin/deals" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Deals</a>
+            <a href="/pages/pipeline-prospects.html" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Prospects</a>
             <a href="/pages/assessments.html" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Assessments</a>
             <a href="/admin/inquiries" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Inquiries</a>
           </nav>
@@ -408,8 +436,16 @@
         <!-- Map (2/3 width) -->
         <div class="lg:col-span-2">
           <div class="bg-white rounded-2xl shadow-sm overflow-hidden" style="height: 480px; position: relative;">
-            <div class="absolute top-4 left-4 z-[500] bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-md">
+            <div class="absolute top-4 left-4 z-[500] bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md" style="display:flex;align-items:center;gap:12px;">
               <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Deal Map</span>
+              <div class="map-legend">
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#64748b"></span>Lead</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#0891b2"></span>Qualified</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#7c3aed"></span>Site Walk</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#d97706"></span>Proposed</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#16a34a"></span>Won/Active</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#e0e7ff;border-color:#818cf8"></span>Prospect</div>
+              </div>
             </div>
             <div id="cc-map" style="height: 100%; width: 100%;"></div>
           </div>
@@ -500,24 +536,101 @@ const STAGE_COLORS = {
   won:'#16a34a', deploying:'#22c55e', active:'#059669', lost:'#dc2626'
 };
 
-// WHY: Hardcoded coords for known deal cities — same list as deals.js
+// WHY: Hardcoded coords for known deal + prospect cities — avoids geocoding API
 const CITY_COORDS = {
-  'miami_fl':[25.7617,-80.1918], 'sarasota_fl':[27.3364,-82.5307],
-  'san ramon_ca':[37.7799,-121.9780], 'lafayette_ca':[37.8858,-122.1180],
-  'berkeley_ca':[37.8716,-122.2727], 'sacramento_ca':[38.5816,-121.4944],
-  'los angeles_ca':[34.0522,-118.2437], 'san francisco_ca':[37.7749,-122.4194],
-  'new york_ny':[40.7128,-74.0060], 'chicago_il':[41.8781,-87.6298],
-  'houston_tx':[29.7604,-95.3698], 'dallas_tx':[32.7767,-96.7970],
-  'atlanta_ga':[33.7490,-84.3880], 'orlando_fl':[28.5383,-81.3792],
-  'denver_co':[39.7392,-104.9903], 'seattle_wa':[47.6062,-122.3321],
-  'boston_ma':[42.3601,-71.0589], 'nashville_tn':[36.1627,-86.7816],
-  'las vegas_nv':[36.1699,-115.1398], 'phoenix_az':[33.4484,-112.0740],
-  'san diego_ca':[32.7157,-117.1611], 'tampa_fl':[27.9506,-82.4572],
-  'fort lauderdale_fl':[26.1224,-80.1373], 'charlotte_nc':[35.2271,-80.8431],
-  'minneapolis_mn':[44.9778,-93.2650], 'portland_or':[45.5152,-122.6784],
-  'austin_tx':[30.2672,-97.7431], 'washington_dc':[38.9072,-77.0369],
-  'philadelphia_pa':[39.9526,-75.1652],
+  'miami':[25.7617,-80.1918], 'sarasota':[27.3364,-82.5307],
+  'san ramon':[37.7799,-121.978], 'lafayette':[37.8858,-122.118],
+  'berkeley':[37.8716,-122.2727], 'sacramento':[38.5816,-121.4944],
+  'los angeles':[34.0522,-118.2437], 'san francisco':[37.7749,-122.4194],
+  'new york':[40.7128,-74.006], 'chicago':[41.8781,-87.6298],
+  'houston':[29.7604,-95.3698], 'dallas':[32.7767,-96.797],
+  'atlanta':[33.749,-84.388], 'orlando':[28.5383,-81.3792],
+  'denver':[39.7392,-104.9903], 'seattle':[47.6062,-122.3321],
+  'boston':[42.3601,-71.0589], 'nashville':[36.1627,-86.7816],
+  'las vegas':[36.1699,-115.1398], 'phoenix':[33.4484,-112.074],
+  'san diego':[32.7157,-117.1611], 'tampa':[27.9506,-82.4572],
+  'fort lauderdale':[26.1224,-80.1373], 'charlotte':[35.2271,-80.8431],
+  'minneapolis':[44.9778,-93.265], 'portland':[45.5152,-122.6784],
+  'austin':[30.2672,-97.7431], 'washington':[38.9072,-77.0369],
+  'philadelphia':[39.9526,-75.1652],
+  // Prospect-specific cities
+  'walnut creek':[37.9101,-122.0652], 'beverly hills':[34.0736,-118.4004],
+  'santa monica':[34.0195,-118.4912], 'west hollywood':[34.0901,-118.3617],
+  'venice / marina del rey':[33.98,-118.4517], 'marina del rey':[33.98,-118.4517],
+  'coconut grove':[25.7291,-80.2429], 'coral gables':[25.7217,-80.2684],
+  'sarasota / longboat key':[27.3869,-82.5961], 'longboat key':[27.4069,-82.6561],
 };
+
+// WHY: 66 prospect hotels extracted from pipeline-prospects.html — plotted on map
+// as lower-opacity pins to show market coverage alongside active deals.
+const PROSPECTS = [
+  {city:'San Francisco',name:'Fairmont San Francisco',keys:606,floors:23,brand:'Fairmont / Accor'},
+  {city:'San Francisco',name:'Palace Hotel',keys:556,floors:9,brand:'Luxury Collection / Marriott'},
+  {city:'San Francisco',name:'InterContinental San Francisco',keys:550,floors:32,brand:'InterContinental / IHG'},
+  {city:'San Francisco',name:'Hotel Nikko San Francisco',keys:532,floors:25,brand:'Okura Nikko'},
+  {city:'San Francisco',name:'Beacon Grand',keys:418,floors:21,brand:'Independent'},
+  {city:'Walnut Creek',name:'Walnut Creek Marriott',keys:342,floors:6,brand:'Marriott'},
+  {city:'Walnut Creek',name:'Renaissance Walnut Creek',keys:175,floors:5,brand:'Renaissance / Marriott'},
+  {city:'Walnut Creek',name:'Embassy Suites Walnut Creek',keys:249,floors:8,brand:'Embassy Suites / Hilton'},
+  {city:'Sacramento',name:'Hyatt Regency Sacramento',keys:505,floors:15,brand:'Hyatt Regency'},
+  {city:'Sacramento',name:'Sheraton Grand Sacramento',keys:503,floors:27,brand:'Sheraton Grand / Marriott'},
+  {city:'Sacramento',name:'Hyatt Centric Downtown Sacramento',keys:172,floors:11,brand:'Hyatt Centric'},
+  {city:'Sacramento',name:'The Exchange Sacramento',keys:100,floors:10,brand:'Curio / Hilton'},
+  {city:'Sacramento',name:'Fort Sutter Hotel',keys:105,floors:4,brand:'Tapestry / Hilton'},
+  {city:'Beverly Hills',name:'Waldorf Astoria Beverly Hills',keys:170,floors:12,brand:'Waldorf Astoria / Hilton'},
+  {city:'Beverly Hills',name:'The Peninsula Beverly Hills',keys:195,floors:4,brand:'Peninsula Hotels'},
+  {city:'Beverly Hills',name:'Beverly Wilshire',keys:345,floors:14,brand:'Independent'},
+  {city:'Beverly Hills',name:'The Maybourne Beverly Hills',keys:205,floors:9,brand:'Maybourne'},
+  {city:'Beverly Hills',name:"L'Ermitage Beverly Hills",keys:116,floors:8,brand:'Independent'},
+  {city:'Santa Monica',name:'Fairmont Miramar Hotel & Bungalows',keys:297,floors:10,brand:'Fairmont / Accor'},
+  {city:'Santa Monica',name:'Regent Santa Monica Beach',keys:167,floors:8,brand:'Regent / IHG'},
+  {city:'Santa Monica',name:'Santa Monica Proper',keys:267,floors:7,brand:'Proper Hotels'},
+  {city:'Santa Monica',name:'Viceroy Santa Monica',keys:169,floors:5,brand:'Viceroy'},
+  {city:'Santa Monica',name:'Shore Hotel',keys:164,floors:4,brand:'Independent'},
+  {city:'West Hollywood',name:'The West Hollywood EDITION',keys:190,floors:13,brand:'EDITION / Marriott'},
+  {city:'West Hollywood',name:'Andaz West Hollywood',keys:239,floors:14,brand:'Andaz / Hyatt'},
+  {city:'West Hollywood',name:'The Valorian',keys:236,floors:13,brand:'Curio / Hilton'},
+  {city:'West Hollywood',name:'Sunset Marquis Hotel & Villas',keys:152,floors:4,brand:'Independent'},
+  {city:'West Hollywood',name:'Kimpton Everly Hotel',keys:216,floors:15,brand:'Kimpton / IHG'},
+  {city:'Venice / Marina del Rey',name:'Hotel Erwin',keys:120,floors:5,brand:'Independent'},
+  {city:'Venice / Marina del Rey',name:'Ritz-Carlton Marina del Rey',keys:304,floors:12,brand:'Ritz-Carlton / Marriott'},
+  {city:'Venice / Marina del Rey',name:'Hotel MdR — DoubleTree',keys:283,floors:4,brand:'DoubleTree / Hilton'},
+  {city:'Venice / Marina del Rey',name:'Marina del Rey Hotel',keys:160,floors:5,brand:'Independent'},
+  {city:'San Diego',name:'Pendry San Diego',keys:317,floors:12,brand:'Pendry / Montage'},
+  {city:'San Diego',name:'The US Grant',keys:270,floors:11,brand:'Luxury Collection / Marriott'},
+  {city:'San Diego',name:'Kimpton Hotel Palomar',keys:183,floors:23,brand:'Kimpton / IHG'},
+  {city:'San Diego',name:'Hotel Republic',keys:258,floors:19,brand:'Autograph / Marriott'},
+  {city:'San Diego',name:'Carte Hotel',keys:246,floors:16,brand:'Curio / Hilton'},
+  {city:'Miami',name:'JW Marriott Marquis Miami',keys:313,floors:41,brand:'JW Marriott'},
+  {city:'Miami',name:'Four Seasons Hotel Miami',keys:221,floors:70,brand:'Four Seasons'},
+  {city:'Miami',name:'EAST Miami',keys:263,floors:40,brand:'EAST / Swire'},
+  {city:'Miami',name:'InterContinental Miami',keys:653,floors:34,brand:'InterContinental / IHG'},
+  {city:'Miami',name:'JW Marriott Miami (Brickell)',keys:296,floors:20,brand:'JW Marriott'},
+  {city:'Fort Lauderdale',name:'Four Seasons Fort Lauderdale',keys:148,floors:22,brand:'Four Seasons'},
+  {city:'Fort Lauderdale',name:'W Fort Lauderdale',keys:517,floors:25,brand:'W Hotels / Marriott'},
+  {city:'Fort Lauderdale',name:'The Ritz-Carlton Fort Lauderdale',keys:166,floors:24,brand:'Ritz-Carlton / Marriott'},
+  {city:'Fort Lauderdale',name:'Marriott Harbor Beach Resort & Spa',keys:650,floors:12,brand:'Marriott'},
+  {city:'Fort Lauderdale',name:'Diplomat Beach Resort',keys:998,floors:36,brand:'Curio / Hilton'},
+  {city:'Coconut Grove',name:'Mayfair House Hotel & Garden',keys:179,floors:7,brand:'Independent'},
+  {city:'Coconut Grove',name:'The Ritz-Carlton Coconut Grove',keys:115,floors:20,brand:'Ritz-Carlton / Marriott'},
+  {city:'Coconut Grove',name:'Mr. C Miami — Coconut Grove',keys:100,floors:22,brand:'Cipriani'},
+  {city:'Coconut Grove',name:'Courtyard Miami Coconut Grove',keys:196,floors:20,brand:'Courtyard / Marriott'},
+  {city:'Coconut Grove',name:'The Mutiny Hotel',keys:120,floors:12,brand:'Independent'},
+  {city:'Coral Gables',name:'The Biltmore Hotel Miami',keys:271,floors:16,brand:'Independent'},
+  {city:'Coral Gables',name:'Loews Coral Gables',keys:242,floors:18,brand:'Loews Hotels'},
+  {city:'Coral Gables',name:'Hotel Colonnade',keys:157,floors:9,brand:'Autograph / Marriott'},
+  {city:'Coral Gables',name:'Hyatt Regency Coral Gables',keys:254,floors:14,brand:'Hyatt Regency'},
+  {city:'Sarasota / Longboat Key',name:'St. Regis Longboat Key Resort',keys:194,floors:6,brand:'St. Regis / Marriott'},
+  {city:'Sarasota / Longboat Key',name:'The Ritz-Carlton Sarasota',keys:276,floors:9,brand:'Ritz-Carlton / Marriott'},
+  {city:'Sarasota / Longboat Key',name:'The Westin Sarasota',keys:246,floors:19,brand:'Westin / Marriott'},
+  {city:'Sarasota / Longboat Key',name:'Resort at Longboat Key Club',keys:220,floors:10,brand:'Independent'},
+  {city:'Sarasota / Longboat Key',name:'Zota Beach Resort',keys:187,floors:6,brand:'Opal Collection'},
+  {city:'Dallas',name:'The Statler Dallas',keys:159,floors:19,brand:'Curio / Hilton'},
+  {city:'Dallas',name:'HALL Arts Hotel',keys:183,floors:11,brand:'Autograph / Marriott'},
+  {city:'Dallas',name:'Hotel Crescent Court',keys:226,floors:7,brand:'Independent'},
+  {city:'Dallas',name:'Kimpton Pittman Hotel',keys:165,floors:7,brand:'Kimpton / IHG'},
+  {city:'Dallas',name:'Virgin Hotels Dallas',keys:268,floors:16,brand:'Virgin Hotels'},
+];
 
 let deals = [];
 let ccMap = null;
@@ -567,6 +680,7 @@ function renderStats() {
     { val: qualified, lbl: 'Qualified', color: '#0891b2' },
     { val: proposed, lbl: 'Proposed', color: '#d97706' },
     { val: won, lbl: 'Won', color: '#16a34a' },
+    { val: PROSPECTS.length, lbl: 'Prospects', color: '#6366f1' },
     { val: totalMRR ? '$' + totalMRR.toLocaleString() : '$0', lbl: 'MRR', color: '#059669' },
   ];
 
@@ -607,14 +721,29 @@ function renderDealList() {
     const color = STAGE_COLORS[d.stage] || '#64748b';
     const label = STAGE_LABELS[d.stage] || d.stage;
     const loc = [d.city, d.state].filter(Boolean).join(', ');
+    const owner = d.owner ? d.owner.split('@')[0] : 'Unassigned';
+    const rooms = d.rooms_or_units ? d.rooms_or_units + ' keys' : '';
+    const floors = d.facility_floors ? d.facility_floors + ' floors' : '';
+    const elev = d.elevator_count ? d.elevator_count + ' elev' : '';
+    const details = [rooms, floors, elev].filter(Boolean).join(' · ');
+    const dm = d.decision_maker_name || '';
+    const rev = d.value_monthly ? '$' + Number(d.value_monthly).toLocaleString() + '/mo' : '';
+
     return `
-      <a href="/admin/deals/${d.id}" class="deal-row">
-        <span class="deal-dot" style="background:${color}"></span>
-        <div style="min-width:0;flex:1;">
-          <div class="deal-name">${escapeHtml(d.name)}</div>
-          <div class="deal-meta">${escapeHtml(loc || 'No location')} &middot; ${label}</div>
+      <a href="/admin/deals/${d.id}" style="display:block;padding:10px 14px;border-radius:10px;transition:background .15s;text-decoration:none;color:inherit;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='transparent'">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span class="deal-dot" style="background:${color}"></span>
+          <span class="deal-name" style="flex:1">${escapeHtml(d.name)}</span>
+          <span style="font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:6px;background:${color}15;color:${color}">${label}</span>
         </div>
-        ${d.value_monthly ? `<span class="deal-meta">$${Number(d.value_monthly).toLocaleString()}/mo</span>` : ''}
+        <div style="margin-left:18px;">
+          <div class="deal-meta">${escapeHtml(loc || 'No location')}${details ? ' &middot; ' + details : ''}</div>
+          <div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;">
+            ${rev ? `<span style="font-size:.72rem;font-weight:700;color:#059669;">${rev}</span>` : ''}
+            <span style="font-size:.72rem;color:#9ca3af;">Owner: ${escapeHtml(owner)}</span>
+            ${dm ? `<span style="font-size:.72rem;color:#9ca3af;">DM: ${escapeHtml(dm)}</span>` : ''}
+          </div>
+        </div>
       </a>
     `;
   }).join('') || '<p class="text-sm text-gray-400 px-4 py-8 text-center">No deals yet</p>';
@@ -693,6 +822,30 @@ function createStageIcon(stage) {
   });
 }
 
+function lookupCoords(city) {
+  const key = city.toLowerCase().trim();
+  if (CITY_COORDS[key]) return CITY_COORDS[key];
+  // WHY: Try partial match for cities with state suffix (e.g., "miami_fl" → "miami")
+  for (const [k, v] of Object.entries(CITY_COORDS)) {
+    if (key.startsWith(k) || k.startsWith(key)) return v;
+  }
+  return null;
+}
+
+function createProspectIcon() {
+  return L.divIcon({
+    className: 'deal-marker',
+    html: `<svg width="22" height="30" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 1C7.72 1 1 7.72 1 16c0 12 15 25 15 25s15-13 15-25C31 7.72 24.28 1 16 1z"
+            fill="#a5b4fc" stroke="white" stroke-width="1.5" opacity="0.7"/>
+      <circle cx="16" cy="16" r="4" fill="white" opacity="0.9"/>
+    </svg>`,
+    iconSize: [22, 30],
+    iconAnchor: [11, 30],
+    popupAnchor: [0, -26],
+  });
+}
+
 function renderMap() {
   const container = document.getElementById('cc-map');
   if (!container || typeof L === 'undefined') return;
@@ -711,29 +864,81 @@ function initMap(container) {
   ccMap.invalidateSize();
   ccMap.eachLayer(layer => { if (layer instanceof L.Marker) ccMap.removeLayer(layer); });
 
+  const allCoords = [];
+
+  // ── Prospect pins (render first so deal pins draw on top) ──
+  const prospectGroups = {};
+  for (const p of PROSPECTS) {
+    const coords = lookupCoords(p.city);
+    if (!coords) continue;
+    const key = p.city.toLowerCase();
+    if (!prospectGroups[key]) prospectGroups[key] = { coords, items: [] };
+    prospectGroups[key].items.push(p);
+  }
+  for (const [, g] of Object.entries(prospectGroups)) {
+    g.items.forEach((p, i) => {
+      // WHY: Spread prospect pins in a circle around city center to avoid stacking
+      const angle = (i / g.items.length) * 2 * Math.PI;
+      const spread = 0.015 + (g.items.length > 5 ? 0.01 : 0); // Wider spread for bigger clusters
+      const pos = [g.coords[0] + Math.sin(angle) * spread, g.coords[1] + Math.cos(angle) * spread];
+      allCoords.push(pos);
+
+      const marker = L.marker(pos, { icon: createProspectIcon() }).addTo(ccMap);
+      marker.bindPopup(`
+        <div class="map-popup">
+          <div class="popup-name">${escapeHtml(p.name)}</div>
+          <div class="popup-meta">${escapeHtml(p.brand)} &middot; ${escapeHtml(p.city)}</div>
+          <span class="popup-stage" style="background:#e0e7ff;color:#4338ca">Prospect</span>
+          <div class="popup-stats">
+            <div class="popup-stat"><span class="popup-stat-val">${p.keys || '—'}</span><span class="popup-stat-lbl">Keys</span></div>
+            <div class="popup-stat"><span class="popup-stat-val">${p.floors || '—'}</span><span class="popup-stat-lbl">Floors</span></div>
+          </div>
+          <a href="/pages/pipeline-prospects.html" class="popup-link">View Prospects &rarr;</a>
+        </div>
+      `);
+    });
+  }
+
+  // ── Deal pins ──
   const groups = {};
   for (const d of deals) {
     if (!d.city || !d.state) continue;
-    const key = (d.city + '_' + d.state).toLowerCase().trim();
-    const coords = CITY_COORDS[key];
+    const coords = lookupCoords(d.city);
     if (!coords) continue;
+    const key = d.city.toLowerCase();
     if (!groups[key]) groups[key] = { coords, deals: [] };
     groups[key].deals.push(d);
   }
 
-  const allCoords = [];
   for (const [, g] of Object.entries(groups)) {
     g.deals.forEach((d, i) => {
       const pos = [g.coords[0] + i * 0.008, g.coords[1] + i * 0.012];
       allCoords.push(pos);
       const marker = L.marker(pos, { icon: createStageIcon(d.stage) }).addTo(ccMap);
       const sc = STAGE_COLORS[d.stage] || '#64748b';
+      const owner = d.owner ? d.owner.split('@')[0] : 'Unassigned';
+
       marker.bindPopup(`
-        <div class="map-popup">
+        <div class="map-popup" style="min-width:220px">
           <div class="popup-name">${escapeHtml(d.name)}</div>
           <div class="popup-meta">${escapeHtml(d.facility_type || 'Hotel')} &middot; ${escapeHtml(d.city||'')}${d.state?', '+escapeHtml(d.state):''}</div>
-          <span class="popup-stage" style="background:${sc}20;color:${sc}">${STAGE_LABELS[d.stage]||d.stage}</span>
-          ${d.value_monthly ? `<div class="popup-meta" style="margin-top:4px">$${Number(d.value_monthly).toLocaleString()}/mo</div>` : ''}
+          <div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap;">
+            <span class="popup-stage" style="background:${sc}20;color:${sc}">${STAGE_LABELS[d.stage]||d.stage}</span>
+            ${d.close_probability ? `<span style="font-size:.72rem;font-weight:600;color:#6b7280;">${d.close_probability}% prob</span>` : ''}
+          </div>
+          <div class="popup-stats">
+            <div class="popup-stat"><span class="popup-stat-val">${d.rooms_or_units||'—'}</span><span class="popup-stat-lbl">Keys</span></div>
+            <div class="popup-stat"><span class="popup-stat-val">${d.facility_floors||'—'}</span><span class="popup-stat-lbl">Floors</span></div>
+            <div class="popup-stat"><span class="popup-stat-val">${d.elevator_count||'—'}</span><span class="popup-stat-lbl">Elevators</span></div>
+            <div class="popup-stat"><span class="popup-stat-val">${d.value_monthly ? '$'+Number(d.value_monthly).toLocaleString() : '—'}</span><span class="popup-stat-lbl">MRR</span></div>
+          </div>
+          <div style="margin-top:8px;padding-top:6px;border-top:1px solid #f1f5f9;font-size:.78rem;color:#6b7280;">
+            <div><strong>Owner:</strong> ${escapeHtml(owner)}</div>
+            ${d.decision_maker_name ? `<div><strong>Decision Maker:</strong> ${escapeHtml(d.decision_maker_name)}${d.decision_maker_title ? ' ('+escapeHtml(d.decision_maker_title)+')' : ''}</div>` : ''}
+            ${d.facility_brand ? `<div><strong>Brand:</strong> ${escapeHtml(d.facility_brand)}</div>` : ''}
+            ${d.facility_operator ? `<div><strong>Operator:</strong> ${escapeHtml(d.facility_operator)}</div>` : ''}
+            ${d.gm_name ? `<div><strong>GM:</strong> ${escapeHtml(d.gm_name)}</div>` : ''}
+          </div>
           <a href="/admin/deals/${d.id}" class="popup-link">View Deal &rarr;</a>
         </div>
       `);
