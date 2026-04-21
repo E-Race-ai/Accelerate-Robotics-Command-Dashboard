@@ -473,6 +473,15 @@ function phases_robot_range(phase, allPhases, fleet) {
     return names.join(', ') || 'as configured';
 }
 
+/* ── HTML ESCAPING ─────────────────────────────────────────── */
+// WHY: Data arrives from localStorage and URL hash (both user-controllable).
+// A crafted share link could inject arbitrary HTML/JS without escaping.
+function escapeHtml(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+function esc(str) { return escapeHtml(str); }
+
 /* ── STATE ────────────────────────────────────────────────────── */
 let DATA = null;       // the full payload from localStorage or URL hash
 let NARRATIVES = null; // from /api/narrate or fallback
@@ -534,6 +543,10 @@ async function init() {
         `;
         return;
     }
+
+    // WHY: Sort fleet by score descending — highest-scored robot is position 1 on the slider.
+    // This reveals robots in order of value, building the business case incrementally.
+    DATA.fleet.sort((a, b) => b.score - a.score);
 
     // Apply property theming
     const theme = detectTheme(DATA.property);
@@ -599,10 +612,10 @@ function renderHeader() {
             <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div class="flex items-center gap-4">
                     <div class="w-14 h-14 rounded-xl border-2 flex items-center justify-center" style="border-color: var(--accent-light)">
-                        <span class="font-bold text-2xl headline" style="color: var(--accent-light)">${p.name.charAt(0)}</span>
+                        <span class="font-bold text-2xl headline" style="color: var(--accent-light)">${esc(p.name.charAt(0))}</span>
                     </div>
                     <div>
-                        <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">${p.name}</h1>
+                        <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">${esc(p.name)}</h1>
                         <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Executive Proposal · Live Configurator</p>
                     </div>
                 </div>
@@ -615,7 +628,7 @@ function renderHeader() {
                     </div>
                     <div class="text-[10px] text-gray-400 md:text-right tracking-wide">
                         One Brain. Many Bots.<br>
-                        <span class="text-gray-500">${p.rooms}-room ${p.type} · ${p.floors} floors · ${p.market || ''}</span>
+                        <span class="text-gray-500">${p.rooms}-room ${esc(p.type)} · ${p.floors} floors · ${esc(p.market || '')}</span>
                     </div>
                 </div>
             </div>
@@ -628,9 +641,9 @@ function renderIntro() {
     el.innerHTML = `
         <div class="max-w-3xl">
             <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color: var(--accent)">Executive Proposal</p>
-            <h2 class="headline text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">${NARRATIVES.headline}</h2>
-            <p class="text-gray-600 leading-relaxed">${NARRATIVES.intro}</p>
-            <p class="text-gray-600 leading-relaxed mt-3">${NARRATIVES.valueProp}</p>
+            <h2 class="headline text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">${esc(NARRATIVES.headline)}</h2>
+            <p class="text-gray-600 leading-relaxed">${esc(NARRATIVES.intro)}</p>
+            <p class="text-gray-600 leading-relaxed mt-3">${esc(NARRATIVES.valueProp)}</p>
         </div>
     `;
 }
@@ -661,12 +674,12 @@ function renderConfigurator() {
         const narr = NARRATIVES.robots[i] || {};
         robotGridHtml += `
             <div class="robot-slot${active ? ' active' : ''}">
-                ${r.image_url ? `<img class="robot-photo" src="${r.image_url}" alt="${r.model_name}" loading="lazy">` : '<div class="robot-photo" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:0.7rem;">No image</div>'}
+                ${r.image_url ? `<img class="robot-photo" src="${esc(r.image_url)}" alt="${esc(r.model_name)}" loading="lazy">` : '<div class="robot-photo" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:0.7rem;">No image</div>'}
                 <div class="flex items-start gap-2.5">
-                    <div class="robot-chip-mini">${r.model_name.split(' ')[0]}</div>
+                    <div class="robot-chip-mini">${esc(r.model_name.split(' ')[0])}</div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-[11px] font-semibold text-white leading-snug truncate">${r.company} ${r.model_name}</p>
-                        <p class="text-[10px] text-gray-400 leading-snug mt-0.5 truncate">${narr.roleDescription || slot.serviceLine}</p>
+                        <p class="text-[11px] font-semibold text-white leading-snug truncate">${esc(r.company)} ${esc(r.model_name)}</p>
+                        <p class="text-[10px] text-gray-400 leading-snug mt-0.5 truncate">${esc(narr.roleDescription || slot.serviceLine)}</p>
                     </div>
                 </div>
             </div>
@@ -682,7 +695,7 @@ function renderConfigurator() {
         ledHtml += `
             <div class="led-indicator${on ? ' on' : ''}">
                 <span class="led-dot"></span>
-                <span class="led-label">${slot.serviceLine}</span>
+                <span class="led-label">${esc(slot.serviceLine)}</span>
                 <span class="led-threshold">${i + 1}+</span>
             </div>
         `;
@@ -699,7 +712,7 @@ function renderConfigurator() {
                         <div class="text-6xl md:text-7xl font-bold tech-font text-white" id="fleetCount">${n}</div>
                         <div class="text-xl text-gray-400 font-light">/ ${total} robots</div>
                     </div>
-                    <p class="text-sm text-gray-400 mt-1" id="tierLabel">${NARRATIVES.tierName}</p>
+                    <p class="text-sm text-gray-400 mt-1" id="tierLabel">${esc(NARRATIVES.tierName)}</p>
                 </div>
                 <div class="flex flex-wrap gap-2 preset-chips-row" id="presetChips">${presetChipsHtml}</div>
             </div>
@@ -962,19 +975,19 @@ function renderPhases() {
         const isIntel = phase.name === 'Intelligence Platform';
         const included = isIntel ? state.intel : idx < activePhases;
         const narrated = NARRATIVES.phases[idx];
-        const desc = narrated ? narrated.description : `Deploy fleet robots for ${phase.name.toLowerCase()}.`;
+        const desc = narrated ? esc(narrated.description) : `Deploy fleet robots for ${esc(phase.name.toLowerCase())}.`;
 
         // WHY: List which robots deploy in this phase
         const prevUpTo = idx > 0 && !isIntel ? allPhases[idx - 1].upTo : 0;
-        const robotNames = isIntel ? [] : DATA.fleet.slice(prevUpTo, phase.upTo).map(s => `${s.robot.company} ${s.robot.model_name}`);
+        const robotNames = isIntel ? [] : DATA.fleet.slice(prevUpTo, phase.upTo).map(s => `${esc(s.robot.company)} ${esc(s.robot.model_name)}`);
 
         phasesHtml += `
             <div class="phase-card${included ? ' included' : ' skipped'}">
                 <div class="flex items-center gap-2 mb-2">
                     <div class="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold tech-font" style="background:var(--accent)">${idx + 1}</div>
-                    <p class="text-[10px] uppercase tracking-widest text-gray-700 font-semibold">${phase.timeframe}</p>
+                    <p class="text-[10px] uppercase tracking-widest text-gray-700 font-semibold">${esc(phase.timeframe)}</p>
                 </div>
-                <p class="font-bold text-gray-900 mb-1 text-sm">${phase.name}</p>
+                <p class="font-bold text-gray-900 mb-1 text-sm">${esc(phase.name)}</p>
                 <p class="text-xs text-gray-600 leading-snug">${desc}</p>
                 ${robotNames.length > 0 ? `<p class="text-[10px] text-gray-400 mt-2">${robotNames.join(', ')}</p>` : ''}
                 ${isIntel && !state.intel ? '<p class="text-[10px] mt-2 text-gray-500 italic">Requires Intelligence Platform add-on</p>' : ''}
@@ -1002,9 +1015,9 @@ function renderSavingsTable() {
         const narr = NARRATIVES.robots[i] || {};
         rowsHtml += `
             <tr>
-                <td><strong>${slot.robot.company} ${slot.robot.model_name}</strong></td>
-                <td>${slot.serviceLine}</td>
-                <td>${narr.savingsCapture || 'Labor offset'}</td>
+                <td><strong>${esc(slot.robot.company)} ${esc(slot.robot.model_name)}</strong></td>
+                <td>${esc(slot.serviceLine)}</td>
+                <td>${esc(narr.savingsCapture || 'Labor offset')}</td>
                 <td class="num">$${slot.savings.toLocaleString()}</td>
             </tr>
         `;
@@ -1051,10 +1064,10 @@ function renderUnlocks() {
         activeCardsHtml += `
             <div class="unlock-card" style="border-left-color:${color}">
                 <div class="flex items-start justify-between gap-3 mb-2">
-                    <span class="tech-font text-[10px] uppercase tracking-widest font-bold" style="color:${color}">${slot.type}</span>
-                    <span class="tech-font text-[10px] text-gray-400">${slot.robot.model_name}</span>
+                    <span class="tech-font text-[10px] uppercase tracking-widest font-bold" style="color:${color}">${esc(slot.type)}</span>
+                    <span class="tech-font text-[10px] text-gray-400">${esc(slot.robot.model_name)}</span>
                 </div>
-                <p class="text-sm text-gray-800 leading-snug">${narr.unlockNarrative || 'Automates ' + slot.serviceLine.toLowerCase()}</p>
+                <p class="text-sm text-gray-800 leading-snug">${esc(narr.unlockNarrative || 'Automates ' + slot.serviceLine.toLowerCase())}</p>
             </div>
         `;
     });
@@ -1069,9 +1082,9 @@ function renderUnlocks() {
                 <div class="unlock-card locked">
                     <div class="flex items-start justify-between gap-3 mb-2">
                         <span class="tech-font text-[10px] uppercase tracking-widest font-bold text-gray-400">+${n + i + 1}th robot</span>
-                        <span class="tech-font text-[10px] text-gray-400">${slot.robot.model_name}</span>
+                        <span class="tech-font text-[10px] text-gray-400">${esc(slot.robot.model_name)}</span>
                     </div>
-                    <p class="text-sm text-gray-500 leading-snug">${narr.unlockNarrative || 'Automates ' + slot.serviceLine.toLowerCase()}</p>
+                    <p class="text-sm text-gray-500 leading-snug">${esc(narr.unlockNarrative || 'Automates ' + slot.serviceLine.toLowerCase())}</p>
                 </div>
             `;
         });
@@ -1080,8 +1093,8 @@ function renderUnlocks() {
     document.getElementById('unlocksSection').innerHTML = `
         <div class="text-center mb-6">
             <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color:var(--accent)">Service Tier</p>
-            <h2 class="headline text-3xl font-bold text-gray-900 mb-3">${NARRATIVES.tierName}</h2>
-            <p class="text-gray-600 max-w-2xl mx-auto">${NARRATIVES.tierNarrative}</p>
+            <h2 class="headline text-3xl font-bold text-gray-900 mb-3">${esc(NARRATIVES.tierName)}</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">${esc(NARRATIVES.tierNarrative)}</p>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">${activeCardsHtml}</div>
         ${lockedHtml ? `
