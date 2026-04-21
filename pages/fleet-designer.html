@@ -294,13 +294,115 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
     box-shadow:0 0 0 2px rgba(0,85,255,0.08);
 }
 
-/* ── Budget inputs ── */
-.budget-display {
-    font-family:'JetBrains Mono',monospace;
-    font-size:0.72rem;
+/* ── Budget section ── */
+.budget-presets {
+    display:flex;
+    gap:5px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+}
+
+.budget-preset {
+    padding:5px 10px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:transparent;
+    font-size:0.62rem;
     font-weight:600;
+    font-family:'JetBrains Mono',monospace;
+    color:var(--muted);
+    cursor:pointer;
+    transition:all 0.12s;
+}
+
+.budget-preset:hover {
+    background:rgba(0,85,255,0.04);
+    border-color:var(--blue);
     color:var(--blue);
-    margin-top:2px;
+}
+
+.budget-preset.active {
+    background:rgba(0,85,255,0.08);
+    border-color:var(--blue);
+    color:var(--blue);
+}
+
+.budget-range-bar {
+    position:relative;
+    height:6px;
+    border-radius:3px;
+    background:rgba(0,0,0,0.06);
+    margin:16px 0 8px;
+}
+
+.budget-range-fill {
+    position:absolute;
+    height:100%;
+    border-radius:3px;
+    background:linear-gradient(90deg, var(--blue), var(--cyan));
+    transition:left 0.15s, width 0.15s;
+}
+
+.budget-range-labels {
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:10px;
+}
+
+.budget-range-label {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.82rem;
+    font-weight:700;
+    color:var(--text);
+}
+
+.budget-range-label .unit {
+    font-size:0.6rem;
+    font-weight:500;
+    color:var(--muted);
+}
+
+.budget-inputs-row {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+}
+
+.budget-field label {
+    font-size:0.58rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    color:var(--muted);
+    margin-bottom:3px;
+    display:block;
+}
+
+.budget-field input {
+    width:100%;
+    padding:7px 10px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.75rem;
+    font-weight:500;
+    color:var(--text);
+    transition:border-color 0.12s;
+}
+
+.budget-field input:focus {
+    outline:none;
+    border-color:var(--blue);
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+}
+
+.budget-hint {
+    margin-top:8px;
+    font-size:0.6rem;
+    color:var(--muted);
+    text-align:center;
+    font-style:italic;
 }
 
 /* ── Generate button ── */
@@ -909,18 +1011,33 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
                 Monthly RaaS Budget
             </div>
 
-            <div class="field-row">
-                <div class="field">
-                    <label for="budget-min">Minimum</label>
-                    <input type="number" id="budget-min" value="5000" min="0" step="500">
-                    <div class="budget-display mono" id="budget-min-display">$5,000/mo</div>
+            <div class="budget-presets">
+                <button class="budget-preset" data-min="2000" data-max="8000" type="button">Pilot</button>
+                <button class="budget-preset active" data-min="5000" data-max="25000" type="button">Standard</button>
+                <button class="budget-preset" data-min="15000" data-max="50000" type="button">Full-Property</button>
+                <button class="budget-preset" data-min="0" data-max="100000" type="button">No Limit</button>
+            </div>
+
+            <div class="budget-range-labels">
+                <span class="budget-range-label" id="budget-min-label">$5,000 <span class="unit">/mo</span></span>
+                <span class="budget-range-label" id="budget-max-label">$25,000 <span class="unit">/mo</span></span>
+            </div>
+            <div class="budget-range-bar">
+                <div class="budget-range-fill" id="budget-fill"></div>
+            </div>
+
+            <div class="budget-inputs-row">
+                <div class="budget-field">
+                    <label for="budget-min">Min</label>
+                    <input type="number" id="budget-min" value="5000" min="0" max="200000" step="500">
                 </div>
-                <div class="field">
-                    <label for="budget-max">Maximum</label>
-                    <input type="number" id="budget-max" value="50000" min="0" step="500">
-                    <div class="budget-display mono" id="budget-max-display">$50,000/mo</div>
+                <div class="budget-field">
+                    <label for="budget-max">Max</label>
+                    <input type="number" id="budget-max" value="25000" min="0" max="200000" step="500">
                 </div>
             </div>
+
+            <div class="budget-hint" id="budget-hint">~$5,000 per robot per month (5 robots)</div>
         </div>
 
         <!-- Generate button -->
@@ -1662,30 +1779,81 @@ function initSurfaceChips() {
 
 
 // ─────────────────────────────────────────────────────────────
-// Budget display — format as currency on input
+// Budget controls — presets, range bar, per-robot hint
 // ─────────────────────────────────────────────────────────────
-function formatCurrency(value) {
+// WHY 200000: hard ceiling for the visual range bar — no hotel
+// needs >$200K/mo in robot RaaS; keeps the bar proportional
+const BUDGET_CEIL = 200000;
+
+function formatBudgetLabel(value) {
     const n = parseInt(value, 10);
-    if (!isFinite(n) || n < 0) return '—';
-    return '$' + n.toLocaleString('en-US') + '/mo';
+    if (!isFinite(n) || n < 0) return '$0';
+    if (n >= 1000) return '$' + (n / 1000).toLocaleString('en-US', { maximumFractionDigits: 0 }) + 'K';
+    return '$' + n.toLocaleString('en-US');
 }
 
-function initBudgetDisplays() {
+function updateBudgetUI() {
     const minInput = document.getElementById('budget-min');
     const maxInput = document.getElementById('budget-max');
-    const minDisplay = document.getElementById('budget-min-display');
-    const maxDisplay = document.getElementById('budget-max-display');
+    const minLabel = document.getElementById('budget-min-label');
+    const maxLabel = document.getElementById('budget-max-label');
+    const fill = document.getElementById('budget-fill');
+    const hint = document.getElementById('budget-hint');
 
-    function update() {
-        minDisplay.textContent = formatCurrency(minInput.value);
-        maxDisplay.textContent = formatCurrency(maxInput.value);
-    }
+    const minVal = parseInt(minInput.value, 10) || 0;
+    const maxVal = parseInt(maxInput.value, 10) || 0;
 
-    minInput.addEventListener('input', update);
-    maxInput.addEventListener('input', update);
+    // Update labels
+    minLabel.innerHTML = formatBudgetLabel(minVal) + ' <span class="unit">/mo</span>';
+    maxLabel.innerHTML = formatBudgetLabel(maxVal) + ' <span class="unit">/mo</span>';
 
-    // Initialise display from default values
-    update();
+    // Update range fill bar position
+    const leftPct = Math.min(100, (minVal / BUDGET_CEIL) * 100);
+    const rightPct = Math.min(100, (maxVal / BUDGET_CEIL) * 100);
+    fill.style.left = leftPct + '%';
+    fill.style.width = Math.max(0, rightPct - leftPct) + '%';
+
+    // Update per-robot hint based on active goals
+    const activeGoals = document.querySelectorAll('.goal-chip.active').length;
+    const robotCount = activeGoals || 5; // default to 5 if no goals selected yet
+    const perRobot = maxVal > 0 ? Math.round(maxVal / robotCount) : 0;
+    hint.textContent = `~$${perRobot.toLocaleString('en-US')} per robot per month (${robotCount} robot${robotCount !== 1 ? 's' : ''})`;
+
+    // Highlight matching preset
+    document.querySelectorAll('.budget-preset').forEach(btn => {
+        const pMin = parseInt(btn.dataset.min, 10);
+        const pMax = parseInt(btn.dataset.max, 10);
+        btn.classList.toggle('active', pMin === minVal && pMax === maxVal);
+    });
+}
+
+function initBudgetControls() {
+    const minInput = document.getElementById('budget-min');
+    const maxInput = document.getElementById('budget-max');
+
+    // Live update on typing
+    minInput.addEventListener('input', updateBudgetUI);
+    maxInput.addEventListener('input', updateBudgetUI);
+
+    // Preset buttons
+    document.querySelectorAll('.budget-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            minInput.value = btn.dataset.min;
+            maxInput.value = btn.dataset.max;
+            updateBudgetUI();
+        });
+    });
+
+    // Re-calculate per-robot hint when goals change
+    document.querySelectorAll('.goal-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            // WHY: setTimeout 0 lets the active class toggle before we recount
+            setTimeout(updateBudgetUI, 0);
+        });
+    });
+
+    // Initial render
+    updateBudgetUI();
 }
 
 
@@ -1836,7 +2004,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadRobots();
     initGoalChips();
     initSurfaceChips();
-    initBudgetDisplays();
+    initBudgetControls();
     initGenerateButton();
     initExportButtons();
 });
