@@ -925,6 +925,8 @@ let state = {
   operations_data: {
     shifts: [],
     contracted_services: [],
+    fb_venues: [],
+    event_spaces: [],
     automation_notes: '',
     pain_points: ''
   },
@@ -1112,133 +1114,544 @@ function autoExpandTextarea(el) {
   el.style.height = Math.max(80, el.scrollHeight) + 'px';
 }
 
+// WHY: Property archetypes encode deep hotel operations knowledge.
+// Tapping one auto-fills 15+ fields with industry-typical values for that property class.
+// Rep adjusts from there — 10x faster than blank-slate entry.
+const PROPERTY_ARCHETYPES = {
+  boutique_hotel: {
+    label: 'Boutique Hotel', icon: '&#10024;',
+    desc: '20–150 keys, independent or soft-brand, design-forward, 1–2 F&B outlets, intimate service model',
+    defaults: { rooms: 80, floors: 6, elevators: 1 },
+    fb_venues: [
+      { type: 'restaurant_casual', name: 'Restaurant', sqft: 2000, covers: 60 },
+    ],
+    event_spaces: [
+      { type: 'meeting_room', name: 'Private Dining / Meeting Room', sqft: 800, capacity: 30 },
+    ],
+    zones: ['lobby', 'restaurant', 'guest_floor'],
+    typical_staff: '35–80 FTE',
+    typical_challenges: 'High guest expectations with lean staff, limited BOH space, premium on guest-facing cleanliness',
+  },
+  resort: {
+    label: 'Resort', icon: '&#127796;',
+    desc: '200–800 keys, extensive F&B and recreation, large grounds, multiple buildings, high seasonal variation',
+    defaults: { rooms: 350, floors: 8, elevators: 4 },
+    fb_venues: [
+      { type: 'restaurant_fine', name: 'Signature Restaurant', sqft: 3500, covers: 80 },
+      { type: 'restaurant_buffet', name: 'All-Day Dining', sqft: 4000, covers: 200 },
+      { type: 'pool_bar', name: 'Pool Bar & Grill', sqft: 1200, covers: 50 },
+      { type: 'bar_lounge', name: 'Lobby Lounge', sqft: 1500, covers: 60 },
+    ],
+    event_spaces: [
+      { type: 'ballroom', name: 'Grand Ballroom', sqft: 12000, capacity: 600 },
+      { type: 'outdoor_terrace', name: 'Garden Terrace', sqft: 8000, capacity: 300 },
+      { type: 'meeting_room', name: 'Meeting Room', sqft: 800, capacity: 40 },
+    ],
+    zones: ['lobby', 'restaurant', 'guest_floor', 'pool_deck', 'fitness_center', 'spa', 'event_space', 'exterior'],
+    typical_staff: '200–600 FTE',
+    typical_challenges: 'Vast grounds to maintain, seasonal staffing swings, F&B delivery across distributed venues, pool/beach towel logistics',
+  },
+  full_service: {
+    label: 'Full Service', icon: '&#127976;',
+    desc: '150–500 keys, branded (Marriott/Hilton/Hyatt), convention space, 2–4 F&B outlets, 24/7 room service',
+    defaults: { rooms: 250, floors: 12, elevators: 3 },
+    fb_venues: [
+      { type: 'restaurant_casual', name: 'Restaurant', sqft: 3000, covers: 120 },
+      { type: 'bar_lounge', name: 'Lobby Bar', sqft: 1200, covers: 50 },
+      { type: 'room_service', name: 'Room Service', sqft: 0, covers: 0 },
+    ],
+    event_spaces: [
+      { type: 'ballroom', name: 'Ballroom', sqft: 8000, capacity: 400 },
+      { type: 'meeting_room', name: 'Meeting Room #1', sqft: 600, capacity: 30 },
+      { type: 'meeting_room', name: 'Meeting Room #2', sqft: 600, capacity: 30 },
+      { type: 'boardroom', name: 'Executive Boardroom', sqft: 500, capacity: 16 },
+    ],
+    zones: ['lobby', 'restaurant', 'guest_floor', 'event_space', 'kitchen', 'laundry', 'boh_corridor', 'fitness_center'],
+    typical_staff: '150–400 FTE',
+    typical_challenges: 'Event setup/teardown volumes, 24/7 room service staffing, linen logistics across 10+ floors, elevator congestion during conferences',
+  },
+  select_service: {
+    label: 'Select Service', icon: '&#127968;',
+    desc: '80–200 keys, limited F&B (grab-and-go or breakfast only), lean staffing, efficiency-focused',
+    defaults: { rooms: 140, floors: 5, elevators: 1 },
+    fb_venues: [
+      { type: 'grab_and_go', name: 'Breakfast / Market', sqft: 500, covers: 0 },
+    ],
+    event_spaces: [],
+    zones: ['lobby', 'guest_floor', 'laundry', 'fitness_center'],
+    typical_staff: '25–60 FTE',
+    typical_challenges: 'Minimal night staff (1–2 people), no room service, cleaning pressure from quick turns, limited housekeeping labor pool',
+  },
+  extended_stay: {
+    label: 'Extended Stay', icon: '&#128188;',
+    desc: '100–250 suites, kitchen-equipped, weekly housekeeping, low F&B, long-stay guests',
+    defaults: { rooms: 150, floors: 4, elevators: 1 },
+    fb_venues: [],
+    event_spaces: [],
+    zones: ['lobby', 'guest_floor', 'laundry', 'fitness_center', 'exterior'],
+    typical_staff: '15–40 FTE',
+    typical_challenges: 'Guest belongings in rooms during service, in-unit kitchen cleaning, waste/recycling volume, fewer but longer cleaning sessions',
+  },
+  convention: {
+    label: 'Convention / Conference', icon: '&#127915;',
+    desc: '400–2000 keys, 50K+ sqft event/meeting space, massive F&B capacity, surge-staffing model',
+    defaults: { rooms: 600, floors: 20, elevators: 8 },
+    fb_venues: [
+      { type: 'restaurant_fine', name: 'Signature Restaurant', sqft: 4000, covers: 100 },
+      { type: 'restaurant_buffet', name: 'All-Day Dining', sqft: 5000, covers: 250 },
+      { type: 'bar_lounge', name: 'Lobby Bar', sqft: 2000, covers: 80 },
+      { type: 'coffee_shop', name: 'Coffee Shop', sqft: 800, covers: 30 },
+      { type: 'banquet_kitchen', name: 'Banquet Kitchen', sqft: 4000, covers: 0 },
+    ],
+    event_spaces: [
+      { type: 'ballroom', name: 'Grand Ballroom', sqft: 25000, capacity: 1500 },
+      { type: 'ballroom', name: 'Junior Ballroom', sqft: 10000, capacity: 500 },
+      { type: 'conference_center', name: 'Conference Center', sqft: 15000, capacity: 800 },
+      { type: 'meeting_room', name: 'Meeting Room #1', sqft: 800, capacity: 40 },
+      { type: 'meeting_room', name: 'Meeting Room #2', sqft: 800, capacity: 40 },
+      { type: 'pre_function', name: 'Pre-Function Hall', sqft: 5000, capacity: 300 },
+      { type: 'boardroom', name: 'Executive Boardroom', sqft: 500, capacity: 16 },
+    ],
+    zones: ['lobby', 'restaurant', 'guest_floor', 'event_space', 'kitchen', 'laundry', 'boh_corridor', 'parking_garage', 'fitness_center'],
+    typical_staff: '400–1200 FTE',
+    typical_challenges: 'Massive setup/teardown cycles (daily), elevator gridlock during session breaks, F&B for 2000+ simultaneously, overnight floor cleaning of 50K+ sqft',
+  },
+  luxury: {
+    label: 'Ultra-Luxury / Members Club', icon: '&#128142;',
+    desc: 'Under 200 keys, 3:1+ staff ratio, bespoke service, Michelin dining, private amenities',
+    defaults: { rooms: 100, floors: 10, elevators: 3 },
+    fb_venues: [
+      { type: 'restaurant_fine', name: 'Fine Dining Restaurant', sqft: 3500, covers: 60 },
+      { type: 'restaurant_casual', name: 'Brasserie / All-Day', sqft: 2500, covers: 80 },
+      { type: 'rooftop', name: 'Rooftop Bar', sqft: 2000, covers: 80 },
+      { type: 'room_service', name: 'In-Room Dining (24/7)', sqft: 0, covers: 0 },
+    ],
+    event_spaces: [
+      { type: 'ballroom', name: 'Salon', sqft: 4000, capacity: 200 },
+      { type: 'boardroom', name: 'Private Boardroom', sqft: 500, capacity: 12 },
+      { type: 'outdoor_terrace', name: 'Terrace', sqft: 3000, capacity: 100 },
+    ],
+    zones: ['lobby', 'restaurant', 'guest_floor', 'spa', 'pool_deck', 'fitness_center', 'event_space', 'kitchen'],
+    typical_staff: '200–500 FTE',
+    typical_challenges: 'Robots must be invisible to guests, white-glove linen handling, kitchen-to-room delivery speed is brand-defining, immaculate 24/7 public area standards',
+  },
+};
+
+// WHY: F&B venue types determine robot needs — a rooftop bar needs a different delivery
+// robot path than a banquet kitchen. Breaking out by type lets Fleet Designer assign
+// the right robot model and route to each venue.
+const FB_VENUE_TYPES = {
+  restaurant_fine: { label: 'Fine Dining Restaurant', icon: '&#127860;', robot_needs: ['Food runner / bussing support', 'Wine/beverage transport from cellar', 'Linen pickup'], typical_sqft: 3500, typical_covers: 80 },
+  restaurant_casual: { label: 'Casual Restaurant', icon: '&#127869;', robot_needs: ['Food runner / tray delivery', 'Bussing support', 'Supply restocking'], typical_sqft: 2500, typical_covers: 120 },
+  restaurant_buffet: { label: 'Buffet / All-Day Dining', icon: '&#129367;', robot_needs: ['Floor cleaning around stations', 'Dish collection from tables', 'Waste/compost runs'], typical_sqft: 4000, typical_covers: 200 },
+  coffee_shop: { label: 'Coffee Shop / Cafe', icon: '&#9749;', robot_needs: ['Supply restocking (cups, lids, napkins)', 'Floor cleaning (high-spill area)', 'Waste runs'], typical_sqft: 800, typical_covers: 30 },
+  bar_lounge: { label: 'Bar / Lounge', icon: '&#127864;', robot_needs: ['Glass/dish collection', 'Floor cleaning (late-night)', 'Ice/supply runs from BOH'], typical_sqft: 1500, typical_covers: 60 },
+  pool_bar: { label: 'Pool Bar / Cabana', icon: '&#127946;', robot_needs: ['Towel delivery/collection', 'F&B delivery to cabanas', 'Deck cleaning'], typical_sqft: 1000, typical_covers: 40 },
+  rooftop: { label: 'Rooftop Bar / Restaurant', icon: '&#127747;', robot_needs: ['Elevator-dependent delivery', 'Weather-exposed surface cleaning', 'Supply runs from main kitchen'], typical_sqft: 2000, typical_covers: 80 },
+  room_service: { label: 'Room Service / In-Room Dining', icon: '&#128706;', robot_needs: ['Tray delivery to guest floors', 'Tray collection (scheduled sweeps)', 'Elevator access critical'], typical_sqft: 0, typical_covers: 0 },
+  grab_and_go: { label: 'Grab & Go / Market', icon: '&#128722;', robot_needs: ['Restocking from BOH', 'Floor cleaning', 'Waste/recycling runs'], typical_sqft: 400, typical_covers: 0 },
+  banquet_kitchen: { label: 'Banquet Kitchen', icon: '&#127859;', robot_needs: ['Bulk food transport to event space', 'Equipment/chafing dish staging', 'Post-event cleanup runs'], typical_sqft: 3000, typical_covers: 0 },
+  main_kitchen: { label: 'Main Kitchen / Production', icon: '&#129379;', robot_needs: ['Dish transport to/from dish pit', 'Supply receiving from loading dock', 'Waste/grease trap runs'], typical_sqft: 2500, typical_covers: 0 },
+  catering: { label: 'Catering / Off-Premise', icon: '&#128666;', robot_needs: ['Load staging at dock', 'Cart/equipment transport', 'Cross-building delivery'], typical_sqft: 1500, typical_covers: 0 },
+};
+
+// WHY: Event space types have dramatically different setup/teardown needs.
+// A 30K sqft ballroom needs multiple cleaning robots overnight; a boardroom needs
+// supply delivery. Typing them lets Fleet Designer model surge patterns.
+const EVENT_SPACE_TYPES = {
+  ballroom: { label: 'Ballroom / Grand Salon', icon: '&#127917;', robot_needs: ['Overnight floor cleaning (carpet or hard)', 'Setup/teardown logistics', 'AV cart transport'], typical_sqft: 15000 },
+  meeting_room: { label: 'Meeting Room', icon: '&#128196;', robot_needs: ['Supply delivery (water, pads, AV)', 'Quick-turn cleaning between sessions', 'Waste collection'], typical_sqft: 800 },
+  conference_center: { label: 'Conference Center', icon: '&#127979;', robot_needs: ['Multi-room supply delivery', 'Large-scale floor cleaning', 'Waste/recycling at scale'], typical_sqft: 25000 },
+  pre_function: { label: 'Pre-Function / Foyer', icon: '&#128682;', robot_needs: ['Floor cleaning (hard surface)', 'F&B station setup support', 'Post-event rapid cleanup'], typical_sqft: 5000 },
+  boardroom: { label: 'Boardroom', icon: '&#128188;', robot_needs: ['Supply delivery', 'Beverage service support', 'Cleaning between meetings'], typical_sqft: 500 },
+  outdoor_terrace: { label: 'Outdoor Terrace / Lawn', icon: '&#127796;', robot_needs: ['Weather-dependent surface cleaning', 'Equipment transport for setup', 'Post-event waste collection'], typical_sqft: 8000 },
+  theater: { label: 'Theater / Auditorium', icon: '&#127916;', robot_needs: ['Floor cleaning between events', 'Supply/AV transport', 'Post-show waste collection'], typical_sqft: 5000 },
+  exhibition_hall: { label: 'Exhibition Hall', icon: '&#127963;', robot_needs: ['Large-scale floor cleaning', 'Booth supply delivery', 'Overnight turnover cleaning'], typical_sqft: 40000 },
+};
+
+// WHY: Department profiles with industry KPIs show we understand their org chart.
+// These are typical for full-service hotels — scaled by property archetype.
+const DEPARTMENT_PROFILES = [
+  {
+    id: 'housekeeping', name: 'Housekeeping / EVS', icon: '&#128722;',
+    kpis: ['Rooms cleaned per housekeeper per shift: 12–16', 'Average room turn time: 25–35 min', 'Inspection pass rate target: 95%+', 'Linen lbs per occupied room: 8–12 lbs'],
+    common_challenges: ['High turnover (60–80% annually)', 'Guest floors during peak checkout (10am–1pm)', 'Linen cart traffic in corridors', 'Night-shift deep cleaning understaffed'],
+    robot_opportunities: ['Autonomous floor scrubbing in corridors overnight', 'Linen delivery to staging areas per floor', 'Public area vacuuming during low-traffic hours'],
+  },
+  {
+    id: 'fb', name: 'Food & Beverage', icon: '&#127860;',
+    kpis: ['Average room service delivery: 30–45 min', 'Covers per server per meal: 20–30', 'Kitchen-to-table distance: varies', 'Food cost target: 28–35% of revenue'],
+    common_challenges: ['Food runner trips during peak service (50+ per meal)', 'Room service delivery time exceeds guest expectations', 'Bussing bottleneck during event meals', 'BOH corridor congestion at shift change'],
+    robot_opportunities: ['Autonomous food delivery from kitchen to dining room', 'Room service delivery to guest floor', 'Bus cart transport from dining to dish pit'],
+  },
+  {
+    id: 'engineering', name: 'Engineering / Facilities', icon: '&#128295;',
+    kpis: ['Work orders per day: 15–40', 'Preventive maintenance completion: 85%+ target', 'Energy cost per sqft per year: $3–6', 'Elevator uptime target: 99.5%'],
+    common_challenges: ['Elevator maintenance windows conflict with guest traffic', 'HVAC system monitoring across all zones', 'Parts/supply delivery between shops and floors', 'After-hours emergency response with skeleton crew'],
+    robot_opportunities: ['Supply delivery from shop to work order location', 'Environmental sensor deployment (air quality, humidity)', 'Predictive elevator maintenance data collection'],
+  },
+  {
+    id: 'front_office', name: 'Front Office / Guest Services', icon: '&#128179;',
+    kpis: ['Average check-in time: 3–5 min', 'Concierge requests per shift: 20–50', 'Guest complaint resolution: <15 min target', 'Luggage delivery avg: 5–10 min'],
+    common_challenges: ['Luggage delivery backlog during group arrivals', 'Amenity delivery (extra pillows, rollaway beds)', 'Late checkout → housekeeping cascade delay', 'Lobby congestion during large group check-in/out'],
+    robot_opportunities: ['Autonomous amenity delivery to guest rooms', 'Luggage transport from bell closet to room', 'Lobby wayfinding and information kiosk'],
+  },
+  {
+    id: 'laundry', name: 'Laundry / Linen', icon: '&#129531;',
+    kpis: ['Linen processed per shift: 2000–5000 lbs', 'Linen loss rate: 3–5% annually', 'Par level: 3x occupied rooms', 'Linen cost per occupied room: $4–8'],
+    common_challenges: ['Cart transport between laundry room and floors', 'Peak demand during AM checkout wave', 'Linen inventory tracking/loss prevention', 'Outsourced laundry pickup/delivery scheduling'],
+    robot_opportunities: ['Automated linen cart delivery to floor staging areas', 'Soiled linen transport from floors to laundry', 'Linen inventory tracking via RFID integration'],
+  },
+];
+
 // ── Overview Tab ──
 function renderOverviewTab() {
   const s = state;
-  return `
-    <div class="section">
-      <div class="section-header" onclick="toggleSection(this)">
-        <h3>Property Basics</h3>
-        <span class="section-chevron">&#9660;</span>
+  let html = '';
+
+  // ── Property Archetype Selector ──
+  html += `<div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h3>Property Archetype</h3>
+      <span class="section-chevron">&#9660;</span>
+    </div>
+    <div class="section-body">
+      <div class="field-group"><label>Tap to auto-fill typical property profile</label>
+        <div class="checkbox-grid">`;
+  Object.entries(PROPERTY_ARCHETYPES).forEach(([key, arch]) => {
+    const isActive = s.property_type === key;
+    html += `<div class="checkbox-chip ${isActive ? 'checked' : ''}"
+      onclick="applyArchetype('${key}')" style="cursor:pointer; padding:12px 14px; min-height:52px; flex-direction:column; align-items:flex-start;">
+      <span style="font-size:0.88rem; font-weight:600;">${arch.icon} ${esc(arch.label)}</span>
+      <span style="font-size:0.68rem; color:var(--text-dim); margin-top:2px; white-space:normal; line-height:1.3;">${esc(arch.desc)}</span>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // Show the archetype insight if one is selected
+  const arch = PROPERTY_ARCHETYPES[s.property_type];
+  if (arch) {
+    html += `<div style="background:var(--accent-soft); border:1px solid rgba(217,119,6,0.2); border-radius:8px; padding:12px 14px; margin-top:8px;">
+      <div style="font-size:0.78rem; font-weight:600; color:var(--accent); margin-bottom:4px;">&#9889; ${esc(arch.label)} Profile</div>
+      <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5;">
+        <strong>Typical staff:</strong> ${esc(arch.typical_staff)}<br>
+        <strong>Key challenge:</strong> ${esc(arch.typical_challenges)}
       </div>
-      <div class="section-body">
+    </div>`;
+  }
+  html += `</div></div>`;
+
+  // ── Property Basics ──
+  html += `<div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h3>Property Basics</h3>
+      <span class="section-chevron">&#9660;</span>
+    </div>
+    <div class="section-body">
+      <div class="field-group">
+        <label>Property Name</label>
+        <input type="text" value="${esc(s.property_name)}" oninput="state.property_name = this.value; document.getElementById('propertyNameInput').value = this.value; markDirty();">
+      </div>
+      <div class="field-group">
+        <label>Address</label>
+        <input type="text" value="${esc(s.property_address)}" oninput="state.property_address = this.value; markDirty();">
+      </div>
+      <div class="field-row">
         <div class="field-group">
-          <label>Property Name</label>
-          <input type="text" value="${esc(s.property_name)}" oninput="state.property_name = this.value; document.getElementById('propertyNameInput').value = this.value; markDirty();">
+          <label>Rooms / Keys: <strong>${s.rooms || '—'}</strong></label>
+          <input type="range" min="10" max="1000" step="5" value="${s.rooms || 100}" class="slider"
+            oninput="state.rooms = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value; markDirty();">
         </div>
         <div class="field-group">
-          <label>Address</label>
-          <input type="text" value="${esc(s.property_address)}" oninput="state.property_address = this.value; markDirty();">
+          <label>Floors: <strong>${s.floors || '—'}</strong></label>
+          <input type="range" min="1" max="50" value="${s.floors || 5}" class="slider"
+            oninput="state.floors = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value; markDirty();">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Elevators: <strong>${s.elevators || '—'}</strong></label>
+          <input type="range" min="0" max="15" value="${s.elevators || 1}" class="slider"
+            oninput="state.elevators = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value; markDirty();">
         </div>
         <div class="field-group">
-          <label>Property Type</label>
-          <select onchange="state.property_type = this.value; markDirty();">
-            <option value="">Select type...</option>
-            <option value="boutique_hotel" ${s.property_type === 'boutique_hotel' ? 'selected' : ''}>Boutique Hotel</option>
-            <option value="resort" ${s.property_type === 'resort' ? 'selected' : ''}>Resort</option>
-            <option value="full_service" ${s.property_type === 'full_service' ? 'selected' : ''}>Full Service</option>
-            <option value="select_service" ${s.property_type === 'select_service' ? 'selected' : ''}>Select Service</option>
-            <option value="extended_stay" ${s.property_type === 'extended_stay' ? 'selected' : ''}>Extended Stay</option>
-            <option value="other" ${s.property_type === 'other' ? 'selected' : ''}>Other</option>
+          <label>Elevator Make</label>
+          <select onchange="state.elevator_make = this.value; markDirty();">
+            <option value="">Select or type below...</option>
+            <option value="ThyssenKrupp" ${s.elevator_make === 'ThyssenKrupp' ? 'selected' : ''}>ThyssenKrupp</option>
+            <option value="Otis" ${s.elevator_make === 'Otis' ? 'selected' : ''}>Otis</option>
+            <option value="KONE" ${s.elevator_make === 'KONE' ? 'selected' : ''}>KONE</option>
+            <option value="Schindler" ${s.elevator_make === 'Schindler' ? 'selected' : ''}>Schindler</option>
+            <option value="Mitsubishi" ${s.elevator_make === 'Mitsubishi' ? 'selected' : ''}>Mitsubishi</option>
+            <option value="Fujitec" ${s.elevator_make === 'Fujitec' ? 'selected' : ''}>Fujitec</option>
           </select>
         </div>
-        <div class="field-row">
-          <div class="field-group">
-            <label>Rooms / Keys</label>
-            <input type="number" inputmode="numeric" value="${s.rooms || ''}" oninput="state.rooms = this.value ? parseInt(this.value) : null; markDirty();">
-          </div>
-          <div class="field-group">
-            <label>Floors</label>
-            <input type="number" inputmode="numeric" value="${s.floors || ''}" oninput="state.floors = this.value ? parseInt(this.value) : null; markDirty();">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field-group">
-            <label>Elevators</label>
-            <input type="number" inputmode="numeric" value="${s.elevators || ''}" oninput="state.elevators = this.value ? parseInt(this.value) : null; markDirty();">
-          </div>
-          <div class="field-group">
-            <label>Elevator Make</label>
-            <input type="text" value="${esc(s.elevator_make)}" placeholder="e.g., ThyssenKrupp TAC32T" oninput="state.elevator_make = this.value; markDirty();">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field-group">
-            <label>Year Built</label>
-            <input type="number" inputmode="numeric" value="${s.year_built || ''}" oninput="state.year_built = this.value ? parseInt(this.value) : null; markDirty();">
-          </div>
-          <div class="field-group">
-            <label>Last Renovation</label>
-            <input type="number" inputmode="numeric" value="${s.last_renovation || ''}" oninput="state.last_renovation = this.value ? parseInt(this.value) : null; markDirty();">
-          </div>
-        </div>
       </div>
-    </div>
-
-    <div class="section">
-      <div class="section-header" onclick="toggleSection(this)">
-        <h3>Contacts</h3>
-        <span class="section-chevron">&#9660;</span>
+      <div class="field-row">
       </div>
-      <div class="section-body">
-        <div class="field-group"><label>General Manager — Name</label>
-          <input type="text" value="${esc(s.gm_name)}" oninput="state.gm_name = this.value; markDirty();"></div>
-        <div class="field-row">
-          <div class="field-group"><label>GM Email</label>
-            <input type="email" value="${esc(s.gm_email)}" oninput="state.gm_email = this.value; markDirty();"></div>
-          <div class="field-group"><label>GM Phone</label>
-            <input type="tel" value="${esc(s.gm_phone)}" oninput="state.gm_phone = this.value; markDirty();"></div>
-        </div>
-        <div class="field-row">
-          <div class="field-group"><label>Engineering Contact</label>
-            <input type="text" value="${esc(s.engineering_contact)}" oninput="state.engineering_contact = this.value; markDirty();"></div>
-          <div class="field-group"><label>Engineering Email</label>
-            <input type="email" value="${esc(s.engineering_email)}" oninput="state.engineering_email = this.value; markDirty();"></div>
-        </div>
-        <div class="field-group"><label>F&B Director</label>
-          <input type="text" value="${esc(s.fb_director)}" oninput="state.fb_director = this.value; markDirty();"></div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-header" onclick="toggleSection(this)">
-        <h3>Facilities</h3>
-        <span class="section-chevron">&#9660;</span>
-      </div>
-      <div class="section-body">
-        <div class="field-row">
-          <div class="field-group"><label>F&B Outlets</label>
-            <input type="number" inputmode="numeric" value="${s.fb_outlets || ''}" oninput="state.fb_outlets = this.value ? parseInt(this.value) : null; markDirty();"></div>
-          <div class="field-group"><label>Event Space (sqft)</label>
-            <input type="number" inputmode="numeric" value="${s.event_space_sqft || ''}" oninput="state.event_space_sqft = this.value ? parseInt(this.value) : null; markDirty();"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-header" onclick="toggleSection(this)">
-        <h3>Union Status</h3>
-        <span class="section-chevron">&#9660;</span>
-      </div>
-      <div class="section-body">
+      <div class="field-row">
         <div class="field-group">
-          <div class="toggle-group">
-            <div class="toggle-option ${s.union_status === 'union' ? 'active' : ''}" onclick="setUnion('union')">Union</div>
-            <div class="toggle-option ${s.union_status === 'non_union' ? 'active' : ''}" onclick="setUnion('non_union')">Non-Union</div>
-            <div class="toggle-option ${s.union_status === 'mixed' ? 'active' : ''}" onclick="setUnion('mixed')">Mixed</div>
-          </div>
+          <label>Year Built</label>
+          <input type="number" inputmode="numeric" value="${s.year_built || ''}" placeholder="e.g., 1998" oninput="state.year_built = this.value ? parseInt(this.value) : null; markDirty();">
         </div>
         <div class="field-group">
-          <label>Union Details</label>
-          <textarea class="auto-expand" oninput="state.union_details = this.value; markDirty();">${esc(s.union_details)}</textarea>
+          <label>Last Renovation</label>
+          <input type="number" inputmode="numeric" value="${s.last_renovation || ''}" placeholder="e.g., 2019" oninput="state.last_renovation = this.value ? parseInt(this.value) : null; markDirty();">
         </div>
       </div>
     </div>
-  `;
+  </div>`;
+
+  // ── F&B Venues ──
+  const ops = state.operations_data;
+  if (!ops.fb_venues) ops.fb_venues = [];
+  if (!ops.event_spaces) ops.event_spaces = [];
+
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>F&amp;B Venues <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + ops.fb_venues.length + ')</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+
+  if (ops.fb_venues.length === 0) {
+    html += '<p style="color:#64748b;font-style:italic;margin:0 0 12px;">No F&amp;B venues added yet. Tap a type below to add one, or select a property archetype above to auto-populate.</p>';
+  }
+
+  ops.fb_venues.forEach((v, i) => {
+    const typeInfo = FB_VENUE_TYPES[v.type] || {};
+    html += '<div class="repeatable-row" style="position:relative;padding:12px;margin-bottom:10px;background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;">';
+    html += '<button class="row-remove" onclick="removeFbVenue(' + i + ')">&times;</button>';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:1.3em;">' + (typeInfo.icon || '&#127860;') + '</span><strong style="font-size:.95em;">' + esc(typeInfo.label || v.type) + '</strong></div>';
+    html += '<div class="field-row"><div class="field-group"><label>Venue Name</label>';
+    html += '<input type="text" value="' + esc(v.name) + '" placeholder="e.g., Rooftop Bar, The Bistro" oninput="state.operations_data.fb_venues[' + i + '].name = this.value; markDirty();"></div>';
+    html += '<div class="field-group"><label>Approx. Sq Ft</label>';
+    html += '<input type="number" inputmode="numeric" value="' + (v.sqft || '') + '" placeholder="' + (typeInfo.typical_sqft || '') + '" oninput="state.operations_data.fb_venues[' + i + '].sqft = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
+    html += '<div class="field-row"><div class="field-group"><label>Covers / Capacity</label>';
+    html += '<input type="number" inputmode="numeric" value="' + (v.covers || '') + '" placeholder="' + (typeInfo.typical_covers || '—') + '" oninput="state.operations_data.fb_venues[' + i + '].covers = this.value ? parseInt(this.value) : null; markDirty();"></div>';
+    html += '<div class="field-group"><label>Floor</label>';
+    html += '<input type="number" inputmode="numeric" value="' + (v.floor != null ? v.floor : '') + '" placeholder="e.g., 1, L, R" oninput="state.operations_data.fb_venues[' + i + '].floor = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
+    html += '<div class="field-group"><label>Notes</label>';
+    html += '<input type="text" value="' + esc(v.notes || '') + '" placeholder="Hours, seasonal, managed by..." oninput="state.operations_data.fb_venues[' + i + '].notes = this.value; markDirty();"></div>';
+    // WHY: Show robot needs inline so the rep can discuss them during the site walk
+    if (typeInfo.robot_needs && typeInfo.robot_needs.length) {
+      html += '<div style="margin-top:6px;"><span style="font-size:.75em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">Robot Opportunities</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">';
+      typeInfo.robot_needs.forEach(need => {
+        html += '<span style="font-size:.78em;padding:3px 8px;border-radius:12px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">' + need + '</span>';
+      });
+      html += '</div></div>';
+    }
+    html += '</div>';
+  });
+
+  // WHY: Venue type chips let the rep tap to add — much faster than dropdown → add → fill on iPad
+  html += '<div style="margin-top:8px;"><span style="font-size:.78em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">+ Add Venue</span>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">';
+  Object.entries(FB_VENUE_TYPES).forEach(([key, vt]) => {
+    html += '<button class="chip-btn" onclick="addFbVenue(\'' + key + '\')" style="font-size:.82em;padding:6px 12px;border-radius:18px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);cursor:pointer;display:flex;align-items:center;gap:4px;min-height:36px;"><span>' + vt.icon + '</span> ' + vt.label + '</button>';
+  });
+  html += '</div></div>';
+  html += '</div></div>';
+
+  // ── Event Spaces ──
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Event Spaces <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + ops.event_spaces.length + ')</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+
+  if (ops.event_spaces.length === 0) {
+    html += '<p style="color:#64748b;font-style:italic;margin:0 0 12px;">No event spaces added yet. Tap a type below to add one.</p>';
+  }
+
+  ops.event_spaces.forEach((es, i) => {
+    const typeInfo = EVENT_SPACE_TYPES[es.type] || {};
+    html += '<div class="repeatable-row" style="position:relative;padding:12px;margin-bottom:10px;background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;">';
+    html += '<button class="row-remove" onclick="removeEventSpace(' + i + ')">&times;</button>';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:1.3em;">' + (typeInfo.icon || '&#127917;') + '</span><strong style="font-size:.95em;">' + esc(typeInfo.label || es.type) + '</strong></div>';
+    html += '<div class="field-row"><div class="field-group"><label>Space Name</label>';
+    html += '<input type="text" value="' + esc(es.name) + '" placeholder="e.g., Grand Ballroom A, Boardroom 204" oninput="state.operations_data.event_spaces[' + i + '].name = this.value; markDirty();"></div>';
+    html += '<div class="field-group"><label>Sq Ft</label>';
+    html += '<input type="number" inputmode="numeric" value="' + (es.sqft || '') + '" placeholder="' + (typeInfo.typical_sqft || '') + '" oninput="state.operations_data.event_spaces[' + i + '].sqft = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
+    html += '<div class="field-row"><div class="field-group"><label>Floor</label>';
+    html += '<input type="number" inputmode="numeric" value="' + (es.floor != null ? es.floor : '') + '" placeholder="e.g., 2" oninput="state.operations_data.event_spaces[' + i + '].floor = this.value ? parseInt(this.value) : null; markDirty();"></div>';
+    html += '<div class="field-group"><label>Max Capacity</label>';
+    html += '<input type="number" inputmode="numeric" value="' + (es.capacity || '') + '" placeholder="e.g., 500" oninput="state.operations_data.event_spaces[' + i + '].capacity = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
+    // WHY: Divisible flag matters for robot cleaning — divisible rooms need multiple passes
+    html += '<div class="field-row"><div class="field-group"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" ' + (es.divisible ? 'checked' : '') + ' onchange="state.operations_data.event_spaces[' + i + '].divisible = this.checked; markDirty();"> Divisible (airwalls)</label></div>';
+    html += '<div class="field-group"><label>Notes</label>';
+    html += '<input type="text" value="' + esc(es.notes || '') + '" placeholder="AV setup, dedicated kitchen..." oninput="state.operations_data.event_spaces[' + i + '].notes = this.value; markDirty();"></div></div>';
+    if (typeInfo.robot_needs && typeInfo.robot_needs.length) {
+      html += '<div style="margin-top:6px;"><span style="font-size:.75em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">Robot Opportunities</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">';
+      typeInfo.robot_needs.forEach(need => {
+        html += '<span style="font-size:.78em;padding:3px 8px;border-radius:12px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">' + need + '</span>';
+      });
+      html += '</div></div>';
+    }
+    html += '</div>';
+  });
+
+  html += '<div style="margin-top:8px;"><span style="font-size:.78em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">+ Add Event Space</span>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">';
+  Object.entries(EVENT_SPACE_TYPES).forEach(([key, et]) => {
+    html += '<button class="chip-btn" onclick="addEventSpace(\'' + key + '\')" style="font-size:.82em;padding:6px 12px;border-radius:18px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);cursor:pointer;display:flex;align-items:center;gap:4px;min-height:36px;"><span>' + et.icon + '</span> ' + et.label + '</button>';
+  });
+  html += '</div></div>';
+  html += '</div></div>';
+
+  // ── Contacts ──
+  html += `<div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h3>Contacts</h3>
+      <span class="section-chevron">&#9660;</span>
+    </div>
+    <div class="section-body">
+      <div class="field-group"><label>General Manager — Name</label>
+        <input type="text" value="${esc(s.gm_name)}" oninput="state.gm_name = this.value; markDirty();"></div>
+      <div class="field-row">
+        <div class="field-group"><label>GM Email</label>
+          <input type="email" value="${esc(s.gm_email)}" oninput="state.gm_email = this.value; markDirty();"></div>
+        <div class="field-group"><label>GM Phone</label>
+          <input type="tel" value="${esc(s.gm_phone)}" oninput="state.gm_phone = this.value; markDirty();"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><label>Engineering Contact</label>
+          <input type="text" value="${esc(s.engineering_contact)}" oninput="state.engineering_contact = this.value; markDirty();"></div>
+        <div class="field-group"><label>Engineering Email</label>
+          <input type="email" value="${esc(s.engineering_email)}" oninput="state.engineering_email = this.value; markDirty();"></div>
+      </div>
+      <div class="field-group"><label>F&B Director</label>
+        <input type="text" value="${esc(s.fb_director)}" oninput="state.fb_director = this.value; markDirty();"></div>
+    </div>
+  </div>`;
+
+  // ── Union Status ──
+  html += `<div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h3>Union Status</h3>
+      <span class="section-chevron">&#9660;</span>
+    </div>
+    <div class="section-body">
+      <div class="field-group">
+        <div class="toggle-group">
+          <div class="toggle-option ${s.union_status === 'union' ? 'active' : ''}" onclick="setUnion('union')">Union</div>
+          <div class="toggle-option ${s.union_status === 'non_union' ? 'active' : ''}" onclick="setUnion('non_union')">Non-Union</div>
+          <div class="toggle-option ${s.union_status === 'mixed' ? 'active' : ''}" onclick="setUnion('mixed')">Mixed</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Union Details</label>
+        <textarea class="auto-expand" oninput="state.union_details = this.value; markDirty();">${esc(s.union_details)}</textarea>
+      </div>
+    </div>
+  </div>`;
+
+  return html;
+}
+
+// WHY: One-tap archetype applies typical values AND auto-creates recommended zones.
+// Rep still edits everything — this just eliminates 5 min of blank-slate typing.
+function applyArchetype(key) {
+  const arch = PROPERTY_ARCHETYPES[key];
+  if (!arch) return;
+
+  state.property_type = key;
+
+  // Apply defaults (only if field is empty/null — don't overwrite intentional edits)
+  if (!state.rooms) state.rooms = arch.defaults.rooms;
+  if (!state.floors) state.floors = arch.defaults.floors;
+  if (!state.elevators) state.elevators = arch.defaults.elevators;
+
+  // WHY: Auto-populate F&B venues and event spaces from archetype only if none exist yet.
+  // Once the rep has added any venues, archetype re-tap won't clobber their work.
+  if (!state.operations_data) state.operations_data = { shifts: [], contracted_services: [], fb_venues: [], event_spaces: [], automation_notes: '', pain_points: '' };
+  if (!state.operations_data.fb_venues) state.operations_data.fb_venues = [];
+  if (!state.operations_data.event_spaces) state.operations_data.event_spaces = [];
+
+  if (state.operations_data.fb_venues.length === 0 && arch.fb_venues) {
+    arch.fb_venues.forEach(v => {
+      state.operations_data.fb_venues.push({ ...v });
+    });
+  }
+  if (state.operations_data.event_spaces.length === 0 && arch.event_spaces) {
+    arch.event_spaces.forEach(es => {
+      state.operations_data.event_spaces.push({ ...es, divisible: false });
+    });
+  }
+  // WHY: Keep legacy columns in sync for backward compat
+  state.fb_outlets = state.operations_data.fb_venues.length;
+  state.event_space_sqft = state.operations_data.event_spaces.reduce((sum, es) => sum + (es.sqft || 0), 0);
+
+  // Auto-create recommended zones if none exist yet
+  if (state.zones.length === 0 && arch.zones) {
+    arch.zones.forEach((zt, idx) => {
+      const tmpl = ZONE_TEMPLATES[zt] || ZONE_TEMPLATES.other;
+      state.zones.push({
+        id: generateUUID(), zone_type: zt, zone_name: tmpl.label,
+        floor_number: null, floor_surfaces: [], corridor_width_ft: null,
+        ceiling_height_ft: null, door_width_min_ft: null,
+        wifi_strength: '', wifi_network: '', lighting: '', foot_traffic: '',
+        current_cleaning_method: '', cleaning_frequency: '', cleaning_contractor: '', cleaning_shift: '',
+        delivery_method: '', staffing_notes: '', pain_points: '',
+        robot_readiness: '', readiness_notes: '', template_data: null, notes: '',
+        sort_order: idx, photos: [],
+      });
+    });
+  }
+
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
 }
 
 function setUnion(val) {
   state.union_status = val;
+  markDirty();
+  renderActiveTab();
+}
+
+// ── F&B Venue & Event Space helpers ──
+function addFbVenue(typeKey) {
+  if (!state.operations_data.fb_venues) state.operations_data.fb_venues = [];
+  const typeInfo = FB_VENUE_TYPES[typeKey] || {};
+  // WHY: Auto-number venues of the same type (Restaurant #1, #2, etc.)
+  const sameType = state.operations_data.fb_venues.filter(v => v.type === typeKey);
+  const num = sameType.length + 1;
+  state.operations_data.fb_venues.push({
+    type: typeKey,
+    name: typeInfo.label + (num > 1 ? ' #' + num : ''),
+    sqft: typeInfo.typical_sqft || null,
+    covers: typeInfo.typical_covers || null,
+    floor: null,
+    notes: '',
+  });
+  // WHY: Keep fb_outlets in sync for backward compat with server column
+  state.fb_outlets = state.operations_data.fb_venues.length;
+  markDirty();
+  renderActiveTab();
+}
+
+function removeFbVenue(idx) {
+  state.operations_data.fb_venues.splice(idx, 1);
+  state.fb_outlets = state.operations_data.fb_venues.length;
+  markDirty();
+  renderActiveTab();
+}
+
+function addEventSpace(typeKey) {
+  if (!state.operations_data.event_spaces) state.operations_data.event_spaces = [];
+  const typeInfo = EVENT_SPACE_TYPES[typeKey] || {};
+  const sameType = state.operations_data.event_spaces.filter(es => es.type === typeKey);
+  const num = sameType.length + 1;
+  state.operations_data.event_spaces.push({
+    type: typeKey,
+    name: typeInfo.label + (num > 1 ? ' #' + num : ''),
+    sqft: typeInfo.typical_sqft || null,
+    capacity: null,
+    floor: null,
+    divisible: false,
+    notes: '',
+  });
+  // WHY: Keep event_space_sqft in sync — sum of all space sqft for backward compat
+  state.event_space_sqft = state.operations_data.event_spaces.reduce((sum, es) => sum + (es.sqft || 0), 0);
+  markDirty();
+  renderActiveTab();
+}
+
+function removeEventSpace(idx) {
+  state.operations_data.event_spaces.splice(idx, 1);
+  state.event_space_sqft = state.operations_data.event_spaces.reduce((sum, es) => sum + (es.sqft || 0), 0);
   markDirty();
   renderActiveTab();
 }
@@ -1354,7 +1767,80 @@ const AUTOMATION_PRESETS = [
 
 function renderOperationsTab() {
   const ops = state.operations_data;
+  if (!ops.departments) ops.departments = {};
   let html = '';
+
+  // ── Department Profiles ──
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Department Assessment</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += '<div class="field-group"><label>Tap each department to assess — pre-filled with industry benchmarks</label></div>';
+
+  DEPARTMENT_PROFILES.forEach(dept => {
+    const d = ops.departments[dept.id] || {};
+    const isExpanded = d._expanded;
+    const isAssessed = d.assessed;
+    html += `<div style="background:${isAssessed ? 'var(--green-soft)' : '#f9fafb'}; border:1px solid ${isAssessed ? 'var(--green)' : 'var(--border)'}; border-radius:10px; margin-bottom:8px; overflow:hidden;">`;
+    html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer; min-height:52px;" onclick="toggleDeptExpand('${dept.id}')">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:1.2rem;">${dept.icon}</span>
+        <div>
+          <div style="font-weight:600; font-size:0.88rem; color:var(--text);">${esc(dept.name)}</div>
+          <div style="font-size:0.7rem; color:var(--text-dim);">${isAssessed ? '&#10003; Assessed' : 'Tap to assess'}</div>
+        </div>
+      </div>
+      <span style="font-size:0.7rem; color:var(--text-dim);">${isExpanded ? '&#9650;' : '&#9660;'}</span>
+    </div>`;
+
+    if (isExpanded) {
+      // KPIs
+      html += '<div style="padding:0 14px 14px;">';
+      html += '<div style="font-size:0.72rem; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Industry KPIs</div>';
+      html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:14px;">';
+      dept.kpis.forEach(kpi => {
+        html += `<div style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-size:0.73rem; color:var(--text-muted); line-height:1.4;">${esc(kpi)}</div>`;
+      });
+      html += '</div>';
+
+      // Common challenges — tappable
+      html += '<div style="font-size:0.72rem; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Common Challenges</div>';
+      html += '<div class="checkbox-grid" style="margin-bottom:14px;">';
+      const deptChallenges = d.challenges || [];
+      dept.common_challenges.forEach(ch => {
+        const isActive = deptChallenges.includes(ch);
+        html += `<div class="checkbox-chip ${isActive ? 'checked' : ''}" style="cursor:pointer; font-size:0.73rem;" onclick="toggleDeptChallenge('${dept.id}', '${esc(ch.replace(/'/g, "\\'"))}')">${isActive ? '&#10003; ' : ''}${esc(ch)}</div>`;
+      });
+      html += '</div>';
+
+      // Robot opportunities — tappable
+      html += '<div style="font-size:0.72rem; font-weight:600; color:var(--green); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Robot Opportunities</div>';
+      html += '<div class="checkbox-grid" style="margin-bottom:14px;">';
+      const deptOpps = d.opportunities || [];
+      dept.robot_opportunities.forEach(opp => {
+        const isActive = deptOpps.includes(opp);
+        html += `<div class="checkbox-chip ${isActive ? 'checked' : ''}" style="cursor:pointer; font-size:0.73rem;" onclick="toggleDeptOpportunity('${dept.id}', '${esc(opp.replace(/'/g, "\\'"))}')">${isActive ? '&#10003; ' : ''}${esc(opp)}</div>`;
+      });
+      html += '</div>';
+
+      // Staff count slider for this department
+      const staffCount = d.staff_count || 0;
+      html += `<div class="field-group"><label>Staff in this department: <strong>${staffCount || '—'}</strong></label>
+        <input type="range" min="0" max="200" value="${staffCount}" class="slider"
+          oninput="setDeptField('${dept.id}', 'staff_count', parseInt(this.value)); this.previousElementSibling.querySelector('strong').textContent = this.value;"></div>`;
+
+      // Notes
+      html += `<div class="field-group"><label>Notes</label>
+        <textarea class="auto-expand" placeholder="Specific observations for ${esc(dept.name)}..." oninput="setDeptField('${dept.id}', 'notes', this.value);">${esc(d.notes || '')}</textarea></div>`;
+
+      // Mark as assessed button
+      html += `<div style="text-align:right; margin-top:8px;">
+        <button class="checkbox-chip ${isAssessed ? 'checked' : ''}" style="cursor:pointer; font-weight:600; border:none;" onclick="setDeptField('${dept.id}', 'assessed', ${!isAssessed}); renderActiveTab();">
+          ${isAssessed ? '&#10003; Assessed' : 'Mark as Assessed'}
+        </button></div>`;
+
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div></div>';
 
   // ── Shift Structure with presets ──
   html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Shift Structure</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
@@ -1505,6 +1991,42 @@ function removeContractedService(idx) {
   renderTabBar();
 }
 
+function toggleDeptExpand(deptId) {
+  if (!state.operations_data.departments) state.operations_data.departments = {};
+  if (!state.operations_data.departments[deptId]) state.operations_data.departments[deptId] = {};
+  state.operations_data.departments[deptId]._expanded = !state.operations_data.departments[deptId]._expanded;
+  renderActiveTab();
+}
+
+function setDeptField(deptId, field, value) {
+  if (!state.operations_data.departments) state.operations_data.departments = {};
+  if (!state.operations_data.departments[deptId]) state.operations_data.departments[deptId] = {};
+  state.operations_data.departments[deptId][field] = value;
+  markDirty();
+}
+
+function toggleDeptChallenge(deptId, text) {
+  if (!state.operations_data.departments) state.operations_data.departments = {};
+  if (!state.operations_data.departments[deptId]) state.operations_data.departments[deptId] = {};
+  const d = state.operations_data.departments[deptId];
+  if (!d.challenges) d.challenges = [];
+  const idx = d.challenges.indexOf(text);
+  if (idx >= 0) d.challenges.splice(idx, 1);
+  else d.challenges.push(text);
+  markDirty(); renderActiveTab();
+}
+
+function toggleDeptOpportunity(deptId, text) {
+  if (!state.operations_data.departments) state.operations_data.departments = {};
+  if (!state.operations_data.departments[deptId]) state.operations_data.departments[deptId] = {};
+  const d = state.operations_data.departments[deptId];
+  if (!d.opportunities) d.opportunities = [];
+  const idx = d.opportunities.indexOf(text);
+  if (idx >= 0) d.opportunities.splice(idx, 1);
+  else d.opportunities.push(text);
+  markDirty(); renderActiveTab();
+}
+
 function togglePainPoint(text) {
   let current = state.operations_data.pain_points || '';
   if (current.includes(text)) {
@@ -1528,29 +2050,63 @@ function toggleAutomation(text) {
   markDirty(); renderActiveTab();
 }
 
+// WHY: Infrastructure presets encode what we need to know for robot deployment.
+// Elevator integration, WiFi/4G for navigation, power for charging, storage for docking.
+const INFRA_CHALLENGES = [
+  'WiFi dead zones in basement/garage/stairwells',
+  'Elevator requires dedicated service mode for robot access',
+  'No dedicated power circuit available for robot charging station',
+  'Limited cellular coverage inside building (concrete/steel construction)',
+  'Fire code restrictions on corridor equipment/charging',
+  'Loading dock access restricted to scheduled windows',
+  'No available storage/closet space for robot docking station',
+  'Building management system (BMS) is proprietary — no API',
+  'Freight elevator shared with guest laundry carts — scheduling conflict',
+  'ADA compliance constrains where robots can park/dock',
+];
+
+const ELEVATOR_MAKES = ['ThyssenKrupp', 'Otis', 'KONE', 'Schindler', 'Mitsubishi', 'Fujitec', 'TK Elevator', 'Hyundai', 'Other'];
+
 // ── Infrastructure Tab ──
 function renderInfrastructureTab() {
   const infra = state.infrastructure_data;
   let html = '';
 
   // WiFi
-  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>WiFi</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>WiFi & Connectivity</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += '<div class="field-group"><label>Overall WiFi Coverage</label>';
+  html += '<div class="readiness-group" style="grid-template-columns:repeat(4,1fr);">';
+  ['strong','moderate','weak','none'].forEach(val => {
+    const labels = { strong:'Strong', moderate:'Moderate', weak:'Weak', none:'None' };
+    const colors = { strong:'var(--green)', moderate:'var(--blue,#2563eb)', weak:'var(--amber)', none:'var(--red)' };
+    const isActive = infra.wifi.coverage === val;
+    html += `<div class="readiness-option ${isActive ? 'active' : ''}" data-val="${val}"
+      style="${isActive ? 'background:color-mix(in srgb, ' + colors[val] + ' 12%, transparent); color:' + colors[val] + '; border-color:' + colors[val] + ';' : ''}"
+      onclick="state.infrastructure_data.wifi.coverage='${val}'; markDirty(); renderActiveTab();">${labels[val]}</div>`;
+  });
+  html += '</div></div>';
   html += `
-    <div class="field-group"><label>Coverage</label>
-      <select onchange="state.infrastructure_data.wifi.coverage = this.value; markDirty();">
-        <option value="">Select...</option>
-        <option value="strong" ${infra.wifi.coverage === 'strong' ? 'selected' : ''}>Strong</option>
-        <option value="moderate" ${infra.wifi.coverage === 'moderate' ? 'selected' : ''}>Moderate</option>
-        <option value="weak" ${infra.wifi.coverage === 'weak' ? 'selected' : ''}>Weak</option>
-        <option value="none" ${infra.wifi.coverage === 'none' ? 'selected' : ''}>None</option>
-      </select></div>
     <div class="field-row">
-      <div class="field-group"><label>Network Name</label>
-        <input type="text" value="${esc(infra.wifi.network)}" oninput="state.infrastructure_data.wifi.network = this.value; markDirty();"></div>
+      <div class="field-group"><label>Network Name (SSID)</label>
+        <input type="text" value="${esc(infra.wifi.network)}" placeholder="e.g., Hotel-Staff" oninput="state.infrastructure_data.wifi.network = this.value; markDirty();"></div>
       <div class="field-group"><label>Bandwidth</label>
         <input type="text" value="${esc(infra.wifi.bandwidth)}" placeholder="e.g., 200 Mbps" oninput="state.infrastructure_data.wifi.bandwidth = this.value; markDirty();"></div>
-    </div>
-    <div class="field-row">
+    </div>`;
+
+  // Cellular coverage
+  html += '<div class="field-group"><label>Cellular Signal (4G/5G) Inside Building</label>';
+  html += '<div class="readiness-group" style="grid-template-columns:repeat(4,1fr);">';
+  ['strong','moderate','weak','none'].forEach(val => {
+    const labels = { strong:'Strong', moderate:'Moderate', weak:'Weak', none:'None' };
+    const colors = { strong:'var(--green)', moderate:'var(--blue,#2563eb)', weak:'var(--amber)', none:'var(--red)' };
+    const isActive = (infra.wifi.cellular || '') === val;
+    html += `<div class="readiness-option ${isActive ? 'active' : ''}"
+      style="${isActive ? 'background:color-mix(in srgb, ' + colors[val] + ' 12%, transparent); color:' + colors[val] + '; border-color:' + colors[val] + ';' : ''}"
+      onclick="state.infrastructure_data.wifi.cellular='${val}'; markDirty(); renderActiveTab();">${labels[val]}</div>`;
+  });
+  html += '</div></div>';
+
+  html += `<div class="field-row">
       <div class="field-group"><label>IT Contact Name</label>
         <input type="text" value="${esc(infra.wifi.it_contact)}" oninput="state.infrastructure_data.wifi.it_contact = this.value; markDirty();"></div>
       <div class="field-group"><label>IT Contact Email</label>
@@ -1560,44 +2116,105 @@ function renderInfrastructureTab() {
 
   // Elevators
   html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Elevator Inventory</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+
+  // Quick-add from elevator count
+  if (infra.elevators.length === 0 && state.elevators > 0) {
+    html += `<div style="background:var(--accent-soft); border:1px solid rgba(217,119,6,0.2); border-radius:8px; padding:12px 14px; margin-bottom:12px; text-align:center;">
+      <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:8px;">You noted ${state.elevators} elevator(s) — auto-populate inventory?</div>
+      <button class="checkbox-chip" style="cursor:pointer; font-weight:600; color:var(--accent); border-color:var(--accent);" onclick="autoPopulateElevators()">&#9889; Auto-Create ${state.elevators} Elevator(s)</button>
+    </div>`;
+  }
+
   infra.elevators.forEach((el, i) => {
     html += `
       <div class="repeatable-row">
         <button class="row-remove" onclick="removeInfraElevator(${i})">&times;</button>
-        <div class="field-row-3">
+        <div style="font-weight:600; font-size:0.82rem; color:var(--text); margin-bottom:8px;">Elevator ${i + 1}</div>
+        <div class="field-row">
           <div class="field-group"><label>Make</label>
-            <input type="text" value="${esc(el.make)}" oninput="state.infrastructure_data.elevators[${i}].make = this.value; markDirty();"></div>
-          <div class="field-group"><label>Model</label>
-            <input type="text" value="${esc(el.model)}" oninput="state.infrastructure_data.elevators[${i}].model = this.value; markDirty();"></div>
-          <div class="field-group"><label>Age (years)</label>
-            <input type="number" inputmode="numeric" value="${el.age || ''}" oninput="state.infrastructure_data.elevators[${i}].age = this.value ? parseInt(this.value) : null; markDirty();"></div>
+            <select onchange="state.infrastructure_data.elevators[${i}].make = this.value; markDirty();">
+              <option value="">Select...</option>
+              ${ELEVATOR_MAKES.map(m => `<option value="${m}" ${el.make === m ? 'selected' : ''}>${m}</option>`).join('')}
+            </select></div>
+          <div class="field-group"><label>Model / System</label>
+            <input type="text" value="${esc(el.model)}" placeholder="e.g., TAC32T, Gen2" oninput="state.infrastructure_data.elevators[${i}].model = this.value; markDirty();"></div>
         </div>
-        <div class="field-row-3">
+        <div class="field-row">
           <div class="field-group"><label>Floors Served</label>
             <input type="text" value="${esc(el.floors_served)}" placeholder="e.g., 1-10" oninput="state.infrastructure_data.elevators[${i}].floors_served = this.value; markDirty();"></div>
-          <div class="field-group"><label>API Access</label>
-            <select onchange="state.infrastructure_data.elevators[${i}].api_access = this.value; markDirty();">
-              <option value="">Unknown</option>
-              <option value="yes" ${el.api_access === 'yes' ? 'selected' : ''}>Yes</option>
-              <option value="no" ${el.api_access === 'no' ? 'selected' : ''}>No</option>
-              <option value="unknown" ${el.api_access === 'unknown' ? 'selected' : ''}>Unknown</option>
-            </select></div>
-          <div class="field-group"><label>Notes</label>
-            <input type="text" value="${esc(el.notes)}" oninput="state.infrastructure_data.elevators[${i}].notes = this.value; markDirty();"></div>
+          <div class="field-group"><label>Age (years): <strong>${el.age || '—'}</strong></label>
+            <input type="range" min="0" max="40" value="${el.age || 0}" class="slider"
+              oninput="state.infrastructure_data.elevators[${i}].age = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value; markDirty();"></div>
         </div>
+        <div class="field-row">
+          <div class="field-group"><label>Dispatch Type</label>
+            <div class="toggle-group">
+              <div class="toggle-option ${el.dispatch === 'conventional' ? 'active' : ''}" onclick="state.infrastructure_data.elevators[${i}].dispatch='conventional'; markDirty(); renderActiveTab();">Conventional</div>
+              <div class="toggle-option ${el.dispatch === 'destination' ? 'active' : ''}" onclick="state.infrastructure_data.elevators[${i}].dispatch='destination'; markDirty(); renderActiveTab();">Destination</div>
+            </div></div>
+          <div class="field-group"><label>Robot Integration</label>
+            <div class="readiness-group" style="grid-template-columns:repeat(3,1fr);">
+              <div class="readiness-option ${el.robot_access === 'api' ? 'active' : ''}" data-val="ready" style="${el.robot_access === 'api' ? 'background:var(--green-soft);color:var(--green);border-color:var(--green);' : ''}" onclick="state.infrastructure_data.elevators[${i}].robot_access='api'; markDirty(); renderActiveTab();">API Ready</div>
+              <div class="readiness-option ${el.robot_access === 'relay' ? 'active' : ''}" data-val="minor_work" style="${el.robot_access === 'relay' ? 'background:var(--amber-soft);color:var(--amber);border-color:var(--amber);' : ''}" onclick="state.infrastructure_data.elevators[${i}].robot_access='relay'; markDirty(); renderActiveTab();">Relay Parallel</div>
+              <div class="readiness-option ${el.robot_access === 'none' ? 'active' : ''}" data-val="major_work" style="${el.robot_access === 'none' ? 'background:var(--red-soft);color:var(--red);border-color:var(--red);' : ''}" onclick="state.infrastructure_data.elevators[${i}].robot_access='none'; markDirty(); renderActiveTab();">None / Unknown</div>
+            </div></div>
+        </div>
+        <div class="field-group"><label>Notes</label>
+          <input type="text" value="${esc(el.notes)}" placeholder="Service contract, maintenance schedule, access restrictions..." oninput="state.infrastructure_data.elevators[${i}].notes = this.value; markDirty();"></div>
       </div>`;
   });
   html += '<button class="add-row-btn" onclick="addInfraElevator()">+ Add Elevator</button>';
   html += '</div></div>';
 
-  // Power, Storage, Network notes
-  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Power, Storage & Network</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
-  html += '<div class="field-group"><label>Power Notes</label><textarea class="auto-expand" placeholder="Available outlets, dedicated circuits..." oninput="state.infrastructure_data.power_notes = this.value; markDirty();">' + esc(infra.power_notes) + '</textarea></div>';
-  html += '<div class="field-group"><label>Storage Notes</label><textarea class="auto-expand" placeholder="Potential robot docking rooms, dimensions..." oninput="state.infrastructure_data.storage_notes = this.value; markDirty();">' + esc(infra.storage_notes) + '</textarea></div>';
-  html += '<div class="field-group"><label>Network Notes</label><textarea class="auto-expand" placeholder="Cellular coverage, backup connectivity..." oninput="state.infrastructure_data.network_notes = this.value; markDirty();">' + esc(infra.network_notes) + '</textarea></div>';
+  // Robot Deployment Readiness
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Robot Deployment Readiness</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+
+  // Charging / docking
+  html += '<div class="field-group"><label>Available Charging Locations</label><div class="checkbox-grid">';
+  const chargingLocations = ['Housekeeping closet', 'Engineering shop', 'Basement/service area', 'Loading dock', 'Back-of-house corridor', 'Dedicated robot room (to build)', 'Other'];
+  const currentCharging = infra.charging_locations || [];
+  chargingLocations.forEach(loc => {
+    const isActive = currentCharging.includes(loc);
+    html += `<div class="checkbox-chip ${isActive ? 'checked' : ''}" style="cursor:pointer; font-size:0.75rem;" onclick="toggleInfraList('charging_locations','${esc(loc.replace(/'/g, "\\'"))}')">${isActive ? '&#10003; ' : ''}${esc(loc)}</div>`;
+  });
+  html += '</div></div>';
+
+  // Infrastructure challenges
+  html += '<div class="field-group"><label>Infrastructure Challenges</label><div class="checkbox-grid">';
+  const currentInfraChall = infra.infra_challenges || [];
+  INFRA_CHALLENGES.forEach(ch => {
+    const isActive = currentInfraChall.includes(ch);
+    html += `<div class="checkbox-chip ${isActive ? 'checked' : ''}" style="cursor:pointer; font-size:0.73rem;" onclick="toggleInfraList('infra_challenges','${esc(ch.replace(/'/g, "\\'"))}')">${isActive ? '&#10003; ' : ''}${esc(ch)}</div>`;
+  });
+  html += '</div></div>';
+
+  html += '<div class="field-group"><label>Power Notes</label><textarea class="auto-expand" placeholder="Available outlets, dedicated circuits, voltage..." oninput="state.infrastructure_data.power_notes = this.value; markDirty();">' + esc(infra.power_notes) + '</textarea></div>';
+  html += '<div class="field-group"><label>Storage / Docking Notes</label><textarea class="auto-expand" placeholder="Potential robot docking rooms, dimensions, proximity to service areas..." oninput="state.infrastructure_data.storage_notes = this.value; markDirty();">' + esc(infra.storage_notes) + '</textarea></div>';
+  html += '<div class="field-group"><label>Network Notes</label><textarea class="auto-expand" placeholder="Backup connectivity, VPN requirements, firewall restrictions..." oninput="state.infrastructure_data.network_notes = this.value; markDirty();">' + esc(infra.network_notes) + '</textarea></div>';
   html += '</div></div>';
 
   return html;
+}
+
+function autoPopulateElevators() {
+  const count = state.elevators || 1;
+  const make = state.elevator_make || '';
+  for (let i = 0; i < count; i++) {
+    state.infrastructure_data.elevators.push({
+      make: make, model: '', age: null, floors_served: state.floors ? '1-' + state.floors : '',
+      api_access: '', dispatch: '', robot_access: '', notes: ''
+    });
+  }
+  markDirty(); renderActiveTab(); renderTabBar();
+}
+
+function toggleInfraList(field, value) {
+  if (!state.infrastructure_data[field]) state.infrastructure_data[field] = [];
+  const arr = state.infrastructure_data[field];
+  const idx = arr.indexOf(value);
+  if (idx >= 0) arr.splice(idx, 1);
+  else arr.push(value);
+  markDirty(); renderActiveTab();
 }
 
 function addInfraElevator() {
@@ -2292,14 +2909,16 @@ async function loadFromServer(id) {
 
     // Parse JSON fields
     if (typeof data.operations_data === 'string') {
-      try { data.operations_data = JSON.parse(data.operations_data); } catch(e) { data.operations_data = { shifts: [], contracted_services: [], automation_notes: '', pain_points: '' }; }
+      try { data.operations_data = JSON.parse(data.operations_data); } catch(e) { data.operations_data = { shifts: [], contracted_services: [], fb_venues: [], event_spaces: [], automation_notes: '', pain_points: '' }; }
     }
     if (typeof data.infrastructure_data === 'string') {
       try { data.infrastructure_data = JSON.parse(data.infrastructure_data); } catch(e) { data.infrastructure_data = { wifi: {}, elevators: [], power_notes: '', storage_notes: '', network_notes: '' }; }
     }
 
     // Ensure nested objects exist
-    if (!data.operations_data) data.operations_data = { shifts: [], contracted_services: [], automation_notes: '', pain_points: '' };
+    if (!data.operations_data) data.operations_data = { shifts: [], contracted_services: [], fb_venues: [], event_spaces: [], automation_notes: '', pain_points: '' };
+    if (!data.operations_data.fb_venues) data.operations_data.fb_venues = [];
+    if (!data.operations_data.event_spaces) data.operations_data.event_spaces = [];
     if (!data.infrastructure_data) data.infrastructure_data = { wifi: {}, elevators: [], power_notes: '', storage_notes: '', network_notes: '' };
     if (!data.infrastructure_data.wifi) data.infrastructure_data.wifi = {};
     if (!data.zones) data.zones = [];
