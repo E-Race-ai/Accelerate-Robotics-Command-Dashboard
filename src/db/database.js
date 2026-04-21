@@ -131,6 +131,95 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- WHY: Facility assessment captures site-walk data that feeds into Fleet Designer.
+  -- UUIDs are generated client-side so assessments can be created offline.
+  CREATE TABLE IF NOT EXISTS assessments (
+    id TEXT PRIMARY KEY,
+    deal_id TEXT REFERENCES deals(id),
+    facility_type TEXT NOT NULL DEFAULT 'hotel',
+    property_name TEXT NOT NULL,
+    property_address TEXT,
+    property_type TEXT,
+    rooms INTEGER,
+    floors INTEGER,
+    elevators INTEGER,
+    elevator_make TEXT,
+    year_built INTEGER,
+    last_renovation INTEGER,
+    gm_name TEXT,
+    gm_email TEXT,
+    gm_phone TEXT,
+    engineering_contact TEXT,
+    engineering_email TEXT,
+    fb_director TEXT,
+    fb_outlets INTEGER,
+    event_space_sqft INTEGER,
+    union_status TEXT CHECK(union_status IN ('union', 'non_union', 'mixed')),
+    union_details TEXT,
+    assigned_to TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft'
+      CHECK(status IN ('draft', 'in_progress', 'completed', 'synced')),
+    operations_data TEXT,
+    infrastructure_data TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    synced_at TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS assessment_zones (
+    id TEXT PRIMARY KEY,
+    assessment_id TEXT NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,
+    zone_type TEXT NOT NULL,
+    zone_name TEXT NOT NULL,
+    floor_number INTEGER,
+    floor_surfaces TEXT,
+    corridor_width_ft REAL,
+    ceiling_height_ft REAL,
+    door_width_min_ft REAL,
+    wifi_strength TEXT CHECK(wifi_strength IN ('strong', 'moderate', 'weak', 'none')),
+    wifi_network TEXT,
+    lighting TEXT CHECK(lighting IN ('bright', 'moderate', 'dim')),
+    foot_traffic TEXT CHECK(foot_traffic IN ('high', 'moderate', 'low')),
+    current_cleaning_method TEXT,
+    cleaning_frequency TEXT,
+    cleaning_contractor TEXT,
+    cleaning_shift TEXT,
+    delivery_method TEXT,
+    staffing_notes TEXT,
+    pain_points TEXT,
+    robot_readiness TEXT CHECK(robot_readiness IN ('ready', 'minor_work', 'major_work', 'not_feasible')),
+    readiness_notes TEXT,
+    template_data TEXT,
+    notes TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS assessment_stakeholders (
+    id TEXT PRIMARY KEY,
+    assessment_id TEXT NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    title TEXT,
+    department TEXT,
+    role TEXT NOT NULL CHECK(role IN ('decision_maker', 'influencer', 'champion', 'blocker', 'technical')),
+    email TEXT,
+    phone TEXT,
+    notes TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS assessment_photos (
+    id TEXT PRIMARY KEY,
+    assessment_id TEXT NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,
+    zone_id TEXT REFERENCES assessment_zones(id) ON DELETE SET NULL,
+    checklist_item TEXT,
+    photo_data BLOB,
+    thumbnail TEXT,
+    annotations TEXT,
+    caption TEXT,
+    taken_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   -- WHY: Indexes on foreign keys and common query patterns
   CREATE INDEX IF NOT EXISTS idx_deals_stage ON deals(stage);
   CREATE INDEX IF NOT EXISTS idx_deals_owner ON deals(owner);
@@ -138,6 +227,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_activities_deal ON activities(deal_id);
   CREATE INDEX IF NOT EXISTS idx_challenges_facility ON operational_challenges(facility_id);
   CREATE INDEX IF NOT EXISTS idx_contacts_facility ON contacts(facility_id);
+  CREATE INDEX IF NOT EXISTS idx_assessments_deal ON assessments(deal_id);
+  CREATE INDEX IF NOT EXISTS idx_assessments_assigned ON assessments(assigned_to);
+  CREATE INDEX IF NOT EXISTS idx_assessments_status ON assessments(status);
+  CREATE INDEX IF NOT EXISTS idx_assessment_zones_assessment ON assessment_zones(assessment_id);
+  CREATE INDEX IF NOT EXISTS idx_assessment_stakeholders_assessment ON assessment_stakeholders(assessment_id);
+  CREATE INDEX IF NOT EXISTS idx_assessment_photos_assessment ON assessment_photos(assessment_id);
+  CREATE INDEX IF NOT EXISTS idx_assessment_photos_zone ON assessment_photos(zone_id);
 `);
 
 // WHY: Add role column for role-based access control. ALTER TABLE ADD COLUMN is safe with IF NOT EXISTS guard.
