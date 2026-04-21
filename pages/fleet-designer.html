@@ -401,11 +401,249 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
 .summary-chip.chip-savings .sc-val { color:var(--teal); }
 .summary-chip.chip-roi .sc-val { color:var(--purple); }
 
-/* ── Fleet slots container ── */
+/* ── Fleet slot cards ── */
 #fleet-slots {
     display:flex;
     flex-direction:column;
-    gap:12px;
+    gap:10px;
+}
+
+.fleet-slot {
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:14px 16px;
+    border-radius:12px;
+    background:var(--card);
+    border:1px solid var(--border);
+    box-shadow:0 2px 10px rgba(0,0,0,0.04);
+    cursor:pointer;
+    transition:all 0.15s;
+    position:relative;
+}
+
+.fleet-slot:hover {
+    background:var(--card-hover);
+    box-shadow:0 4px 16px rgba(0,0,0,0.07);
+    transform:translateY(-1px);
+}
+
+.fleet-slot.expanded {
+    border-color:var(--blue);
+    box-shadow:0 4px 16px rgba(0,85,255,0.12);
+}
+
+.slot-num {
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    background:linear-gradient(135deg, var(--blue), var(--cyan));
+    color:white;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.75rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+}
+
+.slot-info {
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+}
+
+.slot-role {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.82rem;
+    color:var(--text);
+}
+
+.slot-robot {
+    font-size:0.72rem;
+    color:var(--muted);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.slot-meta {
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    font-size:0.62rem;
+    color:var(--muted);
+    align-items:center;
+}
+
+.meta-uses {
+    padding:2px 6px;
+    background:rgba(0,85,255,0.06);
+    border-radius:4px;
+    color:var(--blue);
+}
+
+.meta-elevator {
+    font-size:0.72rem;
+}
+
+.meta-risk {
+    padding:2px 6px;
+    border-radius:4px;
+    font-weight:600;
+}
+
+.risk-low { background:rgba(22,163,74,0.08); color:var(--green); }
+.risk-med { background:rgba(217,119,6,0.08); color:var(--amber); }
+.risk-high { background:rgba(220,38,38,0.08); color:var(--red); }
+
+.meta-score {
+    font-family:'JetBrains Mono',monospace;
+    font-weight:600;
+    color:var(--purple);
+}
+
+.slot-price {
+    text-align:right;
+    flex-shrink:0;
+}
+
+.slot-price .amount {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.05rem;
+    color:var(--text);
+}
+
+.slot-price .period {
+    font-size:0.6rem;
+    color:var(--muted);
+}
+
+.slot-swap {
+    font-size:0.6rem;
+    font-weight:600;
+    color:var(--blue);
+    margin-top:4px;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.slot-swap:hover { text-decoration:underline; }
+
+/* ── Comparison cards ── */
+.comparison {
+    padding:16px;
+    border-radius:12px;
+    background:rgba(0,85,255,0.02);
+    border:1px solid rgba(0,85,255,0.1);
+    margin-top:-4px;
+}
+
+.comp-header {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.72rem;
+    color:var(--muted);
+    margin-bottom:12px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+}
+
+.comp-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+    gap:10px;
+}
+
+.comp-card {
+    padding:14px;
+    border-radius:10px;
+    background:var(--card);
+    border:1px solid var(--border);
+    cursor:pointer;
+    transition:all 0.15s;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.comp-card:hover {
+    background:var(--card-hover);
+    box-shadow:0 2px 12px rgba(0,0,0,0.06);
+}
+
+.comp-card.selected {
+    border-color:var(--blue);
+    box-shadow:0 0 0 2px rgba(0,85,255,0.15);
+}
+
+.comp-card .name {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.85rem;
+    color:var(--text);
+}
+
+.comp-card .company {
+    font-size:0.65rem;
+    color:var(--muted);
+    margin-bottom:4px;
+}
+
+.comp-stat {
+    display:flex;
+    justify-content:space-between;
+    font-size:0.65rem;
+    padding:3px 0;
+    border-bottom:1px solid rgba(0,0,0,0.04);
+}
+
+.comp-stat .k {
+    color:var(--muted);
+}
+
+.comp-stat span:last-child {
+    font-weight:600;
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.62rem;
+}
+
+.comp-diff {
+    font-size:0.6rem;
+    color:var(--muted);
+    line-height:1.4;
+    padding-left:4px;
+}
+
+.pick-btn {
+    margin-top:6px;
+    padding:6px;
+    border-radius:6px;
+    text-align:center;
+    font-size:0.65rem;
+    font-weight:700;
+    cursor:pointer;
+    transition:all 0.12s;
+}
+
+.comp-card.selected .pick-btn {
+    background:rgba(0,85,255,0.08);
+    color:var(--blue);
+}
+
+.comp-card:not(.selected) .pick-btn {
+    background:rgba(0,0,0,0.03);
+    color:var(--muted);
+}
+
+.comp-card:not(.selected):hover .pick-btn {
+    background:linear-gradient(135deg, var(--blue), var(--cyan));
+    color:white;
 }
 
 /* ── Export bar ── */
@@ -1300,9 +1538,14 @@ function renderFleet(slots) {
             `;
         }
 
+        // Wire click handler — clicking slot toggles comparison panel
+        if (slot.selected && slot.alternatives.length > 0) {
+            slotEl.addEventListener('click', () => toggleComparison(idx));
+        }
+
         fleetSlotsContainer.appendChild(slotEl);
 
-        // Comparison div placeholder for Task 5
+        // Comparison container (hidden until user clicks)
         const compDiv = document.createElement('div');
         compDiv.className = 'comparison';
         compDiv.id = `comp-${idx}`;
@@ -1312,6 +1555,100 @@ function renderFleet(slots) {
 
     // Store current slots for other tasks (export, comparison)
     currentSlots = slots;
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Comparison view — expand/collapse + render top-3 cards
+// ─────────────────────────────────────────────────────────────
+function toggleComparison(slotIdx) {
+    const el = document.getElementById('comp-' + slotIdx);
+    const slotEl = el.previousElementSibling;
+
+    if (el.style.display === 'none') {
+        // Close all other comparisons first
+        document.querySelectorAll('.comparison').forEach(c => { c.style.display = 'none'; });
+        document.querySelectorAll('.fleet-slot').forEach(s => s.classList.remove('expanded'));
+
+        el.style.display = 'block';
+        slotEl.classList.add('expanded');
+        renderComparison(slotIdx);
+    } else {
+        el.style.display = 'none';
+        slotEl.classList.remove('expanded');
+    }
+}
+
+function renderComparison(slotIdx) {
+    const slot = currentSlots[slotIdx];
+    if (!slot || !slot.selected) return;
+
+    const all = [slot.selected, ...slot.alternatives].filter(Boolean);
+    const el = document.getElementById('comp-' + slotIdx);
+
+    el.innerHTML = `
+        <div class="comp-header">Top ${all.length} candidates for ${slot.label} (${slot.allCandidates} evaluated)</div>
+        <div class="comp-grid">
+            ${all.map((c, ci) => {
+                const r = c.robot;
+                const isSelected = ci === 0;
+                const riskScore = r.import_risk_score != null ? r.import_risk_score : 5;
+                const riskClass = riskScore <= 3 ? 'risk-low' : riskScore <= 6 ? 'risk-med' : 'risk-high';
+                const riskLabel = r.import_risk_level || (riskScore <= 3 ? 'Low' : riskScore <= 6 ? 'Medium' : 'High');
+                const diffs = (r.key_differentiators || []).slice(0, 2);
+
+                return `<div class="comp-card ${isSelected ? 'selected' : ''}" data-slot="${slotIdx}" data-candidate="${ci}">
+                    <div class="name">${r.model_name}</div>
+                    <div class="company">${r.company}</div>
+                    <div class="comp-stat"><span class="k">Score</span><span>${c.score}/100</span></div>
+                    <div class="comp-stat"><span class="k">Monthly</span><span>$${(c.monthlyEstimate || 0).toLocaleString('en-US')}</span></div>
+                    <div class="comp-stat"><span class="k">Payload</span><span>${r.payload_kg ? r.payload_kg + ' kg' : '—'}</span></div>
+                    <div class="comp-stat"><span class="k">Runtime</span><span>${r.runtime_hours ? r.runtime_hours + 'h' : '—'}</span></div>
+                    <div class="comp-stat"><span class="k">Elevator</span><span style="color:${r.elevator_integration ? 'var(--green)' : 'var(--red)'}">${r.elevator_integration ? 'Yes' : 'No'}</span></div>
+                    <div class="comp-stat"><span class="k">Risk</span><span class="${riskClass}">${riskLabel}</span></div>
+                    ${diffs.map(d => `<div class="comp-diff">&bull; ${d}</div>`).join('')}
+                    <div class="pick-btn">${isSelected ? '★ Selected' : 'Swap to this'}</div>
+                </div>`;
+            }).join('')}
+        </div>
+    `;
+
+    // Wire swap click handlers via delegation
+    el.querySelectorAll('.comp-card:not(.selected)').forEach(card => {
+        card.addEventListener('click', () => {
+            const si = parseInt(card.dataset.slot, 10);
+            const ci = parseInt(card.dataset.candidate, 10);
+            swapRobot(si, ci);
+        });
+    });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// swapRobot — promote an alternative to selected, re-render
+// ─────────────────────────────────────────────────────────────
+function swapRobot(slotIdx, candidateIdx) {
+    const slot = currentSlots[slotIdx];
+    if (!slot || candidateIdx === 0) return;
+
+    const all = [slot.selected, ...slot.alternatives].filter(Boolean);
+    const newSelected = all[candidateIdx];
+
+    // Build new alternatives list: old selected + others, minus the promoted one
+    const newAlternatives = all.filter((_, i) => i !== candidateIdx);
+    // Remove the old selected (index 0) from the new alternatives and put it back
+    const oldSelected = newAlternatives.shift();
+    newAlternatives.unshift(oldSelected);
+
+    slot.selected = newSelected;
+    slot.alternatives = newAlternatives;
+
+    // Re-render the entire fleet (updates summary totals)
+    renderFleet(currentSlots);
+
+    // Re-open the comparison for this slot after render
+    // WHY: setTimeout 0 lets the DOM update before we try to expand
+    setTimeout(() => toggleComparison(slotIdx), 0);
 }
 
 
