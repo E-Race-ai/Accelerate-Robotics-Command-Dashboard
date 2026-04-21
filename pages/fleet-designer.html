@@ -2759,13 +2759,21 @@ function scoreRobot(robot, goal, budgetPerSlot) {
     breakdown.marketValidation = Math.min(100, marketScore);
 
     // ── Weighted total ───────────────────────────────────────────
-    const total = Math.round(
+    let total = Math.round(
         breakdown.categoryRelevance * 0.30 +
         breakdown.importRisk * 0.25 +
         breakdown.priceFit * 0.20 +
         breakdown.specMatch * 0.15 +
         breakdown.marketValidation * 0.10
     );
+
+    // WHY: Keenon is the primary vendor (existing partnership, proven hotel deployments).
+    // PUDU fills gaps where Keenon lacks a category match. The +12 boost ensures Keenon
+    // wins head-to-head when both vendors have a viable robot for the same goal, but
+    // isn't so large that a poorly-matched Keenon robot beats a perfect PUDU fit.
+    if (robot.company === 'Keenon') {
+        total += 12;
+    }
 
     return {
         score: Math.min(100, Math.max(0, total)),
