@@ -25,11 +25,31 @@
       gap: 6px;
       flex-shrink: 0;
     }
+    /* WHY: Clickable stages get pointer cursor and hover scale — makes it obvious you can click to move */
+    .stage-clickable {
+      cursor: pointer;
+    }
+    .stage-clickable:hover .stage-dot {
+      transform: scale(1.5);
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.2);
+      background: #2563eb !important;
+    }
+    .stage-clickable:hover .stage-label {
+      color: #2563eb !important;
+    }
     .stage-dot {
       width: 14px;
       height: 14px;
       border-radius: 50%;
-      transition: box-shadow 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    /* WHY: Pulse animation on current stage dot — visual "you are here" beacon */
+    .stage-dot-current {
+      animation: stage-pulse 2s ease-in-out infinite;
+    }
+    @keyframes stage-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
     }
     .stage-label {
       font-size: 0.68rem;
@@ -37,6 +57,7 @@
       white-space: nowrap;
       text-transform: uppercase;
       letter-spacing: 0.04em;
+      transition: color 0.15s;
     }
     .stage-line {
       height: 2px;
@@ -118,6 +139,52 @@
       box-shadow: 0 0 0 2px #e5e7eb;
     }
 
+    /* ── Proposal cards ────────────────────────────────────────── */
+    .proposals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .proposal-card {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 18px 16px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .proposal-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    .proposal-icon {
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+    .proposal-label {
+      font-family: 'Space Grotesk', 'Inter', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .proposal-desc {
+      font-size: 0.75rem;
+      color: #6b7280;
+      line-height: 1.4;
+    }
+    .proposal-open {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #2563eb;
+      margin-top: auto;
+      padding-top: 6px;
+    }
+
     /* ── Nav active state ──────────────────────────────────────── */
     .nav-active {
       color: #2563eb;
@@ -160,6 +227,7 @@
           <nav class="flex items-center gap-1">
             <a href="/admin" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Dashboard</a>
             <a href="/admin/deals" class="px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 bg-blue-50">Deals</a>
+            <a href="/pages/assessments.html" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Assessments</a>
           </nav>
           <span class="text-gray-200 select-none">|</span>
           <span id="adminEmail" class="text-sm text-gray-400"></span>
@@ -188,6 +256,12 @@
       <div class="detail-card mb-6">
         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Pipeline Stage</p>
         <div id="stage-bar" class="stage-bar"></div>
+      </div>
+
+      <!-- Proposals -->
+      <div class="detail-card mb-6">
+        <h3 class="card-heading">Proposals &amp; Documents</h3>
+        <div id="proposals-grid" class="proposals-grid"></div>
       </div>
 
       <!-- Two-column layout -->

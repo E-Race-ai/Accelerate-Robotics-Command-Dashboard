@@ -6,6 +6,9 @@
   <title>Deal Pipeline — Accelerate Robotics</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- WHY: Leaflet for the interactive deal map view — loaded from unpkg (allowed in CSP) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { font-family: 'Inter', system-ui, sans-serif; }
     h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
@@ -124,10 +127,109 @@
       font-weight: 500;
     }
 
+    /* ── Inline stage dropdown ────────────────────────────── */
+    .stage-select {
+      appearance: none;
+      -webkit-appearance: none;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 3px 24px 3px 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      /* WHY: Right-pad for the custom arrow icon */
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 6px center;
+    }
+    .stage-select:hover {
+      border-color: #d1d5db;
+    }
+    .stage-select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+    }
+
+    /* ── Activity snippet ─────────────────────────────────── */
+    .activity-snippet {
+      max-width: 220px;
+    }
+    .activity-snippet .actor {
+      font-weight: 600;
+      color: #374151;
+    }
+    .activity-snippet .action {
+      color: #6b7280;
+    }
+    .activity-snippet .when {
+      color: #9ca3af;
+      font-size: 0.68rem;
+    }
+
     /* ── Nav active state ──────────────────────────────────── */
     .nav-active {
       color: #2563eb;
       font-weight: 600;
+    }
+
+    /* ── Leaflet popup overrides ──────────────────────────── */
+    .leaflet-popup-content-wrapper {
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+      padding: 0;
+    }
+    .leaflet-popup-content {
+      margin: 0;
+      min-width: 220px;
+    }
+    .map-popup {
+      padding: 16px 18px;
+    }
+    .map-popup .popup-name {
+      font-family: 'Space Grotesk', 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 6px;
+    }
+    .map-popup .popup-meta {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    .map-popup .popup-stage {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+    .map-popup .popup-link {
+      display: block;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #2563eb;
+      text-decoration: none;
+      border-top: 1px solid #f3f4f6;
+      margin: 8px -18px -16px -18px;
+      padding: 10px 18px;
+      border-radius: 0 0 14px 14px;
+      transition: background 0.15s;
+    }
+    .map-popup .popup-link:hover {
+      background: #f0f5ff;
+    }
+    /* WHY: Override default Leaflet marker styles — remove white box around custom SVG icons */
+    .deal-marker {
+      background: none !important;
+      border: none !important;
     }
   </style>
 </head>
@@ -151,6 +253,7 @@
           <nav class="flex items-center gap-1">
             <a href="/admin" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Dashboard</a>
             <a href="/admin/deals" class="px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 bg-blue-50">Deals</a>
+            <a href="/pages/assessments.html" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Assessments</a>
           </nav>
           <span class="text-gray-200 select-none">|</span>
           <span id="adminEmail" class="text-sm text-gray-400"></span>
@@ -185,6 +288,10 @@
                   class="px-4 py-2 text-sm font-semibold transition text-gray-500 hover:bg-gray-50">
             Table
           </button>
+          <button id="view-map"
+                  class="px-4 py-2 text-sm font-semibold transition text-gray-500 hover:bg-gray-50">
+            Map
+          </button>
         </div>
 
         <!-- Search -->
@@ -206,6 +313,13 @@
       <!-- Kanban view -->
       <div id="deal-kanban"></div>
 
+      <!-- Map view (hidden by default) -->
+      <div id="deal-map-wrap" class="hidden">
+        <div class="rounded-2xl shadow-lg overflow-hidden" style="height: 600px; background: #f0f1f3;">
+          <div id="deal-map" style="height: 100%; width: 100%;"></div>
+        </div>
+      </div>
+
       <!-- Table view (hidden by default) -->
       <div id="deal-table-wrap" class="hidden">
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -215,11 +329,11 @@
                 <th class="px-4 py-3 text-left">ID</th>
                 <th class="px-4 py-3 text-left">Name</th>
                 <th class="px-4 py-3 text-left">Stage</th>
-                <th class="px-4 py-3 text-left">Type</th>
                 <th class="px-4 py-3 text-left">Location</th>
                 <th class="px-4 py-3 text-left">Owner</th>
-                <th class="px-4 py-3 text-left">Monthly Value</th>
+                <th class="px-4 py-3 text-left">Last Activity</th>
                 <th class="px-4 py-3 text-left">Updated</th>
+                <th class="px-4 py-3 text-left"></th>
               </tr>
             </thead>
             <tbody id="deal-table-body"></tbody>
