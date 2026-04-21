@@ -131,7 +131,7 @@ Insert these styles immediately after the `.surface-chip.checked` closing brace 
     outline:none;
 }
 
-/* ── Amenity chips — same style as surface chips, purple accent ── */
+/* ── Amenity chips — same style as surface chips, blue accent ── */
 .amenity-grid {
     display:flex;
     flex-wrap:wrap;
