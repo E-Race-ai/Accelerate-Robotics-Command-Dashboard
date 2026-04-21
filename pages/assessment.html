@@ -890,6 +890,7 @@ select {
 
 <!-- ── Hidden Photo Input ── -->
 <input type="file" accept="image/*" capture="environment" id="photoInput" class="hidden">
+<input type="file" accept="image/*" capture="environment" id="infraPhotoInput" class="hidden">
 
 <script>
 /* ===================================================================
@@ -1081,8 +1082,9 @@ async function initPage() {
   // Initial sync status
   updateSyncStatus(navigator.onLine ? 'ready' : 'offline');
 
-  // Photo input handler
+  // Photo input handlers
   document.getElementById('photoInput').addEventListener('change', handlePhotoSelected);
+  document.getElementById('infraPhotoInput').addEventListener('change', handleInfraPhotoSelected);
 }
 
 // ── Tab Bar ──
@@ -1409,6 +1411,11 @@ const DEPARTMENT_PROFILES = [
       { key: 'peak_covers', label: 'Peak Meal Period Covers', type: 'slider', min: 0, max: 500, unit: '' },
       { key: 'banquet_events_weekly', label: 'Banquet Events per Week', type: 'slider', min: 0, max: 20, unit: '' },
       { key: 'fb_revenue_monthly', label: 'Monthly F&B Revenue', type: 'number', placeholder: 'e.g., 250000', prefix: '$' },
+      { key: 'pos_system', label: 'POS System', type: 'text', placeholder: 'e.g., Micros, Toast, Aloha, Square, Lightspeed' },
+      { key: 'pos_integrations', label: 'POS Integrations', type: 'text', placeholder: 'e.g., PMS (Opera), accounting, inventory' },
+      { key: 'pos_eod_process', label: 'End-of-Day POS Process', type: 'text', placeholder: 'e.g., Night auditor runs Z-report, auto-posts to PMS' },
+      { key: 'pos_data_reviewer', label: 'Who Reviews POS Data?', type: 'text', placeholder: 'e.g., F&B Director, Controller, GM' },
+      { key: 'pos_reporting_frequency', label: 'POS Reporting Frequency', type: 'text', placeholder: 'e.g., Daily flash, weekly P&L, monthly deep dive' },
     ],
     common_challenges: [
       'Food runner trips during peak service (50+ per meal)',
@@ -2767,6 +2774,53 @@ function renderInfrastructureTab() {
   html += '<div class="field-group"><label>Network Notes</label><textarea class="auto-expand" placeholder="Backup connectivity, VPN requirements, firewall restrictions..." oninput="state.infrastructure_data.network_notes = this.value; markDirty();">' + esc(infra.network_notes) + '</textarea></div>';
   html += '</div></div>';
 
+  // ── Infrastructure Photo Documentation ──
+  // WHY: Photos of infrastructure during the site walk are critical for deployment
+  // planning. Server closets, power panels, docking locations, etc. can't be
+  // described accurately in text — a photo eliminates ambiguity.
+  const infraPhotos = [
+    { id: 'server_closet', label: 'Server / Telecom Closet', desc: 'Network switches, patch panels, available rack space' },
+    { id: 'wifi_ap', label: 'WiFi Access Points', desc: 'AP locations, model/brand, mounting style' },
+    { id: 'electrical_panel', label: 'Electrical Panel / Circuits', desc: 'Available breakers, dedicated circuits, voltage' },
+    { id: 'elevator_machine_room', label: 'Elevator Machine Room', desc: 'Controller model, relay board, available ports' },
+    { id: 'elevator_panel', label: 'Elevator Call Panel', desc: 'Button panel type, wiring access, signal fixture' },
+    { id: 'loading_dock', label: 'Loading Dock', desc: 'Access path, door width, ramp grade, staging area' },
+    { id: 'storage_room', label: 'Storage / Potential Robot Room', desc: 'Dimensions, power outlets, door width, ventilation' },
+    { id: 'charging_location', label: 'Charging Station Location(s)', desc: 'Outlet proximity, floor surface, clearance space' },
+    { id: 'hsk_closet', label: 'Housekeeping Closet', desc: 'Existing storage, available space, power outlet' },
+    { id: 'laundry_room', label: 'Laundry Room', desc: 'Cart staging area, path to elevator, door widths' },
+    { id: 'boh_corridor', label: 'BOH Corridor(s)', desc: 'Width, surface, obstacles, door clearances' },
+    { id: 'security_cameras', label: 'Security / Surveillance', desc: 'Camera system overview, CCTV monitor room, NVR' },
+    { id: 'fire_panel', label: 'Fire Panel / Life Safety', desc: 'Main fire panel, sprinkler risers, alarm zones' },
+    { id: 'bms_panel', label: 'BMS / Building Automation', desc: 'Building management system, HVAC controls' },
+    { id: 'sales_office', label: 'Sales Office / Admin', desc: 'Office location, meeting space for deployment planning' },
+    { id: 'parking_garage', label: 'Parking Garage', desc: 'Surface condition, clearance heights, lane widths' },
+    { id: 'exterior_paths', label: 'Exterior Paths / Walkways', desc: 'Surface type, width, grade changes, weather exposure' },
+    { id: 'signage_wayfinding', label: 'Signage / Wayfinding', desc: 'Existing signage placement, digital displays' },
+    { id: 'other_infra', label: 'Other Infrastructure', desc: 'Anything else relevant to robot deployment' },
+  ];
+
+  if (!infra.infra_photos) infra.infra_photos = {};
+
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Infrastructure Photos <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + Object.keys(infra.infra_photos).filter(k => infra.infra_photos[k]).length + '/' + infraPhotos.length + ')</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += '<p style="font-size:0.75rem; color:var(--text-dim); margin:0 0 10px;">Tap each item to capture a photo. These document the facility for deployment planning.</p>';
+
+  infraPhotos.forEach(item => {
+    const hasPhoto = infra.infra_photos[item.id];
+    html += `<div class="photo-checklist-item" style="padding:10px 0;">
+      <div class="photo-check ${hasPhoto ? 'taken' : ''}" onclick="captureInfraPhoto('${item.id}')" style="cursor:pointer;">
+        ${hasPhoto ? '&#128247;' : '&#128248;'}
+      </div>
+      <div style="flex:1;">
+        <span class="photo-checklist-label" style="font-weight:${hasPhoto ? '600' : '400'}; color:${hasPhoto ? 'var(--text)' : 'var(--text-dim)'};">${esc(item.label)}</span>
+        <div style="font-size:0.65rem; color:var(--text-dim); margin-top:1px;">${esc(item.desc)}</div>
+      </div>
+      ${hasPhoto ? '<button style="background:none; border:none; color:var(--red); font-size:0.7rem; cursor:pointer; padding:4px 8px;" onclick="removeInfraPhoto(\'' + item.id + '\')">Remove</button>' : ''}
+    </div>`;
+  });
+
+  html += '</div></div>';
+
   return html;
 }
 
@@ -2804,6 +2858,61 @@ function removeInfraElevator(idx) {
   markDirty();
   renderActiveTab();
   renderTabBar();
+}
+
+// WHY: Infrastructure photos use the same camera input as zone photos,
+// but store a thumbnail reference in infrastructure_data.infra_photos keyed by item ID.
+// Full blobs go to IndexedDB via the same savePhotoToDB pipeline.
+let pendingInfraPhotoId = null;
+
+function captureInfraPhoto(itemId) {
+  pendingInfraPhotoId = itemId;
+  document.getElementById('infraPhotoInput').click();
+}
+
+async function handleInfraPhotoSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+
+  const itemId = pendingInfraPhotoId;
+  if (!itemId) return;
+
+  try {
+    const thumbnail = await generateThumbnail(file);
+    const photoId = generateUUID();
+
+    const photoRecord = {
+      id: photoId,
+      assessmentId: state.id,
+      zoneId: null,
+      blob: file,
+      thumbnail: thumbnail,
+      annotations: [],
+      caption: itemId,
+      checklistItem: 'infra_' + itemId,
+      takenAt: new Date().toISOString()
+    };
+
+    await savePhotoToDB(photoRecord);
+
+    if (!state.infrastructure_data.infra_photos) state.infrastructure_data.infra_photos = {};
+    state.infrastructure_data.infra_photos[itemId] = { photoId, thumbnail, takenAt: photoRecord.takenAt };
+
+    markDirty();
+    renderActiveTab();
+    showToast('Photo captured', 'success');
+  } catch (err) {
+    console.error('Infra photo error:', err);
+    showToast('Failed to save photo', 'error');
+  }
+}
+
+function removeInfraPhoto(itemId) {
+  if (!state.infrastructure_data.infra_photos) return;
+  delete state.infrastructure_data.infra_photos[itemId];
+  markDirty();
+  renderActiveTab();
 }
 
 // ── Zone Tab ──
