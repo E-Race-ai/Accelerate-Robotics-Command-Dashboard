@@ -461,6 +461,76 @@ select {
 }
 .add-row-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
 
+/* ── Org Chart ── */
+.org-tree { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 8px 0; }
+.org-gm { margin-bottom: 20px; position: relative; width: 100%; max-width: 320px; }
+.org-gm::after {
+  content: ''; position: absolute; bottom: -20px; left: 50%; width: 2px; height: 20px;
+  background: rgba(217,119,6,0.2); transform: translateX(-50%);
+}
+.org-connector { width: 100%; height: 2px; background: rgba(217,119,6,0.15); margin-bottom: 20px; position: relative; }
+.org-connector::before, .org-connector::after {
+  content: ''; position: absolute; top: 0; width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(217,119,6,0.25); transform: translate(-50%, -2px);
+}
+.org-connector::before { left: 0; }
+.org-connector::after { left: 100%; }
+.org-departments { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
+@media (max-width: 768px) { .org-departments { grid-template-columns: repeat(2, 1fr); } }
+.org-dept-card { position: relative; }
+.org-dept-card::before {
+  content: ''; position: absolute; top: -20px; left: 50%; width: 2px; height: 20px;
+  background: rgba(217,119,6,0.15); transform: translateX(-50%);
+}
+
+.contact-card {
+  background: var(--card-bg, #fff); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px; cursor: pointer; transition: all 0.2s ease;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.contact-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.contact-card.gm-card { border-color: rgba(217,119,6,0.2); background: linear-gradient(135deg, #fffbeb, #fff); }
+.contact-card.gm-card:hover { border-color: var(--accent); box-shadow: 0 6px 20px rgba(217,119,6,0.1); }
+
+.cc-header { display: flex; align-items: center; gap: 10px; }
+.cc-dept-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+.cc-name { font-size: 0.85em; font-weight: 700; color: var(--text); line-height: 1.2; }
+.cc-title { font-size: 0.72em; color: var(--text-dim, #64748b); margin-top: 2px; }
+.cc-dept-tag { font-size: 0.6em; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 3px; }
+.cc-role-badge { font-size: 0.65em; font-weight: 600; padding: 2px 8px; border-radius: 10px; display: inline-block; }
+.cc-role-badge.decision_maker { background: #fef3c7; color: #92400e; }
+.cc-role-badge.champion { background: #d1fae5; color: #065f46; }
+.cc-role-badge.influencer { background: #dbeafe; color: #1e40af; }
+.cc-role-badge.blocker { background: #fee2e2; color: #991b1b; }
+.cc-role-badge.technical { background: #e0e7ff; color: #3730a3; }
+
+.cc-expand-hint { font-size: 0.6em; color: rgba(0,0,0,0.25); text-align: center; letter-spacing: 1px; text-transform: uppercase; }
+.contact-card:hover .cc-expand-hint { color: rgba(0,0,0,0.4); }
+.contact-card.expanded .cc-expand-hint { display: none; }
+
+.cc-details { display: none; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--border); }
+.contact-card.expanded .cc-details { display: flex; }
+.cc-detail-row { display: flex; align-items: center; gap: 6px; font-size: 0.75em; color: var(--text-dim, #64748b); }
+.cc-detail-row input { font-size: 1em; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg, #f8fafc); width: 100%; }
+.cc-detail-row select { font-size: 1em; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg, #f8fafc); }
+.cc-detail-row textarea { font-size: 1em; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg, #f8fafc); width: 100%; min-height: 44px; resize: vertical; }
+
+.cc-actions { display: flex; gap: 6px; padding-top: 4px; }
+.cc-action-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 8px 0; border-radius: 8px; font-size: 0.68em; font-weight: 700;
+  text-decoration: none; transition: all 0.15s; border: 1px solid var(--border);
+  min-height: 36px; cursor: pointer;
+}
+.cc-action-btn.btn-call { background: rgba(34,197,94,0.06); color: #16a34a; border-color: rgba(34,197,94,0.2); }
+.cc-action-btn.btn-call:hover { background: rgba(34,197,94,0.12); }
+.cc-action-btn.btn-text { background: rgba(59,130,246,0.05); color: #2563eb; border-color: rgba(59,130,246,0.15); }
+.cc-action-btn.btn-text:hover { background: rgba(59,130,246,0.1); }
+.cc-action-btn.btn-email { background: rgba(124,58,237,0.05); color: #7c3aed; border-color: rgba(124,58,237,0.15); }
+.cc-action-btn.btn-email:hover { background: rgba(124,58,237,0.1); }
+.cc-action-btn.btn-remove { background: rgba(239,68,68,0.05); color: #dc2626; border-color: rgba(239,68,68,0.15); }
+.cc-action-btn.btn-remove:hover { background: rgba(239,68,68,0.1); }
+
 /* ── Photo Checklist ── */
 .photo-checklist-item {
   display: flex; align-items: center; gap: 10px;
@@ -1657,46 +1727,152 @@ function removeEventSpace(idx) {
 }
 
 // ── Stakeholders Tab ──
+// WHY: Hotel org chart presets — every hotel has these departments.
+// One-tap to add the typical contact for each, then just fill in the name.
+const STAKEHOLDER_PRESETS = [
+  { title: 'General Manager', department: 'Executive', role: 'decision_maker', icon: '&#11088;', color: '#d97706', tag: 'GM', isGM: true },
+  { title: 'Director of Operations', department: 'Operations', role: 'influencer', icon: '&#9881;', color: '#3b82f6', tag: 'OPS' },
+  { title: 'Director of Engineering', department: 'Engineering', role: 'technical', icon: '&#128295;', color: '#8b5cf6', tag: 'ENG' },
+  { title: 'Director of Housekeeping', department: 'Housekeeping', role: 'champion', icon: '&#128700;', color: '#10b981', tag: 'HSK' },
+  { title: 'F&B Director', department: 'Food & Beverage', role: 'influencer', icon: '&#127860;', color: '#f59e0b', tag: 'F&B' },
+  { title: 'Front Desk Manager', department: 'Front Office', role: 'influencer', icon: '&#128188;', color: '#06b6d4', tag: 'FO' },
+  { title: 'Director of Events', department: 'Events', role: 'influencer', icon: '&#127917;', color: '#ec4899', tag: 'EVT' },
+  { title: 'Director of Security', department: 'Security', role: 'influencer', icon: '&#128737;', color: '#64748b', tag: 'SEC' },
+  { title: 'IT Manager', department: 'IT', role: 'technical', icon: '&#128421;', color: '#6366f1', tag: 'IT' },
+  { title: 'Owner / Asset Manager', department: 'Ownership', role: 'decision_maker', icon: '&#127970;', color: '#0ea5e9', tag: 'OWN' },
+];
+
+const ROLE_LABELS = {
+  decision_maker: 'Decision Maker',
+  champion: 'Champion',
+  influencer: 'Influencer',
+  blocker: 'Blocker',
+  technical: 'Technical',
+};
+
 function renderStakeholdersTab() {
-  let html = '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Stakeholders</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  const shs = state.stakeholders;
+  // WHY: Find GM to display at top of org chart — GM is the first stakeholder with isGM flag
+  // or title containing "General Manager"
+  const gmIdx = shs.findIndex(sh => sh._isGM || (sh.title && sh.title.toLowerCase().includes('general manager')));
 
-  state.stakeholders.forEach((sh, i) => {
-    html += `
-      <div class="repeatable-row">
-        <button class="row-remove" onclick="removeStakeholder(${i})">&times;</button>
-        <div class="field-row">
-          <div class="field-group"><label>Name</label>
-            <input type="text" value="${esc(sh.name)}" oninput="state.stakeholders[${i}].name = this.value; markDirty();"></div>
-          <div class="field-group"><label>Title</label>
-            <input type="text" value="${esc(sh.title)}" oninput="state.stakeholders[${i}].title = this.value; markDirty();"></div>
-        </div>
-        <div class="field-row">
-          <div class="field-group"><label>Department</label>
-            <input type="text" value="${esc(sh.department)}" oninput="state.stakeholders[${i}].department = this.value; markDirty();"></div>
-          <div class="field-group"><label>Role</label>
-            <select onchange="state.stakeholders[${i}].role = this.value; markDirty();">
-              <option value="">Select role...</option>
-              <option value="decision_maker" ${sh.role === 'decision_maker' ? 'selected' : ''}>Decision Maker</option>
-              <option value="influencer" ${sh.role === 'influencer' ? 'selected' : ''}>Influencer</option>
-              <option value="champion" ${sh.role === 'champion' ? 'selected' : ''}>Champion</option>
-              <option value="blocker" ${sh.role === 'blocker' ? 'selected' : ''}>Blocker</option>
-              <option value="technical" ${sh.role === 'technical' ? 'selected' : ''}>Technical</option>
-            </select></div>
-        </div>
-        <div class="field-row">
-          <div class="field-group"><label>Email</label>
-            <input type="email" value="${esc(sh.email)}" oninput="state.stakeholders[${i}].email = this.value; markDirty();"></div>
-          <div class="field-group"><label>Phone</label>
-            <input type="tel" value="${esc(sh.phone)}" oninput="state.stakeholders[${i}].phone = this.value; markDirty();"></div>
-        </div>
-        <div class="field-group"><label>Notes</label>
-          <textarea class="auto-expand" oninput="state.stakeholders[${i}].notes = this.value; markDirty();">${esc(sh.notes)}</textarea></div>
-      </div>`;
+  let html = '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Organization Chart <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + shs.length + ')</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+
+  if (shs.length === 0) {
+    html += '<p style="color:#64748b;font-style:italic;margin:0 0 12px;">No stakeholders added yet. Tap a role below to add one, or they\'ll auto-populate with the property archetype.</p>';
+  } else {
+    html += '<div class="org-tree">';
+
+    // ── GM Card at top ──
+    if (gmIdx >= 0) {
+      html += '<div class="org-gm">' + renderStakeholderCard(gmIdx, true) + '</div>';
+      html += '<div class="org-connector"></div>';
+    }
+
+    // ── Department grid below ──
+    html += '<div class="org-departments">';
+    shs.forEach((sh, i) => {
+      if (i === gmIdx) return; // skip GM, already rendered above
+      html += '<div class="org-dept-card">' + renderStakeholderCard(i, false) + '</div>';
+    });
+    html += '</div>';
+
+    html += '</div>';
+  }
+
+  // ── Quick-Add Presets ──
+  html += '<div style="margin-top:14px;"><span style="font-size:.78em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">+ Add Role</span>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">';
+  STAKEHOLDER_PRESETS.forEach(p => {
+    // WHY: Dim presets that are already added to avoid duplicates
+    const exists = shs.some(sh => sh.title === p.title);
+    const dimStyle = exists ? 'opacity:0.4;pointer-events:none;' : '';
+    html += `<button class="chip-btn" onclick="addStakeholderPreset('${esc(p.title)}')" style="font-size:.82em;padding:6px 12px;border-radius:18px;border:1px solid var(--border);background:var(--card-bg,#fff);cursor:pointer;display:flex;align-items:center;gap:4px;min-height:36px;${dimStyle}"><span>${p.icon}</span> ${p.title}</button>`;
   });
+  html += '</div>';
+  html += '<button class="add-row-btn" style="margin-top:8px;" onclick="addStakeholder()">+ Add Custom Stakeholder</button>';
+  html += '</div>';
 
-  html += '<button class="add-row-btn" onclick="addStakeholder()">+ Add Stakeholder</button>';
   html += '</div></div>';
   return html;
+}
+
+function renderStakeholderCard(i, isGM) {
+  const sh = state.stakeholders[i];
+  const preset = STAKEHOLDER_PRESETS.find(p => p.title === sh.title);
+  const icon = preset ? preset.icon : '&#128100;';
+  const color = preset ? preset.color : '#64748b';
+  const tag = preset ? preset.tag : (sh.department || '').substring(0, 3).toUpperCase();
+  const roleLabel = ROLE_LABELS[sh.role] || sh.role || '';
+
+  let card = `<div class="contact-card ${isGM ? 'gm-card' : ''}" onclick="toggleStakeholderExpand(this, event)">`;
+  card += `<div class="cc-header">`;
+  card += `<div class="cc-dept-icon" style="background:${color}18;color:${color};font-size:18px;">${icon}</div>`;
+  card += `<div>`;
+  card += `<div class="cc-name">${esc(sh.name) || 'TBD'}</div>`;
+  card += `<div class="cc-title">${esc(sh.title) || 'Untitled'}</div>`;
+  card += `<div style="display:flex;gap:4px;align-items:center;margin-top:3px;">`;
+  if (tag) card += `<span class="cc-dept-tag" style="background:${color}14;color:${color};">${tag}</span>`;
+  if (roleLabel) card += `<span class="cc-role-badge ${sh.role || ''}">${roleLabel}</span>`;
+  card += `</div></div></div>`;
+
+  // Summary line when collapsed
+  if (sh.email || sh.phone) {
+    card += `<div class="cc-expand-hint">${sh.email ? esc(sh.email) : ''} ${sh.phone ? '&middot; ' + esc(sh.phone) : ''}</div>`;
+  } else {
+    card += `<div class="cc-expand-hint">tap to edit</div>`;
+  }
+
+  // ── Expanded details ──
+  card += `<div class="cc-details" onclick="event.stopPropagation();">`;
+  card += `<div class="cc-detail-row"><label style="width:55px;flex-shrink:0;font-weight:600;">Name</label><input type="text" value="${esc(sh.name)}" placeholder="Full name" oninput="state.stakeholders[${i}].name = this.value; markDirty();"></div>`;
+  card += `<div class="cc-detail-row"><label style="width:55px;flex-shrink:0;font-weight:600;">Title</label><input type="text" value="${esc(sh.title)}" placeholder="Job title" oninput="state.stakeholders[${i}].title = this.value; markDirty();"></div>`;
+  card += `<div class="cc-detail-row"><label style="width:55px;flex-shrink:0;font-weight:600;">Dept</label><input type="text" value="${esc(sh.department)}" placeholder="Department" oninput="state.stakeholders[${i}].department = this.value; markDirty();"></div>`;
+  card += `<div class="cc-detail-row"><label style="width:55px;flex-shrink:0;font-weight:600;">Role</label>`;
+  card += `<div class="toggle-group" style="flex:1;">`;
+  ['decision_maker','champion','influencer','blocker','technical'].forEach(r => {
+    card += `<div class="toggle-option ${sh.role === r ? 'active' : ''}" style="font-size:.72em;padding:4px 8px;" onclick="state.stakeholders[${i}].role = '${r}'; markDirty(); renderActiveTab();">${ROLE_LABELS[r]}</div>`;
+  });
+  card += `</div></div>`;
+  card += `<div class="cc-detail-row"><label style="width:55px;flex-shrink:0;font-weight:600;">Email</label><input type="email" value="${esc(sh.email)}" placeholder="email@hotel.com" oninput="state.stakeholders[${i}].email = this.value; markDirty();"></div>`;
+  card += `<div class="cc-detail-row"><label style="width:55px;flex-shrink:0;font-weight:600;">Phone</label><input type="tel" value="${esc(sh.phone)}" placeholder="+1 (___) ___-____" oninput="state.stakeholders[${i}].phone = this.value; markDirty();"></div>`;
+  card += `<div class="cc-detail-row" style="flex-direction:column;align-items:stretch;"><label style="font-weight:600;margin-bottom:4px;">Notes</label><textarea class="auto-expand" placeholder="Disposition, interests, concerns..." oninput="state.stakeholders[${i}].notes = this.value; markDirty();">${esc(sh.notes)}</textarea></div>`;
+
+  // ── Action buttons ──
+  card += `<div class="cc-actions">`;
+  if (sh.phone) {
+    card += `<a class="cc-action-btn btn-call" href="tel:${esc(sh.phone)}">&#128222; CALL</a>`;
+    card += `<a class="cc-action-btn btn-text" href="sms:${esc(sh.phone)}">&#128172; TEXT</a>`;
+  }
+  if (sh.email) {
+    card += `<a class="cc-action-btn btn-email" href="mailto:${esc(sh.email)}">&#9993; EMAIL</a>`;
+  }
+  card += `<button class="cc-action-btn btn-remove" onclick="removeStakeholder(${i})">&#128465; REMOVE</button>`;
+  card += `</div>`;
+
+  card += `</div></div>`;
+  return card;
+}
+
+function toggleStakeholderExpand(el, event) {
+  // WHY: Don't toggle when clicking inside expanded details (inputs, buttons)
+  if (el.classList.contains('expanded') && event.target !== el && !event.target.classList.contains('cc-expand-hint') && !event.target.classList.contains('cc-header') && !event.target.closest('.cc-header')) {
+    return;
+  }
+  el.classList.toggle('expanded');
+}
+
+function addStakeholderPreset(title) {
+  const preset = STAKEHOLDER_PRESETS.find(p => p.title === title);
+  if (!preset) return;
+  state.stakeholders.push({
+    id: generateUUID(), name: '', title: preset.title, department: preset.department,
+    role: preset.role, email: '', phone: '', notes: '', sort_order: state.stakeholders.length,
+    _isGM: preset.isGM || false,
+  });
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
 }
 
 function addStakeholder() {
