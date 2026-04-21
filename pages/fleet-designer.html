@@ -2802,6 +2802,12 @@ function generateFleet(robots) {
 
         // ── Filter candidates ────────────────────────────────
         const candidates = robots.filter(robot => {
+            // WHY: V1 proposals only recommend Keenon and PUDU robots — these are the two
+            // vendors with confirmed US availability and partnership readiness. The full
+            // 222-robot catalog remains for browsing; this gate scopes fleet recommendations.
+            const V1_VENDORS = ['Keenon', 'Pudu'];
+            if (!V1_VENDORS.some(v => robot.company.toLowerCase().includes(v.toLowerCase()))) return false;
+
             // Status gate: only production-ready or near-ready
             const validStatuses = ['commercially_available', 'limited_production', 'early_access'];
             if (!validStatuses.includes(robot.status)) return false;
