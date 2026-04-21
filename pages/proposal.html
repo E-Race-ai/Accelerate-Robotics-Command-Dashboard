@@ -572,18 +572,552 @@ function render() {
     renderFooter();
 }
 
-// Placeholder render functions — implemented in Tasks 4-7
-function renderHeader() {}
-function renderIntro() {}
-function renderConfigurator() {}
-function renderImpact() {}
-function renderSavings() {}
-function renderHiring() {}
-function renderAnnualSummary() {}
-function renderPhases() {}
-function renderSavingsTable() {}
-function renderUnlocks() {}
-function renderFooter() {}
+/* ── SHARE PROPOSAL ─────────────────────────────────────────── */
+function shareProposal() {
+    // WHY: Encode the full payload (minus generatedAt) as base64 in the URL hash.
+    // This makes the link self-contained — no server needed to store proposals.
+    const payload = { ...DATA, generatedAt: new Date().toISOString() };
+    const encoded = btoa(JSON.stringify(payload));
+    const url = location.origin + location.pathname + '#config=' + encoded;
+
+    navigator.clipboard.writeText(url).then(() => {
+        const toast = document.getElementById('shareToast');
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2500);
+    }).catch(() => {
+        // WHY: Fallback for browsers that block clipboard access
+        prompt('Copy this link:', url);
+    });
+}
+
+function renderHeader() {
+    const p = DATA.property;
+    const el = document.getElementById('headerSection');
+    el.style.background = `linear-gradient(135deg, var(--panel-bg), var(--panel-bg-deep))`;
+    el.innerHTML = `
+        <div class="max-w-6xl mx-auto relative">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-xl border-2 flex items-center justify-center" style="border-color: var(--accent-light)">
+                        <span class="font-bold text-2xl headline" style="color: var(--accent-light)">${p.name.charAt(0)}</span>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">${p.name}</h1>
+                        <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Executive Proposal · Live Configurator</p>
+                    </div>
+                </div>
+                <div class="flex flex-col md:items-end gap-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                        </div>
+                        <span class="text-sm font-bold tracking-tight accel-gradient tech-font">Accelerate Robotics</span>
+                    </div>
+                    <div class="text-[10px] text-gray-400 md:text-right tracking-wide">
+                        One Brain. Many Bots.<br>
+                        <span class="text-gray-500">${p.rooms}-room ${p.type} · ${p.floors} floors · ${p.market || ''}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderIntro() {
+    const el = document.getElementById('introSection');
+    el.innerHTML = `
+        <div class="max-w-3xl">
+            <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color: var(--accent)">Executive Proposal</p>
+            <h2 class="headline text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">${NARRATIVES.headline}</h2>
+            <p class="text-gray-600 leading-relaxed">${NARRATIVES.intro}</p>
+            <p class="text-gray-600 leading-relaxed mt-3">${NARRATIVES.valueProp}</p>
+        </div>
+    `;
+}
+
+function renderConfigurator() {
+    const n = state.count;
+    const total = DATA.fleet.length;
+    const presets = generatePresets(total);
+    const pct = total > 1 ? ((n - 1) / (total - 1)) * 100 : 100;
+
+    // Build preset chips HTML
+    const presetChipsHtml = presets.map(p =>
+        `<button class="preset-chip${p.count === n ? ' active' : ''}" data-count="${p.count}">${p.label} · ${p.count}</button>`
+    ).join('');
+
+    // Build slider ticks HTML
+    const presetCounts = presets.map(p => p.count);
+    let ticksHtml = '';
+    for (let i = 1; i <= total; i++) {
+        ticksHtml += `<div class="tick${presetCounts.includes(i) ? ' tier-marker' : ''}"></div>`;
+    }
+
+    // Build robot grid HTML
+    let robotGridHtml = '';
+    DATA.fleet.forEach((slot, i) => {
+        const active = i < n;
+        const r = slot.robot;
+        const narr = NARRATIVES.robots[i] || {};
+        robotGridHtml += `
+            <div class="robot-slot${active ? ' active' : ''}">
+                ${r.image_url ? `<img class="robot-photo" src="${r.image_url}" alt="${r.model_name}" loading="lazy">` : '<div class="robot-photo" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:0.7rem;">No image</div>'}
+                <div class="flex items-start gap-2.5">
+                    <div class="robot-chip-mini">${r.model_name.split(' ')[0]}</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[11px] font-semibold text-white leading-snug truncate">${r.company} ${r.model_name}</p>
+                        <p class="text-[10px] text-gray-400 leading-snug mt-0.5 truncate">${narr.roleDescription || slot.serviceLine}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    // Build service LED HTML
+    let ledHtml = '';
+    let onCount = 0;
+    DATA.fleet.forEach((slot, i) => {
+        const on = i < n;
+        if (on) onCount++;
+        ledHtml += `
+            <div class="led-indicator${on ? ' on' : ''}">
+                <span class="led-dot"></span>
+                <span class="led-label">${slot.serviceLine}</span>
+                <span class="led-threshold">${i + 1}+</span>
+            </div>
+        `;
+    });
+
+    const el = document.getElementById('configuratorSection');
+    el.innerHTML = `
+        <div class="config-panel p-6 md:p-10">
+            <!-- Fleet size header -->
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+                <div>
+                    <p class="text-[11px] uppercase tracking-widest font-semibold mb-2" style="color:var(--accent-light)">Fleet Size</p>
+                    <div class="flex items-baseline gap-3">
+                        <div class="text-6xl md:text-7xl font-bold tech-font text-white" id="fleetCount">${n}</div>
+                        <div class="text-xl text-gray-400 font-light">/ ${total} robots</div>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-1" id="tierLabel">${NARRATIVES.tierName}</p>
+                </div>
+                <div class="flex flex-wrap gap-2 preset-chips-row" id="presetChips">${presetChipsHtml}</div>
+            </div>
+
+            <!-- Slider -->
+            <div class="slider-wrap mb-2 no-print">
+                <div class="slider-track">
+                    <div class="slider-fill" id="sliderFill" style="width: ${pct}%"></div>
+                    <div class="slider-ticks">${ticksHtml}</div>
+                </div>
+                <input type="range" min="1" max="${total}" value="${n}" step="1" class="slider-input" id="fleetSlider">
+            </div>
+
+            <!-- Robot grid -->
+            <div class="mt-8">
+                <p class="text-[11px] uppercase tracking-widest font-semibold mb-3" style="color:var(--accent-light)">Fleet Composition</p>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5" id="robotGrid">${robotGridHtml}</div>
+            </div>
+
+            <!-- Service line LEDs -->
+            <div class="mt-8">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[11px] uppercase tracking-widest font-semibold" style="color:var(--accent-light)">Service Lines — System Status</p>
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400">
+                        <span class="tech-font text-[#5eff88] font-bold" id="serviceOnCount">${onCount}</span>
+                        <span class="text-gray-500"> / ${total} online</span>
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2" id="serviceLedGrid">${ledHtml}</div>
+            </div>
+
+            <!-- Intelligence Platform toggle -->
+            <div class="mt-8 toggle-row">
+                <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div class="flex-1 pr-4">
+                        <p class="text-sm font-semibold text-white">Facility Intelligence Platform</p>
+                        <p class="text-[11px] text-gray-400 mt-0.5">Asset sensing, BLE + UWB tags, smart-dispatch rules, ops dashboard · <span style="color:var(--accent-light)">$${INTEL_Y1_INSTALL.toLocaleString()} Y1 install · $${(INTEL_Y2_LICENSE/1000).toFixed(0)}K/yr license</span></p>
+                    </div>
+                    <div class="toggle${state.intel ? ' on' : ''}" id="intelToggle"></div>
+                </div>
+            </div>
+
+            <!-- Impact divider -->
+            <div class="mt-12 mb-8 text-center">
+                <p class="text-[11px] uppercase tracking-widest font-semibold mb-2" style="color:var(--accent-light)">Now see what this fleet delivers</p>
+                <p class="headline text-2xl md:text-3xl font-bold text-white" style="line-height:1.3">Better service. Stronger bottom line.</p>
+            </div>
+
+            <!-- Impact section (rendered by renderImpact) -->
+            <div id="impactContainer"></div>
+
+            <!-- Savings stats (rendered by renderSavings) -->
+            <div id="savingsContainer"></div>
+
+            <!-- Annual summary (rendered by renderAnnualSummary) -->
+            <div id="annualContainer"></div>
+
+            <!-- vs. Hiring (rendered by renderHiring) -->
+            <div id="hiringContainer"></div>
+        </div>
+    `;
+
+    // Wire slider
+    document.getElementById('fleetSlider').addEventListener('input', (e) => {
+        state.count = parseInt(e.target.value);
+        render();
+    });
+
+    // Wire preset chips
+    document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            state.count = parseInt(chip.dataset.count);
+            render();
+        });
+    });
+
+    // Wire intel toggle
+    document.getElementById('intelToggle').addEventListener('click', () => {
+        state.intel = !state.intel;
+        render();
+    });
+}
+
+function renderImpact() {
+    const n = state.count;
+    const activeFleet = DATA.fleet.slice(0, n);
+    const totalSavings = activeFleet.reduce((s, r) => s + r.savings, 0);
+    const fteCost = getFteMonthlyCost(DATA.property);
+    const fteFreed = (totalSavings / fteCost).toFixed(1);
+    const touchpoints = n * 6;
+    const touchpointsMonthly = touchpoints * 30;
+    const revenueMonthly = n * 2500;
+    const revenueAnnual = revenueMonthly * 12;
+
+    document.getElementById('impactContainer').innerHTML = `
+        <div class="hours-card mb-8">
+            <div class="hours-eyebrow">Enhanced Service Capacity</div>
+            <div class="hours-anchor">
+                Every robot in your fleet <em>creates capacity your current staffing can't reach</em> — and turns each hour into revenue or service quality your operation leaves on the table today.
+            </div>
+            <div class="pillar-grid">
+                <div class="pillar">
+                    <div class="p-eyebrow">New Service Touchpoints</div>
+                    <div class="p-num"><span class="plus">+</span>${touchpoints}</div>
+                    <div class="p-unit">service events / day</div>
+                    <div class="p-body"><strong>Deliveries, cleaning runs, supply transport, and guest interactions</strong> that currently require pulling staff away from higher-value work.</div>
+                    <div class="p-foot">&asymp; ${touchpointsMonthly.toLocaleString()} service events / month</div>
+                </div>
+                <div class="pillar">
+                    <div class="p-eyebrow">Staff Freed for Higher-Value Work</div>
+                    <div class="p-num"><span class="plus">+</span>${fteFreed}</div>
+                    <div class="p-unit">FTE equivalent freed</div>
+                    <div class="p-body"><strong>The fleet handles repetitive logistics</strong> — corridor cleaning, supply runs, delivery — so your best people stay where they create the most value.</div>
+                    <div class="p-foot">Based on $${fteCost.toLocaleString()}/mo fully-loaded FTE cost</div>
+                </div>
+            </div>
+            <div class="revenue-hero">
+                <div class="rv-eyebrow">Estimated Additional Revenue Capacity</div>
+                <div>
+                    <div class="rv-num"><span class="plus">+</span>$${revenueMonthly.toLocaleString()}</div>
+                    <div class="rv-unit">new monthly revenue capacity</div>
+                </div>
+                <div class="rv-body">
+                    Extended service hours, faster turnover between events, and <strong>automated delivery during off-peak windows</strong> that currently go unserved. This is revenue capacity that doesn't exist without the fleet.
+                </div>
+                <div class="rv-annual">
+                    <span class="big">$${revenueAnnual.toLocaleString()}</span> / year in estimated new revenue capacity
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderSavings() {
+    const n = state.count;
+    const activeFleet = DATA.fleet.slice(0, n);
+    const monthlyCost = activeFleet.reduce((s, r) => s + r.monthlyEstimate, 0);
+    const monthlySavings = activeFleet.reduce((s, r) => s + r.savings, 0);
+    const netMonthly = monthlySavings - monthlyCost;
+    const sign = netMonthly >= 0 ? '+$' : '−$';
+    const robotWord = n === 1 ? 'robot' : 'robots';
+    const avgCost = n > 0 ? Math.round(monthlyCost / n) : 0;
+
+    document.getElementById('savingsContainer').innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Fleet Cost</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white">$${monthlyCost.toLocaleString()}</p>
+                <p class="text-[11px] text-gray-500 mt-1">${n} ${robotWord} × ~$${avgCost.toLocaleString()} avg</p>
+            </div>
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Hard Savings</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font" style="color:var(--accent-light)">$${monthlySavings.toLocaleString()}</p>
+                <p class="text-[11px] text-gray-500 mt-1">Labor &amp; vendor contracts offset</p>
+            </div>
+            <div class="stat-tile accent-green">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Net Monthly Benefit</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white">${sign}${Math.abs(netMonthly).toLocaleString()}</p>
+                <p class="text-[11px] text-gray-300 mt-1">${netMonthly >= 0 ? '+' : '−'}$${Math.abs(netMonthly * 12).toLocaleString()} annualized</p>
+            </div>
+        </div>
+    `;
+}
+
+function renderHiring() {
+    const n = state.count;
+    const activeFleet = DATA.fleet.slice(0, n);
+    const monthlyCost = activeFleet.reduce((s, r) => s + r.monthlyEstimate, 0);
+    const monthlySavings = activeFleet.reduce((s, r) => s + r.savings, 0);
+    const fteCost = getFteMonthlyCost(DATA.property);
+    const fteCount = (monthlySavings / fteCost).toFixed(1);
+    const fteEquivCost = Math.round(parseFloat(fteCount) * fteCost);
+    const delta = fteEquivCost - monthlyCost;
+    const deltaPct = fteEquivCost > 0 ? Math.round((delta / fteEquivCost) * 100) : 0;
+    const deltaSign = delta >= 0 ? '' : '−';
+
+    document.getElementById('hiringContainer').innerHTML = `
+        <div class="mt-6 p-6 rounded-xl" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-[11px] uppercase tracking-widest font-semibold" style="color:var(--accent-light)">vs. Hiring — Fully Loaded Labor Comparison</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Your Fleet</p>
+                    <p class="text-3xl font-bold tech-font text-white">$${monthlyCost.toLocaleString()}<span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1">All-in — hardware, service, support</p>
+                </div>
+                <div class="text-center text-3xl text-gray-500 font-light hidden md:block">&rarr;</div>
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Equivalent FTE Coverage</p>
+                    <p class="text-3xl font-bold tech-font text-white">$${fteEquivCost.toLocaleString()}<span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1">${fteCount} FTEs × $${fteCost.toLocaleString()}/mo fully-loaded</p>
+                </div>
+            </div>
+            <div class="mt-5 pt-5 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-3">
+                <p class="text-sm text-gray-300">The fleet delivers this coverage for</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font" style="color:var(--accent-light)">${deltaSign}$${Math.abs(delta).toLocaleString()}/mo ${delta >= 0 ? 'less' : 'more'}</p>
+                <p class="text-sm text-gray-300">${Math.abs(deltaPct)}% ${delta >= 0 ? 'cheaper' : 'more'} · ${deltaSign}$${Math.abs(delta * 12).toLocaleString()}/yr delta</p>
+            </div>
+            <p class="text-[10px] text-gray-500 italic mt-4 leading-relaxed">
+                Not counted: recruiting, turnover, OT premiums, overnight differentials, agency markup. Hospitality turnover runs 70–100%/yr — typically adds 20–40% on top of base FTE cost.
+            </p>
+        </div>
+    `;
+}
+
+function renderAnnualSummary() {
+    const n = state.count;
+    const activeFleet = DATA.fleet.slice(0, n);
+    const monthlyCost = activeFleet.reduce((s, r) => s + r.monthlyEstimate, 0);
+    const monthlySavings = activeFleet.reduce((s, r) => s + r.savings, 0);
+    const netMonthly = monthlySavings - monthlyCost;
+    const annualNet = netMonthly * 12;
+    const intelY1 = state.intel ? INTEL_Y1_INSTALL : 0;
+    const intelY2 = state.intel ? INTEL_Y2_LICENSE : 0;
+    const year1 = monthlyCost * 12 + intelY1;
+    const year2 = monthlyCost * 12 + intelY2;
+    const sign = annualNet >= 0 ? '+$' : '−$';
+
+    document.getElementById('annualContainer').innerHTML = `
+        <div class="mt-4 p-5 rounded-xl" style="background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 15%, transparent), color-mix(in srgb, var(--accent) 4%, transparent)); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center md:text-left">
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest font-semibold mb-1" style="color:var(--accent-light)">Year 1 All-In</p>
+                    <p class="text-2xl font-bold tech-font text-white">$${year1.toLocaleString()}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest font-semibold mb-1" style="color:var(--accent-light)">Year 2+ Steady-State</p>
+                    <p class="text-2xl font-bold tech-font text-white">$${year2.toLocaleString()}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest font-semibold mb-1" style="color:var(--accent-light)">Annual Net Cash Benefit</p>
+                    <p class="text-2xl font-bold tech-font" style="color:var(--accent-light)">${sign}${Math.abs(annualNet).toLocaleString()}</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderPhases() {
+    const n = state.count;
+    const phaseBreaks = generatePhaseBreaks(DATA.fleet.length);
+
+    // WHY: Determine how many phases are "reached" at the current slider position
+    let activePhases = 0;
+    for (const p of phaseBreaks) {
+        if (n >= (phaseBreaks.indexOf(p) === 0 ? 1 : phaseBreaks[phaseBreaks.indexOf(p) - 1].upTo + 1)) {
+            activePhases++;
+        }
+    }
+
+    // Add intelligence phase if toggled
+    const allPhases = [...phaseBreaks];
+    if (state.intel || DATA.fleet.length >= 7) {
+        allPhases.push({ upTo: DATA.fleet.length, name: 'Intelligence Platform', timeframe: 'Months 7-8' });
+    }
+
+    let phasesHtml = '';
+    allPhases.forEach((phase, idx) => {
+        const isIntel = phase.name === 'Intelligence Platform';
+        const included = isIntel ? state.intel : idx < activePhases;
+        const narrated = NARRATIVES.phases[idx];
+        const desc = narrated ? narrated.description : `Deploy fleet robots for ${phase.name.toLowerCase()}.`;
+
+        // WHY: List which robots deploy in this phase
+        const prevUpTo = idx > 0 && !isIntel ? allPhases[idx - 1].upTo : 0;
+        const robotNames = isIntel ? [] : DATA.fleet.slice(prevUpTo, phase.upTo).map(s => `${s.robot.company} ${s.robot.model_name}`);
+
+        phasesHtml += `
+            <div class="phase-card${included ? ' included' : ' skipped'}">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold tech-font" style="background:var(--accent)">${idx + 1}</div>
+                    <p class="text-[10px] uppercase tracking-widest text-gray-700 font-semibold">${phase.timeframe}</p>
+                </div>
+                <p class="font-bold text-gray-900 mb-1 text-sm">${phase.name}</p>
+                <p class="text-xs text-gray-600 leading-snug">${desc}</p>
+                ${robotNames.length > 0 ? `<p class="text-[10px] text-gray-400 mt-2">${robotNames.join(', ')}</p>` : ''}
+                ${isIntel && !state.intel ? '<p class="text-[10px] mt-2 text-gray-500 italic">Requires Intelligence Platform add-on</p>' : ''}
+            </div>
+        `;
+    });
+
+    document.getElementById('phaseSection').innerHTML = `
+        <div class="text-center mb-6">
+            <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color:var(--accent)">Deployment Timeline</p>
+            <h2 class="headline text-3xl font-bold text-gray-900 mb-3">Phased rollout. Proven at each step.</h2>
+        </div>
+        <div class="phase-timeline">${phasesHtml}</div>
+    `;
+}
+
+function renderSavingsTable() {
+    const n = state.count;
+    const activeFleet = DATA.fleet.slice(0, n);
+    let total = 0;
+
+    let rowsHtml = '';
+    activeFleet.forEach((slot, i) => {
+        total += slot.savings;
+        const narr = NARRATIVES.robots[i] || {};
+        rowsHtml += `
+            <tr>
+                <td><strong>${slot.robot.company} ${slot.robot.model_name}</strong></td>
+                <td>${slot.serviceLine}</td>
+                <td>${narr.savingsCapture || 'Labor offset'}</td>
+                <td class="num">$${slot.savings.toLocaleString()}</td>
+            </tr>
+        `;
+    });
+
+    document.getElementById('savingsTableSection').innerHTML = `
+        <div class="text-center mb-6">
+            <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color:var(--accent)">Savings Breakdown</p>
+            <h2 class="headline text-3xl font-bold text-gray-900 mb-3">Where the money comes from</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Robot</th>
+                        <th>Service Line</th>
+                        <th>Replaces</th>
+                        <th class="right">Monthly Savings</th>
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+                <tfoot>
+                    <tr class="total">
+                        <td colspan="3">Total Monthly Savings</td>
+                        <td class="num">$${total.toLocaleString()}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    `;
+}
+
+function renderUnlocks() {
+    const n = state.count;
+    const CATEGORY_COLOR = {
+        cleaning: '#6b8e23', delivery: '#3b7a9a', logistics: '#5a6b7a',
+        service: '#8a6f47', security: '#4a3a6a',
+    };
+
+    let activeCardsHtml = '';
+    DATA.fleet.slice(0, n).forEach((slot, i) => {
+        const narr = NARRATIVES.robots[i] || {};
+        const color = CATEGORY_COLOR[slot.type] || 'var(--accent)';
+        activeCardsHtml += `
+            <div class="unlock-card" style="border-left-color:${color}">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <span class="tech-font text-[10px] uppercase tracking-widest font-bold" style="color:${color}">${slot.type}</span>
+                    <span class="tech-font text-[10px] text-gray-400">${slot.robot.model_name}</span>
+                </div>
+                <p class="text-sm text-gray-800 leading-snug">${narr.unlockNarrative || 'Automates ' + slot.serviceLine.toLowerCase()}</p>
+            </div>
+        `;
+    });
+
+    // "Next up" preview
+    let lockedHtml = '';
+    const upcoming = DATA.fleet.slice(n, n + 2);
+    if (upcoming.length > 0) {
+        upcoming.forEach((slot, i) => {
+            const narr = NARRATIVES.robots[n + i] || {};
+            lockedHtml += `
+                <div class="unlock-card locked">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <span class="tech-font text-[10px] uppercase tracking-widest font-bold text-gray-400">+${n + i + 1}th robot</span>
+                        <span class="tech-font text-[10px] text-gray-400">${slot.robot.model_name}</span>
+                    </div>
+                    <p class="text-sm text-gray-500 leading-snug">${narr.unlockNarrative || 'Automates ' + slot.serviceLine.toLowerCase()}</p>
+                </div>
+            `;
+        });
+    }
+
+    document.getElementById('unlocksSection').innerHTML = `
+        <div class="text-center mb-6">
+            <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color:var(--accent)">Service Tier</p>
+            <h2 class="headline text-3xl font-bold text-gray-900 mb-3">${NARRATIVES.tierName}</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">${NARRATIVES.tierNarrative}</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">${activeCardsHtml}</div>
+        ${lockedHtml ? `
+            <div class="mt-4">
+                <p class="text-sm text-gray-500 font-semibold mb-3">Next up — add more robots to unlock:</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">${lockedHtml}</div>
+            </div>
+        ` : ''}
+    `;
+}
+
+function renderFooter() {
+    const date = DATA.generatedAt ? new Date(DATA.generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    document.getElementById('footerSection').innerHTML = `
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-gray-800">Accelerate Robotics</p>
+                    <p class="text-xs text-gray-500">One Brain. Many Bots. · Generated ${date}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="shareBtn" class="no-print px-4 py-2 rounded-lg text-sm font-semibold text-white" style="background:var(--accent)" onclick="shareProposal()">Share Proposal</button>
+                <button class="no-print px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-700 hover:bg-gray-100" onclick="window.print()">Print / Save PDF</button>
+                <a href="fleet-designer.html" class="no-print text-xs text-gray-500 hover:text-gray-700 underline">Back to Fleet Designer</a>
+            </div>
+        </div>
+        <div id="shareToast" style="display:none; position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); background:#1f2937; color:#fff; padding:0.75rem 1.5rem; border-radius:0.5rem; font-size:0.85rem; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+            Link copied to clipboard!
+        </div>
+    `;
+}
 
 /* ── BOOT ─────────────────────────────────────────────────────── */
 init();
