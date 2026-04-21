@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Facility Assessment — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Design Tokens ── */
+:root {
+  --bg: #0a0a0f;
+  --card: rgba(255,255,255,0.04);
+  --card-hover: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.08);
+  --border-focus: rgba(245,158,11,0.4);
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --accent: #f59e0b;
+  --accent-light: #fbbf24;
+  --accent-soft: rgba(245,158,11,0.15);
+  --green: #00e676;
+  --green-soft: rgba(0,230,118,0.15);
+  --red: #ef4444;
+  --red-soft: rgba(239,68,68,0.15);
+  --amber: #f59e0b;
+  --amber-soft: rgba(245,158,11,0.15);
+  --grey: #6b7280;
+  --grey-soft: rgba(107,114,128,0.15);
+  --header-h: 56px;
+  --tabbar-h: 48px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+h1,h2,h3,h4 { font-family: 'Space Grotesk', sans-serif; }
+
+/* ── Header (fixed) ── */
+.header {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--header-h);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(10,10,15,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  z-index: 200;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex; align-items: center; gap: 10px;
+  flex: 1; min-width: 0;
+}
+
+.brand {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700; font-size: 0.75rem;
+  color: var(--accent);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.property-name-input {
+  background: transparent; border: 1px solid transparent;
+  color: var(--text); font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem; font-weight: 600;
+  padding: 4px 8px; border-radius: 6px;
+  min-width: 120px; max-width: 260px;
+  outline: none; transition: border-color 0.15s;
+}
+.property-name-input::placeholder { color: var(--text-dim); }
+.property-name-input:focus { border-color: var(--border-focus); }
+
+.header-center {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+
+.rep-select {
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--text); font-size: 0.78rem;
+  padding: 6px 10px; border-radius: 6px;
+  outline: none; min-height: 44px;
+  font-family: 'Inter', sans-serif;
+}
+
+.status-badge {
+  font-size: 0.65rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.status-draft { background: var(--grey-soft); color: var(--grey); }
+.status-in_progress { background: var(--amber-soft); color: var(--amber); }
+.status-completed { background: var(--green-soft); color: var(--green); }
+.status-synced { background: var(--green-soft); color: var(--green); }
+
+.header-right {
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+
+.save-indicator {
+  font-size: 0.68rem; color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ── Sync Button ── */
+.sync-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; min-height: 44px;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.sync-btn:active { transform: scale(0.97); }
+
+.sync-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.sync-ready .sync-dot { background: var(--green); animation: pulse 2s infinite; }
+.sync-offline .sync-dot { background: var(--grey); }
+.sync-syncing .sync-dot { background: #3b82f6; animation: spin-dot 1s linear infinite; }
+.sync-synced .sync-dot { background: var(--green); }
+.sync-failed .sync-dot { background: var(--red); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,230,118,0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(0,230,118,0); }
+}
+@keyframes spin-dot {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+/* ── Tab Bar (sticky) ── */
+.tabbar {
+  position: fixed; top: var(--header-h); left: 0; right: 0;
+  height: var(--tabbar-h);
+  display: flex; align-items: stretch;
+  background: rgba(10,10,15,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  z-index: 190;
+  overflow-x: auto; overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 0;
+}
+.tabbar::-webkit-scrollbar { display: none; }
+
+.tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 16px;
+  font-size: 0.78rem; font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  min-height: 44px;
+  flex-shrink: 0;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.tab:active { background: rgba(255,255,255,0.03); }
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  border: 1.5px solid var(--text-dim);
+  flex-shrink: 0;
+}
+.tab-dot.partial {
+  /* WHY: half-filled effect with gradient — shows partial completion at a glance */
+  background: linear-gradient(to top, var(--amber) 50%, transparent 50%);
+  border-color: var(--amber);
+}
+.tab-dot.complete {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.tab-divider {
+  width: 1px; margin: 10px 4px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.tab .zone-remove {
+  display: none;
+  width: 16px; height: 16px;
+  line-height: 16px; text-align: center;
+  font-size: 11px; color: var(--text-dim);
+  border-radius: 50%;
+  margin-left: 2px;
+  cursor: pointer;
+}
+.tab:hover .zone-remove,
+.tab.active .zone-remove { display: inline-block; }
+.tab .zone-remove:hover { color: var(--red); background: var(--red-soft); }
+
+.add-zone-tab {
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 16px;
+  font-size: 0.78rem; font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  cursor: pointer;
+  min-height: 44px;
+  flex-shrink: 0;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+.add-zone-tab:hover { opacity: 1; }
+
+/* ── Main Content ── */
+.main {
+  /* WHY: offset for fixed header + sticky tabbar */
+  padding-top: calc(var(--header-h) + var(--tabbar-h));
+  min-height: 100vh;
+}
+
+.tab-content {
+  display: none;
+  padding: 20px 16px 100px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.tab-content.active { display: block; }
+
+/* ── Form Styles ── */
+.section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  min-height: 44px;
+}
+.section-header h3 {
+  font-size: 0.85rem; font-weight: 600;
+  color: var(--text);
+}
+.section-chevron {
+  font-size: 0.7rem; color: var(--text-dim);
+  transition: transform 0.2s;
+}
+.section.collapsed .section-chevron { transform: rotate(-90deg); }
+.section.collapsed .section-body { display: none; }
+
+.section-body { padding: 0 16px 16px; }
+
+.field-group {
+  margin-bottom: 14px;
+}
+.field-group label {
+  display: block;
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.field-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+input[type="text"], input[type="number"], input[type="email"],
+input[type="tel"], input[type="date"], input[type="time"],
+select, textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  padding: 10px 12px;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s;
+  min-height: 44px;
+  -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--border-focus);
+}
+textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+/* WHY: auto-expanding textareas — JS sets the height, but let them shrink back */
+textarea.auto-expand {
+  overflow: hidden;
+  resize: none;
+}
+
+select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+/* ── Union Toggle Group ── */
+.toggle-group {
+  display: flex; gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.toggle-option {
+  flex: 1;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 0.78rem; font-weight: 500;
+  color: var(--text-muted);
+  background: var(--card);
+  cursor: pointer;
+  min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  border-right: 1px solid var(--border);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.toggle-option:last-child { border-right: none; }
+.toggle-option.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Readiness Toggle ── */
+.readiness-group {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.readiness-option {
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 0.72rem; font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-muted);
+  cursor: pointer;
+  min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.readiness-option[data-val="ready"].active { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+.readiness-option[data-val="minor_work"].active { background: var(--amber-soft); color: var(--amber); border-color: var(--amber); }
+.readiness-option[data-val="major_work"].active { background: var(--red-soft); color: var(--red); border-color: var(--red); }
+.readiness-option[data-val="not_feasible"].active { background: var(--grey-soft); color: var(--grey); border-color: var(--grey); }
+
+/* ── Checkbox (floor surfaces multi-select) ── */
+.checkbox-grid {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.checkbox-chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 8px 12px; border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 0.78rem; color: var(--text-muted);
+  cursor: pointer; min-height: 36px;
+  transition: all 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.checkbox-chip.checked {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: rgba(245,158,11,0.3);
+}
+
+/* ── Repeatable Rows (stakeholders, shifts, services, elevators) ── */
+.repeatable-row {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  position: relative;
+}
+.repeatable-row .row-remove {
+  position: absolute; top: 8px; right: 8px;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  border: none;
+  transition: all 0.15s;
+}
+.repeatable-row .row-remove:hover {
+  background: var(--red-soft); color: var(--red);
+}
+
+.add-row-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.78rem; font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  transition: all 0.15s;
+  width: 100%;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+}
+.add-row-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+/* ── Photo Checklist ── */
+.photo-checklist-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  min-height: 44px;
+}
+.photo-checklist-item:last-child { border-bottom: none; }
+
+.photo-check {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: transparent;
+}
+.photo-check.taken {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.photo-checklist-label {
+  flex: 1;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.photo-check.taken + .photo-checklist-label { color: var(--text); }
+
+.photo-capture-btn {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.photo-capture-btn:active { background: var(--accent-soft); }
+
+/* ── Photo Grid ── */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.photo-thumb {
+  position: relative;
+  aspect-ratio: 4/3;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.photo-thumb img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.photo-thumb-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 3px 6px;
+  background: rgba(0,0,0,0.7);
+  font-size: 0.6rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.photo-thumb-annotation-dot {
+  position: absolute; top: 4px; right: 4px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ── Add Zone Modal ── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: #14141a;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%; max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+.modal h2 {
+  font-size: 1.1rem; margin-bottom: 16px;
+  color: var(--text);
+}
+.modal-close {
+  float: right;
+  background: none; border: none;
+  color: var(--text-dim); font-size: 1.2rem;
+  cursor: pointer; padding: 4px;
+}
+
+.zone-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.zone-picker-card {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 6px;
+  padding: 16px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  min-height: 80px;
+  transition: all 0.15s;
+  text-align: center;
+}
+.zone-picker-card:active { background: var(--accent-soft); border-color: var(--accent); }
+.zone-picker-card .zone-icon { font-size: 1.5rem; }
+.zone-picker-card .zone-label {
+  font-size: 0.72rem; font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ── Annotation Overlay ── */
+.annotation-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: #000;
+  z-index: 600;
+  flex-direction: column;
+}
+.annotation-overlay.open { display: flex; }
+
+.annotation-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(20,20,26,0.95);
+  border-bottom: 1px solid var(--border);
+  min-height: 50px;
+}
+.annotation-title {
+  font-size: 0.85rem; font-weight: 600; color: var(--text);
+}
+.annotation-done-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #000;
+  font-weight: 700; font-size: 0.82rem;
+  border: none;
+  cursor: pointer;
+  min-height: 44px;
+  font-family: 'Inter', sans-serif;
+}
+
+.annotation-canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.annotation-canvas-wrap img {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+.annotation-svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+/* WHY: pointer-events on individual annotation elements so taps register */
+.annotation-svg .anno-el { pointer-events: all; cursor: pointer; }
+
+.annotation-toolbar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(20,20,26,0.95);
+  border-top: 1px solid var(--border);
+}
+.anno-tool {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+  padding: 8px 16px; border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-muted);
+  font-size: 0.68rem; font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  transition: all 0.15s;
+}
+.anno-tool .tool-icon { font-size: 1.1rem; }
+.anno-tool.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+/* ── Toast ── */
+.toast-container {
+  position: fixed; bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 700;
+  display: flex; flex-direction: column; gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 0.82rem; font-weight: 500;
+  color: #fff;
+  pointer-events: auto;
+  animation: toast-in 0.3s ease;
+  max-width: 90vw;
+  text-align: center;
+}
+.toast.info { background: rgba(59,130,246,0.9); }
+.toast.success { background: rgba(0,230,118,0.85); color: #000; }
+.toast.error { background: rgba(239,68,68,0.9); }
+.toast.fadeout { animation: toast-out 0.3s ease forwards; }
+
+@keyframes toast-in { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes toast-out { from { opacity:1; } to { opacity:0; transform:translateY(-10px); } }
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+.full-width { grid-column: 1 / -1; }
+
+/* ── Responsive (iPad portrait) ── */
+@media (max-width: 600px) {
+  .header-center { display: none; }
+  .zone-picker-grid { grid-template-columns: repeat(2, 1fr); }
+  .field-row { grid-template-columns: 1fr; }
+  .field-row-3 { grid-template-columns: 1fr; }
+  .readiness-group { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="header-left">
+    <span class="brand">ACCELERATE</span>
+    <input type="text" class="property-name-input" id="propertyNameInput"
+           placeholder="Property Name..." oninput="state.property_name = this.value; markDirty();">
+  </div>
+  <div class="header-center">
+    <select class="rep-select" id="repSelect" onchange="state.assigned_to = this.value; markDirty();">
+      <option value="">Assign Rep...</option>
+      <option value="Cory">Cory</option>
+      <option value="Tyler">Tyler</option>
+      <option value="David">David</option>
+      <option value="Eric">Eric</option>
+      <option value="Lydia">Lydia</option>
+      <option value="JB">JB</option>
+      <option value="Ben">Ben</option>
+    </select>
+    <span class="status-badge" id="statusBadge">DRAFT</span>
+  </div>
+  <div class="header-right">
+    <span class="save-indicator" id="saveIndicator">Not saved</span>
+    <button class="sync-btn sync-ready" id="syncBtn" onclick="syncToServer()">
+      <span class="sync-dot"></span>
+      <span id="syncLabel">Sync</span>
+    </button>
+  </div>
+</header>
+
+<!-- ── Tab Bar ── -->
+<nav class="tabbar" id="tabBar"></nav>
+
+<!-- ── Main Content ── -->
+<main class="main" id="mainContent"></main>
+
+<!-- ── Add Zone Modal ── -->
+<div class="modal-overlay" id="addZoneModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAddZoneModal()">&times;</button>
+    <h2>Add Zone</h2>
+    <div class="zone-picker-grid" id="zonePickerGrid"></div>
+  </div>
+</div>
+
+<!-- ── Annotation Overlay ── -->
+<div class="annotation-overlay" id="annotationOverlay">
+  <div class="annotation-header">
+    <span class="annotation-title" id="annotationTitle">Annotate Photo</span>
+    <button class="annotation-done-btn" onclick="closeAnnotation()">Done</button>
+  </div>
+  <div class="annotation-canvas-wrap" id="annotationCanvasWrap" onclick="handleAnnotationClick(event)">
+    <img id="annotationImg" src="" alt="Photo">
+    <svg class="annotation-svg" id="annotationSvg"></svg>
+  </div>
+  <div class="annotation-toolbar">
+    <button class="anno-tool active" data-tool="pin" onclick="selectAnnotationTool('pin')">
+      <span class="tool-icon">📍</span> Pin
+    </button>
+    <button class="anno-tool" data-tool="arrow" onclick="selectAnnotationTool('arrow')">
+      <span class="tool-icon">➡️</span> Arrow
+    </button>
+    <button class="anno-tool" data-tool="text" onclick="selectAnnotationTool('text')">
+      <span class="tool-icon">💬</span> Text
+    </button>
+  </div>
+</div>
+
+<!-- ── Toast Container ── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ── Hidden Photo Input ── -->
+<input type="file" accept="image/*" capture="environment" id="photoInput" class="hidden">
+
+<script>
+/* ===================================================================
+   Facility Assessment — Accelerate Robotics
+   Self-contained: all state, rendering, storage, sync in one file.
+   =================================================================== */
+
+// ── XSS Escape ──
+function esc(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = String(str);
+  return d.innerHTML;
+}
+
+// ── UUID ──
+function generateUUID() {
+  // WHY: crypto.randomUUID() is ideal but not available in all older browsers/WebViews
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+// ── Zone Templates ──
+const ZONE_TEMPLATES = {
+  lobby: {
+    label: 'Lobby', icon: '\u{1F3E8}',
+    photoChecklist: ['Wide lobby shot', 'Floor surface close-up', 'Entrance/exit paths', 'Path to elevators', 'Obstacles/thresholds', 'Front desk area'],
+  },
+  restaurant: {
+    label: 'Restaurant / Bar', icon: '\u{1F37D}\u{FE0F}',
+    photoChecklist: ['Dining room layout', 'Kitchen pass/window', 'Server station', 'Path from kitchen', 'Host stand', 'Steps/thresholds'],
+  },
+  guest_floor: {
+    label: 'Guest Floor', icon: '\u{1F6CF}\u{FE0F}',
+    photoChecklist: ['Corridor width shot', 'Floor surface', 'Linen closet', 'Elevator landing', 'Ice/vending area', 'Housekeeping staging'],
+  },
+  pool_deck: {
+    label: 'Pool Deck', icon: '\u{1F3CA}',
+    photoChecklist: ['Deck overview', 'Surface close-up', 'Path from building', 'Towel station', 'F&B service point', 'Gate/access point'],
+  },
+  kitchen: {
+    label: 'Kitchen', icon: '\u{1F468}\u200D\u{1F373}',
+    photoChecklist: ['Floor surface', 'Main aisle width', 'Service window/pass', 'Path to dining room', 'Loading dock access'],
+  },
+  laundry: {
+    label: 'Laundry', icon: '\u{1F9FA}',
+    photoChecklist: ['Room overview', 'Equipment', 'Cart staging', 'Path to elevator/floors', 'Storage area'],
+  },
+  boh_corridor: {
+    label: 'BOH Corridor', icon: '\u{1F6AA}',
+    photoChecklist: ['Corridor width shot', 'Floor surface', 'Pinch points/turns', 'Door clearances', 'Ramp/grade changes'],
+  },
+  parking_garage: {
+    label: 'Parking Garage', icon: '\u{1F17F}\u{FE0F}',
+    photoChecklist: ['Driving lane width', 'Surface condition', 'Trash/debris areas', 'Lighting', 'EV station area', 'Entrance/exit ramps'],
+  },
+  event_space: {
+    label: 'Event Space', icon: '\u{1F3AA}',
+    photoChecklist: ['Room overview', 'Floor surface', 'Loading path from dock', 'Storage area', 'AV setup', 'Entry doors'],
+  },
+  fitness_center: {
+    label: 'Fitness Center', icon: '\u{1F4AA}',
+    photoChecklist: ['Room overview', 'Floor surface', 'Entry path', 'Towel station'],
+  },
+  spa: {
+    label: 'Spa', icon: '\u{1F486}',
+    photoChecklist: ['Corridor', 'Floor surface', 'Linen storage', 'Treatment room entry width'],
+  },
+  exterior: {
+    label: 'Exterior / Grounds', icon: '\u{1F333}',
+    photoChecklist: ['Main walkways', 'Surface conditions', 'Grade changes', 'Lighting', 'Parking lot surface'],
+  },
+  other: {
+    label: 'Other', icon: '\u{1F4CB}',
+    photoChecklist: ['Overview', 'Floor surface', 'Access path'],
+  },
+};
+
+const PROPERTY_TABS = ['overview', 'stakeholders', 'operations', 'infrastructure'];
+const PROPERTY_TAB_LABELS = { overview: 'Overview', stakeholders: 'Stakeholders', operations: 'Operations', infrastructure: 'Infrastructure' };
+
+const FLOOR_SURFACES = ['carpet', 'hardwood', 'tile', 'marble', 'concrete', 'vinyl', 'rubber', 'other'];
+
+const TEAM_MEMBERS = ['Cory', 'Tyler', 'David', 'Eric', 'Lydia', 'JB', 'Ben'];
+
+// ── State ──
+let state = {
+  id: null,
+  property_name: '', property_address: '', property_type: '',
+  facility_type: 'hotel',
+  rooms: null, floors: null, elevators: null, elevator_make: '',
+  year_built: null, last_renovation: null,
+  gm_name: '', gm_email: '', gm_phone: '',
+  engineering_contact: '', engineering_email: '',
+  fb_director: '', fb_outlets: null, event_space_sqft: null,
+  union_status: '', union_details: '',
+  assigned_to: '', status: 'draft',
+  operations_data: {
+    shifts: [],
+    contracted_services: [],
+    automation_notes: '',
+    pain_points: ''
+  },
+  infrastructure_data: {
+    wifi: { coverage: '', network: '', bandwidth: '', it_contact: '', it_email: '' },
+    elevators: [],
+    power_notes: '', storage_notes: '', network_notes: ''
+  },
+  zones: [],
+  stakeholders: [],
+  notes: '',
+  created_at: null, updated_at: null, synced_at: null
+};
+
+let activeTab = 'overview';
+let autoSaveTimer = null;
+let lastSaveTime = null;
+let dirty = false;
+let photoDB = null;
+
+// Photo annotation state
+let currentAnnotationPhotoId = null;
+let currentAnnotationTool = 'pin';
+let currentAnnotations = [];
+let arrowStartPoint = null; // for 2-tap arrow placement
+
+// ── Initialization ──
+document.addEventListener('DOMContentLoaded', initPage);
+
+async function initPage() {
+  await openPhotoDb();
+
+  const params = new URLSearchParams(window.location.search);
+  const urlId = params.get('id');
+
+  if (urlId) {
+    // Try server first, fall back to localStorage
+    const serverData = await loadFromServer(urlId);
+    if (serverData) {
+      Object.assign(state, serverData);
+    } else {
+      const localData = loadFromLocal(urlId);
+      if (localData) {
+        Object.assign(state, localData);
+      }
+    }
+  } else {
+    // Check for any existing draft
+    const draftKeys = Object.keys(localStorage).filter(k => k.startsWith('assessment_draft_'));
+    // Start fresh — new assessment
+    state.id = generateUUID();
+    state.created_at = new Date().toISOString();
+    state.updated_at = state.created_at;
+    // Update URL without reload
+    const newUrl = window.location.pathname + '?id=' + state.id;
+    window.history.replaceState({}, '', newUrl);
+  }
+
+  // Populate header
+  document.getElementById('propertyNameInput').value = state.property_name;
+  document.getElementById('repSelect').value = state.assigned_to || '';
+  updateStatusBadge();
+
+  // Build zone picker
+  buildZonePicker();
+
+  // Render
+  renderTabBar();
+  renderActiveTab();
+
+  // Start auto-save
+  startAutoSave();
+
+  // Online/offline listeners
+  window.addEventListener('online', () => {
+    updateSyncStatus('ready');
+    showToast('You\'re back online — tap Sync to upload', 'info');
+  });
+  window.addEventListener('offline', () => {
+    updateSyncStatus('offline');
+    showToast('You\'re offline — changes save locally', 'info');
+  });
+
+  // Initial sync status
+  updateSyncStatus(navigator.onLine ? 'ready' : 'offline');
+
+  // Photo input handler
+  document.getElementById('photoInput').addEventListener('change', handlePhotoSelected);
+}
+
+// ── Tab Bar ──
+function renderTabBar() {
+  const bar = document.getElementById('tabBar');
+  let html = '';
+
+  // Property tabs
+  PROPERTY_TABS.forEach(id => {
+    const comp = getTabCompletion(id);
+    const dotClass = comp === 'complete' ? 'complete' : comp === 'partial' ? 'partial' : '';
+    html += '<div class="tab' + (activeTab === id ? ' active' : '') + '" onclick="switchTab(\'' + id + '\')">'
+      + '<span class="tab-dot ' + dotClass + '"></span>'
+      + esc(PROPERTY_TAB_LABELS[id])
+      + '</div>';
+  });
+
+  // Divider
+  html += '<div class="tab-divider"></div>';
+
+  // Zone tabs
+  state.zones.forEach((z, i) => {
+    const tabId = 'zone_' + i;
+    const tmpl = ZONE_TEMPLATES[z.zone_type] || ZONE_TEMPLATES.other;
+    const comp = getZoneCompletion(i);
+    const dotClass = comp === 'complete' ? 'complete' : comp === 'partial' ? 'partial' : '';
+    html += '<div class="tab' + (activeTab === tabId ? ' active' : '') + '" onclick="switchTab(\'' + tabId + '\')">'
+      + '<span class="tab-dot ' + dotClass + '"></span>'
+      + tmpl.icon + ' ' + esc(z.zone_name)
+      + '<span class="zone-remove" onclick="event.stopPropagation(); removeZone(' + i + ')">&times;</span>'
+      + '</div>';
+  });
+
+  // Add Zone button
+  html += '<div class="add-zone-tab" onclick="showAddZoneModal()">+ Add Zone</div>';
+
+  bar.innerHTML = html;
+}
+
+// ── Tab Switching ──
+function switchTab(tabId) {
+  // Save current state from active inputs before switching
+  collectActiveInputs();
+  autoSave();
+
+  activeTab = tabId;
+  renderTabBar();
+  renderActiveTab();
+
+  // Scroll tab bar to show active tab
+  const bar = document.getElementById('tabBar');
+  const activeEl = bar.querySelector('.tab.active');
+  if (activeEl) {
+    activeEl.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// ── Collect inputs from DOM ──
+// WHY: Before switching tabs or saving, gather any unsaved input values from the DOM
+function collectActiveInputs() {
+  // This is handled by oninput handlers on each field,
+  // but for safety let's re-read a few key fields from the DOM if they exist
+  const pni = document.getElementById('propertyNameInput');
+  if (pni) state.property_name = pni.value;
+  const rs = document.getElementById('repSelect');
+  if (rs) state.assigned_to = rs.value;
+}
+
+// ── Render Active Tab ──
+function renderActiveTab() {
+  const main = document.getElementById('mainContent');
+
+  if (activeTab === 'overview') {
+    main.innerHTML = '<div class="tab-content active">' + renderOverviewTab() + '</div>';
+  } else if (activeTab === 'stakeholders') {
+    main.innerHTML = '<div class="tab-content active">' + renderStakeholdersTab() + '</div>';
+  } else if (activeTab === 'operations') {
+    main.innerHTML = '<div class="tab-content active">' + renderOperationsTab() + '</div>';
+  } else if (activeTab === 'infrastructure') {
+    main.innerHTML = '<div class="tab-content active">' + renderInfrastructureTab() + '</div>';
+  } else if (activeTab.startsWith('zone_')) {
+    const idx = parseInt(activeTab.split('_')[1]);
+    if (state.zones[idx]) {
+      main.innerHTML = '<div class="tab-content active">' + renderZoneTab(idx) + '</div>';
+      // Load photos for this zone
+      renderPhotoGridAsync(idx);
+    }
+  }
+
+  // Wire up auto-expanding textareas
+  main.querySelectorAll('textarea.auto-expand').forEach(ta => {
+    autoExpandTextarea(ta);
+    ta.addEventListener('input', () => autoExpandTextarea(ta));
+  });
+}
+
+function autoExpandTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.max(80, el.scrollHeight) + 'px';
+}
+
+// ── Overview Tab ──
+function renderOverviewTab() {
+  const s = state;
+  return `
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3>Property Basics</h3>
+        <span class="section-chevron">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div class="field-group">
+          <label>Property Name</label>
+          <input type="text" value="${esc(s.property_name)}" oninput="state.property_name = this.value; document.getElementById('propertyNameInput').value = this.value; markDirty();">
+        </div>
+        <div class="field-group">
+          <label>Address</label>
+          <input type="text" value="${esc(s.property_address)}" oninput="state.property_address = this.value; markDirty();">
+        </div>
+        <div class="field-group">
+          <label>Property Type</label>
+          <select onchange="state.property_type = this.value; markDirty();">
+            <option value="">Select type...</option>
+            <option value="boutique_hotel" ${s.property_type === 'boutique_hotel' ? 'selected' : ''}>Boutique Hotel</option>
+            <option value="resort" ${s.property_type === 'resort' ? 'selected' : ''}>Resort</option>
+            <option value="full_service" ${s.property_type === 'full_service' ? 'selected' : ''}>Full Service</option>
+            <option value="select_service" ${s.property_type === 'select_service' ? 'selected' : ''}>Select Service</option>
+            <option value="extended_stay" ${s.property_type === 'extended_stay' ? 'selected' : ''}>Extended Stay</option>
+            <option value="other" ${s.property_type === 'other' ? 'selected' : ''}>Other</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Rooms / Keys</label>
+            <input type="number" inputmode="numeric" value="${s.rooms || ''}" oninput="state.rooms = this.value ? parseInt(this.value) : null; markDirty();">
+          </div>
+          <div class="field-group">
+            <label>Floors</label>
+            <input type="number" inputmode="numeric" value="${s.floors || ''}" oninput="state.floors = this.value ? parseInt(this.value) : null; markDirty();">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Elevators</label>
+            <input type="number" inputmode="numeric" value="${s.elevators || ''}" oninput="state.elevators = this.value ? parseInt(this.value) : null; markDirty();">
+          </div>
+          <div class="field-group">
+            <label>Elevator Make</label>
+            <input type="text" value="${esc(s.elevator_make)}" placeholder="e.g., ThyssenKrupp TAC32T" oninput="state.elevator_make = this.value; markDirty();">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Year Built</label>
+            <input type="number" inputmode="numeric" value="${s.year_built || ''}" oninput="state.year_built = this.value ? parseInt(this.value) : null; markDirty();">
+          </div>
+          <div class="field-group">
+            <label>Last Renovation</label>
+            <input type="number" inputmode="numeric" value="${s.last_renovation || ''}" oninput="state.last_renovation = this.value ? parseInt(this.value) : null; markDirty();">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3>Contacts</h3>
+        <span class="section-chevron">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div class="field-group"><label>General Manager — Name</label>
+          <input type="text" value="${esc(s.gm_name)}" oninput="state.gm_name = this.value; markDirty();"></div>
+        <div class="field-row">
+          <div class="field-group"><label>GM Email</label>
+            <input type="email" value="${esc(s.gm_email)}" oninput="state.gm_email = this.value; markDirty();"></div>
+          <div class="field-group"><label>GM Phone</label>
+            <input type="tel" value="${esc(s.gm_phone)}" oninput="state.gm_phone = this.value; markDirty();"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label>Engineering Contact</label>
+            <input type="text" value="${esc(s.engineering_contact)}" oninput="state.engineering_contact = this.value; markDirty();"></div>
+          <div class="field-group"><label>Engineering Email</label>
+            <input type="email" value="${esc(s.engineering_email)}" oninput="state.engineering_email = this.value; markDirty();"></div>
+        </div>
+        <div class="field-group"><label>F&B Director</label>
+          <input type="text" value="${esc(s.fb_director)}" oninput="state.fb_director = this.value; markDirty();"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3>Facilities</h3>
+        <span class="section-chevron">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <div class="field-group"><label>F&B Outlets</label>
+            <input type="number" inputmode="numeric" value="${s.fb_outlets || ''}" oninput="state.fb_outlets = this.value ? parseInt(this.value) : null; markDirty();"></div>
+          <div class="field-group"><label>Event Space (sqft)</label>
+            <input type="number" inputmode="numeric" value="${s.event_space_sqft || ''}" oninput="state.event_space_sqft = this.value ? parseInt(this.value) : null; markDirty();"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3>Union Status</h3>
+        <span class="section-chevron">&#9660;</span>
+      </div>
+      <div class="section-body">
+        <div class="field-group">
+          <div class="toggle-group">
+            <div class="toggle-option ${s.union_status === 'union' ? 'active' : ''}" onclick="setUnion('union')">Union</div>
+            <div class="toggle-option ${s.union_status === 'non_union' ? 'active' : ''}" onclick="setUnion('non_union')">Non-Union</div>
+            <div class="toggle-option ${s.union_status === 'mixed' ? 'active' : ''}" onclick="setUnion('mixed')">Mixed</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Union Details</label>
+          <textarea class="auto-expand" oninput="state.union_details = this.value; markDirty();">${esc(s.union_details)}</textarea>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function setUnion(val) {
+  state.union_status = val;
+  markDirty();
+  renderActiveTab();
+}
+
+// ── Stakeholders Tab ──
+function renderStakeholdersTab() {
+  let html = '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Stakeholders</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+
+  state.stakeholders.forEach((sh, i) => {
+    html += `
+      <div class="repeatable-row">
+        <button class="row-remove" onclick="removeStakeholder(${i})">&times;</button>
+        <div class="field-row">
+          <div class="field-group"><label>Name</label>
+            <input type="text" value="${esc(sh.name)}" oninput="state.stakeholders[${i}].name = this.value; markDirty();"></div>
+          <div class="field-group"><label>Title</label>
+            <input type="text" value="${esc(sh.title)}" oninput="state.stakeholders[${i}].title = this.value; markDirty();"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label>Department</label>
+            <input type="text" value="${esc(sh.department)}" oninput="state.stakeholders[${i}].department = this.value; markDirty();"></div>
+          <div class="field-group"><label>Role</label>
+            <select onchange="state.stakeholders[${i}].role = this.value; markDirty();">
+              <option value="">Select role...</option>
+              <option value="decision_maker" ${sh.role === 'decision_maker' ? 'selected' : ''}>Decision Maker</option>
+              <option value="influencer" ${sh.role === 'influencer' ? 'selected' : ''}>Influencer</option>
+              <option value="champion" ${sh.role === 'champion' ? 'selected' : ''}>Champion</option>
+              <option value="blocker" ${sh.role === 'blocker' ? 'selected' : ''}>Blocker</option>
+              <option value="technical" ${sh.role === 'technical' ? 'selected' : ''}>Technical</option>
+            </select></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label>Email</label>
+            <input type="email" value="${esc(sh.email)}" oninput="state.stakeholders[${i}].email = this.value; markDirty();"></div>
+          <div class="field-group"><label>Phone</label>
+            <input type="tel" value="${esc(sh.phone)}" oninput="state.stakeholders[${i}].phone = this.value; markDirty();"></div>
+        </div>
+        <div class="field-group"><label>Notes</label>
+          <textarea class="auto-expand" oninput="state.stakeholders[${i}].notes = this.value; markDirty();">${esc(sh.notes)}</textarea></div>
+      </div>`;
+  });
+
+  html += '<button class="add-row-btn" onclick="addStakeholder()">+ Add Stakeholder</button>';
+  html += '</div></div>';
+  return html;
+}
+
+function addStakeholder() {
+  state.stakeholders.push({
+    id: generateUUID(), name: '', title: '', department: '',
+    role: '', email: '', phone: '', notes: '', sort_order: state.stakeholders.length
+  });
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
+}
+
+function removeStakeholder(idx) {
+  state.stakeholders.splice(idx, 1);
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
+}
+
+// ── Operations Tab ──
+function renderOperationsTab() {
+  const ops = state.operations_data;
+  let html = '';
+
+  // Shifts
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Shift Structure</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  ops.shifts.forEach((sh, i) => {
+    html += `
+      <div class="repeatable-row">
+        <button class="row-remove" onclick="removeShift(${i})">&times;</button>
+        <div class="field-row">
+          <div class="field-group"><label>Shift Name</label>
+            <input type="text" value="${esc(sh.name)}" placeholder="e.g., Morning, Swing, Night" oninput="state.operations_data.shifts[${i}].name = this.value; markDirty();"></div>
+          <div class="field-group"><label>Staff Count</label>
+            <input type="number" inputmode="numeric" value="${sh.staff_count || ''}" oninput="state.operations_data.shifts[${i}].staff_count = this.value ? parseInt(this.value) : null; markDirty();"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label>Start Time</label>
+            <input type="time" value="${esc(sh.start_time)}" oninput="state.operations_data.shifts[${i}].start_time = this.value; markDirty();"></div>
+          <div class="field-group"><label>End Time</label>
+            <input type="time" value="${esc(sh.end_time)}" oninput="state.operations_data.shifts[${i}].end_time = this.value; markDirty();"></div>
+        </div>
+      </div>`;
+  });
+  html += '<button class="add-row-btn" onclick="addShift()">+ Add Shift</button>';
+  html += '</div></div>';
+
+  // Contracted Services
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Contracted Services</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  ops.contracted_services.forEach((svc, i) => {
+    html += `
+      <div class="repeatable-row">
+        <button class="row-remove" onclick="removeContractedService(${i})">&times;</button>
+        <div class="field-row">
+          <div class="field-group"><label>Service Type</label>
+            <select onchange="state.operations_data.contracted_services[${i}].service_type = this.value; markDirty();">
+              <option value="">Select...</option>
+              <option value="cleaning" ${svc.service_type === 'cleaning' ? 'selected' : ''}>Cleaning</option>
+              <option value="security" ${svc.service_type === 'security' ? 'selected' : ''}>Security</option>
+              <option value="laundry" ${svc.service_type === 'laundry' ? 'selected' : ''}>Laundry</option>
+              <option value="landscaping" ${svc.service_type === 'landscaping' ? 'selected' : ''}>Landscaping</option>
+              <option value="pest_control" ${svc.service_type === 'pest_control' ? 'selected' : ''}>Pest Control</option>
+              <option value="other" ${svc.service_type === 'other' ? 'selected' : ''}>Other</option>
+            </select></div>
+          <div class="field-group"><label>Vendor Name</label>
+            <input type="text" value="${esc(svc.vendor_name)}" oninput="state.operations_data.contracted_services[${i}].vendor_name = this.value; markDirty();"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label>Annual Cost ($)</label>
+            <input type="number" inputmode="numeric" value="${svc.annual_cost || ''}" oninput="state.operations_data.contracted_services[${i}].annual_cost = this.value ? parseInt(this.value) : null; markDirty();"></div>
+          <div class="field-group"><label>Contract End Date</label>
+            <input type="date" value="${esc(svc.contract_end)}" oninput="state.operations_data.contracted_services[${i}].contract_end = this.value; markDirty();"></div>
+        </div>
+        <div class="field-group"><label>Satisfaction</label>
+          <select onchange="state.operations_data.contracted_services[${i}].satisfaction = this.value; markDirty();">
+            <option value="">Rate...</option>
+            <option value="excellent" ${svc.satisfaction === 'excellent' ? 'selected' : ''}>Excellent</option>
+            <option value="good" ${svc.satisfaction === 'good' ? 'selected' : ''}>Good</option>
+            <option value="fair" ${svc.satisfaction === 'fair' ? 'selected' : ''}>Fair</option>
+            <option value="poor" ${svc.satisfaction === 'poor' ? 'selected' : ''}>Poor</option>
+          </select></div>
+      </div>`;
+  });
+  html += '<button class="add-row-btn" onclick="addContractedService()">+ Add Service</button>';
+  html += '</div></div>';
+
+  // Automation + Pain Points
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Notes</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += '<div class="field-group"><label>Current Automation</label><textarea class="auto-expand" oninput="state.operations_data.automation_notes = this.value; markDirty();">' + esc(ops.automation_notes) + '</textarea></div>';
+  html += '<div class="field-group"><label>Pain Points</label><textarea class="auto-expand" oninput="state.operations_data.pain_points = this.value; markDirty();">' + esc(ops.pain_points) + '</textarea></div>';
+  html += '</div></div>';
+
+  return html;
+}
+
+function addShift() {
+  state.operations_data.shifts.push({ name: '', start_time: '', end_time: '', staff_count: null });
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
+}
+function removeShift(idx) {
+  state.operations_data.shifts.splice(idx, 1);
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
+}
+function addContractedService() {
+  state.operations_data.contracted_services.push({
+    service_type: '', vendor_name: '', annual_cost: null, contract_end: '', satisfaction: ''
+  });
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
+}
+function removeContractedService(idx) {
+  state.operations_data.contracted_services.splice(idx, 1);
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
+}
+
+// ── Infrastructure Tab ──
+function renderInfrastructureTab() {
+  const infra = state.infrastructure_data;
+  let html = '';
+
+  // WiFi
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>WiFi</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += `
+    <div class="field-group"><label>Coverage</label>
+      <select onchange="state.infrastructure_data.wifi.coverage = this.value; markDirty();">
+        <option value="">Select...</option>
+        <option value="strong" ${infra.wifi.coverage === 'strong' ? 'selected' : ''}>Strong</option>
+        <option value="moderate" ${infra.wifi.coverage === 'moderate' ? 'selected' : ''}>Moderate</option>
+        <option value="weak" ${infra.wifi.coverage === 'weak' ? 'selected' : ''}>Weak</option>
+        <option value="none" ${infra.wifi.coverage === 'none' ? 'selected' : ''}>None</option>
+      </select></div>
+    <div class="field-row">
+      <div class="field-group"><label>Network Name</label>
+        <input type="text" value="${esc(infra.wifi.network)}" oninput="state.infrastructure_data.wifi.network = this.value; markDirty();"></div>
+      <div class="field-group"><label>Bandwidth</label>
+        <input type="text" value="${esc(infra.wifi.bandwidth)}" placeholder="e.g., 200 Mbps" oninput="state.infrastructure_data.wifi.bandwidth = this.value; markDirty();"></div>
+    </div>
+    <div class="field-row">
+      <div class="field-group"><label>IT Contact Name</label>
+        <input type="text" value="${esc(infra.wifi.it_contact)}" oninput="state.infrastructure_data.wifi.it_contact = this.value; markDirty();"></div>
+      <div class="field-group"><label>IT Contact Email</label>
+        <input type="email" value="${esc(infra.wifi.it_email)}" oninput="state.infrastructure_data.wifi.it_email = this.value; markDirty();"></div>
+    </div>`;
+  html += '</div></div>';
+
+  // Elevators
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Elevator Inventory</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  infra.elevators.forEach((el, i) => {
+    html += `
+      <div class="repeatable-row">
+        <button class="row-remove" onclick="removeInfraElevator(${i})">&times;</button>
+        <div class="field-row-3">
+          <div class="field-group"><label>Make</label>
+            <input type="text" value="${esc(el.make)}" oninput="state.infrastructure_data.elevators[${i}].make = this.value; markDirty();"></div>
+          <div class="field-group"><label>Model</label>
+            <input type="text" value="${esc(el.model)}" oninput="state.infrastructure_data.elevators[${i}].model = this.value; markDirty();"></div>
+          <div class="field-group"><label>Age (years)</label>
+            <input type="number" inputmode="numeric" value="${el.age || ''}" oninput="state.infrastructure_data.elevators[${i}].age = this.value ? parseInt(this.value) : null; markDirty();"></div>
+        </div>
+        <div class="field-row-3">
+          <div class="field-group"><label>Floors Served</label>
+            <input type="text" value="${esc(el.floors_served)}" placeholder="e.g., 1-10" oninput="state.infrastructure_data.elevators[${i}].floors_served = this.value; markDirty();"></div>
+          <div class="field-group"><label>API Access</label>
+            <select onchange="state.infrastructure_data.elevators[${i}].api_access = this.value; markDirty();">
+              <option value="">Unknown</option>
+              <option value="yes" ${el.api_access === 'yes' ? 'selected' : ''}>Yes</option>
+              <option value="no" ${el.api_access === 'no' ? 'selected' : ''}>No</option>
+              <option value="unknown" ${el.api_access === 'unknown' ? 'selected' : ''}>Unknown</option>
+            </select></div>
+          <div class="field-group"><label>Notes</label>
+            <input type="text" value="${esc(el.notes)}" oninput="state.infrastructure_data.elevators[${i}].notes = this.value; markDirty();"></div>
+        </div>
+      </div>`;
+  });
+  html += '<button class="add-row-btn" onclick="addInfraElevator()">+ Add Elevator</button>';
+  html += '</div></div>';
+
+  // Power, Storage, Network notes
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Power, Storage & Network</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += '<div class="field-group"><label>Power Notes</label><textarea class="auto-expand" placeholder="Available outlets, dedicated circuits..." oninput="state.infrastructure_data.power_notes = this.value; markDirty();">' + esc(infra.power_notes) + '</textarea></div>';
+  html += '<div class="field-group"><label>Storage Notes</label><textarea class="auto-expand" placeholder="Potential robot docking rooms, dimensions..." oninput="state.infrastructure_data.storage_notes = this.value; markDirty();">' + esc(infra.storage_notes) + '</textarea></div>';
+  html += '<div class="field-group"><label>Network Notes</label><textarea class="auto-expand" placeholder="Cellular coverage, backup connectivity..." oninput="state.infrastructure_data.network_notes = this.value; markDirty();">' + esc(infra.network_notes) + '</textarea></div>';
+  html += '</div></div>';
+
+  return html;
+}
+
+function addInfraElevator() {
+  state.infrastructure_data.elevators.push({
+    make: '', model: '', age: null, floors_served: '', api_access: '', notes: ''
+  });
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
+}
+function removeInfraElevator(idx) {
+  state.infrastructure_data.elevators.splice(idx, 1);
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
+}
+
+// ── Zone Tab ──
+function renderZoneTab(zoneIdx) {
+  const z = state.zones[zoneIdx];
+  const tmpl = ZONE_TEMPLATES[z.zone_type] || ZONE_TEMPLATES.other;
+  let html = '';
+
+  // Zone name
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Zone Details</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += `<div class="field-group"><label>Zone Name</label>
+    <input type="text" value="${esc(z.zone_name)}" oninput="state.zones[${zoneIdx}].zone_name = this.value; renderTabBar(); markDirty();"></div>`;
+  html += `<div class="field-group"><label>Floor Number</label>
+    <input type="number" inputmode="numeric" value="${z.floor_number || ''}" oninput="state.zones[${zoneIdx}].floor_number = this.value ? parseInt(this.value) : null; markDirty();"></div>`;
+
+  // Floor surfaces (multi-select chips)
+  html += '<div class="field-group"><label>Floor Surfaces</label><div class="checkbox-grid">';
+  FLOOR_SURFACES.forEach(fs => {
+    const checked = (z.floor_surfaces || []).includes(fs);
+    html += '<div class="checkbox-chip ' + (checked ? 'checked' : '') + '" onclick="toggleFloorSurface(' + zoneIdx + ', \'' + fs + '\')">'
+      + (checked ? '&#10003; ' : '') + esc(fs) + '</div>';
+  });
+  html += '</div></div>';
+
+  // Common dimension fields
+  html += `<div class="field-row-3">
+    <div class="field-group"><label>Corridor Width (ft)</label>
+      <input type="number" inputmode="numeric" step="0.1" value="${z.corridor_width_ft || ''}" oninput="state.zones[${zoneIdx}].corridor_width_ft = this.value ? parseFloat(this.value) : null; markDirty();"></div>
+    <div class="field-group"><label>Ceiling Height (ft)</label>
+      <input type="number" inputmode="numeric" step="0.1" value="${z.ceiling_height_ft || ''}" oninput="state.zones[${zoneIdx}].ceiling_height_ft = this.value ? parseFloat(this.value) : null; markDirty();"></div>
+    <div class="field-group"><label>Min Door Width (ft)</label>
+      <input type="number" inputmode="numeric" step="0.1" value="${z.door_width_min_ft || ''}" oninput="state.zones[${zoneIdx}].door_width_min_ft = this.value ? parseFloat(this.value) : null; markDirty();"></div>
+  </div>`;
+
+  // Environment dropdowns
+  html += `<div class="field-row-3">
+    <div class="field-group"><label>WiFi Strength</label>
+      <select onchange="state.zones[${zoneIdx}].wifi_strength = this.value; markDirty();">
+        <option value="">Select...</option>
+        <option value="strong" ${z.wifi_strength === 'strong' ? 'selected' : ''}>Strong</option>
+        <option value="moderate" ${z.wifi_strength === 'moderate' ? 'selected' : ''}>Moderate</option>
+        <option value="weak" ${z.wifi_strength === 'weak' ? 'selected' : ''}>Weak</option>
+        <option value="none" ${z.wifi_strength === 'none' ? 'selected' : ''}>None</option>
+      </select></div>
+    <div class="field-group"><label>Lighting</label>
+      <select onchange="state.zones[${zoneIdx}].lighting = this.value; markDirty();">
+        <option value="">Select...</option>
+        <option value="bright" ${z.lighting === 'bright' ? 'selected' : ''}>Bright</option>
+        <option value="moderate" ${z.lighting === 'moderate' ? 'selected' : ''}>Moderate</option>
+        <option value="dim" ${z.lighting === 'dim' ? 'selected' : ''}>Dim</option>
+      </select></div>
+    <div class="field-group"><label>Foot Traffic</label>
+      <select onchange="state.zones[${zoneIdx}].foot_traffic = this.value; markDirty();">
+        <option value="">Select...</option>
+        <option value="high" ${z.foot_traffic === 'high' ? 'selected' : ''}>High</option>
+        <option value="moderate" ${z.foot_traffic === 'moderate' ? 'selected' : ''}>Moderate</option>
+        <option value="low" ${z.foot_traffic === 'low' ? 'selected' : ''}>Low</option>
+      </select></div>
+  </div>`;
+  html += '</div></div>';
+
+  // Cleaning section
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Cleaning & Operations</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += `<div class="field-row">
+    <div class="field-group"><label>Current Cleaning Method</label>
+      <input type="text" value="${esc(z.current_cleaning_method)}" oninput="state.zones[${zoneIdx}].current_cleaning_method = this.value; markDirty();"></div>
+    <div class="field-group"><label>Cleaning Frequency</label>
+      <input type="text" value="${esc(z.cleaning_frequency)}" placeholder="e.g., daily, 2x daily" oninput="state.zones[${zoneIdx}].cleaning_frequency = this.value; markDirty();"></div>
+  </div>`;
+  html += `<div class="field-row">
+    <div class="field-group"><label>Cleaning Contractor</label>
+      <input type="text" value="${esc(z.cleaning_contractor)}" placeholder="In-house or name" oninput="state.zones[${zoneIdx}].cleaning_contractor = this.value; markDirty();"></div>
+    <div class="field-group"><label>Cleaning Shift</label>
+      <input type="text" value="${esc(z.cleaning_shift)}" placeholder="e.g., overnight 11pm-6am" oninput="state.zones[${zoneIdx}].cleaning_shift = this.value; markDirty();"></div>
+  </div>`;
+  html += `<div class="field-group"><label>Delivery Method</label>
+    <textarea class="auto-expand" placeholder="How items move through this zone today..." oninput="state.zones[${zoneIdx}].delivery_method = this.value; markDirty();">${esc(z.delivery_method)}</textarea></div>`;
+  html += `<div class="field-group"><label>Staffing Notes</label>
+    <textarea class="auto-expand" oninput="state.zones[${zoneIdx}].staffing_notes = this.value; markDirty();">${esc(z.staffing_notes)}</textarea></div>`;
+  html += '</div></div>';
+
+  // Photo Checklist
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Photos</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  tmpl.photoChecklist.forEach(item => {
+    // WHY: We store photo references as objects {id, checklistItem} in zone.photos
+    // so we can track which checklist item each photo belongs to
+    const hasTaken = (z.photos || []).some(p => p.checklistItem === item);
+    html += `<div class="photo-checklist-item">
+      <span class="photo-check ${hasTaken ? 'taken' : ''}">${hasTaken ? '&#10003;' : ''}</span>
+      <span class="photo-checklist-label">${esc(item)}</span>
+      <button class="photo-capture-btn" onclick="capturePhoto(${zoneIdx}, decodeURIComponent('${encodeURIComponent(item)}'))">&#128247;</button>
+    </div>`;
+  });
+  html += '<button class="add-row-btn mt-12" onclick="capturePhoto(' + zoneIdx + ', null)">+ Add Photo</button>';
+  html += '<div class="photo-grid" id="photoGrid_' + zoneIdx + '"></div>';
+  html += '</div></div>';
+
+  // Pain Points
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Pain Points</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += `<div class="field-group">
+    <textarea class="auto-expand" placeholder="What's broken, what do they complain about..." oninput="state.zones[${zoneIdx}].pain_points = this.value; markDirty();">${esc(z.pain_points)}</textarea></div>`;
+  html += '</div></div>';
+
+  // Robot Readiness
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Robot Readiness</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += '<div class="field-group"><div class="readiness-group">';
+  const rOptions = [
+    { val: 'ready', label: 'Ready' },
+    { val: 'minor_work', label: 'Minor Work' },
+    { val: 'major_work', label: 'Major Work' },
+    { val: 'not_feasible', label: 'Not Feasible' }
+  ];
+  rOptions.forEach(r => {
+    html += `<div class="readiness-option ${z.robot_readiness === r.val ? 'active' : ''}" data-val="${r.val}"
+      onclick="state.zones[${zoneIdx}].robot_readiness = '${r.val}'; markDirty(); renderActiveTab(); renderTabBar();">${esc(r.label)}</div>`;
+  });
+  html += '</div></div>';
+  html += `<div class="field-group mt-12"><label>Readiness Notes</label>
+    <textarea class="auto-expand" placeholder="What work is needed..." oninput="state.zones[${zoneIdx}].readiness_notes = this.value; markDirty();">${esc(z.readiness_notes)}</textarea></div>`;
+  html += '</div></div>';
+
+  // Assessor Notes
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Assessor Notes</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += `<div class="field-group">
+    <textarea class="auto-expand" oninput="state.zones[${zoneIdx}].notes = this.value; markDirty();">${esc(z.notes)}</textarea></div>`;
+  html += '</div></div>';
+
+  return html;
+}
+
+function toggleFloorSurface(zoneIdx, surface) {
+  const z = state.zones[zoneIdx];
+  if (!z.floor_surfaces) z.floor_surfaces = [];
+  const idx = z.floor_surfaces.indexOf(surface);
+  if (idx >= 0) {
+    z.floor_surfaces.splice(idx, 1);
+  } else {
+    z.floor_surfaces.push(surface);
+  }
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
+}
+
+// ── Zone Management ──
+function buildZonePicker() {
+  const grid = document.getElementById('zonePickerGrid');
+  let html = '';
+  Object.keys(ZONE_TEMPLATES).forEach(key => {
+    const t = ZONE_TEMPLATES[key];
+    html += `<div class="zone-picker-card" onclick="addZone('${key}')">
+      <span class="zone-icon">${t.icon}</span>
+      <span class="zone-label">${esc(t.label)}</span>
+    </div>`;
+  });
+  grid.innerHTML = html;
+}
+
+function showAddZoneModal() {
+  document.getElementById('addZoneModal').classList.add('open');
+}
+function closeAddZoneModal() {
+  document.getElementById('addZoneModal').classList.remove('open');
+}
+
+function addZone(zoneType) {
+  const tmpl = ZONE_TEMPLATES[zoneType] || ZONE_TEMPLATES.other;
+
+  // Count existing zones of this type for naming
+  const sameTypeCount = state.zones.filter(z => z.zone_type === zoneType).length;
+  const defaultName = sameTypeCount > 0 ? tmpl.label + ' ' + (sameTypeCount + 1) : tmpl.label;
+
+  const zone = {
+    id: generateUUID(),
+    zone_type: zoneType,
+    zone_name: defaultName,
+    floor_number: null,
+    floor_surfaces: [],
+    corridor_width_ft: null,
+    ceiling_height_ft: null,
+    door_width_min_ft: null,
+    wifi_strength: '',
+    wifi_network: '',
+    lighting: '',
+    foot_traffic: '',
+    current_cleaning_method: '',
+    cleaning_frequency: '',
+    cleaning_contractor: '',
+    cleaning_shift: '',
+    delivery_method: '',
+    staffing_notes: '',
+    pain_points: '',
+    robot_readiness: '',
+    readiness_notes: '',
+    template_data: {},
+    notes: '',
+    photos: []
+  };
+
+  state.zones.push(zone);
+  closeAddZoneModal();
+  markDirty();
+
+  // Switch to the new zone tab
+  activeTab = 'zone_' + (state.zones.length - 1);
+  renderTabBar();
+  renderActiveTab();
+}
+
+function removeZone(idx) {
+  const z = state.zones[idx];
+  if (!confirm('Delete zone "' + (z.zone_name || 'Untitled') + '"?')) return;
+
+  // Delete photos from IndexedDB for this zone
+  (z.photos || []).forEach(p => {
+    deletePhotoFromDB(p.id);
+  });
+
+  state.zones.splice(idx, 1);
+  markDirty();
+
+  // If we were viewing that zone, go to overview
+  if (activeTab === 'zone_' + idx) {
+    activeTab = 'overview';
+  } else if (activeTab.startsWith('zone_')) {
+    // Adjust index if needed
+    const viewIdx = parseInt(activeTab.split('_')[1]);
+    if (viewIdx > idx) {
+      activeTab = 'zone_' + (viewIdx - 1);
+    }
+  }
+
+  renderTabBar();
+  renderActiveTab();
+}
+
+// ── Collapsible Sections ──
+function toggleSection(headerEl) {
+  headerEl.parentElement.classList.toggle('collapsed');
+}
+
+// ── Photo Capture ──
+let pendingPhotoZoneIdx = null;
+let pendingPhotoChecklistItem = null;
+
+function capturePhoto(zoneIdx, checklistItem) {
+  pendingPhotoZoneIdx = zoneIdx;
+  pendingPhotoChecklistItem = checklistItem;
+  document.getElementById('photoInput').click();
+}
+
+async function handlePhotoSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const zoneIdx = pendingPhotoZoneIdx;
+  const checklistItem = pendingPhotoChecklistItem;
+
+  // Reset input so the same file can be re-selected
+  e.target.value = '';
+
+  try {
+    const blob = file;
+    const thumbnail = await generateThumbnail(blob);
+    const photoId = generateUUID();
+
+    // Save to IndexedDB
+    const photoRecord = {
+      id: photoId,
+      assessmentId: state.id,
+      zoneId: state.zones[zoneIdx]?.id || null,
+      blob: blob,
+      thumbnail: thumbnail,
+      annotations: [],
+      caption: checklistItem || '',
+      checklistItem: checklistItem,
+      takenAt: new Date().toISOString()
+    };
+
+    await savePhotoToDB(photoRecord);
+
+    // Add reference to zone
+    if (state.zones[zoneIdx]) {
+      if (!state.zones[zoneIdx].photos) state.zones[zoneIdx].photos = [];
+      state.zones[zoneIdx].photos.push({
+        id: photoId,
+        checklistItem: checklistItem
+      });
+    }
+
+    markDirty();
+    renderActiveTab();
+    renderTabBar();
+    // Render the photo grid for this zone after tab renders
+    setTimeout(() => renderPhotoGridAsync(zoneIdx), 50);
+
+    showToast('Photo captured', 'success');
+  } catch (err) {
+    console.error('Photo capture error:', err);
+    showToast('Failed to save photo', 'error');
+  }
+}
+
+function generateThumbnail(blob) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      // WHY: 200px wide thumbnails balance file size against legibility in grid
+      const targetWidth = 200;
+      const scale = targetWidth / img.width;
+      const targetHeight = img.height * scale;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      URL.revokeObjectURL(url);
+      resolve(dataUrl);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image for thumbnail'));
+    };
+    img.src = url;
+  });
+}
+
+// ── IndexedDB for Photos ──
+function openPhotoDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('accelerate_assessments', 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('photos')) {
+        db.createObjectStore('photos', { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = (e) => {
+      photoDB = e.target.result;
+      resolve();
+    };
+    request.onerror = (e) => {
+      console.error('IndexedDB error:', e.target.error);
+      reject(e.target.error);
+    };
+  });
+}
+
+function savePhotoToDB(record) {
+  return new Promise((resolve, reject) => {
+    if (!photoDB) { reject(new Error('Photo DB not open')); return; }
+    const tx = photoDB.transaction('photos', 'readwrite');
+    const store = tx.objectStore('photos');
+    store.put(record);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function getPhotoFromDB(id) {
+  return new Promise((resolve, reject) => {
+    if (!photoDB) { reject(new Error('Photo DB not open')); return; }
+    const tx = photoDB.transaction('photos', 'readonly');
+    const store = tx.objectStore('photos');
+    const req = store.get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function deletePhotoFromDB(id) {
+  return new Promise((resolve, reject) => {
+    if (!photoDB) { resolve(); return; }
+    const tx = photoDB.transaction('photos', 'readwrite');
+    const store = tx.objectStore('photos');
+    store.delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function getAllPhotosForAssessment(assessmentId) {
+  return new Promise((resolve, reject) => {
+    if (!photoDB) { resolve([]); return; }
+    const tx = photoDB.transaction('photos', 'readonly');
+    const store = tx.objectStore('photos');
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const all = req.result.filter(p => p.assessmentId === assessmentId);
+      resolve(all);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// ── Render Photo Grid ──
+async function renderPhotoGridAsync(zoneIdx) {
+  const gridEl = document.getElementById('photoGrid_' + zoneIdx);
+  if (!gridEl) return;
+
+  const z = state.zones[zoneIdx];
+  if (!z || !z.photos || z.photos.length === 0) {
+    gridEl.innerHTML = '<div style="color:var(--text-dim); font-size:0.78rem; padding:8px 0;">No photos yet</div>';
+    return;
+  }
+
+  let html = '';
+  for (const photoRef of z.photos) {
+    try {
+      const photo = await getPhotoFromDB(photoRef.id);
+      if (!photo) continue;
+      const hasAnnotations = photo.annotations && photo.annotations.length > 0;
+      html += `<div class="photo-thumb" onclick="openAnnotation('${esc(photoRef.id)}')" oncontextmenu="event.preventDefault(); showPhotoMenu('${esc(photoRef.id)}', ${zoneIdx})">
+        <img src="${photo.thumbnail}" alt="${esc(photo.caption || 'Photo')}">
+        ${hasAnnotations ? '<span class="photo-thumb-annotation-dot"></span>' : ''}
+        <span class="photo-thumb-label">${esc(photo.caption || photo.checklistItem || 'Photo')}</span>
+      </div>`;
+    } catch (err) {
+      console.error('Failed to load photo thumbnail:', err);
+    }
+  }
+
+  gridEl.innerHTML = html || '<div style="color:var(--text-dim); font-size:0.78rem; padding:8px 0;">No photos yet</div>';
+}
+
+function showPhotoMenu(photoId, zoneIdx) {
+  const action = prompt('Type "delete" to remove this photo, or enter a new caption:');
+  if (action === null) return;
+  if (action.toLowerCase() === 'delete') {
+    deletePhoto(photoId, zoneIdx);
+  } else if (action.trim()) {
+    editPhotoCaption(photoId, action.trim());
+  }
+}
+
+async function deletePhoto(photoId, zoneIdx) {
+  await deletePhotoFromDB(photoId);
+  const z = state.zones[zoneIdx];
+  if (z) {
+    z.photos = (z.photos || []).filter(p => p.id !== photoId);
+  }
+  markDirty();
+  renderActiveTab();
+  renderTabBar();
+  setTimeout(() => renderPhotoGridAsync(zoneIdx), 50);
+  showToast('Photo deleted', 'info');
+}
+
+async function editPhotoCaption(photoId, newCaption) {
+  try {
+    const photo = await getPhotoFromDB(photoId);
+    if (photo) {
+      photo.caption = newCaption;
+      await savePhotoToDB(photo);
+      // Re-render the current zone
+      if (activeTab.startsWith('zone_')) {
+        const idx = parseInt(activeTab.split('_')[1]);
+        renderPhotoGridAsync(idx);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to edit caption:', err);
+  }
+}
+
+// ── Photo Annotation ──
+async function openAnnotation(photoId) {
+  try {
+    const photo = await getPhotoFromDB(photoId);
+    if (!photo) { showToast('Photo not found', 'error'); return; }
+
+    currentAnnotationPhotoId = photoId;
+    currentAnnotations = photo.annotations ? [...photo.annotations] : [];
+    currentAnnotationTool = 'pin';
+    arrowStartPoint = null;
+
+    // Set image
+    const imgEl = document.getElementById('annotationImg');
+    if (photo.blob instanceof Blob) {
+      imgEl.src = URL.createObjectURL(photo.blob);
+    } else {
+      imgEl.src = photo.thumbnail;
+    }
+    document.getElementById('annotationTitle').textContent = photo.caption || 'Annotate Photo';
+
+    // Render existing annotations
+    renderAnnotationSvg();
+
+    // Show overlay
+    document.getElementById('annotationOverlay').classList.add('open');
+
+    // Reset tool buttons
+    document.querySelectorAll('.anno-tool').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tool === 'pin');
+    });
+  } catch (err) {
+    console.error('Failed to open annotation:', err);
+    showToast('Failed to open photo', 'error');
+  }
+}
+
+function selectAnnotationTool(tool) {
+  currentAnnotationTool = tool;
+  arrowStartPoint = null;
+  document.querySelectorAll('.anno-tool').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tool === tool);
+  });
+}
+
+function handleAnnotationClick(e) {
+  const wrap = document.getElementById('annotationCanvasWrap');
+  const rect = wrap.getBoundingClientRect();
+
+  // Normalize coordinates to percentage (0-100) for resolution independence
+  const x = ((e.clientX - rect.left) / rect.width) * 100;
+  const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+  if (currentAnnotationTool === 'pin') {
+    const label = prompt('Pin label:') || '';
+    currentAnnotations.push({ type: 'pin', x, y, label, color: '#ef4444' });
+    renderAnnotationSvg();
+  } else if (currentAnnotationTool === 'arrow') {
+    if (!arrowStartPoint) {
+      arrowStartPoint = { x, y };
+      showToast('Tap arrow endpoint', 'info');
+    } else {
+      currentAnnotations.push({
+        type: 'arrow',
+        x: arrowStartPoint.x, y: arrowStartPoint.y,
+        x2: x, y2: y,
+        color: '#f59e0b'
+      });
+      arrowStartPoint = null;
+      renderAnnotationSvg();
+    }
+  } else if (currentAnnotationTool === 'text') {
+    const text = prompt('Text label:');
+    if (text) {
+      currentAnnotations.push({ type: 'text', x, y, label: text, color: '#ffffff' });
+      renderAnnotationSvg();
+    }
+  }
+}
+
+function renderAnnotationSvg() {
+  const svg = document.getElementById('annotationSvg');
+  let html = '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/></marker></defs>';
+
+  currentAnnotations.forEach((a, i) => {
+    if (a.type === 'pin') {
+      html += `<circle class="anno-el" cx="${a.x}%" cy="${a.y}%" r="8" fill="${a.color || '#ef4444'}" stroke="#fff" stroke-width="2" onclick="event.stopPropagation(); removeAnnotation(${i})"/>`;
+      if (a.label) {
+        html += `<text class="anno-el" x="${a.x}%" y="${a.y - 2}%" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" style="text-shadow:0 1px 3px #000" onclick="event.stopPropagation(); removeAnnotation(${i})">${esc(a.label)}</text>`;
+      }
+    } else if (a.type === 'arrow') {
+      html += `<line class="anno-el" x1="${a.x}%" y1="${a.y}%" x2="${a.x2}%" y2="${a.y2}%" stroke="${a.color || '#f59e0b'}" stroke-width="3" marker-end="url(#arrowhead)" onclick="event.stopPropagation(); removeAnnotation(${i})"/>`;
+    } else if (a.type === 'text') {
+      html += `<text class="anno-el" x="${a.x}%" y="${a.y}%" fill="${a.color || '#ffffff'}" font-size="14" font-weight="bold" style="text-shadow:0 1px 4px #000" onclick="event.stopPropagation(); removeAnnotation(${i})">${esc(a.label)}</text>`;
+    }
+  });
+
+  svg.innerHTML = html;
+}
+
+function removeAnnotation(idx) {
+  if (confirm('Remove this annotation?')) {
+    currentAnnotations.splice(idx, 1);
+    renderAnnotationSvg();
+  }
+}
+
+async function closeAnnotation() {
+  // Save annotations to the photo record in IndexedDB
+  if (currentAnnotationPhotoId) {
+    try {
+      const photo = await getPhotoFromDB(currentAnnotationPhotoId);
+      if (photo) {
+        photo.annotations = currentAnnotations;
+        await savePhotoToDB(photo);
+      }
+    } catch (err) {
+      console.error('Failed to save annotations:', err);
+    }
+  }
+
+  // Clean up blob URL
+  const imgEl = document.getElementById('annotationImg');
+  if (imgEl.src.startsWith('blob:')) {
+    URL.revokeObjectURL(imgEl.src);
+  }
+
+  document.getElementById('annotationOverlay').classList.remove('open');
+  currentAnnotationPhotoId = null;
+  currentAnnotations = [];
+  arrowStartPoint = null;
+
+  // Re-render photo grid if on a zone tab
+  if (activeTab.startsWith('zone_')) {
+    const idx = parseInt(activeTab.split('_')[1]);
+    renderPhotoGridAsync(idx);
+  }
+}
+
+// ── Auto-Save (localStorage) ──
+function markDirty() {
+  dirty = true;
+  state.updated_at = new Date().toISOString();
+  updateOverallStatus();
+}
+
+function startAutoSave() {
+  // WHY: 30-second interval balances data safety against localStorage write overhead
+  autoSaveTimer = setInterval(autoSave, 30000);
+}
+
+function autoSave() {
+  if (!state.id) return;
+  collectActiveInputs();
+  try {
+    const key = 'assessment_draft_' + state.id;
+    localStorage.setItem(key, JSON.stringify(state));
+    lastSaveTime = new Date();
+    dirty = false;
+    updateSaveIndicator();
+  } catch (err) {
+    console.error('Auto-save failed:', err);
+    showToast('Auto-save failed — localStorage may be full', 'error');
+  }
+}
+
+function loadFromLocal(id) {
+  try {
+    const key = 'assessment_draft_' + id;
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  } catch (err) {
+    console.error('Failed to load from localStorage:', err);
+    return null;
+  }
+}
+
+function updateSaveIndicator() {
+  const el = document.getElementById('saveIndicator');
+  if (lastSaveTime) {
+    const ago = Math.round((Date.now() - lastSaveTime.getTime()) / 1000);
+    if (ago < 5) {
+      el.textContent = 'Saved just now';
+    } else if (ago < 60) {
+      el.textContent = 'Saved ' + ago + 's ago';
+    } else {
+      el.textContent = 'Saved ' + Math.round(ago / 60) + 'm ago';
+    }
+  } else {
+    el.textContent = dirty ? 'Unsaved changes' : 'Not saved';
+  }
+}
+
+// Update save indicator every 10 seconds
+setInterval(updateSaveIndicator, 10000);
+
+// ── Server Load ──
+async function loadFromServer(id) {
+  try {
+    const resp = await fetch('/api/assessments/' + encodeURIComponent(id), {
+      credentials: 'include'
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!data || !data.id) return null;
+
+    // Parse JSON fields
+    if (typeof data.operations_data === 'string') {
+      try { data.operations_data = JSON.parse(data.operations_data); } catch(e) { data.operations_data = { shifts: [], contracted_services: [], automation_notes: '', pain_points: '' }; }
+    }
+    if (typeof data.infrastructure_data === 'string') {
+      try { data.infrastructure_data = JSON.parse(data.infrastructure_data); } catch(e) { data.infrastructure_data = { wifi: {}, elevators: [], power_notes: '', storage_notes: '', network_notes: '' }; }
+    }
+
+    // Ensure nested objects exist
+    if (!data.operations_data) data.operations_data = { shifts: [], contracted_services: [], automation_notes: '', pain_points: '' };
+    if (!data.infrastructure_data) data.infrastructure_data = { wifi: {}, elevators: [], power_notes: '', storage_notes: '', network_notes: '' };
+    if (!data.infrastructure_data.wifi) data.infrastructure_data.wifi = {};
+    if (!data.zones) data.zones = [];
+    if (!data.stakeholders) data.stakeholders = [];
+
+    // Parse zone floor_surfaces from JSON strings
+    data.zones.forEach(z => {
+      if (typeof z.floor_surfaces === 'string') {
+        try { z.floor_surfaces = JSON.parse(z.floor_surfaces); } catch(e) { z.floor_surfaces = []; }
+      }
+      if (!z.photos) z.photos = [];
+    });
+
+    return data;
+  } catch (err) {
+    console.error('Server load failed:', err);
+    return null;
+  }
+}
+
+// ── Sync to Server ──
+async function syncToServer() {
+  if (!navigator.onLine) {
+    showToast('You\'re offline — connect to sync', 'error');
+    return;
+  }
+
+  if (!state.property_name) {
+    showToast('Enter a property name before syncing', 'error');
+    return;
+  }
+  if (!state.assigned_to) {
+    showToast('Assign a rep before syncing', 'error');
+    return;
+  }
+
+  // Save locally first
+  autoSave();
+
+  updateSyncStatus('syncing');
+
+  try {
+    // Prepare payload — clone state and stringify JSON fields for the API
+    const payload = { ...state };
+    payload.operations_data = JSON.stringify(state.operations_data);
+    payload.infrastructure_data = JSON.stringify(state.infrastructure_data);
+
+    // Zones: stringify floor_surfaces for API
+    payload.zones = state.zones.map(z => ({
+      ...z,
+      floor_surfaces: JSON.stringify(z.floor_surfaces || []),
+      // Remove photo references from zone payload (photos upload separately)
+      photos: undefined
+    }));
+
+    const resp = await fetch('/api/assessments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error('Server returned ' + resp.status + ': ' + err);
+    }
+
+    // Upload photos in batches of 5
+    const allPhotos = await getAllPhotosForAssessment(state.id);
+    const batchSize = 5; // WHY: batches of 5 balance upload speed against timeout risk on slow hotel WiFi
+    for (let i = 0; i < allPhotos.length; i += batchSize) {
+      const batch = allPhotos.slice(i, i + batchSize);
+      await uploadPhotoBatch(state.id, batch);
+    }
+
+    state.synced_at = new Date().toISOString();
+    autoSave();
+    updateSyncStatus('synced');
+    showToast('Synced successfully', 'success');
+  } catch (err) {
+    console.error('Sync failed:', err);
+    updateSyncStatus('failed');
+    showToast('Sync failed: ' + err.message, 'error');
+  }
+}
+
+async function uploadPhotoBatch(assessmentId, photos) {
+  for (const photo of photos) {
+    try {
+      const formData = new FormData();
+      formData.append('photo', photo.blob, 'photo.jpg');
+      formData.append('metadata', JSON.stringify({
+        id: photo.id,
+        zoneId: photo.zoneId,
+        checklistItem: photo.checklistItem,
+        caption: photo.caption,
+        annotations: photo.annotations,
+        takenAt: photo.takenAt
+      }));
+
+      await fetch('/api/assessments/' + encodeURIComponent(assessmentId) + '/photos', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+    } catch (err) {
+      console.error('Photo upload failed for ' + photo.id + ':', err);
+      // Continue with remaining photos
+    }
+  }
+}
+
+function updateSyncStatus(status, message) {
+  const btn = document.getElementById('syncBtn');
+  const label = document.getElementById('syncLabel');
+
+  btn.className = 'sync-btn';
+
+  switch (status) {
+    case 'ready':
+      btn.classList.add('sync-ready');
+      label.textContent = 'Sync';
+      break;
+    case 'offline':
+      btn.classList.add('sync-offline');
+      label.textContent = 'Offline';
+      break;
+    case 'syncing':
+      btn.classList.add('sync-syncing');
+      label.textContent = 'Syncing...';
+      break;
+    case 'synced':
+      btn.classList.add('sync-synced');
+      label.textContent = 'Synced';
+      // WHY: revert to "ready" after 5s so the button remains actionable
+      setTimeout(() => {
+        if (navigator.onLine) updateSyncStatus('ready');
+      }, 5000);
+      break;
+    case 'failed':
+      btn.classList.add('sync-failed');
+      label.textContent = 'Failed';
+      setTimeout(() => {
+        if (navigator.onLine) updateSyncStatus('ready');
+      }, 5000);
+      break;
+  }
+}
+
+// ── Completion Tracking ──
+function getTabCompletion(tabId) {
+  if (tabId === 'overview') {
+    const hasName = !!state.property_name;
+    const hasRooms = state.rooms != null && state.rooms > 0;
+    const hasFloors = state.floors != null && state.floors > 0;
+    const hasElevators = state.elevators != null && state.elevators >= 0;
+    const hasContact = !!(state.gm_name || state.engineering_contact);
+    const complete = hasName && hasRooms && hasFloors && hasElevators && hasContact;
+    const partial = hasName || hasRooms || hasFloors || hasContact;
+    return complete ? 'complete' : partial ? 'partial' : 'empty';
+  }
+
+  if (tabId === 'stakeholders') {
+    const withNameAndRole = state.stakeholders.filter(s => s.name && s.role);
+    if (withNameAndRole.length > 0) return 'complete';
+    if (state.stakeholders.length > 0) return 'partial';
+    return 'empty';
+  }
+
+  if (tabId === 'operations') {
+    const hasShift = state.operations_data.shifts.length > 0;
+    const hasService = state.operations_data.contracted_services.length > 0;
+    if (hasShift || hasService) return 'complete';
+    if (state.operations_data.automation_notes || state.operations_data.pain_points) return 'partial';
+    return 'empty';
+  }
+
+  if (tabId === 'infrastructure') {
+    const hasWifi = !!state.infrastructure_data.wifi.coverage;
+    const hasElevator = state.infrastructure_data.elevators.length > 0;
+    if (hasWifi || hasElevator) return 'complete';
+    if (state.infrastructure_data.power_notes || state.infrastructure_data.storage_notes || state.infrastructure_data.network_notes) return 'partial';
+    return 'empty';
+  }
+
+  return 'empty';
+}
+
+function getZoneCompletion(zoneIdx) {
+  const z = state.zones[zoneIdx];
+  if (!z) return 'empty';
+
+  const hasSurfaces = z.floor_surfaces && z.floor_surfaces.length > 0;
+  const hasWidth = z.corridor_width_ft != null;
+  const hasReadiness = !!z.robot_readiness;
+  const photoCount = (z.photos || []).length;
+
+  const complete = hasSurfaces && hasWidth && hasReadiness && photoCount >= 2;
+  const partial = hasSurfaces || hasWidth || hasReadiness || photoCount > 0
+    || z.current_cleaning_method || z.pain_points || z.notes;
+
+  return complete ? 'complete' : partial ? 'partial' : 'empty';
+}
+
+function updateOverallStatus() {
+  const overviewComplete = getTabCompletion('overview') === 'complete';
+  const allPropertyComplete = PROPERTY_TABS.every(t => getTabCompletion(t) === 'complete');
+  const completeZones = state.zones.filter((_, i) => getZoneCompletion(i) === 'complete').length;
+
+  let newStatus = state.status;
+  if (allPropertyComplete && completeZones >= 2) {
+    newStatus = 'completed';
+  } else if (overviewComplete) {
+    newStatus = 'in_progress';
+  } else {
+    newStatus = 'draft';
+  }
+
+  // WHY: Only auto-advance status, never auto-regress (user might manually override)
+  const statusOrder = { draft: 0, in_progress: 1, completed: 2, synced: 3 };
+  if (statusOrder[newStatus] > statusOrder[state.status]) {
+    state.status = newStatus;
+  }
+
+  updateStatusBadge();
+}
+
+function updateStatusBadge() {
+  const badge = document.getElementById('statusBadge');
+  badge.className = 'status-badge status-' + state.status;
+  const labels = { draft: 'DRAFT', in_progress: 'IN PROGRESS', completed: 'COMPLETED', synced: 'SYNCED' };
+  badge.textContent = labels[state.status] || state.status.toUpperCase();
+}
+
+// ── Toast Notifications ──
+function showToast(message, type) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + (type || 'info');
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  // WHY: 3-second display with 300ms fade — long enough to read, short enough not to annoy
+  setTimeout(() => {
+    toast.classList.add('fadeout');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+</script>
+</body>
+</html>
