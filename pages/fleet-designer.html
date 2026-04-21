@@ -3318,11 +3318,58 @@ function initPropertySection() {
         updatePropertyProfile();
         updateProposalButton();
         updateResearchLinks();
+
+        // Fill facility detail fields
+        fillFacilityDetails(p);
     });
 
     // Auto-update profile on input changes
     ['prop-rooms', 'prop-floors', 'prop-elevators'].forEach(id => {
         document.getElementById(id).addEventListener('input', updatePropertyProfile);
+    });
+
+    // ── Facility detail expand/collapse ──────────────────────
+    const expandBtn = document.getElementById('facility-expand-btn');
+    const detailCard = document.getElementById('facility-detail-card');
+
+    expandBtn.addEventListener('click', () => {
+        detailCard.classList.toggle('hidden');
+        updateExpandButton();
+    });
+
+    // ── Elevator make — show custom text input when "Other" selected ──
+    const elevMakeSelect = document.getElementById('fd-elevator-make');
+    const elevCustomInput = document.getElementById('fd-elevator-custom');
+
+    elevMakeSelect.addEventListener('change', () => {
+        elevCustomInput.style.display = elevMakeSelect.value === 'Other' ? '' : 'none';
+        updateExpandButton();
+    });
+
+    elevCustomInput.addEventListener('input', updateExpandButton);
+    document.getElementById('fd-elevator-guest').addEventListener('input', updateExpandButton);
+    document.getElementById('fd-elevator-service').addEventListener('input', updateExpandButton);
+    document.getElementById('fd-fb-outlets').addEventListener('input', updateExpandButton);
+    document.getElementById('fd-event-sqft').addEventListener('input', updateExpandButton);
+
+    // ── Amenity chips — toggle checked class ──
+    document.querySelectorAll('.amenity-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const cb = chip.querySelector('input[type="checkbox"]');
+            cb.checked = !cb.checked;
+            chip.classList.toggle('checked', cb.checked);
+            syncSurfacesFromZones();
+            updateExpandButton();
+        });
+    });
+
+    // ── Zone chips — toggle checked class + sync global surfaces ──
+    document.querySelectorAll('.zone-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            chip.classList.toggle('checked');
+            syncSurfacesFromZones();
+            updateExpandButton();
+        });
     });
 
     // ── Add Prospect form ────────────────────────────────────
@@ -3394,6 +3441,133 @@ function initPropertySection() {
     });
 
     updatePropertyProfile();
+}
+
+// ─────────────────────────────────────────────────────────────
+// fillFacilityDetails — populate facility detail card from property data
+// WHY: auto-fills elevator, amenities, and surface zones when
+// a pipeline property is selected from the dropdown
+// ─────────────────────────────────────────────────────────────
+function fillFacilityDetails(p) {
+    // Elevator
+    const makeSelect = document.getElementById('fd-elevator-make');
+    const customInput = document.getElementById('fd-elevator-custom');
+    const makeValue = p.elevatorMake || '';
+
+    // WHY: check if value matches a dropdown option; if not, select "Other" and fill custom input
+    const knownMakes = ['ThyssenKrupp', 'Otis', 'KONE', 'Schindler', 'Mitsubishi'];
+    if (makeValue && !knownMakes.includes(makeValue)) {
+        makeSelect.value = 'Other';
+        customInput.value = makeValue;
+        customInput.style.display = '';
+    } else {
+        makeSelect.value = makeValue;
+        customInput.value = '';
+        customInput.style.display = 'none';
+    }
+
+    document.getElementById('fd-elevator-guest').value = p.elevatorGuestCount || '';
+    document.getElementById('fd-elevator-service').value = p.elevatorServiceCount || '';
+
+    // Amenities
+    const allAmenities = ['pool', 'rooftop', 'courtyard', 'sports', 'garden'];
+    const activeAmenities = p.outdoorAmenities || [];
+    allAmenities.forEach(a => {
+        const chip = document.getElementById('amenity-' + a);
+        if (!chip) return;
+        const cb = chip.querySelector('input[type="checkbox"]');
+        const isActive = activeAmenities.includes(a);
+        cb.checked = isActive;
+        chip.classList.toggle('checked', isActive);
+    });
+
+    document.getElementById('fd-fb-outlets').value = p.fbOutlets || '';
+    document.getElementById('fd-event-sqft').value = p.eventSpaceSqFt || '';
+
+    // Surface zones
+    const zones = p.surfaceZones || { corridors: [], lobby: [], fb: [], boh: [] };
+    document.querySelectorAll('.zone-group').forEach(group => {
+        const zoneKey = group.dataset.zone;
+        const activeSurfaces = zones[zoneKey] || [];
+        group.querySelectorAll('.zone-chip').forEach(chip => {
+            chip.classList.toggle('checked', activeSurfaces.includes(chip.dataset.surface));
+        });
+    });
+
+    // Sync global surfaces from zones
+    syncSurfacesFromZones();
+    updateExpandButton();
+}
+
+// ─────────────────────────────────────────────────────────────
+// syncSurfacesFromZones — derive global surfaces from zone selections
+// WHY: the fleet algorithm reads the legacy surface checkboxes;
+// zone-based surfaces auto-sync to keep backward compatibility
+// ─────────────────────────────────────────────────────────────
+function syncSurfacesFromZones() {
+    const allSurfaces = ['carpet', 'hardwood', 'tile', 'terrazzo', 'outdoor'];
+    const zoneChips = document.querySelectorAll('.zone-chip.checked');
+    const activeSurfaces = new Set();
+
+    zoneChips.forEach(chip => activeSurfaces.add(chip.dataset.surface));
+
+    // WHY: if any outdoor amenity is checked, add 'outdoor' to global surfaces
+    const anyOutdoor = document.querySelectorAll('#amenity-grid .amenity-chip.checked').length > 0;
+    if (anyOutdoor) activeSurfaces.add('outdoor');
+
+    // Sync legacy global surface checkboxes
+    allSurfaces.forEach(s => {
+        const chip = document.getElementById('surface-' + s);
+        if (!chip) return;
+        const cb = chip.querySelector('input[type="checkbox"]');
+        const shouldBeChecked = activeSurfaces.has(s);
+        cb.checked = shouldBeChecked;
+        chip.classList.toggle('checked', shouldBeChecked);
+    });
+
+    // Toggle global chips vs summary
+    const hasZones = zoneChips.length > 0;
+    document.getElementById('surface-global-wrap').style.display = hasZones ? 'none' : '';
+    const summaryWrap = document.getElementById('surface-summary-wrap');
+    summaryWrap.style.display = hasZones ? '' : 'none';
+    if (hasZones) {
+        const names = [...activeSurfaces].map(s => s.charAt(0).toUpperCase() + s.slice(1));
+        document.getElementById('surface-summary-text').textContent = names.join(', ') || 'None selected';
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// countFacilityDetails — count how many detail fields are set
+// WHY: shown on the expand button as "N details set" indicator
+// ─────────────────────────────────────────────────────────────
+function countFacilityDetails() {
+    let count = 0;
+    if (document.getElementById('fd-elevator-make').value) count++;
+    if (parseInt(document.getElementById('fd-elevator-guest').value, 10) > 0) count++;
+    if (parseInt(document.getElementById('fd-elevator-service').value, 10) > 0) count++;
+    if (document.querySelectorAll('#amenity-grid .amenity-chip.checked').length > 0) count++;
+    if (parseInt(document.getElementById('fd-fb-outlets').value, 10) > 0) count++;
+    if (parseInt(document.getElementById('fd-event-sqft').value, 10) > 0) count++;
+    if (document.querySelectorAll('.zone-chip.checked').length > 0) count++;
+    return count;
+}
+
+// ─────────────────────────────────────────────────────────────
+// updateExpandButton — refresh the expand button label
+// ─────────────────────────────────────────────────────────────
+function updateExpandButton() {
+    const btn = document.getElementById('facility-expand-btn');
+    const card = document.getElementById('facility-detail-card');
+    const isExpanded = !card.classList.contains('hidden');
+    const count = countFacilityDetails();
+
+    if (isExpanded) {
+        btn.innerHTML = '<span class="arrow">▾</span> Facility Details';
+    } else if (count > 0) {
+        btn.innerHTML = '<span class="arrow">▸</span> Configure Facility Details <span class="detail-count">· ' + count + ' detail' + (count === 1 ? '' : 's') + ' set</span>';
+    } else {
+        btn.innerHTML = '<span class="arrow">▸</span> Configure Facility Details';
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
