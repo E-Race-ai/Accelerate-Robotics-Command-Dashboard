@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Command Center — Accelerate Robotics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- WHY: Leaflet for embedded US deal map — same CDN as admin-deals.html -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+    /* ── Tool cards ──────────────────────────────────────── */
+    .tool-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid transparent;
+      transition: box-shadow 0.2s, transform 0.15s, border-color 0.2s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .tool-card:hover {
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+      border-color: #e5e7eb;
+    }
+    .tool-card .card-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+    }
+    .tool-card .card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .tool-card .card-desc {
+      font-size: 0.82rem;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+    .tool-card .card-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tool-card .card-stripe {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    /* ── Stats ───────────────────────────────────────────── */
+    .stat-pill {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: white;
+      border-radius: 14px;
+      padding: 16px 24px;
+      min-width: 90px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .stat-pill .stat-val {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .stat-pill .stat-lbl {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-top: 6px;
+    }
+
+    /* ── Deal list in sidebar ────────────────────────────── */
+    .deal-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      transition: background 0.15s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+    .deal-row:hover { background: #f8fafc; }
+    .deal-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .deal-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #111827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .deal-meta {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      white-space: nowrap;
+    }
+
+    /* ── Workflow pipeline ────────────────────────────────── */
+    .wf-pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-bottom: 32px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .wf-step {
+      flex: 1;
+      min-width: 180px;
+      position: relative;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+    }
+    /* WHY: Chevron connector between steps — CSS clip-path creates the arrow shape */
+    .wf-step-inner {
+      background: white;
+      border-radius: 14px;
+      padding: 20px 18px;
+      margin-right: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid transparent;
+      transition: box-shadow 0.2s, transform 0.15s, border-color 0.2s;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+    }
+    .wf-step:hover .wf-step-inner {
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+      border-color: #e5e7eb;
+    }
+    .wf-step-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.5;
+    }
+    .wf-step-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.2;
+    }
+    .wf-step-desc {
+      font-size: 0.78rem;
+      color: #6b7280;
+      line-height: 1.4;
+    }
+    .wf-step-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: auto;
+      padding-top: 8px;
+    }
+    .wf-tool-chip {
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .wf-step-stripe {
+      height: 3px;
+      border-radius: 3px 3px 0 0;
+      margin: 0 12px 0 0;
+    }
+    /* WHY: Arrow connector between workflow steps — pure CSS triangle */
+    .wf-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 24px;
+      margin-right: -12px;
+      z-index: 1;
+    }
+    .wf-arrow svg { opacity: 0.25; }
+    .wf-step:last-child .wf-arrow { display: none; }
+    .wf-step:last-child .wf-step-inner { margin-right: 0; }
+    .wf-step:last-child .wf-step-stripe { margin-right: 0; }
+
+    /* WHY: Deal count badges on workflow steps — show how many deals are in each phase */
+    .wf-count {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    /* ── Activity feed ───────────────────────────────────── */
+    .activity-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 0.84rem;
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+    .activity-time {
+      font-size: 0.72rem;
+      color: #9ca3af;
+      white-space: nowrap;
+    }
+
+    /* ── Leaflet overrides ───────────────────────────────── */
+    .deal-marker { background: none !important; border: none !important; }
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      padding: 0;
+    }
+    .leaflet-popup-content { margin: 0; min-width: 180px; }
+    .map-popup { padding: 12px 16px; }
+    .map-popup .popup-name { font-weight: 700; font-size: 0.9rem; color: #111827; margin-bottom: 4px; }
+    .map-popup .popup-meta { font-size: 0.78rem; color: #6b7280; }
+    .map-popup .popup-stage {
+      display: inline-block; font-size: 0.72rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 6px; margin-top: 6px;
+    }
+    .map-popup .popup-link {
+      display: block; margin-top: 8px; font-size: 0.78rem; font-weight: 600;
+      color: #2563eb; text-decoration: none;
+    }
+    .map-popup .popup-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body class="bg-[#f7f8fc] min-h-screen">
+
+  <!-- Loading -->
+  <div id="loading" class="flex items-center justify-center min-h-screen">
+    <p class="text-gray-400">Loading...</p>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="hidden">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-40">
+      <div class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-md">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white"/></svg>
+          </div>
+          <nav class="flex items-center gap-1">
+            <a href="/admin" class="px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 bg-blue-50">Command Center</a>
+            <a href="/admin/deals" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Deals</a>
+            <a href="/pages/assessments.html" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Assessments</a>
+            <a href="/admin/inquiries" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Inquiries</a>
+          </nav>
+          <span class="text-gray-200 select-none">|</span>
+          <span id="adminEmail" class="text-sm text-gray-400"></span>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="/" class="text-sm text-gray-400 hover:text-blue-600 transition">View Site</a>
+          <button onclick="logout()" class="text-sm text-gray-400 hover:text-red-600 transition">Sign Out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-[1400px] mx-auto px-6 py-8">
+      <!-- Title row -->
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="headline text-2xl font-bold text-gray-900">Command Center</h1>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-400" id="lastRefresh"></span>
+          <button onclick="refreshAll()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-gray-500 hover:bg-gray-50 border border-gray-200 transition">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="flex gap-3 flex-wrap mb-8" id="statsRow">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- ═══ Sales Workflow Pipeline ═══ -->
+      <div class="wf-pipeline" id="workflowPipeline">
+
+        <!-- Step 1: Prospect -->
+        <div class="wf-step">
+          <div class="wf-step-stripe" style="background: linear-gradient(90deg, #64748b, #94a3b8);"></div>
+          <a href="/admin/deals" class="wf-step-inner">
+            <span class="wf-count" id="wf-count-prospect" style="color:#64748b;">0</span>
+            <span class="wf-step-num" style="color:#64748b;">Step 1</span>
+            <div class="wf-step-title">Prospect</div>
+            <div class="wf-step-desc">Identify target, create deal in pipeline, assign owner</div>
+            <div class="wf-step-tools">
+              <span class="wf-tool-chip" style="background:#f1f5f9;color:#475569;">Deal Pipeline</span>
+              <span class="wf-tool-chip" style="background:#fdf4ff;color:#86198f;">Prospects</span>
+            </div>
+          </a>
+          <div class="wf-arrow"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 4l8 6-8 6V4z" fill="#cbd5e1"/></svg></div>
+        </div>
+
+        <!-- Step 2: V1 Proposal -->
+        <div class="wf-step">
+          <div class="wf-step-stripe" style="background: linear-gradient(90deg, #0891b2, #06b6d4);"></div>
+          <a href="/pages/fleet-designer.html" class="wf-step-inner">
+            <span class="wf-count" id="wf-count-v1" style="color:#0891b2;">0</span>
+            <span class="wf-step-num" style="color:#0891b2;">Step 2</span>
+            <div class="wf-step-title">V1 Proposal</div>
+            <div class="wf-step-desc">Fleet design + archetype-based proposal from public data</div>
+            <div class="wf-step-tools">
+              <span class="wf-tool-chip" style="background:#ecfeff;color:#0e7490;">Fleet Designer</span>
+              <span class="wf-tool-chip" style="background:#f0fdf4;color:#166534;">Proposal Builder</span>
+            </div>
+          </a>
+          <div class="wf-arrow"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 4l8 6-8 6V4z" fill="#cbd5e1"/></svg></div>
+        </div>
+
+        <!-- Step 3: Assessment -->
+        <div class="wf-step">
+          <div class="wf-step-stripe" style="background: linear-gradient(90deg, #7c3aed, #a78bfa);"></div>
+          <a href="/pages/assessments.html" class="wf-step-inner">
+            <span class="wf-count" id="wf-count-assess" style="color:#7c3aed;">0</span>
+            <span class="wf-step-num" style="color:#7c3aed;">Step 3</span>
+            <div class="wf-step-title">Assessment</div>
+            <div class="wf-step-desc">On-site or digital facility assessment with iPad toolkit</div>
+            <div class="wf-step-tools">
+              <span class="wf-tool-chip" style="background:#f5f3ff;color:#6d28d9;">Site Walk</span>
+              <span class="wf-tool-chip" style="background:#fdf4ff;color:#86198f;">Photos + Data</span>
+            </div>
+          </a>
+          <div class="wf-arrow"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 4l8 6-8 6V4z" fill="#cbd5e1"/></svg></div>
+        </div>
+
+        <!-- Step 4: V2 Proposal -->
+        <div class="wf-step">
+          <div class="wf-step-stripe" style="background: linear-gradient(90deg, #d97706, #f59e0b);"></div>
+          <a href="/admin/deals" class="wf-step-inner">
+            <span class="wf-count" id="wf-count-v2" style="color:#d97706;">0</span>
+            <span class="wf-step-num" style="color:#d97706;">Step 4</span>
+            <div class="wf-step-title">V2 Proposal</div>
+            <div class="wf-step-desc">Refined proposal with real assessment data, custom fleet + ROI</div>
+            <div class="wf-step-tools">
+              <span class="wf-tool-chip" style="background:#fffbeb;color:#92400e;">Custom Proposal</span>
+              <span class="wf-tool-chip" style="background:#fef3c7;color:#78350f;">ROI Model</span>
+            </div>
+          </a>
+          <div class="wf-arrow"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 4l8 6-8 6V4z" fill="#cbd5e1"/></svg></div>
+        </div>
+
+        <!-- Step 5: Deploy -->
+        <div class="wf-step">
+          <div class="wf-step-stripe" style="background: linear-gradient(90deg, #16a34a, #22c55e);"></div>
+          <a href="/repos/accelerate-thesis-hotel/pages/playbook.html" class="wf-step-inner">
+            <span class="wf-count" id="wf-count-deploy" style="color:#16a34a;">0</span>
+            <span class="wf-step-num" style="color:#16a34a;">Step 5</span>
+            <div class="wf-step-title">Deploy</div>
+            <div class="wf-step-desc">Won deal, deployment playbook, fleet install + go-live</div>
+            <div class="wf-step-tools">
+              <span class="wf-tool-chip" style="background:#f0fdf4;color:#166534;">Playbook</span>
+              <span class="wf-tool-chip" style="background:#ecfdf5;color:#065f46;">Monitoring</span>
+            </div>
+          </a>
+        </div>
+
+      </div>
+
+      <!-- ═══ Main Content: Map + Deal List ═══ -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+        <!-- Map (2/3 width) -->
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-2xl shadow-sm overflow-hidden" style="height: 480px; position: relative;">
+            <div class="absolute top-4 left-4 z-[500] bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-md">
+              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Deal Map</span>
+            </div>
+            <div id="cc-map" style="height: 100%; width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- Deal list (1/3 width) -->
+        <div class="bg-white rounded-2xl shadow-sm p-5 flex flex-col" style="max-height: 480px;">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Active Deals</h3>
+            <a href="/admin/deals" class="text-xs font-medium text-blue-600 hover:underline">View All</a>
+          </div>
+          <div class="flex-1 overflow-y-auto -mx-2" id="dealList">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ═══ Bottom row: Activity Feed + Quick Links ═══ -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Activity feed (2/3) -->
+        <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
+          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Recent Activity</h3>
+          <div id="activityFeed">
+            <p class="text-sm text-gray-400 py-4">Loading activity...</p>
+          </div>
+        </div>
+
+        <!-- Quick links (1/3) -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Quick Links</h3>
+          <div class="space-y-2">
+            <a href="/pages/robot-catalog.html" class="deal-row">
+              <span class="text-lg">&#129302;</span>
+              <div>
+                <div class="deal-name">Robot Catalog</div>
+                <div class="deal-meta">Browse fleet models + specs</div>
+              </div>
+            </a>
+            <a href="/admin/inquiries" class="deal-row">
+              <span class="text-lg">&#128233;</span>
+              <div>
+                <div class="deal-name">Inquiries</div>
+                <div class="deal-meta">Website contact submissions</div>
+              </div>
+            </a>
+            <a href="/pages/investor-crm.html" class="deal-row">
+              <span class="text-lg">&#128176;</span>
+              <div>
+                <div class="deal-name">Investor CRM</div>
+                <div class="deal-meta">Fundraise tracking</div>
+              </div>
+            </a>
+            <a href="/pages/pipeline-prospects.html" class="deal-row">
+              <span class="text-lg">&#127919;</span>
+              <div>
+                <div class="deal-name">Pipeline Prospects</div>
+                <div class="deal-meta">Lead generation targets</div>
+              </div>
+            </a>
+            <a href="/" class="deal-row">
+              <span class="text-lg">&#127760;</span>
+              <div>
+                <div class="deal-name">Public Website</div>
+                <div class="deal-meta">acceleraterobotics.com</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/admin-auth.js"></script>
+  <script>
+// ── Constants ───────────────────────────────────────────────────
+const STAGES = ['lead','qualified','site_walk','configured','proposed','negotiation','won','deploying','active','lost'];
+const STAGE_LABELS = {
+  lead:'Lead', qualified:'Qualified', site_walk:'Site Walk',
+  configured:'Configured', proposed:'Proposed', negotiation:'Negotiation',
+  won:'Won', deploying:'Deploying', active:'Active', lost:'Lost'
+};
+const STAGE_COLORS = {
+  lead:'#64748b', qualified:'#0891b2', site_walk:'#7c3aed',
+  configured:'#0055ff', proposed:'#d97706', negotiation:'#f59e0b',
+  won:'#16a34a', deploying:'#22c55e', active:'#059669', lost:'#dc2626'
+};
+
+// WHY: Hardcoded coords for known deal cities — same list as deals.js
+const CITY_COORDS = {
+  'miami_fl':[25.7617,-80.1918], 'sarasota_fl':[27.3364,-82.5307],
+  'san ramon_ca':[37.7799,-121.9780], 'lafayette_ca':[37.8858,-122.1180],
+  'berkeley_ca':[37.8716,-122.2727], 'sacramento_ca':[38.5816,-121.4944],
+  'los angeles_ca':[34.0522,-118.2437], 'san francisco_ca':[37.7749,-122.4194],
+  'new york_ny':[40.7128,-74.0060], 'chicago_il':[41.8781,-87.6298],
+  'houston_tx':[29.7604,-95.3698], 'dallas_tx':[32.7767,-96.7970],
+  'atlanta_ga':[33.7490,-84.3880], 'orlando_fl':[28.5383,-81.3792],
+  'denver_co':[39.7392,-104.9903], 'seattle_wa':[47.6062,-122.3321],
+  'boston_ma':[42.3601,-71.0589], 'nashville_tn':[36.1627,-86.7816],
+  'las vegas_nv':[36.1699,-115.1398], 'phoenix_az':[33.4484,-112.0740],
+  'san diego_ca':[32.7157,-117.1611], 'tampa_fl':[27.9506,-82.4572],
+  'fort lauderdale_fl':[26.1224,-80.1373], 'charlotte_nc':[35.2271,-80.8431],
+  'minneapolis_mn':[44.9778,-93.2650], 'portland_or':[45.5152,-122.6784],
+  'austin_tx':[30.2672,-97.7431], 'washington_dc':[38.9072,-77.0369],
+  'philadelphia_pa':[39.9526,-75.1652],
+};
+
+let deals = [];
+let ccMap = null;
+
+// ── Init ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const ok = await checkAuth();
+  if (!ok) return;
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('dashboard').classList.remove('hidden');
+  refreshAll();
+});
+
+async function refreshAll() {
+  try {
+    const res = await fetch('/api/deals');
+    if (!res.ok) throw new Error('Failed to fetch deals');
+    deals = await res.json();
+  } catch (e) {
+    console.error('Failed to load deals:', e);
+    deals = [];
+  }
+  renderStats();
+  renderWorkflowCounts();
+  renderDealList();
+  renderActivityFeed();
+  renderMap();
+  document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+// ── Stats row ───────────────────────────────────────────────────
+function renderStats() {
+  const active = deals.filter(d => !['lost'].includes(d.stage));
+  const total = active.length;
+  const leads = deals.filter(d => d.stage === 'lead').length;
+  const qualified = deals.filter(d => ['qualified','site_walk','configured'].includes(d.stage)).length;
+  const proposed = deals.filter(d => ['proposed','negotiation'].includes(d.stage)).length;
+  const won = deals.filter(d => ['won','deploying','active'].includes(d.stage)).length;
+
+  const totalMRR = deals
+    .filter(d => ['won','deploying','active'].includes(d.stage) && d.value_monthly)
+    .reduce((sum, d) => sum + Number(d.value_monthly), 0);
+
+  const stats = [
+    { val: total, lbl: 'Pipeline', color: '#111827' },
+    { val: leads, lbl: 'Leads', color: '#64748b' },
+    { val: qualified, lbl: 'Qualified', color: '#0891b2' },
+    { val: proposed, lbl: 'Proposed', color: '#d97706' },
+    { val: won, lbl: 'Won', color: '#16a34a' },
+    { val: totalMRR ? '$' + totalMRR.toLocaleString() : '$0', lbl: 'MRR', color: '#059669' },
+  ];
+
+  document.getElementById('statsRow').innerHTML = stats.map(s => `
+    <div class="stat-pill">
+      <span class="stat-val" style="color:${s.color}">${s.val}</span>
+      <span class="stat-lbl">${s.lbl}</span>
+    </div>
+  `).join('');
+}
+
+// ── Workflow step counts ────────────────────────────────────────
+// WHY: Maps deal pipeline stages to the 5-step sales workflow so the command
+// center shows how many deals are in each workflow phase at a glance.
+function renderWorkflowCounts() {
+  const prospect = deals.filter(d => d.stage === 'lead').length;
+  const v1 = deals.filter(d => ['qualified'].includes(d.stage)).length;
+  const assess = deals.filter(d => ['site_walk', 'configured'].includes(d.stage)).length;
+  const v2 = deals.filter(d => ['proposed', 'negotiation'].includes(d.stage)).length;
+  const deploy = deals.filter(d => ['won', 'deploying', 'active'].includes(d.stage)).length;
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('wf-count-prospect', prospect);
+  set('wf-count-v1', v1);
+  set('wf-count-assess', assess);
+  set('wf-count-v2', v2);
+  set('wf-count-deploy', deploy);
+}
+
+// ── Deal list (sidebar) ─────────────────────────────────────────
+function renderDealList() {
+  // WHY: Show active deals sorted by stage progression (most advanced first)
+  const sorted = deals
+    .filter(d => d.stage !== 'lost')
+    .sort((a, b) => STAGES.indexOf(b.stage) - STAGES.indexOf(a.stage));
+
+  document.getElementById('dealList').innerHTML = sorted.map(d => {
+    const color = STAGE_COLORS[d.stage] || '#64748b';
+    const label = STAGE_LABELS[d.stage] || d.stage;
+    const loc = [d.city, d.state].filter(Boolean).join(', ');
+    return `
+      <a href="/admin/deals/${d.id}" class="deal-row">
+        <span class="deal-dot" style="background:${color}"></span>
+        <div style="min-width:0;flex:1;">
+          <div class="deal-name">${escapeHtml(d.name)}</div>
+          <div class="deal-meta">${escapeHtml(loc || 'No location')} &middot; ${label}</div>
+        </div>
+        ${d.value_monthly ? `<span class="deal-meta">$${Number(d.value_monthly).toLocaleString()}/mo</span>` : ''}
+      </a>
+    `;
+  }).join('') || '<p class="text-sm text-gray-400 px-4 py-8 text-center">No deals yet</p>';
+}
+
+// ── Activity feed ───────────────────────────────────────────────
+function renderActivityFeed() {
+  // WHY: Build activity from deal data — last_activity fields
+  const activities = deals
+    .filter(d => d.last_activity_at)
+    .sort((a, b) => new Date(b.last_activity_at) - new Date(a.last_activity_at))
+    .slice(0, 12); // Last 12 activities
+
+  if (activities.length === 0) {
+    document.getElementById('activityFeed').innerHTML =
+      '<p class="text-sm text-gray-400 py-4">No recent activity</p>';
+    return;
+  }
+
+  document.getElementById('activityFeed').innerHTML = activities.map(d => {
+    const color = STAGE_COLORS[d.stage] || '#64748b';
+    const action = formatAction(d.last_activity_action);
+    const ago = timeAgo(d.last_activity_at);
+    return `
+      <div class="activity-item">
+        <span class="activity-dot" style="background:${color}"></span>
+        <div style="flex:1;min-width:0;">
+          <span style="font-weight:600;color:#111827;">${escapeHtml(d.name)}</span>
+          <span style="color:#6b7280;"> — ${action}</span>
+        </div>
+        <span class="activity-time">${ago}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatAction(action) {
+  const map = {
+    'deal_created': 'Deal created',
+    'stage_changed': 'Stage updated',
+    'deal_updated': 'Deal updated',
+    'note_added': 'Note added',
+    'contact_added': 'Contact added',
+  };
+  return map[action] || action?.replace(/_/g, ' ') || 'Activity';
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return days + 'd ago';
+  return new Date(dateStr).toLocaleDateString();
+}
+
+// ── Map ─────────────────────────────────────────────────────────
+function createStageIcon(stage) {
+  const color = STAGE_COLORS[stage] || '#64748b';
+  return L.divIcon({
+    className: 'deal-marker',
+    html: `<svg width="28" height="38" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+      <defs><filter id="ds-${stage}" x="-20%" y="-10%" width="140%" height="130%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.25"/>
+      </filter></defs>
+      <path d="M16 1C7.72 1 1 7.72 1 16c0 12 15 25 15 25s15-13 15-25C31 7.72 24.28 1 16 1z"
+            fill="${color}" filter="url(#ds-${stage})" stroke="white" stroke-width="1.5"/>
+      <circle cx="16" cy="16" r="5" fill="white"/>
+    </svg>`,
+    iconSize: [28, 38],
+    iconAnchor: [14, 38],
+    popupAnchor: [0, -34],
+  });
+}
+
+function renderMap() {
+  const container = document.getElementById('cc-map');
+  if (!container || typeof L === 'undefined') return;
+  requestAnimationFrame(() => initMap(container));
+}
+
+function initMap(container) {
+  if (!ccMap) {
+    ccMap = L.map('cc-map', { scrollWheelZoom: true, zoomControl: true }).setView([37, -96], 4);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19, subdomains: 'abcd',
+      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    }).addTo(ccMap);
+  }
+
+  ccMap.invalidateSize();
+  ccMap.eachLayer(layer => { if (layer instanceof L.Marker) ccMap.removeLayer(layer); });
+
+  const groups = {};
+  for (const d of deals) {
+    if (!d.city || !d.state) continue;
+    const key = (d.city + '_' + d.state).toLowerCase().trim();
+    const coords = CITY_COORDS[key];
+    if (!coords) continue;
+    if (!groups[key]) groups[key] = { coords, deals: [] };
+    groups[key].deals.push(d);
+  }
+
+  const allCoords = [];
+  for (const [, g] of Object.entries(groups)) {
+    g.deals.forEach((d, i) => {
+      const pos = [g.coords[0] + i * 0.008, g.coords[1] + i * 0.012];
+      allCoords.push(pos);
+      const marker = L.marker(pos, { icon: createStageIcon(d.stage) }).addTo(ccMap);
+      const sc = STAGE_COLORS[d.stage] || '#64748b';
+      marker.bindPopup(`
+        <div class="map-popup">
+          <div class="popup-name">${escapeHtml(d.name)}</div>
+          <div class="popup-meta">${escapeHtml(d.facility_type || 'Hotel')} &middot; ${escapeHtml(d.city||'')}${d.state?', '+escapeHtml(d.state):''}</div>
+          <span class="popup-stage" style="background:${sc}20;color:${sc}">${STAGE_LABELS[d.stage]||d.stage}</span>
+          ${d.value_monthly ? `<div class="popup-meta" style="margin-top:4px">$${Number(d.value_monthly).toLocaleString()}/mo</div>` : ''}
+          <a href="/admin/deals/${d.id}" class="popup-link">View Deal &rarr;</a>
+        </div>
+      `);
+    });
+  }
+
+  if (allCoords.length > 0) {
+    ccMap.fitBounds(allCoords, { padding: [40, 40], maxZoom: 12 });
+  }
+  setTimeout(() => ccMap.invalidateSize(), 250);
+}
+
+// ── Helpers ─────────────────────────────────────────────────────
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+  </script>
+</body>
+</html>

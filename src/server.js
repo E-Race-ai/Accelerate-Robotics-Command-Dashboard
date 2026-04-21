@@ -120,8 +120,12 @@ app.use('/api/assessments/:id/pdf', assessmentPdfRoutes);
 app.use('/api/narrate', narrateLimiter, narrateRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
-// WHY: Direct navigation to /admin or /admin-login should serve the HTML files
+// WHY: /admin is the master command center — unified dashboard for all tools
 app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-command-center.html'));
+});
+// WHY: Old admin dashboard (inquiries + recipients) moved to /admin/inquiries
+app.get('/admin/inquiries', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 app.get('/admin-login', (req, res) => {
