@@ -14,22 +14,34 @@ const recipientRoutes = require('./routes/recipients');
 const stockRoutes = require('./routes/stocks');
 const dealRoutes = require('./routes/deals');
 const facilityRoutes = require('./routes/facilities');
+const narrateRoutes = require('./routes/narrate');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ── Security ────────────────────────────────────────────────────
 app.use(helmet({
+  // WHY: Helmet defaults to 'no-referrer' which strips the Referer header entirely.
+  // OpenStreetMap tile servers require a Referer to serve tiles (anti-abuse policy).
+  // 'strict-origin-when-cross-origin' sends origin on cross-origin requests — enough for OSM.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      // WHY: Proposal pages use GSAP, Lenis, Tailwind, and inline scripts for interactivity
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
+      // WHY: unpkg.com added for Leaflet CSS (deal map view)
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https://img.youtube.com"],
+      // WHY: Proposal pages embed robot product images from manufacturer CDNs and Google favicons
+      imgSrc: ["'self'", "data:", "https://img.youtube.com", "https:", "http:"],
       connectSrc: ["'self'"],
       // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) require iframe permission
       frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
+      // WHY: Helmet defaults script-src-attr to 'none', which blocks ALL inline event
+      // handlers (onclick, onchange, etc.) even when script-src allows 'unsafe-inline'.
+      // Our admin pages use onclick handlers extensively — allow them.
+      scriptSrcAttr: ["'unsafe-inline'"],
     },
   },
 }));
@@ -50,8 +62,39 @@ const inquiryLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// ── Static files ────────────────────────────────────────────────
+// WHY: 10 proposals per IP per hour — generous for iteration, prevents abuse
+const narrateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many narration requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ── Static files ───────────────��────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
+// WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
+app.use('/pages', express.static(path.join(__dirname, '..', 'pages')));
+
+// WHY: Serve each hotel repo so proposal pages (with relative asset paths) work correctly from the deals dashboard
+const HOTEL_REPOS_DIR = path.join(__dirname, '..', '..');
+const hotelRepos = [
+  'accelerate-thesis-hotel',
+  'accelerate-moore-miami',
+  'accelerate-art-ovation',
+  'accelerate-san-ramon-marriott',
+  'accelerate-lafayette-park',
+  'accelerate-claremont-resort',
+  'accelerate-kimpton-sawyer',
+  'accelerate-citizen-hotel',
+  'accelerate-westin-sacramento',
+  'accelerate-westin-sarasota',
+  'accelerate-hotel-template',
+];
+for (const repo of hotelRepos) {
+  const repoPath = path.join(HOTEL_REPOS_DIR, repo);
+  app.use(`/repos/${repo}`, express.static(repoPath));
+}
 
 // ── API routes ──────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -64,6 +107,7 @@ app.use('/api/recipients', recipientRoutes);
 app.use('/api/stocks', stockRoutes);
 app.use('/api/deals', dealRoutes);
 app.use('/api/facilities', facilityRoutes);
+app.use('/api/narrate', narrateLimiter, narrateRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
 // WHY: Direct navigation to /admin or /admin-login should serve the HTML files
