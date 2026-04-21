@@ -15,6 +15,7 @@ const stockRoutes = require('./routes/stocks');
 const dealRoutes = require('./routes/deals');
 const facilityRoutes = require('./routes/facilities');
 const assessmentRoutes = require('./routes/assessments');
+const assessmentPhotoRoutes = require('./routes/assessment-photos');
 const narrateRoutes = require('./routes/narrate');
 
 const app = express();
@@ -109,6 +110,9 @@ app.use('/api/stocks', stockRoutes);
 app.use('/api/deals', dealRoutes);
 app.use('/api/facilities', facilityRoutes);
 app.use('/api/assessments', assessmentRoutes);
+// WHY: Must be mounted AFTER assessmentRoutes so /meta/team and /:id routes in assessmentRoutes
+// are registered first. mergeParams on the photo router gives it access to :id.
+app.use('/api/assessments/:id/photos', assessmentPhotoRoutes);
 app.use('/api/narrate', narrateLimiter, narrateRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
