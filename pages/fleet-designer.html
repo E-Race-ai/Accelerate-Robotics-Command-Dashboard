@@ -913,6 +913,409 @@ async function loadRobots() {
 
 
 // ─────────────────────────────────────────────────────────────
+// Recommendation Engine — Task 4
+// ─────────────────────────────────────────────────────────────
+
+// WHY 2850: median RaaS monthly estimate across the catalog when
+// no public price is available — conservative middle ground
+const DEFAULT_RAAS_MONTHLY = 2850;
+
+// Module-level state for the current fleet recommendation
+let currentSlots = [];
+
+// ── GOALS constant — maps each goal ID to filtering/scoring config ──
+const GOALS = {
+    'goal-roomservice': {
+        categories: ['delivery_robot', 'hotel_delivery_robot'],
+        requireElevator: true,
+        defaultSavings: 3800, // WHY: one FTE room-service runner costs ~$3,800/mo loaded
+        type: 'delivery',
+        serviceLine: 'Room Service'
+    },
+    'goal-corridor': {
+        categories: ['cleaning_robot'],
+        requireElevator: true,
+        requireKeyword: /carpet|vacuum|corridor/i,
+        defaultSavings: 4200, // WHY: EVS corridor labor for a 200+ room hotel
+        type: 'cleaning',
+        serviceLine: 'Corridor Cleaning'
+    },
+    'goal-lobby': {
+        categories: ['cleaning_robot'],
+        requireElevator: false,
+        requireKeyword: /scrub|mop|hard.?floor|lobby|polish/i,
+        defaultSavings: 3500, // WHY: lobby/public-area cleaning shift cost
+        type: 'cleaning',
+        serviceLine: 'Lobby Floor Care'
+    },
+    'goal-wow': {
+        categories: ['service_robot', 'social_robot', 'telepresence_robot'],
+        requireElevator: false,
+        defaultSavings: 1500, // WHY: guest satisfaction / NPS uplift proxy, not direct labor
+        type: 'service',
+        serviceLine: 'Guest Experience'
+    },
+    'goal-linen': {
+        categories: ['hospital_logistics_robot', 'delivery_robot', 'hotel_delivery_robot'],
+        requireElevator: true,
+        minPayloadKg: 20, // WHY: a linen cart load is ~20-40 kg minimum
+        defaultSavings: 4500, // WHY: linen runner FTE cost + overtime
+        type: 'logistics',
+        serviceLine: 'Linen & Supply'
+    },
+    'goal-security': {
+        categories: ['security_robot'],
+        requireElevator: false,
+        defaultSavings: 5000, // WHY: overnight security guard shift cost
+        type: 'security',
+        serviceLine: 'Security'
+    },
+    'goal-disinfection': {
+        categories: ['disinfection_robot'],
+        requireElevator: false,
+        defaultSavings: 3000, // WHY: infection control labor + chemical savings
+        type: 'cleaning',
+        serviceLine: 'Disinfection'
+    },
+    'goal-outdoor': {
+        categories: [], // WHY: filter by outdoor_capable flag instead of category
+        requireOutdoor: true,
+        defaultSavings: 2500, // WHY: grounds crew partial offset
+        type: 'service',
+        serviceLine: 'Outdoor Service'
+    },
+    'goal-pool': {
+        categories: ['outdoor_cleaning_robot', 'pool_cleaning_robot'],
+        requireOutdoor: true,
+        defaultSavings: 2000, // WHY: pool maintenance labor savings
+        type: 'cleaning',
+        serviceLine: 'Pool & Amenity'
+    }
+};
+
+
+// ─────────────────────────────────────────────────────────────
+// scoreRobot — returns {score: 0-100, breakdown: {...}, monthlyEstimate}
+//
+// Five weighted factors that sum to 100:
+//   Category relevance (30%), Import risk (25%), Price fit (20%),
+//   Spec match (15%), Market validation (10%)
+// ─────────────────────────────────────────────────────────────
+function scoreRobot(robot, goal, budgetPerSlot) {
+    const breakdown = {};
+
+    // ── 1. Category relevance (30%) ──────────────────────────────
+    let catScore = 0;
+    if (goal.categories.length > 0 && goal.categories.includes(robot.primary_category)) {
+        catScore = 100; // exact primary_category match
+    } else {
+        // Check use-case keyword match
+        const useCases = (robot.primary_use_cases || []).join(' ').toLowerCase();
+        const differentiators = (robot.key_differentiators || []).join(' ').toLowerCase();
+        const combined = useCases + ' ' + differentiators + ' ' + (robot.notes || '').toLowerCase();
+
+        if (goal.requireKeyword && goal.requireKeyword.test(combined)) {
+            catScore = 70;
+        } else if (goal.categories.length === 0 && goal.requireOutdoor && robot.outdoor_capable) {
+            // WHY: outdoor goal has empty categories — outdoor_capable IS the relevance signal
+            catScore = 100;
+        } else {
+            // Check if robot targets hospitality
+            const industries = (robot.target_industries || []).join(' ').toLowerCase();
+            if (/hotel|hospitality|hostel|resort/i.test(industries)) {
+                catScore = 40;
+            }
+        }
+    }
+    breakdown.categoryRelevance = catScore;
+
+    // ── 2. Import risk (25%) ─────────────────────────────────────
+    // Lower risk = higher score. Risk score is 0-10, so invert it.
+    const riskScore = robot.import_risk_score != null ? robot.import_risk_score : 5;
+    const importScore = Math.max(0, Math.min(100, (10 - riskScore) * 10));
+    breakdown.importRisk = Math.round(importScore);
+
+    // ── 3. Price fit (20%) ───────────────────────────────────────
+    const monthlyEstimate = parseMonthlyPrice(robot.public_price, DEFAULT_RAAS_MONTHLY);
+    let priceScore = 0;
+    if (budgetPerSlot > 0) {
+        const ratio = monthlyEstimate / budgetPerSlot;
+        if (ratio <= 1) {
+            // Under budget: 60 base + proportional bonus up to 100
+            // WHY: prefer robots that use the budget well (not too cheap = likely underspec)
+            priceScore = 60 + Math.round(ratio * 40);
+        } else {
+            // Over budget: penalize linearly, floor at 0
+            priceScore = Math.max(0, Math.round(100 - (ratio - 1) * 100));
+        }
+    } else {
+        priceScore = 50; // No budget info — neutral
+    }
+    breakdown.priceFit = priceScore;
+
+    // ── 4. Spec match (15%) ──────────────────────────────────────
+    // Sum raw points, then normalize to 0-100 (max possible = 115)
+    let specPoints = 0;
+    const MAX_SPEC_POINTS = 115;
+
+    if (goal.requireElevator && robot.elevator_integration) {
+        specPoints += 30;
+    }
+    if (goal.minPayloadKg && robot.payload_kg >= goal.minPayloadKg) {
+        specPoints += 20;
+    } else if (!goal.minPayloadKg && robot.payload_kg > 0) {
+        specPoints += 10; // any payload data is a mild positive
+    }
+    if (robot.runtime_hours >= 6) {
+        specPoints += 20; // WHY: 6h minimum for a useful shift
+    }
+    if (robot.fleet_management) {
+        specPoints += 15;
+    }
+    if (goal.requireOutdoor && robot.outdoor_capable) {
+        specPoints += 30;
+    }
+
+    const specScore = Math.round((specPoints / MAX_SPEC_POINTS) * 100);
+    breakdown.specMatch = specScore;
+
+    // ── 5. Market validation (10%) ───────────────────────────────
+    let marketScore = 0;
+    if (robot.status === 'commercially_available') {
+        marketScore = 60;
+    } else if (robot.status === 'limited_production' || robot.status === 'early_access') {
+        marketScore = 30;
+    }
+    // Deployment evidence in notes
+    const notes = (robot.notes || '').toLowerCase();
+    if (/deploy|install|operat|live|running|active fleet/i.test(notes)) {
+        marketScore += 20;
+    }
+    // Named customers
+    if (/hilton|marriott|hyatt|ihg|accor|starwood|four seasons|ritz|intercontinental|westin/i.test(notes)) {
+        marketScore += 20;
+    }
+    breakdown.marketValidation = Math.min(100, marketScore);
+
+    // ── Weighted total ───────────────────────────────────────────
+    const total = Math.round(
+        breakdown.categoryRelevance * 0.30 +
+        breakdown.importRisk * 0.25 +
+        breakdown.priceFit * 0.20 +
+        breakdown.specMatch * 0.15 +
+        breakdown.marketValidation * 0.10
+    );
+
+    return {
+        score: Math.min(100, Math.max(0, total)),
+        breakdown,
+        monthlyEstimate
+    };
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// generateFleet — reads form inputs, filters/scores/selects per goal
+// ─────────────────────────────────────────────────────────────
+function generateFleet(robots) {
+    const activeGoals = [...document.querySelectorAll('.goal-chip.active')].map(c => c.id);
+    const floors = parseInt(document.getElementById('prop-floors').value, 10) || 1;
+    const elevators = parseInt(document.getElementById('prop-elevators').value, 10) || 0;
+    const budgetMin = parseInt(document.getElementById('budget-min').value, 10) || 5000;
+    const budgetMax = parseInt(document.getElementById('budget-max').value, 10) || 50000;
+
+    // WHY: divide max budget evenly across goals to get per-slot budget ceiling
+    const budgetPerSlot = activeGoals.length > 0 ? budgetMax / activeGoals.length : budgetMax;
+
+    const isMultiFloor = floors > 1;
+
+    const slots = [];
+
+    for (const goalId of activeGoals) {
+        const goal = GOALS[goalId];
+        if (!goal) continue;
+
+        // ── Filter candidates ────────────────────────────────
+        const candidates = robots.filter(robot => {
+            // Status gate: only production-ready or near-ready
+            const validStatuses = ['commercially_available', 'limited_production', 'early_access'];
+            if (!validStatuses.includes(robot.status)) return false;
+
+            // Category or keyword match
+            let categoryMatch = false;
+            if (goal.categories.length > 0) {
+                categoryMatch = goal.categories.includes(robot.primary_category);
+            }
+            if (!categoryMatch && goal.requireKeyword) {
+                const text = [
+                    ...(robot.primary_use_cases || []),
+                    ...(robot.key_differentiators || []),
+                    robot.notes || ''
+                ].join(' ');
+                categoryMatch = goal.requireKeyword.test(text);
+            }
+            // WHY: outdoor goal uses outdoor_capable as primary filter, not category
+            if (!categoryMatch && goal.categories.length === 0 && goal.requireOutdoor) {
+                categoryMatch = robot.outdoor_capable === true;
+            }
+            if (!categoryMatch) return false;
+
+            // Elevator requirement: if multi-floor and goal needs elevator access
+            if (goal.requireElevator && isMultiFloor && elevators > 0) {
+                // Don't hard-exclude — but this will be scored in specMatch
+                // Only exclude if building has NO elevators (robot literally can't reach floors)
+            }
+
+            // Outdoor requirement
+            if (goal.requireOutdoor && !robot.outdoor_capable) return false;
+
+            // Payload minimum
+            if (goal.minPayloadKg && robot.payload_kg < goal.minPayloadKg) return false;
+
+            return true;
+        });
+
+        // ── Score each candidate ─────────────────────────────
+        const scored = candidates.map(robot => {
+            const result = scoreRobot(robot, goal, budgetPerSlot);
+            return { robot, ...result };
+        });
+
+        // ── Sort by score descending, take top 3 ─────────────
+        scored.sort((a, b) => b.score - a.score);
+        const top3 = scored.slice(0, 3);
+
+        const selected = top3[0] || null;
+        const alternatives = top3.slice(1);
+
+        slots.push({
+            goalId,
+            label: goal.serviceLine,
+            type: goal.type,
+            serviceLine: goal.serviceLine,
+            defaultSavings: goal.defaultSavings,
+            savings: goal.defaultSavings,
+            selected: selected ? {
+                robot: selected.robot,
+                score: selected.score,
+                breakdown: selected.breakdown,
+                monthlyEstimate: selected.monthlyEstimate
+            } : null,
+            alternatives: alternatives.map(a => ({
+                robot: a.robot,
+                score: a.score,
+                breakdown: a.breakdown,
+                monthlyEstimate: a.monthlyEstimate
+            })),
+            allCandidates: candidates.length
+        });
+    }
+
+    return slots;
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// renderFleet — displays results in the right panel
+// ─────────────────────────────────────────────────────────────
+function renderFleet(slots) {
+    const emptyState = document.getElementById('empty-state');
+    const summaryStrip = document.getElementById('summary-strip');
+    const exportBar = document.getElementById('export-bar');
+    const fleetSlotsContainer = document.getElementById('fleet-slots');
+
+    // Hide empty state, show summary and export
+    emptyState.style.display = 'none';
+    summaryStrip.style.display = 'flex';
+    exportBar.style.display = 'flex';
+
+    // ── Summary calculations ─────────────────────────────────
+    let totalRobots = 0;
+    let totalMonthlyCost = 0;
+    let totalAnnualSavings = 0;
+
+    for (const slot of slots) {
+        if (slot.selected) {
+            totalRobots++;
+            totalMonthlyCost += slot.selected.monthlyEstimate;
+            totalAnnualSavings += slot.savings * 12;
+        }
+    }
+
+    const annualCost = totalMonthlyCost * 12;
+    // WHY: ROI multiple = annual savings / annual cost — how many times the investment pays back
+    const roiMultiple = annualCost > 0 ? (totalAnnualSavings / annualCost) : 0;
+
+    // Update summary chips
+    document.getElementById('sum-robots').textContent = totalRobots;
+    document.getElementById('sum-raas').textContent = '$' + totalMonthlyCost.toLocaleString('en-US');
+    document.getElementById('sum-savings').textContent = '$' + totalAnnualSavings.toLocaleString('en-US');
+    document.getElementById('sum-roi').textContent = roiMultiple.toFixed(1) + 'x';
+
+    // ── Render fleet slots ───────────────────────────────────
+    fleetSlotsContainer.innerHTML = '';
+
+    slots.forEach((slot, idx) => {
+        const slotEl = document.createElement('div');
+        slotEl.className = 'fleet-slot';
+        slotEl.dataset.slotIndex = idx;
+
+        if (!slot.selected) {
+            slotEl.innerHTML = `
+                <div class="slot-num">${idx + 1}</div>
+                <div class="slot-info">
+                    <div class="slot-role">${slot.label}</div>
+                    <div class="slot-robot">No suitable robot found</div>
+                    <div class="slot-meta">0 candidates in catalog</div>
+                </div>
+            `;
+        } else {
+            const robot = slot.selected.robot;
+            const score = slot.selected.score;
+            const monthlyEst = slot.selected.monthlyEstimate;
+            const riskScore = robot.import_risk_score != null ? robot.import_risk_score : 5;
+            const riskClass = riskScore <= 3 ? 'risk-low' : riskScore <= 6 ? 'risk-med' : 'risk-high';
+            const riskLabel = riskScore <= 3 ? 'Low' : riskScore <= 6 ? 'Med' : 'High';
+            const useCases = (robot.primary_use_cases || []).slice(0, 2).join(', ');
+            const altCount = slot.alternatives.length;
+            const elevatorIcon = robot.elevator_integration ? '🛗' : '';
+
+            slotEl.innerHTML = `
+                <div class="slot-num">${idx + 1}</div>
+                <div class="slot-info">
+                    <div class="slot-role">${slot.label}</div>
+                    <div class="slot-robot">${robot.company} ${robot.model_name}</div>
+                    <div class="slot-meta">
+                        ${useCases ? `<span class="meta-uses">${useCases}</span>` : ''}
+                        ${elevatorIcon ? `<span class="meta-elevator">${elevatorIcon}</span>` : ''}
+                        <span class="meta-risk ${riskClass}">Risk: ${riskLabel}</span>
+                        <span class="meta-score">Score: ${score}</span>
+                    </div>
+                </div>
+                <div class="slot-price">
+                    <span class="amount">$${monthlyEst.toLocaleString('en-US')}</span>
+                    <span class="period">/mo</span>
+                </div>
+                ${altCount > 0 ? `<div class="slot-swap" data-slot="${idx}">compare ${altCount} &rarr;</div>` : ''}
+            `;
+        }
+
+        fleetSlotsContainer.appendChild(slotEl);
+
+        // Comparison div placeholder for Task 5
+        const compDiv = document.createElement('div');
+        compDiv.className = 'comparison';
+        compDiv.id = `comp-${idx}`;
+        compDiv.style.display = 'none';
+        fleetSlotsContainer.appendChild(compDiv);
+    });
+
+    // Store current slots for other tasks (export, comparison)
+    currentSlots = slots;
+}
+
+
+// ─────────────────────────────────────────────────────────────
 // Goal chips — toggle .active class + aria-checked
 // ─────────────────────────────────────────────────────────────
 function initGoalChips() {
@@ -987,23 +1390,32 @@ function initBudgetDisplays() {
 
 
 // ─────────────────────────────────────────────────────────────
-// Generate button — placeholder (Task 4 will add real logic)
+// Generate button — wired to recommendation engine
 // ─────────────────────────────────────────────────────────────
 function initGenerateButton() {
     const btn = document.getElementById('generate-btn');
     btn.addEventListener('click', () => {
-        console.log('Generate clicked', {
-            propertyName:  document.getElementById('prop-name').value,
-            rooms:         document.getElementById('prop-rooms').value,
-            floors:        document.getElementById('prop-floors').value,
-            guestFloors:   document.getElementById('prop-guest-floors').value,
-            elevators:     document.getElementById('prop-elevators').value,
-            budgetMin:     document.getElementById('budget-min').value,
-            budgetMax:     document.getElementById('budget-max').value,
-            goals:         [...document.querySelectorAll('.goal-chip.active')].map(c => c.dataset.goal),
-            surfaces:      [...document.querySelectorAll('.surface-chip input:checked')].map(c => c.value),
-        });
-        // Task 4 will replace this placeholder
+        // Validate: at least one goal must be active
+        const activeGoals = document.querySelectorAll('.goal-chip.active');
+        if (activeGoals.length === 0) {
+            // WHY: brief visual feedback without modal — shake the goals section
+            const goalsGrid = document.querySelector('.goals-grid');
+            goalsGrid.style.outline = '2px solid var(--red)';
+            goalsGrid.style.outlineOffset = '4px';
+            goalsGrid.style.borderRadius = '10px';
+            setTimeout(() => {
+                goalsGrid.style.outline = 'none';
+            }, 1500);
+            return;
+        }
+
+        if (allRobots.length === 0) {
+            console.warn('[Fleet Designer] No robots loaded — cannot generate fleet');
+            return;
+        }
+
+        const slots = generateFleet(allRobots);
+        renderFleet(slots);
     });
 }
 
