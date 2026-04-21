@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prospect Pipeline — Accelerate Robotics</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #252530;
+    --text: #e8e4df;
+    --dim: #8a8a9a;
+    --accent: #00d4ff;
+    --green: #00e676;
+    --amber: #ffab00;
+    --red: #ff5252;
+    --blue: #448aff;
+    --purple: #b388ff;
+    --pink: #ff80ab;
+    --teal: #64ffda;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    padding: 72px 40px 56px;
+    text-align: center;
+    background: linear-gradient(135deg, #0a0a0f 0%, #0d1015 50%, #0a0a0f 100%);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(ellipse at 30% 40%, rgba(0,212,255,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 60%, rgba(0,230,118,0.03) 0%, transparent 50%);
+    animation: drift 25s ease-in-out infinite alternate;
+  }
+  @keyframes drift { 0%{transform:translate(0,0)} 100%{transform:translate(-20px,15px)} }
+  .hero h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    position: relative; z-index: 1;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero .subtitle {
+    color: var(--dim);
+    font-size: 1rem;
+    margin-top: 10px;
+    position: relative; z-index: 1;
+  }
+  .hero .datestamp {
+    display: inline-block;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    color: var(--accent);
+    padding: 6px 18px;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 20px;
+    position: relative; z-index: 1;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* Container */
+  .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+
+  /* KPI Strip */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: -32px 24px 0;
+    position: relative; z-index: 2;
+  }
+  .kpi {
+    background: var(--surface);
+    padding: 24px 16px;
+    text-align: center;
+  }
+  .kpi-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+  .kpi-value.green { color: var(--green); }
+  .kpi-value.amber { color: var(--amber); }
+  .kpi-value.purple { color: var(--purple); }
+  .kpi-label {
+    font-size: 0.75rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* Filter Bar */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 24px;
+    margin-top: 24px;
+  }
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active { background: rgba(0,212,255,0.12); border-color: var(--accent); color: var(--accent); }
+
+  /* Market Sections */
+  .market-section {
+    margin: 48px 0;
+    padding: 0 24px;
+  }
+  .market-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .market-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  .market-badge {
+    font-size: 0.7rem;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .market-stats {
+    margin-left: auto;
+    display: flex;
+    gap: 24px;
+    font-size: 0.85rem;
+    color: var(--dim);
+  }
+  .market-stats strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .market-note {
+    font-size: 0.8rem;
+    color: var(--dim);
+    font-style: italic;
+    margin-bottom: 16px;
+    padding: 10px 16px;
+    background: rgba(255,171,0,0.05);
+    border-left: 3px solid var(--amber);
+    border-radius: 0 8px 8px 0;
+  }
+
+  /* Prospect Cards */
+  .prospect-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 16px;
+  }
+  .prospect-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+    overflow: hidden;
+  }
+  .prospect-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .prospect-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    border-radius: 12px 0 0 12px;
+  }
+  .prospect-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .prospect-monogram {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .prospect-identity { flex: 1; min-width: 0; }
+  .prospect-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .prospect-location {
+    font-size: 0.8rem;
+    color: var(--dim);
+    margin-top: 2px;
+  }
+  .prospect-brand {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+  .brand-soft { background: rgba(0,212,255,0.1); color: var(--accent); }
+  .brand-luxury { background: rgba(179,136,255,0.1); color: var(--purple); }
+  .brand-independent { background: rgba(0,230,118,0.1); color: var(--green); }
+  .brand-chain { background: rgba(138,138,154,0.1); color: var(--dim); }
+
+  .prospect-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 14px 0;
+    padding: 12px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+  }
+  .metric { text-align: center; }
+  .metric-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .metric-label {
+    font-size: 0.65rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .prospect-signal {
+    font-size: 0.8rem;
+    color: var(--dim);
+    line-height: 1.5;
+  }
+  .prospect-signal strong { color: var(--accent); font-weight: 600; }
+
+  .prospect-mgmt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    font-size: 0.75rem;
+    color: var(--dim);
+  }
+  .prospect-mgmt .mgmt-icon {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.55rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .prospect-mgmt .portfolio-tag {
+    background: rgba(255,171,0,0.1);
+    color: var(--amber);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.65rem;
+    margin-left: auto;
+  }
+
+  /* Operator Plays Section */
+  .operator-section {
+    margin: 56px 0;
+    padding: 0 24px;
+  }
+  .section-title {
+    font-size: 0.8rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .operator-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+  }
+  .operator-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .operator-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .operator-props {
+    font-size: 0.8rem;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+  .operator-props strong { color: var(--text); }
+
+  /* Cluster Summary */
+  .cluster-summary {
+    margin: 48px 0;
+    padding: 0 24px;
+  }
+  .cluster-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .cluster-table th {
+    background: var(--surface);
+    padding: 14px 20px;
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--dim);
+    font-weight: 600;
+  }
+  .cluster-table td {
+    padding: 14px 20px;
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border);
+  }
+  .cluster-table tr:hover td { background: rgba(0,212,255,0.03); }
+  .cluster-table .total-row td {
+    background: var(--surface);
+    font-weight: 700;
+    color: var(--accent);
+    border-top: 2px solid var(--accent);
+  }
+
+  /* Print */
+  .print-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,212,255,0.3);
+    transition: transform 0.2s;
+  }
+  .print-btn:hover { transform: scale(1.05); }
+
+  @media print {
+    body { background: #fff; color: #111; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .hero { background: #f8f8f8; border-bottom: 2px solid #ddd; padding: 40px 24px 32px; }
+    .hero h1 { color: #111; font-size: 1.8rem; }
+    .hero h1 span { color: #0088aa; }
+    .hero .subtitle { color: #666; }
+    .hero .datestamp { background: #f0f0f0; border-color: #ddd; color: #0088aa; }
+    .hero::before { display: none; }
+    .kpi-strip { background: #ddd; margin: -20px 16px 0; }
+    .kpi { background: #fff; }
+    .kpi-value { color: #0088aa; font-size: 1.4rem; }
+    .kpi-value.green { color: #00a060; }
+    .kpi-value.amber { color: #b87700; }
+    .kpi-value.purple { color: #7744bb; }
+    .kpi-label { color: #666; }
+    .filter-bar { display: none; }
+    .print-btn { display: none; }
+    .market-section { break-inside: avoid; margin: 32px 0; }
+    .market-header { border-bottom-color: #ddd; }
+    .market-name { color: #111; }
+    .market-note { background: #fef9e7; border-left-color: #b87700; }
+    .prospect-card { background: #fafafa; border-color: #ddd; break-inside: avoid; }
+    .prospect-card:hover { transform: none; border-color: #ddd; }
+    .prospect-card::before { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .prospect-metrics { background: #f0f0f0; }
+    .metric-value { color: #111; }
+    .prospect-signal { color: #444; }
+    .prospect-signal strong { color: #0088aa; }
+    .operator-card { background: #fafafa; border-color: #ddd; break-inside: avoid; }
+    .operator-name { color: #0088aa; }
+    .cluster-table { border-color: #ddd; }
+    .cluster-table th { background: #f0f0f0; color: #666; }
+    .cluster-table td { border-color: #ddd; color: #111; }
+    .cluster-table .total-row td { background: #f0f0f0; color: #0088aa; border-top-color: #0088aa; }
+    .prospect-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>Prospect <span>Pipeline</span></h1>
+  <div class="subtitle">Expansion targets across 14 markets &mdash; research-qualified against ICP</div>
+  <div class="datestamp">Generated April 18, 2026</div>
+</div>
+
+<!-- KPI Strip -->
+<div class="container">
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-value">14</div>
+      <div class="kpi-label">Markets</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value">67</div>
+      <div class="kpi-label">Prospects</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value green">~19,800</div>
+      <div class="kpi-label">Total Keys</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value amber">7</div>
+      <div class="kpi-label">Clusters</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value purple">8+</div>
+      <div class="kpi-label">Portfolio Operators</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="container">
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterMarket('all')">All Markets</button>
+    <button class="filter-btn" onclick="filterMarket('sf-bay')">SF Bay Area</button>
+    <button class="filter-btn" onclick="filterMarket('sacramento')">Sacramento</button>
+    <button class="filter-btn" onclick="filterMarket('la-west')">LA West</button>
+    <button class="filter-btn" onclick="filterMarket('san-diego')">San Diego</button>
+    <button class="filter-btn" onclick="filterMarket('south-fl')">South Florida</button>
+    <button class="filter-btn" onclick="filterMarket('gulf-fl')">Gulf Coast FL</button>
+    <button class="filter-btn" onclick="filterMarket('dallas')">Dallas</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SAN FRANCISCO BAY AREA                                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<div class="container">
+
+<!-- San Francisco -->
+<div class="market-section" data-cluster="sf-bay">
+  <div class="market-header">
+    <div class="market-name">San Francisco</div>
+    <div class="market-badge" style="background:rgba(0,212,255,0.1);color:var(--accent);">California</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>2,662</strong> keys</span>
+    </div>
+  </div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card" style="--accent-color:#c9a96e;">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c9a96e;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#c9a96e;">FM</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Fairmont San Francisco</div>
+          <div class="prospect-location">950 Mason St, Nob Hill</div>
+          <span class="prospect-brand brand-luxury">FAIRMONT / ACCOR</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">606</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">23</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Luxury flagship, 3 restaurants, 55K sq ft events, highest key count in any market</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">A</div> Accor / Fairmont</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--purple);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:var(--purple);">PH</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Palace Hotel</div>
+          <div class="prospect-location">2 New Montgomery St, SoMa</div>
+          <span class="prospect-brand brand-luxury">LUXURY COLLECTION / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">556</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">9</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 3 grand ballrooms, 44K sq ft events, near Moscone Convention Center</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:var(--blue);">IC</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">InterContinental San Francisco</div>
+          <div class="prospect-location">888 Howard St, SoMa</div>
+          <span class="prospect-brand brand-luxury">INTERCONTINENTAL / IHG</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">550</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">32</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Tallest single-building in SF, Michelin-starred Luce, spa, Club Lounge</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">I</div> IHG Hotels <span class="portfolio-tag">6 IHG prospects</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--teal);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#2d6a6a;">NK</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Hotel Nikko San Francisco</div>
+          <div class="prospect-location">222 Mason St, Union Square</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT / OKURA NIKKO</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">532</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">25</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Japanese-managed, Imperial Club premium tier, quality-conscious operator</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">O</div> Okura Nikko Hotels</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1a6b3a;">BG</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Beacon Grand</div>
+          <div class="prospect-location">450 Powell St, Union Square</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT / NORTHVIEW</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">418</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">21</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Starlite rooftop bar (fl 21), 17K sq ft events, independent operator = fast decisions</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">N</div> Northview Hotel Group</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Walnut Creek -->
+<div class="market-section" data-cluster="sf-bay">
+  <div class="market-header">
+    <div class="market-name">Walnut Creek</div>
+    <div class="market-badge" style="background:rgba(0,212,255,0.1);color:var(--accent);">California</div>
+    <div class="market-stats">
+      <span><strong>3</strong> prospects</span>
+      <span><strong>766</strong> keys</span>
+    </div>
+  </div>
+  <div class="market-note">Thin market &mdash; extends existing East Bay pipeline (San Ramon Marriott, Lafayette Park, Claremont)</div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1e40af;">WM</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Walnut Creek Marriott</div>
+          <div class="prospect-location">2355 N. Main St, Walnut Creek</div>
+          <span class="prospect-brand brand-chain">MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">342</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">6</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Largest in market, 18K sq ft meetings, Atrio restaurant</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">W</div> WCG Hotels</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#0e7490;">RW</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Renaissance Walnut Creek</div>
+          <div class="prospect-location">2805 Jones Rd, Walnut Creek</div>
+          <span class="prospect-brand brand-soft">RENAISSANCE / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">175</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Lifestyle brand, spa, 3 pools, Bay Club fitness campus integration</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">B</div> The Bay Club</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#6366f1;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#4338ca;">ES</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Embassy Suites Walnut Creek</div>
+          <div class="prospect-location">1345 Treat Blvd, Walnut Creek</div>
+          <span class="prospect-brand brand-chain">EMBASSY SUITES / HILTON</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">249</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">8</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> All-suite, 8-story atrium, 2 daily F&amp;B services, 7K sq ft events</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">H</div> Hilton</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Sacramento -->
+<div class="market-section" data-cluster="sacramento">
+  <div class="market-header">
+    <div class="market-name">Sacramento</div>
+    <div class="market-badge" style="background:rgba(0,212,255,0.1);color:var(--accent);">California</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>1,385</strong> keys</span>
+    </div>
+  </div>
+  <div class="market-note">Extends existing Sacramento pipeline (Kimpton Sawyer, Citizen Hotel, Westin Sacramento)</div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#b45309;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#b45309;">HR</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Hyatt Regency Sacramento</div>
+          <div class="prospect-location">1209 L St, Downtown</div>
+          <span class="prospect-brand brand-chain">HYATT REGENCY</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">505</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">15</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Largest in market, spa, convention-adjacent, Regency Club lounge (fl 12)</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">H</div> Hyatt Hotels Corp</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#7c3aed;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#7c3aed;">SG</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Sheraton Grand Sacramento</div>
+          <div class="prospect-location">1230 J St, Downtown</div>
+          <span class="prospect-brand brand-chain">SHERATON GRAND / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">503</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">27</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Tallest hotel in Sacramento (27 floors), farm-to-table restaurant, ballroom</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott (Sheraton)</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--amber);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#92400e;">HC</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Hyatt Centric Downtown Sacramento</div>
+          <div class="prospect-location">1122 7th St, Downtown</div>
+          <span class="prospect-brand brand-soft">HYATT CENTRIC</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">172</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">11</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Lifestyle soft brand, rooftop lounge, managed by Aimbridge/Evolution</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">A</div> Aimbridge Hospitality <span class="portfolio-tag">3 Aimbridge prospects</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#0e7490;">EX</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Exchange Sacramento</div>
+          <div class="prospect-location">1006 4th St, Downtown</div>
+          <span class="prospect-brand brand-soft">CURIO COLLECTION / HILTON</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">100</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">10</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Curio soft brand in historic 10-story building, boutique operator, Golden 1 Center proximity</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">I</div> Independent / boutique</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1a6b3a;">FS</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Fort Sutter Hotel</div>
+          <div class="prospect-location">1308 28th St, Midtown</div>
+          <span class="prospect-brand brand-soft">TAPESTRY / HILTON</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">105</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Tapestry soft brand, Caf&eacute; Bernardo F&amp;B partner, Midtown location</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">I</div> Independent / boutique</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Beverly Hills -->
+<div class="market-section" data-cluster="la-west">
+  <div class="market-header">
+    <div class="market-name">Beverly Hills</div>
+    <div class="market-badge" style="background:rgba(179,136,255,0.1);color:var(--purple);">California</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>1,031</strong> keys</span>
+    </div>
+  </div>
+  <div class="market-note">Beverly Wilshire in management transition (Four Seasons departed Dec 2025) &mdash; rare window to pitch incoming operator</div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c9a96e;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#8b7340;">WA</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Waldorf Astoria Beverly Hills</div>
+          <div class="prospect-location">9850 Wilshire Blvd</div>
+          <span class="prospect-brand brand-luxury">WALDORF ASTORIA / HILTON</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">170</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">12</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 2017 tower, rooftop F&amp;B, La Prairie Spa, private balconies on all rooms</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">H</div> Hilton Hotels</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--purple);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#5b21b6;">PB</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Peninsula Beverly Hills</div>
+          <div class="prospect-location">9882 S Santa Monica Blvd</div>
+          <span class="prospect-brand brand-luxury">PENINSULA HOTELS</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">195</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> AAA Five Diamond since 1993, 3 restaurants, independent luxury brand</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">P</div> Hongkong &amp; Shanghai Hotels</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--amber);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#92400e;">BW</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Beverly Wilshire</div>
+          <div class="prospect-location">9500 Wilshire Blvd (at Rodeo Dr)</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT (POST-FOUR SEASONS)</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">345</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">14</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Largest in BH, CUT by Wolfgang Puck, mgmt transition = window to influence new operator</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">?</div> TBD (management transition 2026)</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--pink);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#9d174d;">MB</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Maybourne Beverly Hills</div>
+          <div class="prospect-location">225 N Canon Dr</div>
+          <span class="prospect-brand brand-luxury">MAYBOURNE HOTEL GROUP</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">205</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">9</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Dante restaurant, 20K sq ft spa, 4 bars, Claridge's/Connaught pedigree</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Maybourne Hotel Group</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1a6b3a;">LE</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">L'Ermitage Beverly Hills</div>
+          <div class="prospect-location">9291 Burton Way</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">116</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">8</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> All-suite (805 sq ft avg), rooftop restaurant, independent = fast decisions</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">E</div> EOS Investors</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Santa Monica -->
+<div class="market-section" data-cluster="la-west">
+  <div class="market-header">
+    <div class="market-name">Santa Monica</div>
+    <div class="market-badge" style="background:rgba(179,136,255,0.1);color:var(--purple);">California</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>1,064</strong> keys</span>
+    </div>
+  </div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c9a96e;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#8b7340;">FM</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Fairmont Miramar Hotel &amp; Bungalows</div>
+          <div class="prospect-location">101 Wilshire Blvd</div>
+          <span class="prospect-brand brand-luxury">FAIRMONT / ACCOR</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">297</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">10</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 5 restaurants, Exhale Spa, 64K sq ft events, multi-building campus</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">A</div> Accor / Fairmont</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--purple);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#5b21b6;">RS</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Regent Santa Monica Beach</div>
+          <div class="prospect-location">1700 Ocean Ave</div>
+          <span class="prospect-brand brand-luxury">REGENT / IHG</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">167</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">8</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Ultra-luxury IHG flagship (opened 2024), Michael Mina, Guerlain Spa</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">I</div> IHG Hotels <span class="portfolio-tag">6 IHG prospects</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#0e7490;">SP</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Santa Monica Proper</div>
+          <div class="prospect-location">700 Wilshire Blvd</div>
+          <span class="prospect-brand brand-soft">PROPER HOTELS / DESIGN HOTELS</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">267</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">7</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4.5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Only rooftop pool in SM, Surya Spa, Proper Hospitality portfolio</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">P</div> Proper Hospitality</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--teal);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#2d6a6a;">VS</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Viceroy Santa Monica</div>
+          <div class="prospect-location">1819 Ocean Ave</div>
+          <span class="prospect-brand brand-independent">VICEROY HOTELS</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">169</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Beachfront, 2 pools, restaurant, independent lifestyle brand</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">V</div> Viceroy Hotels &amp; Resorts</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1a6b3a;">SH</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Shore Hotel</div>
+          <div class="prospect-location">1515 Ocean Ave</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">164</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> LEED certified, family-owned, beachfront restaurant, fast decisions</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">I</div> Independent (family-owned)</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- West Hollywood -->
+<div class="market-section" data-cluster="la-west">
+  <div class="market-header">
+    <div class="market-name">West Hollywood</div>
+    <div class="market-badge" style="background:rgba(179,136,255,0.1);color:var(--purple);">California</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>1,033</strong> keys</span>
+    </div>
+  </div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--pink);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#9d174d;">ED</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The West Hollywood EDITION</div>
+          <div class="prospect-location">9040 Sunset Blvd</div>
+          <span class="prospect-brand brand-luxury">EDITION / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">190</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">13</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Sunset rooftop nightclub, Ardor restaurant, 40K sq ft events</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1e40af;">AZ</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Andaz West Hollywood</div>
+          <div class="prospect-location">8401 Sunset Blvd</div>
+          <span class="prospect-brand brand-soft">ANDAZ / HYATT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">239</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">14</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4.5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Sunset Strip, Panorama Ballroom, Hyatt portfolio entry point</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">H</div> Hyatt Hotels Corporation</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#0e7490;">VL</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Valorian (formerly Mondrian)</div>
+          <div class="prospect-location">8440 Sunset Blvd</div>
+          <span class="prospect-brand brand-soft">CURIO COLLECTION / HILTON</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">236</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">13</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Davidson Hospitality Group manages dozens of properties &mdash; major portfolio play</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">D</div> Davidson Hospitality <span class="portfolio-tag">Portfolio operator</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1a6b3a;">SM</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Sunset Marquis Hotel &amp; Villas</div>
+          <div class="prospect-location">1200 Alta Loma Rd</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">152</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4.5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> All-suite + villas, recording studio, celebrity clientele, 3-acre campus</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">I</div> Independent (privately owned)</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1e40af;">KE</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Kimpton Everly Hotel</div>
+          <div class="prospect-location">1800 Argyle Ave, Hollywood</div>
+          <span class="prospect-brand brand-soft">KIMPTON / IHG</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">216</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">15</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> IHG cross-sell with Regent Santa Monica &mdash; 2-property IHG pitch</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">I</div> IHG (Kimpton) <span class="portfolio-tag">6 IHG prospects</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Venice / Marina del Rey -->
+<div class="market-section" data-cluster="la-west">
+  <div class="market-header">
+    <div class="market-name">Venice / Marina del Rey</div>
+    <div class="market-badge" style="background:rgba(179,136,255,0.1);color:var(--purple);">California</div>
+    <div class="market-stats">
+      <span><strong>4</strong> prospects</span>
+      <span><strong>867</strong> keys</span>
+    </div>
+  </div>
+  <div class="market-note">Venice is a thin market &mdash; only Hotel Erwin qualifies in Venice proper. Marina del Rey (2 mi south) provides volume targets.</div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1a6b3a;">HE</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Hotel Erwin</div>
+          <div class="prospect-location">1697 Pacific Ave, Venice Beach</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT / SPRINGBOARD</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">120</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Only 100+ key hotel in Venice proper, Springboard Hospitality portfolio</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">S</div> Springboard Hospitality</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--purple);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#5b21b6;">RC</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Ritz-Carlton Marina del Rey</div>
+          <div class="prospect-location">4375 Admiralty Way, Marina del Rey</div>
+          <span class="prospect-brand brand-luxury">RITZ-CARLTON / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">304</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">12</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Volume driver for Venice/MDR corridor, spa, marina, tennis, 304 keys</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1e40af;">MD</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Hotel MdR &mdash; DoubleTree by Hilton</div>
+          <div class="prospect-location">13480 Maxella Ave, Marina del Rey</div>
+          <span class="prospect-brand brand-chain">DOUBLETREE / HILTON</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">283</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">3.5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 283 keys, restaurant &amp; pool, Hilton cross-sell with Waldorf Astoria BH</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">H</div> Hilton</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--teal);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#2d6a6a;">MR</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Marina del Rey Hotel</div>
+          <div class="prospect-location">13534 Bali Way, Marina del Rey</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT / PACIFIC HOSPITALITY</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">160</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Waterfront F&amp;B, Pacific Hospitality Group (regional CA operator)</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">P</div> Pacific Hospitality Group</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- San Diego -->
+<div class="market-section" data-cluster="san-diego">
+  <div class="market-header">
+    <div class="market-name">San Diego</div>
+    <div class="market-badge" style="background:rgba(0,212,255,0.1);color:var(--accent);">California</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>1,274</strong> keys</span>
+    </div>
+  </div>
+  <div class="market-note">Gaslamp Quarter cluster &mdash; 4 of 5 properties within blocks of each other</div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c9a96e;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#8b7340;">PD</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Pendry San Diego</div>
+          <div class="prospect-location">550 J St, Gaslamp Quarter</div>
+          <span class="prospect-brand brand-luxury">PENDRY / MONTAGE</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">317</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">12</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4.5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 6 F&amp;B outlets, 35K sq ft events, Montage Hotels management</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Montage Hotels &amp; Resorts</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--purple);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#5b21b6;">UG</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The US Grant</div>
+          <div class="prospect-location">326 Broadway, Downtown</div>
+          <span class="prospect-brand brand-luxury">LUXURY COLLECTION / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">270</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">11</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> AAA Four Diamond, Grant Grill, historic landmark, Sycuan tribal ownership</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott (Sycuan-owned)</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1e40af;">KP</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Kimpton Hotel Palomar</div>
+          <div class="prospect-location">1047 Fifth Ave, Gaslamp</div>
+          <span class="prospect-brand brand-soft">KIMPTON / IHG</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">183</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">23</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Tallest in cluster (23 floors), rooftop infinity pool, spa, IHG portfolio</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">I</div> IHG (Kimpton) <span class="portfolio-tag">6 IHG prospects</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#0e7490;">HR</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Hotel Republic</div>
+          <div class="prospect-location">421 W B St, Downtown</div>
+          <span class="prospect-brand brand-soft">AUTOGRAPH COLLECTION / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">258</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">19</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Autograph soft brand, rooftop dining, Club Lounge, 24-hr room service</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#0e7490;">CH</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Carte Hotel</div>
+          <div class="prospect-location">401 W Ash St, Downtown</div>
+          <span class="prospect-brand brand-soft">CURIO COLLECTION / HILTON</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">246</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">16</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Curio soft brand, 16th-floor rooftop bar, FIT Athletic Club, modern tower</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">H</div> Hilton Hotels</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Miami -->
+<div class="market-section" data-cluster="south-fl">
+  <div class="market-header">
+    <div class="market-name">Miami</div>
+    <div class="market-badge" style="background:rgba(0,230,118,0.1);color:var(--green);">Florida</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>1,746</strong> keys</span>
+    </div>
+  </div>
+  <div class="market-note">Home market advantage &mdash; excludes Thesis Hotel (OPP-001) and Moore Miami (OPP-002)</div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--purple);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#5b21b6;">JW</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">JW Marriott Marquis Miami</div>
+          <div class="prospect-location">255 Biscayne Blvd Way, Downtown</div>
+          <span class="prospect-brand brand-luxury">JW MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">313</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">41</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 20K sq ft ballroom, NBA sports complex, 41 floors, Boulud Sud</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c9a96e;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#8b7340;">FS</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Four Seasons Hotel Miami</div>
+          <div class="prospect-location">1435 Brickell Ave</div>
+          <span class="prospect-brand brand-luxury">FOUR SEASONS</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">221</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">70</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Brickell tower (hotel fl 7-36), EDGE Steak, Equinox spa, 2-acre pool</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">F</div> Four Seasons Hotels</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1a6b3a;">EA</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">EAST Miami</div>
+          <div class="prospect-location">788 Brickell Plaza</div>
+          <span class="prospect-brand brand-independent">EAST / SWIRE HOTELS</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">263</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">40</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Sugar rooftop (fl 40), 4 pools, Swire is innovation-forward &mdash; fastest decisions</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">S</div> Swire Hotels <span class="portfolio-tag">Innovation-forward</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1e40af;">IC</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">InterContinental Miami</div>
+          <div class="prospect-location">100 Chopin Plaza, Downtown</div>
+          <span class="prospect-brand brand-luxury">INTERCONTINENTAL / IHG</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">653</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">34</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Largest in market (653 keys), 3 restaurants, Club Lounge, maximum volume</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">I</div> IHG Hotels <span class="portfolio-tag">6 IHG prospects</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--purple);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#5b21b6;">JB</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">JW Marriott Miami (Brickell)</div>
+          <div class="prospect-location">1109 Brickell Ave</div>
+          <span class="prospect-brand brand-luxury">JW MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">296</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">20</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Salus Spa, 25K sq ft meetings, JW portfolio play with JW Marquis</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Fort Lauderdale -->
+<div class="market-section" data-cluster="south-fl">
+  <div class="market-header">
+    <div class="market-name">Fort Lauderdale</div>
+    <div class="market-badge" style="background:rgba(0,230,118,0.1);color:var(--green);">Florida</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>2,481</strong> keys</span>
+    </div>
+  </div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c9a96e;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#8b7340;">FS</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Four Seasons Fort Lauderdale</div>
+          <div class="prospect-location">525 N Ft Lauderdale Beach Blvd</div>
+          <span class="prospect-brand brand-luxury">FOUR SEASONS</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">148</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">22</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Only Five-Diamond in FLL, Michelin-star chef (MAASS), yacht services</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">F</div> Four Seasons / Fort Partners</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--pink);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#9d174d;">WF</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">W Fort Lauderdale</div>
+          <div class="prospect-location">401 N Fort Lauderdale Beach Blvd</div>
+          <span class="prospect-brand brand-luxury">W HOTELS / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">517</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">25</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Largest beachfront, WET rooftop deck, full spa, high-volume F&amp;B</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--purple);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#5b21b6;">RC</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Ritz-Carlton Fort Lauderdale</div>
+          <div class="prospect-location">1 N Fort Lauderdale Beach Blvd</div>
+          <span class="prospect-brand brand-luxury">RITZ-CARLTON / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">166</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">24</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 17K sq ft European Spa, 500-bottle wine room, Club Lounge (fl 8)</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">R</div> Ritz-Carlton Management</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1e40af;">HB</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Marriott Harbor Beach Resort &amp; Spa</div>
+          <div class="prospect-location">3030 Holiday Dr</div>
+          <span class="prospect-brand brand-chain">MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">650</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">12</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 16 private beachfront acres, 4 restaurants, 22K sq ft spa, convention space</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--amber);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#92400e;">DB</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Diplomat Beach Resort</div>
+          <div class="prospect-location">3555 S Ocean Dr, Hollywood FL</div>
+          <span class="prospect-brand brand-soft">CURIO COLLECTION / HILTON</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">1,000</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">36</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Highest single-property volume (1,000 keys), 8 restaurants, 30K sq ft spa, Highgate-managed</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">H</div> Highgate Hotels <span class="portfolio-tag">Innovation operator</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Coconut Grove -->
+<div class="market-section" data-cluster="south-fl">
+  <div class="market-header">
+    <div class="market-name">Coconut Grove</div>
+    <div class="market-badge" style="background:rgba(0,230,118,0.1);color:var(--green);">Florida</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>760</strong> keys</span>
+    </div>
+  </div>
+  <div class="market-note">Thin market &mdash; Mayfair House (HEI-managed, Michelin Keys) is the standout. HEI also manages San Ramon Marriott.</div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1a6b3a;">MF</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Mayfair House Hotel &amp; Garden</div>
+          <div class="prospect-location">3000 Florida Ave, Coconut Grove</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT / 2 MICHELIN KEYS</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">179</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">7</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> HEI management (Nov 2025), Michelin Keys, 18K sq ft events, cross-portfolio with San Ramon</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">H</div> HEI Hotels &amp; Resorts <span class="portfolio-tag">Pipeline crossover</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--purple);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#5b21b6;">RC</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Ritz-Carlton Coconut Grove</div>
+          <div class="prospect-location">3300 SW 27th Ave</div>
+          <span class="prospect-brand brand-luxury">RITZ-CARLTON / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">115</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">20</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Boutique luxury Ritz in residential tower, ballroom, garden courtyard</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">R</div> Ritz-Carlton Management</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c9a96e;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#8b7340;">MC</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Mr. C Miami &mdash; Coconut Grove</div>
+          <div class="prospect-location">2988 McFarlane Rd</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT / CIPRIANI</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">100</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">22</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Cipriani family owner-operated, Bellini rooftop, direct decision access</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">C</div> Cipriani family</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1e40af;">CY</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Courtyard Miami Coconut Grove</div>
+          <div class="prospect-location">2649 S Bayshore Dr</div>
+          <span class="prospect-brand brand-chain">COURTYARD / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">196</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">20</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">3.5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Highest key count in Grove, 20th-floor ballroom with marina views</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--dim);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#555;">MU</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Mutiny Hotel</div>
+          <div class="prospect-location">2951 S Bayshore Dr</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT / PROVIDENT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">~170</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">12</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> F&amp;B + room service, pool; condo-hotel structure, ownership flux risk</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">P</div> Provident Resorts</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Coral Gables -->
+<div class="market-section" data-cluster="south-fl">
+  <div class="market-header">
+    <div class="market-name">Coral Gables</div>
+    <div class="market-badge" style="background:rgba(0,230,118,0.1);color:var(--green);">Florida</div>
+    <div class="market-stats">
+      <span><strong>4</strong> prospects</span>
+      <span><strong>924</strong> keys</span>
+    </div>
+  </div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c9a96e;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#8b7340;">BM</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Biltmore Hotel Miami</div>
+          <div class="prospect-location">1200 Anastasia Ave</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT / NATIONAL HISTORIC LANDMARK</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">271</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">16</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 150 acres, golf, largest hotel pool in US, Fontana fine dining, grand ballroom</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">T</div> Teneo Hospitality Group</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1a6b3a;">LW</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Loews Coral Gables</div>
+          <div class="prospect-location">2901 Ponce de Leon Blvd</div>
+          <span class="prospect-brand brand-independent">LOEWS HOTELS</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">242</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">18</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Loews is innovation-receptive self-managed operator, 4 F&amp;B venues, rooftop lounge</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">L</div> Loews Hotels &amp; Co. <span class="portfolio-tag">Innovation-receptive</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#0e7490;">HC</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Hotel Colonnade, Autograph Collection</div>
+          <div class="prospect-location">180 Aragon Ave, Miracle Mile</div>
+          <span class="prospect-brand brand-soft">AUTOGRAPH COLLECTION / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">157</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">9</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Autograph Collection (preferred soft brand), Miracle Mile, 28K sq ft meetings</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1e40af;">HY</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Hyatt Regency Coral Gables</div>
+          <div class="prospect-location">50 Alhambra Plaza</div>
+          <span class="prospect-brand brand-chain">HYATT REGENCY</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">254</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">14</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 20K sq ft events, grand ballroom, strong business clientele</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">H</div> Hyatt Hotels Corporation</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Sarasota -->
+<div class="market-section" data-cluster="gulf-fl">
+  <div class="market-header">
+    <div class="market-name">Sarasota / Longboat Key</div>
+    <div class="market-badge" style="background:rgba(0,230,118,0.1);color:var(--green);">Florida</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>1,153</strong> keys</span>
+    </div>
+  </div>
+  <div class="market-note">Extends existing Sarasota pipeline (Art Ovation, OPP-003). Opal Collection manages 2 Longboat Key properties &mdash; bundle play.</div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c9a96e;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#8b7340;">SR</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">St. Regis Longboat Key Resort</div>
+          <div class="prospect-location">1601 Gulf of Mexico Dr, Longboat Key</div>
+          <span class="prospect-brand brand-luxury">ST. REGIS / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">194</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">6</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Brand new ($376M, opened 2024), 5 dining venues, Rem&egrave;de Spa, no legacy constraints</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--purple);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#5b21b6;">RC</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Ritz-Carlton Sarasota</div>
+          <div class="prospect-location">1111 Ritz-Carlton Dr</div>
+          <span class="prospect-brand brand-luxury">RITZ-CARLTON / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">276</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">9</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> AAA Five Diamond, 26K sq ft meetings, Beach Club, largest luxury in downtown</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">M</div> Marriott International</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#0e7490;">WS</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Westin Sarasota</div>
+          <div class="prospect-location">100 Marina View Dr</div>
+          <span class="prospect-brand brand-chain">WESTIN / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">~270</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">19</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Tallest in market (19 floors), rooftop bar, Kolter Hospitality &mdash; most independent decision authority</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">K</div> Kolter Hospitality</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--teal);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#2d6a6a;">LK</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Resort at Longboat Key Club</div>
+          <div class="prospect-location">220 Sands Point Rd, Longboat Key</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT / AAA FOUR DIAMOND</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">~226</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">10</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 5 restaurants, spa, golf, marina, 33K sq ft events, Opal Collection managed</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">O</div> Opal Collection <span class="portfolio-tag">2-property bundle</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--teal);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#2d6a6a;">ZB</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Zota Beach Resort</div>
+          <div class="prospect-location">4711 Gulf of Mexico Dr, Longboat Key</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT / OPAL COLLECTION</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">187</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">6</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Opal Collection sibling to Longboat Key Club &mdash; single conversation unlocks both properties</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">O</div> Opal Collection <span class="portfolio-tag">2-property bundle</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Dallas -->
+<div class="market-section" data-cluster="dallas">
+  <div class="market-header">
+    <div class="market-name">Dallas</div>
+    <div class="market-badge" style="background:rgba(255,171,0,0.1);color:var(--amber);">Texas</div>
+    <div class="market-stats">
+      <span><strong>5</strong> prospects</span>
+      <span><strong>1,001</strong> keys</span>
+    </div>
+  </div>
+  <div class="market-note">New market for Accelerate &mdash; all non-union (Texas advantage). 2 Aimbridge-managed properties create immediate portfolio play.</div>
+  <div class="prospect-grid">
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#0e7490;">SD</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">The Statler Dallas</div>
+          <div class="prospect-location">1914 Commerce St, Downtown</div>
+          <span class="prospect-brand brand-soft">CURIO COLLECTION / HILTON</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">159</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">19</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 4 restaurants, rooftop bar, Grand Ballroom, Aimbridge-managed</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">A</div> Aimbridge Hospitality <span class="portfolio-tag">3 Aimbridge prospects</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#0e7490;">HA</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">HALL Arts Hotel, Autograph Collection</div>
+          <div class="prospect-location">1717 Leonard St, Arts District</div>
+          <span class="prospect-brand brand-soft">AUTOGRAPH COLLECTION / MARRIOTT</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">183</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">11</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Autograph soft brand + Aimbridge management, Ellie's restaurant, Arts District prestige</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">A</div> Aimbridge Hospitality <span class="portfolio-tag">3 Aimbridge prospects</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:#c9a96e;border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#8b7340;">CC</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Hotel Crescent Court</div>
+          <div class="prospect-location">400 Crescent Ct, Uptown</div>
+          <span class="prospect-brand brand-independent">INDEPENDENT (FORMER ROSEWOOD)</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">226</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">7</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> Nobu restaurant, Crescent Club, 19K sq ft events, direct owner negotiation</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">C</div> Crescent Real Estate</div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--blue);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#1e40af;">KP</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Kimpton Pittman Hotel</div>
+          <div class="prospect-location">2551 Elm St, Deep Ellum</div>
+          <span class="prospect-brand brand-soft">KIMPTON / IHG</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">165</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">7</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> LEED-certified, Beaux-Arts landmark, Deep Ellum, IHG portfolio entry</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">I</div> IHG (Kimpton) <span class="portfolio-tag">6 IHG prospects</span></div>
+    </div>
+
+    <div class="prospect-card">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--pink);border-radius:12px 0 0 12px;"></div>
+      <div class="prospect-card-header">
+        <div class="prospect-monogram" style="background:#9d174d;">VH</div>
+        <div class="prospect-identity">
+          <div class="prospect-name">Virgin Hotels Dallas</div>
+          <div class="prospect-location">1445 Turtle Creek Blvd, Design District</div>
+          <span class="prospect-brand brand-independent">VIRGIN HOTELS</span>
+        </div>
+      </div>
+      <div class="prospect-metrics">
+        <div class="metric"><div class="metric-value">268</div><div class="metric-label">Keys</div></div>
+        <div class="metric"><div class="metric-value">16</div><div class="metric-label">Floors</div></div>
+        <div class="metric"><div class="metric-value">4</div><div class="metric-label">Stars</div></div>
+      </div>
+      <div class="prospect-signal"><strong>Signal:</strong> 3 F&amp;B outlets, tech-brand alignment, Design District, 268 keys across 16 floors</div>
+      <div class="prospect-mgmt"><div class="mgmt-icon">V</div> Virgin Hotels (self-managed)</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PORTFOLIO OPERATOR PLAYS                                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<div class="operator-section">
+  <div class="section-title">Portfolio Operator Plays</div>
+  <div class="operator-grid">
+    <div class="operator-card">
+      <div class="operator-name">IHG (Kimpton / Regent / InterContinental)</div>
+      <div class="operator-props"><strong>6 prospects:</strong> Kimpton Palomar SD, Kimpton Everly WeHo, Kimpton Pittman Dallas, Regent SM, InterContinental SF, InterContinental Miami</div>
+    </div>
+    <div class="operator-card">
+      <div class="operator-name">Aimbridge Hospitality</div>
+      <div class="operator-props"><strong>3 prospects:</strong> Statler Dallas, HALL Arts Dallas, Hyatt Centric Sacramento. One conversation, three properties.</div>
+    </div>
+    <div class="operator-card">
+      <div class="operator-name">HEI Hotels &amp; Resorts</div>
+      <div class="operator-props"><strong>1 prospect + 1 pipeline:</strong> Mayfair House (Coconut Grove) + San Ramon Marriott (existing). Cross-coast leverage.</div>
+    </div>
+    <div class="operator-card">
+      <div class="operator-name">Opal Collection</div>
+      <div class="operator-props"><strong>2-property bundle:</strong> Resort at Longboat Key Club + Zota Beach Resort. Same operator, same island.</div>
+    </div>
+    <div class="operator-card">
+      <div class="operator-name">Highgate Hotels</div>
+      <div class="operator-props"><strong>Highest single-property volume:</strong> Diplomat Beach Resort (1,000 keys, 36 floors, 8 restaurants). Known innovator.</div>
+    </div>
+    <div class="operator-card">
+      <div class="operator-name">Swire Hotels (EAST)</div>
+      <div class="operator-props"><strong>Fastest decisions:</strong> EAST Miami (263 keys, 40 floors). Innovation-forward independent operator.</div>
+    </div>
+    <div class="operator-card">
+      <div class="operator-name">Davidson Hospitality</div>
+      <div class="operator-props"><strong>Portfolio entry:</strong> The Valorian WeHo (236 keys). Davidson manages dozens of upscale properties nationally.</div>
+    </div>
+    <div class="operator-card">
+      <div class="operator-name">Loews Hotels</div>
+      <div class="operator-props"><strong>Innovation-receptive:</strong> Loews Coral Gables (242 keys, 4 F&amp;B venues). Self-managed, known for service innovation.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- CLUSTER SUMMARY TABLE                                       -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<div class="cluster-summary">
+  <div class="section-title">Market Cluster Summary</div>
+  <table class="cluster-table">
+    <thead>
+      <tr>
+        <th>Cluster</th>
+        <th>Markets</th>
+        <th>Prospects</th>
+        <th>Total Keys</th>
+        <th>Top Signal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>SF Bay Area</td>
+        <td>San Francisco + Walnut Creek</td>
+        <td>8</td>
+        <td>~3,428</td>
+        <td>InterContinental SF (550 keys, 32 fl)</td>
+      </tr>
+      <tr>
+        <td>Sacramento</td>
+        <td>Sacramento</td>
+        <td>5</td>
+        <td>~1,385</td>
+        <td>Sheraton Grand (503 keys, 27 fl)</td>
+      </tr>
+      <tr>
+        <td>LA West</td>
+        <td>Beverly Hills + Santa Monica + WeHo + Venice/MDR</td>
+        <td>19</td>
+        <td>~3,995</td>
+        <td>Beverly Wilshire (345 keys, mgmt transition)</td>
+      </tr>
+      <tr>
+        <td>San Diego</td>
+        <td>San Diego (Gaslamp cluster)</td>
+        <td>5</td>
+        <td>~1,274</td>
+        <td>Pendry (317 keys, 6 F&amp;B outlets)</td>
+      </tr>
+      <tr>
+        <td>South Florida</td>
+        <td>Miami + Ft Lauderdale + Coconut Grove + Coral Gables</td>
+        <td>19</td>
+        <td>~5,911</td>
+        <td>Diplomat (1,000 keys, Highgate)</td>
+      </tr>
+      <tr>
+        <td>Gulf Coast FL</td>
+        <td>Sarasota / Longboat Key</td>
+        <td>5</td>
+        <td>~1,153</td>
+        <td>St. Regis LBK ($376M, brand new)</td>
+      </tr>
+      <tr>
+        <td>Dallas TX</td>
+        <td>Dallas</td>
+        <td>5</td>
+        <td>~1,001</td>
+        <td>Statler + HALL Arts (2x Aimbridge)</td>
+      </tr>
+      <tr class="total-row">
+        <td>TOTAL</td>
+        <td>14 markets, 7 clusters</td>
+        <td>67</td>
+        <td>~19,800+</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</div><!-- /container -->
+
+<button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+
+<script>
+function filterMarket(cluster) {
+  const sections = document.querySelectorAll('.market-section');
+  const buttons = document.querySelectorAll('.filter-btn');
+  buttons.forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  sections.forEach(s => {
+    if (cluster === 'all' || s.dataset.cluster === cluster) {
+      s.style.display = '';
+    } else {
+      s.style.display = 'none';
+    }
+  });
+}
+</script>
+
+</body>
+</html>

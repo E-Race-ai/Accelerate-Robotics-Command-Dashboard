@@ -231,6 +231,35 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
     box-shadow:0 0 0 3px rgba(0,85,255,0.08);
 }
 
+/* ── Research bar ── */
+.research-bar {
+    display:flex;
+    gap:6px;
+    margin-top:4px;
+}
+
+.research-link {
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:5px 10px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    color:var(--blue);
+    font-size:0.62rem;
+    font-weight:600;
+    text-decoration:none;
+    cursor:pointer;
+    transition:all 0.15s;
+    font-family:'Inter',sans-serif;
+}
+
+.research-link:hover {
+    background:rgba(0,85,255,0.05);
+    border-color:rgba(0,85,255,0.2);
+}
+
 /* ── Property type selector ── */
 .prop-type-row {
     display:flex;
@@ -1339,6 +1368,16 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
                 <input type="text" id="prop-name-custom" placeholder="Property name" style="display:none;margin-top:6px">
             </div>
 
+            <!-- Research links — market research + site profile -->
+            <div class="research-bar" id="research-bar">
+                <a class="research-link" id="research-pipeline" href="/accelerate-robotics/pages/pipeline-prospects.html" target="_blank" rel="noopener" title="Browse 67 hotels across 14 markets">
+                    Prospect Pipeline
+                </a>
+                <a class="research-link" id="research-site" href="#" target="_blank" rel="noopener" style="display:none">
+                    Site Profile
+                </a>
+            </div>
+
             <!-- Size metrics — compact grid -->
             <div class="prop-metrics">
                 <div class="prop-metric">
@@ -1686,7 +1725,8 @@ const PIPELINE = {
         rooms: 245, floors: 10, guestFloors: '4-10', elevators: 2,
         surfaces: ['carpet', 'tile', 'hardwood', 'outdoor'],
         market: 'Miami',
-        proposalUrl: '/accelerate-thesis-hotel/pages/proposal-interactive.html'
+        proposalUrl: '/accelerate-thesis-hotel/pages/proposal-interactive.html',
+        siteProfileUrl: '/accelerate-thesis-hotel/pages/site-profile.html'
     },
     'moore-miami': {
         name: 'The Moore Miami',
@@ -1694,7 +1734,8 @@ const PIPELINE = {
         rooms: 13, floors: 4, guestFloors: '2-4', elevators: 2,
         surfaces: ['hardwood', 'tile'],
         market: 'Miami',
-        proposalUrl: '/accelerate-moore-miami/pages/proposal-interactive.html'
+        proposalUrl: '/accelerate-moore-miami/pages/proposal-interactive.html',
+        siteProfileUrl: '/accelerate-moore-miami/pages/site-profile.html'
     },
     'art-ovation': {
         name: 'Art Ovation Hotel',
@@ -1702,7 +1743,8 @@ const PIPELINE = {
         rooms: 162, floors: 6, guestFloors: '3-6', elevators: 3,
         surfaces: ['carpet', 'tile', 'hardwood'],
         market: 'Sarasota',
-        proposalUrl: '/accelerate-art-ovation/pages/proposal-interactive.html'
+        proposalUrl: '/accelerate-art-ovation/pages/proposal-interactive.html',
+        siteProfileUrl: '/accelerate-art-ovation/pages/site-profile.html'
     },
     'san-ramon-marriott': {
         name: 'San Ramon Marriott',
@@ -1710,7 +1752,8 @@ const PIPELINE = {
         rooms: 368, floors: 6, guestFloors: '2-6', elevators: 4,
         surfaces: ['carpet', 'tile'],
         market: 'East Bay, CA',
-        proposalUrl: null
+        proposalUrl: null,
+        siteProfileUrl: null
     },
     'lafayette-park': {
         name: 'Lafayette Park Hotel & Spa',
@@ -1718,7 +1761,8 @@ const PIPELINE = {
         rooms: 136, floors: 4, guestFloors: '2-4', elevators: 2,
         surfaces: ['carpet', 'hardwood'],
         market: 'East Bay, CA',
-        proposalUrl: null
+        proposalUrl: null,
+        siteProfileUrl: null
     },
     'claremont-resort': {
         name: 'Claremont Resort & Club',
@@ -1726,7 +1770,8 @@ const PIPELINE = {
         rooms: 276, floors: 10, guestFloors: '2-10', elevators: 4,
         surfaces: ['carpet', 'hardwood', 'tile', 'outdoor'],
         market: 'East Bay, CA',
-        proposalUrl: null
+        proposalUrl: null,
+        siteProfileUrl: null
     },
     'kimpton-sawyer': {
         name: 'Kimpton Sawyer',
@@ -1734,7 +1779,8 @@ const PIPELINE = {
         rooms: 250, floors: 16, guestFloors: '4-16', elevators: 4,
         surfaces: ['carpet', 'tile', 'hardwood'],
         market: 'Sacramento',
-        proposalUrl: null
+        proposalUrl: null,
+        siteProfileUrl: null
     },
     'citizen-hotel': {
         name: 'The Citizen Hotel',
@@ -1742,7 +1788,8 @@ const PIPELINE = {
         rooms: 196, floors: 14, guestFloors: '3-14', elevators: 3,
         surfaces: ['carpet', 'hardwood', 'tile'],
         market: 'Sacramento',
-        proposalUrl: null
+        proposalUrl: null,
+        siteProfileUrl: null
     },
     'westin-riverfront': {
         name: 'Westin Riverfront',
@@ -1750,7 +1797,8 @@ const PIPELINE = {
         rooms: 101, floors: 3, guestFloors: '1-3', elevators: 2,
         surfaces: ['carpet', 'tile'],
         market: 'Sacramento',
-        proposalUrl: null
+        proposalUrl: null,
+        siteProfileUrl: null
     }
 };
 
@@ -2453,6 +2501,7 @@ function initPropertySection() {
 
         updatePropertyProfile();
         updateProposalButton();
+        updateResearchLinks();
     });
 
     // Auto-update profile on input changes
@@ -2490,6 +2539,33 @@ function updateProposalButton() {
             e.preventDefault();
             downloadProposalConfig();
         };
+    }
+}
+
+function updateResearchLinks() {
+    const key = document.getElementById('prop-name').value;
+    const p = PIPELINE[key];
+    const siteLink = document.getElementById('research-site');
+    const pipelineLink = document.getElementById('research-pipeline');
+
+    // Site profile — show when a pipeline property with a profile is selected
+    if (p && p.siteProfileUrl) {
+        siteLink.style.display = 'inline-flex';
+        siteLink.href = p.siteProfileUrl;
+        siteLink.textContent = p.name + ' Site Profile';
+    } else {
+        siteLink.style.display = 'none';
+    }
+
+    // Pipeline link — update to filter by market if a property is selected
+    if (p && p.market) {
+        // WHY: hash fragment lets the pipeline page scroll to the right market section
+        const marketSlug = p.market.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        pipelineLink.href = '/accelerate-robotics/pages/pipeline-prospects.html#' + marketSlug;
+        pipelineLink.textContent = p.market + ' Pipeline';
+    } else {
+        pipelineLink.href = '/accelerate-robotics/pages/pipeline-prospects.html';
+        pipelineLink.textContent = 'Prospect Pipeline';
     }
 }
 
