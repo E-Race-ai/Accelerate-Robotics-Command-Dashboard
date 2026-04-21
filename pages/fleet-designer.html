@@ -220,6 +220,108 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
     box-shadow:0 0 0 3px rgba(0,85,255,0.08);
 }
 
+/* ── Property type selector ── */
+.prop-type-row {
+    display:flex;
+    gap:4px;
+    background:rgba(0,0,0,0.03);
+    padding:3px;
+    border-radius:8px;
+}
+
+.prop-type {
+    flex:1;
+    padding:6px 4px;
+    border:none;
+    border-radius:6px;
+    background:transparent;
+    font-size:0.62rem;
+    font-weight:600;
+    font-family:'Inter',sans-serif;
+    color:var(--muted);
+    cursor:pointer;
+    transition:all 0.12s;
+    text-align:center;
+}
+
+.prop-type:hover { color:var(--text); }
+
+.prop-type.active {
+    background:white;
+    color:var(--text);
+    box-shadow:0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* ── Property metrics grid ── */
+.prop-metrics {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+}
+
+.prop-metric {
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+}
+
+.prop-metric label {
+    font-size:0.58rem;
+    font-weight:600;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+}
+
+.prop-metric input {
+    padding:7px 10px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.8);
+    color:var(--text);
+    font-size:0.82rem;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    transition:all 0.15s;
+    width:100%;
+}
+
+.prop-metric input:focus {
+    border-color:var(--blue);
+    background:rgba(255,255,255,0.95);
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+}
+
+/* ── Property profile summary ── */
+.prop-profile {
+    padding:8px 10px;
+    border-radius:8px;
+    background:rgba(0,85,255,0.03);
+    border:1px solid rgba(0,85,255,0.08);
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.pp-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:0.62rem;
+}
+
+.pp-label {
+    color:var(--muted);
+    font-weight:500;
+}
+
+.pp-value {
+    font-family:'JetBrains Mono',monospace;
+    font-weight:600;
+    font-size:0.6rem;
+    color:var(--text);
+}
+
 /* ── Surface checkboxes ── */
 .surface-grid {
     display:flex;
@@ -914,30 +1016,52 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
                 Property
             </div>
 
+            <!-- Property type quick-select -->
+            <div class="prop-type-row">
+                <button class="prop-type active" data-type="hotel" type="button">Hotel</button>
+                <button class="prop-type" data-type="resort" type="button">Resort</button>
+                <button class="prop-type" data-type="hospital" type="button">Hospital</button>
+                <button class="prop-type" data-type="senior" type="button">Senior Living</button>
+            </div>
+
             <div class="field">
                 <label for="prop-name">Property Name</label>
                 <input type="text" id="prop-name" placeholder="Kimpton Sawyer Hotel">
             </div>
 
-            <div class="field-row">
-                <div class="field">
+            <!-- Size metrics — compact grid -->
+            <div class="prop-metrics">
+                <div class="prop-metric">
                     <label for="prop-rooms">Rooms</label>
                     <input type="number" id="prop-rooms" placeholder="250" min="1">
                 </div>
-                <div class="field">
+                <div class="prop-metric">
                     <label for="prop-floors">Floors</label>
                     <input type="number" id="prop-floors" placeholder="16" min="1">
                 </div>
-            </div>
-
-            <div class="field-row">
-                <div class="field">
+                <div class="prop-metric">
                     <label for="prop-guest-floors">Guest Floors</label>
                     <input type="text" id="prop-guest-floors" placeholder="4-16">
                 </div>
-                <div class="field">
+                <div class="prop-metric">
                     <label for="prop-elevators">Elevators</label>
                     <input type="number" id="prop-elevators" placeholder="4" min="0">
+                </div>
+            </div>
+
+            <!-- Property profile summary — auto-computed from inputs -->
+            <div class="prop-profile" id="prop-profile">
+                <div class="pp-row">
+                    <span class="pp-label">Scale</span>
+                    <span class="pp-value" id="pp-scale">--</span>
+                </div>
+                <div class="pp-row">
+                    <span class="pp-label">Vertical</span>
+                    <span class="pp-value" id="pp-vertical">--</span>
+                </div>
+                <div class="pp-row">
+                    <span class="pp-label">Elevator ratio</span>
+                    <span class="pp-value" id="pp-elevator-ratio">--</span>
                 </div>
             </div>
 
@@ -946,23 +1070,23 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
                 <div class="surface-grid">
                     <label class="surface-chip" id="surface-carpet">
                         <input type="checkbox" value="carpet">
-                        🟫 Carpet
+                        Carpet
                     </label>
                     <label class="surface-chip" id="surface-hardwood">
                         <input type="checkbox" value="hardwood">
-                        🟤 Hardwood
+                        Hardwood
                     </label>
                     <label class="surface-chip" id="surface-tile">
                         <input type="checkbox" value="tile">
-                        ⬜ Tile
+                        Tile
                     </label>
                     <label class="surface-chip" id="surface-terrazzo">
                         <input type="checkbox" value="terrazzo">
-                        🔷 Terrazzo
+                        Terrazzo
                     </label>
                     <label class="surface-chip" id="surface-outdoor">
                         <input type="checkbox" value="outdoor">
-                        🌿 Outdoor
+                        Outdoor
                     </label>
                 </div>
             </div>
@@ -1738,6 +1862,74 @@ function swapRobot(slotIdx, candidateIdx) {
 
 
 // ─────────────────────────────────────────────────────────────
+// Property type selector + profile summary
+// ─────────────────────────────────────────────────────────────
+function updatePropertyProfile() {
+    const rooms = parseInt(document.getElementById('prop-rooms').value, 10) || 0;
+    const floors = parseInt(document.getElementById('prop-floors').value, 10) || 0;
+    const elevators = parseInt(document.getElementById('prop-elevators').value, 10) || 0;
+
+    const scaleEl = document.getElementById('pp-scale');
+    const verticalEl = document.getElementById('pp-vertical');
+    const ratioEl = document.getElementById('pp-elevator-ratio');
+
+    // Scale classification
+    if (rooms === 0) {
+        scaleEl.textContent = '--';
+    } else if (rooms <= 80) {
+        scaleEl.textContent = 'Boutique (' + rooms + ' keys)';
+    } else if (rooms <= 200) {
+        scaleEl.textContent = 'Mid-scale (' + rooms + ' keys)';
+    } else if (rooms <= 500) {
+        scaleEl.textContent = 'Full-service (' + rooms + ' keys)';
+    } else {
+        scaleEl.textContent = 'Large-scale (' + rooms + ' keys)';
+    }
+
+    // Vertical profile
+    if (floors === 0) {
+        verticalEl.textContent = '--';
+    } else if (floors <= 3) {
+        verticalEl.textContent = 'Low-rise (' + floors + ' floors)';
+    } else if (floors <= 10) {
+        verticalEl.textContent = 'Mid-rise (' + floors + ' floors)';
+    } else {
+        verticalEl.textContent = 'High-rise (' + floors + ' floors)';
+    }
+
+    // Elevator ratio
+    if (floors <= 1 || elevators === 0) {
+        ratioEl.textContent = floors <= 1 ? 'N/A — single floor' : 'None — stairs only';
+        ratioEl.style.color = floors <= 1 ? 'var(--muted)' : 'var(--amber)';
+    } else {
+        const floorsPerElev = (floors / elevators).toFixed(1);
+        // WHY: <4 floors per elevator is good coverage for robot operations
+        const quality = floorsPerElev <= 4 ? 'Good' : floorsPerElev <= 6 ? 'Adequate' : 'Constrained';
+        const color = floorsPerElev <= 4 ? 'var(--green)' : floorsPerElev <= 6 ? 'var(--text)' : 'var(--amber)';
+        ratioEl.textContent = floorsPerElev + ' floors/elev — ' + quality;
+        ratioEl.style.color = color;
+    }
+}
+
+function initPropertySection() {
+    // Property type toggle
+    document.querySelectorAll('.prop-type').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.prop-type').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    // Auto-update profile on input changes
+    ['prop-rooms', 'prop-floors', 'prop-elevators'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updatePropertyProfile);
+    });
+
+    updatePropertyProfile();
+}
+
+
+// ─────────────────────────────────────────────────────────────
 // Goal chips — toggle .active class + aria-checked
 // ─────────────────────────────────────────────────────────────
 function initGoalChips() {
@@ -2002,6 +2194,7 @@ function initExportButtons() {
 // ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     loadRobots();
+    initPropertySection();
     initGoalChips();
     initSurfaceChips();
     initBudgetControls();
