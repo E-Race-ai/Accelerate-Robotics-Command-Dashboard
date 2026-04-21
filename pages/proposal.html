@@ -441,25 +441,54 @@ function generatePhaseBreaks(fleetSize) {
 }
 
 /* ── Fallback narratives (used when /api/narrate is unavailable) ── */
+// WHY: Fallback narratives match the gold-standard proposal voice (Moore/Thesis) so
+// the proposal reads well even when the Claude API is unavailable or slow.
 function generateFallbackNarratives(data) {
     const { property, fleet } = data;
     const phaseBreaks = generatePhaseBreaks(fleet.length);
+    const pName = property.name;
+    const pType = property.type || 'property';
+    const pMarket = property.market || 'the market';
+    const serviceList = fleet.map(s => s.serviceLine.toLowerCase()).join(', ');
+
+    // WHY: Savings capture language mirrors real proposals — specific expense-line
+    // eliminations (contract termination, FTE non-backfill), not generic "labor offset."
+    const SAVINGS_LANGUAGE = {
+        cleaning: 'Third-party floor-care contract — terminated',
+        delivery: 'Runner overtime and late-shift coverage — not backfilled',
+        logistics: 'Linen/supply runner shift — not backfilled',
+        security: 'Overnight security patrol supplement — reduced',
+        service: 'Guest-facing concierge coverage gap — extended autonomously',
+        disinfection: 'Third-party sanitization contract — terminated',
+    };
+
+    const UNLOCK_LANGUAGE = {
+        cleaning: 'EVS staff shifts from floor maintenance to room turns and guest-facing cleaning',
+        delivery: 'Front desk and F&B staff stay on-floor instead of running deliveries through elevators',
+        logistics: 'Housekeeping focuses on room turns instead of hauling linen carts between floors',
+        security: 'Security team focuses on guest interaction and incident response, not routine patrol loops',
+        service: 'Guests receive branded autonomous service available 24/7 — something no staffing model can sustain',
+        disinfection: 'High-touch surfaces are sanitized on a consistent schedule without pulling EVS from other tasks',
+    };
+
     return {
-        intro: `${property.name} is a ${property.rooms}-room ${property.type} across ${property.floors} floors in ${property.market || 'the market'}.`,
-        headline: 'Drag the slider. Watch the operation transform.',
-        valueProp: 'Every robot in your fleet reclaims hours your team currently spends on repetitive logistics — and turns them into capacity for higher-value work.',
+        intro: `${pName} is a ${property.rooms}-room ${pType} in ${pMarket}. This fleet is designed to extend service past what human staffing can sustainably cover — a branded operational amenity, not back-of-house infrastructure.`,
+        headline: 'Build your fleet. See the impact.',
+        valueProp: `This fleet doesn't replace your team. It gives your team leverage — shifting repetitive logistics to robots so staff can focus on the guest-facing, high-touch work that defines ${pName}.`,
         robots: fleet.map(s => ({
             goalId: s.goalId,
             roleDescription: `${s.serviceLine} — ${s.robot.company} ${s.robot.model_name}`,
-            unlockNarrative: `Automates ${s.serviceLine.toLowerCase()} to free staff for higher-value work.`,
-            savingsCapture: `Replaces $${s.savings.toLocaleString()}/mo in labor costs`,
+            unlockNarrative: UNLOCK_LANGUAGE[s.type] || `Staff time shifts from ${s.serviceLine.toLowerCase()} logistics to higher-value guest interaction.`,
+            savingsCapture: SAVINGS_LANGUAGE[s.type] || `$${s.savings.toLocaleString()}/mo expense-line offset`,
         })),
         tierName: phaseBreaks[phaseBreaks.length - 1].name,
-        tierNarrative: `With ${fleet.length} robots deployed, the fleet covers ${fleet.map(s => s.serviceLine.toLowerCase()).join(', ')}.`,
-        phases: phaseBreaks.map(p => ({
+        tierNarrative: `With ${fleet.length} robot${fleet.length > 1 ? 's' : ''} deployed, the fleet covers ${serviceList}. Every robot carries the ${pName} identity — guests see a service amenity, not a vendor's equipment.`,
+        phases: phaseBreaks.map((p, i) => ({
             name: p.name,
             timeframe: p.timeframe,
-            description: `Deploy robots ${phases_robot_range(p, phaseBreaks, fleet)}.`,
+            description: i === 0
+                ? `Deploy ${phases_robot_range(p, phaseBreaks, fleet)} for a 30-day pilot. Measurable success criteria agreed in advance — go/no-go at day 30.`
+                : `Commission ${phases_robot_range(p, phaseBreaks, fleet)}. ${property.floors > 1 && i === 1 ? 'Elevator integration (button emulator) activates multi-floor autonomy. ' : ''}Each phase builds on the previous with clear gates.`,
         })),
     };
 }
