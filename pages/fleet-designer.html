@@ -260,6 +260,105 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
     border-color:rgba(0,85,255,0.2);
 }
 
+/* ── Add Prospect toggle ── */
+.add-prospect-toggle {
+    margin-left:auto;
+    color:var(--green);
+    border-color:rgba(22,163,74,0.2);
+}
+
+.add-prospect-toggle:hover {
+    background:rgba(22,163,74,0.06);
+    border-color:rgba(22,163,74,0.3);
+}
+
+/* ── Add Prospect form ── */
+.add-prospect-form {
+    background:rgba(255,255,255,0.7);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px;
+    margin-top:6px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.apf-row {
+    display:flex;
+    gap:6px;
+}
+
+.apf-field {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+.apf-field.apf-wide { flex:2; }
+
+.apf-field label {
+    font-size:0.55rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    color:var(--muted);
+}
+
+.apf-field input,
+.apf-field select {
+    padding:6px 8px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:white;
+    color:var(--text);
+    font-size:0.75rem;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    width:100%;
+}
+
+.apf-field input:focus,
+.apf-field select:focus {
+    border-color:var(--blue);
+    box-shadow:0 0 0 2px rgba(0,85,255,0.06);
+}
+
+.apf-actions {
+    display:flex;
+    gap:6px;
+    margin-top:2px;
+}
+
+.apf-save {
+    padding:6px 14px;
+    border-radius:6px;
+    border:none;
+    background:var(--green);
+    color:white;
+    font-size:0.68rem;
+    font-weight:700;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+}
+
+.apf-save:hover { opacity:0.9; }
+
+.apf-cancel {
+    padding:6px 14px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--muted);
+    font-size:0.68rem;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+}
+
+.apf-cancel:hover { background:rgba(0,0,0,0.03); }
+
 /* ── Property type selector ── */
 .prop-type-row {
     display:flex;
@@ -1361,14 +1460,10 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
                         <option value="citizen-hotel">The Citizen Hotel — OPP-008</option>
                         <option value="westin-riverfront">Westin Riverfront — OPP-009</option>
                     </optgroup>
-                    <optgroup label="Custom">
-                        <option value="custom">Enter manually...</option>
-                    </optgroup>
                 </select>
-                <input type="text" id="prop-name-custom" placeholder="Property name" style="display:none;margin-top:6px">
             </div>
 
-            <!-- Research links — market research + site profile -->
+            <!-- Research + Add Prospect bar -->
             <div class="research-bar" id="research-bar">
                 <a class="research-link" id="research-pipeline" href="/accelerate-robotics/pages/pipeline-prospects.html" target="_blank" rel="noopener" title="Browse 67 hotels across 14 markets">
                     Prospect Pipeline
@@ -1376,6 +1471,67 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
                 <a class="research-link" id="research-site" href="#" target="_blank" rel="noopener" style="display:none">
                     Site Profile
                 </a>
+                <button class="research-link add-prospect-toggle" id="add-prospect-toggle" type="button">
+                    + Add Prospect
+                </button>
+            </div>
+
+            <!-- Add Prospect form — slides open -->
+            <div class="add-prospect-form" id="add-prospect-form" style="display:none">
+                <div class="apf-row">
+                    <div class="apf-field apf-wide">
+                        <label>Hotel Name</label>
+                        <input type="text" id="apf-name" placeholder="The Ritz-Carlton Coconut Grove">
+                    </div>
+                </div>
+                <div class="apf-row">
+                    <div class="apf-field">
+                        <label>Market</label>
+                        <select id="apf-market">
+                            <option value="Miami">Miami</option>
+                            <option value="Sarasota">Sarasota</option>
+                            <option value="East Bay, CA">East Bay, CA</option>
+                            <option value="Sacramento">Sacramento</option>
+                            <option value="Los Angeles">Los Angeles</option>
+                            <option value="San Francisco">San Francisco</option>
+                            <option value="New York">New York</option>
+                            <option value="Dallas">Dallas</option>
+                            <option value="Chicago">Chicago</option>
+                            <option value="Other">Other...</option>
+                        </select>
+                        <input type="text" id="apf-market-custom" placeholder="Market name" style="display:none;margin-top:4px">
+                    </div>
+                    <div class="apf-field">
+                        <label>Type</label>
+                        <select id="apf-type">
+                            <option value="hotel">Hotel</option>
+                            <option value="resort">Resort</option>
+                            <option value="hospital">Hospital</option>
+                            <option value="senior">Senior Living</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="apf-row">
+                    <div class="apf-field"><label>Rooms</label><input type="number" id="apf-rooms" placeholder="250" min="1"></div>
+                    <div class="apf-field"><label>Floors</label><input type="number" id="apf-floors" placeholder="10" min="1"></div>
+                    <div class="apf-field"><label>Elevators</label><input type="number" id="apf-elevators" placeholder="3" min="0"></div>
+                </div>
+                <div class="apf-row">
+                    <div class="apf-field apf-wide">
+                        <label>Brand / Flag</label>
+                        <input type="text" id="apf-brand" placeholder="Independent, Marriott Autograph, Hilton Curio, etc.">
+                    </div>
+                </div>
+                <div class="apf-row">
+                    <div class="apf-field apf-wide">
+                        <label>Notes</label>
+                        <input type="text" id="apf-notes" placeholder="Key signal, management company, why this hotel...">
+                    </div>
+                </div>
+                <div class="apf-actions">
+                    <button class="apf-save" id="apf-save" type="button">Save Prospect</button>
+                    <button class="apf-cancel" id="apf-cancel" type="button">Cancel</button>
+                </div>
             </div>
 
             <!-- Size metrics — compact grid -->
@@ -2452,6 +2608,55 @@ function updatePropertyProfile() {
     }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Custom prospects — stored in localStorage, loaded into dropdown
+// ─────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'accelerate-fleet-prospects';
+
+function loadCustomProspects() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch { return []; }
+}
+
+function saveCustomProspects(prospects) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prospects));
+}
+
+function rebuildDropdownProspects() {
+    const select = document.getElementById('prop-name');
+    // Remove any existing custom optgroups (they have data-custom attribute)
+    select.querySelectorAll('optgroup[data-custom]').forEach(g => g.remove());
+
+    const prospects = loadCustomProspects();
+    if (prospects.length === 0) return;
+
+    // Group by market
+    const byMarket = {};
+    prospects.forEach(p => {
+        if (!byMarket[p.market]) byMarket[p.market] = [];
+        byMarket[p.market].push(p);
+    });
+
+    // Add optgroups before the closing </select>
+    Object.keys(byMarket).sort().forEach(market => {
+        const group = document.createElement('optgroup');
+        group.label = market + ' (Prospects)';
+        group.dataset.custom = 'true';
+        byMarket[market].forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = 'prospect-' + p.id;
+            opt.textContent = p.name;
+            group.appendChild(opt);
+        });
+        select.appendChild(group);
+    });
+}
+
+function getProspectById(id) {
+    return loadCustomProspects().find(p => p.id === id) || null;
+}
+
 function initPropertySection() {
     // Property type toggle
     document.querySelectorAll('.prop-type').forEach(btn => {
@@ -2461,26 +2666,45 @@ function initPropertySection() {
         });
     });
 
-    // Property dropdown — auto-fill form when a pipeline property is selected
+    // Load saved prospects into dropdown
+    rebuildDropdownProspects();
+
+    // Property dropdown — auto-fill form when a property is selected
     const propSelect = document.getElementById('prop-name');
-    const propCustom = document.getElementById('prop-name-custom');
 
     propSelect.addEventListener('change', () => {
         const key = propSelect.value;
 
-        // Show/hide custom name input
-        propCustom.style.display = key === 'custom' ? 'block' : 'none';
+        // Check pipeline properties first, then custom prospects
+        let p = PIPELINE[key];
+        if (!p && key.startsWith('prospect-')) {
+            const prospect = getProspectById(key.replace('prospect-', ''));
+            if (prospect) {
+                p = {
+                    name: prospect.name,
+                    type: prospect.type,
+                    rooms: prospect.rooms,
+                    floors: prospect.floors,
+                    guestFloors: prospect.guestFloors || '',
+                    elevators: prospect.elevators,
+                    surfaces: prospect.surfaces || [],
+                    market: prospect.market,
+                    proposalUrl: null,
+                    siteProfileUrl: null
+                };
+            }
+        }
 
-        const p = PIPELINE[key];
         if (!p) {
             updateProposalButton();
+            updateResearchLinks();
             return;
         }
 
         // Fill metrics
         document.getElementById('prop-rooms').value = p.rooms;
         document.getElementById('prop-floors').value = p.floors;
-        document.getElementById('prop-guest-floors').value = p.guestFloors;
+        document.getElementById('prop-guest-floors').value = p.guestFloors || '';
         document.getElementById('prop-elevators').value = p.elevators;
 
         // Set property type
@@ -2494,7 +2718,7 @@ function initPropertySection() {
             const chip = document.getElementById('surface-' + s);
             if (!chip) return;
             const cb = chip.querySelector('input[type="checkbox"]');
-            const checked = p.surfaces.includes(s);
+            const checked = (p.surfaces || []).includes(s);
             cb.checked = checked;
             chip.classList.toggle('checked', checked);
         });
@@ -2507,6 +2731,74 @@ function initPropertySection() {
     // Auto-update profile on input changes
     ['prop-rooms', 'prop-floors', 'prop-elevators'].forEach(id => {
         document.getElementById(id).addEventListener('input', updatePropertyProfile);
+    });
+
+    // ── Add Prospect form ────────────────────────────────────
+    const toggleBtn = document.getElementById('add-prospect-toggle');
+    const form = document.getElementById('add-prospect-form');
+    const marketSelect = document.getElementById('apf-market');
+    const marketCustom = document.getElementById('apf-market-custom');
+
+    toggleBtn.addEventListener('click', () => {
+        const visible = form.style.display !== 'none';
+        form.style.display = visible ? 'none' : 'block';
+        toggleBtn.textContent = visible ? '+ Add Prospect' : 'Cancel';
+    });
+
+    document.getElementById('apf-cancel').addEventListener('click', () => {
+        form.style.display = 'none';
+        toggleBtn.textContent = '+ Add Prospect';
+    });
+
+    marketSelect.addEventListener('change', () => {
+        marketCustom.style.display = marketSelect.value === 'Other' ? 'block' : 'none';
+    });
+
+    document.getElementById('apf-save').addEventListener('click', () => {
+        const name = document.getElementById('apf-name').value.trim();
+        if (!name) {
+            document.getElementById('apf-name').style.borderColor = 'var(--red)';
+            return;
+        }
+
+        const market = marketSelect.value === 'Other'
+            ? (marketCustom.value.trim() || 'Other')
+            : marketSelect.value;
+
+        const prospect = {
+            id: Date.now().toString(36),
+            name,
+            market,
+            type: document.getElementById('apf-type').value,
+            rooms: parseInt(document.getElementById('apf-rooms').value, 10) || 0,
+            floors: parseInt(document.getElementById('apf-floors').value, 10) || 0,
+            guestFloors: '',
+            elevators: parseInt(document.getElementById('apf-elevators').value, 10) || 0,
+            surfaces: [],
+            brand: document.getElementById('apf-brand').value.trim(),
+            notes: document.getElementById('apf-notes').value.trim(),
+            dateAdded: new Date().toISOString().slice(0, 10)
+        };
+
+        // Save to localStorage
+        const all = loadCustomProspects();
+        all.push(prospect);
+        saveCustomProspects(all);
+
+        // Rebuild dropdown and select the new prospect
+        rebuildDropdownProspects();
+        propSelect.value = 'prospect-' + prospect.id;
+        propSelect.dispatchEvent(new Event('change'));
+
+        // Reset and hide form
+        form.style.display = 'none';
+        toggleBtn.textContent = '+ Add Prospect';
+        document.getElementById('apf-name').value = '';
+        document.getElementById('apf-rooms').value = '';
+        document.getElementById('apf-floors').value = '';
+        document.getElementById('apf-elevators').value = '';
+        document.getElementById('apf-brand').value = '';
+        document.getElementById('apf-notes').value = '';
     });
 
     updatePropertyProfile();
@@ -2573,7 +2865,7 @@ function downloadProposalConfig() {
     const propSelect = document.getElementById('prop-name');
     const propKey = propSelect.value;
     const p = PIPELINE[propKey];
-    const name = p ? p.name : (document.getElementById('prop-name-custom').value || 'New Property');
+    const name = p ? p.name : (propSelect.options[propSelect.selectedIndex]?.text || 'New Property');
     const rooms = document.getElementById('prop-rooms').value || '0';
     const floors = document.getElementById('prop-floors').value || '1';
     const guestFloors = document.getElementById('prop-guest-floors').value || '';
@@ -2801,10 +3093,10 @@ function initGenerateButton() {
 function generateFleetYaml() {
     const propSelect = document.getElementById('prop-name');
     const propKey = propSelect.value;
-    // WHY: select value is a key like "thesis-hotel"; display name comes from PIPELINE or the custom input
-    const propName = propKey === 'custom'
-        ? (document.getElementById('prop-name-custom').value || 'Untitled Property')
-        : (PIPELINE[propKey] ? PIPELINE[propKey].name : (propSelect.options[propSelect.selectedIndex]?.text || 'Untitled Property'));
+    // WHY: select value is a key like "thesis-hotel" or "prospect-xxxxx"; resolve to display name
+    const propName = PIPELINE[propKey]
+        ? PIPELINE[propKey].name
+        : (propSelect.options[propSelect.selectedIndex]?.text || 'Untitled Property');
     const today = new Date().toISOString().slice(0, 10);
 
     let totalCost = 0;
