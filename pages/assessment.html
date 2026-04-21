@@ -705,6 +705,29 @@ select {
 @keyframes toast-in { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 @keyframes toast-out { from { opacity:1; } to { opacity:0; transform:translateY(-10px); } }
 
+/* ── Range Slider ── */
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  margin-top: 8px;
+  border: none;
+  min-height: 44px; /* WHY: 44px touch target for iPad — the track is thin but the thumb is large */
+  padding: 19px 0;
+  background-clip: content-box;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
 /* ── Utility ── */
 .hidden { display: none !important; }
 .mt-8 { margin-top: 8px; }
@@ -1281,21 +1304,83 @@ function removeStakeholder(idx) {
 }
 
 // ── Operations Tab ──
+// WHY: Preset shift templates — every hotel uses some variation of these three.
+// One tap to populate vs manual entry on iPad keyboard.
+const SHIFT_PRESETS = [
+  { name: 'Morning', start_time: '06:00', end_time: '14:00', staff_count: null },
+  { name: 'Swing',   start_time: '14:00', end_time: '22:00', staff_count: null },
+  { name: 'Night',   start_time: '22:00', end_time: '06:00', staff_count: null },
+];
+
+// WHY: Universal contracted services — every hotel has most of these.
+// Tap to add with pre-filled type so rep only needs vendor + cost.
+const SERVICE_PRESETS = [
+  { service_type: 'cleaning', label: 'Cleaning / EVS' },
+  { service_type: 'laundry', label: 'Laundry' },
+  { service_type: 'security', label: 'Security' },
+  { service_type: 'landscaping', label: 'Landscaping' },
+  { service_type: 'pest_control', label: 'Pest Control' },
+  { service_type: 'waste', label: 'Waste / Recycling' },
+  { service_type: 'hvac', label: 'HVAC / Mechanical' },
+  { service_type: 'pool', label: 'Pool Maintenance' },
+];
+
+// WHY: Pre-written pain points — these recur at every site walk.
+// Tapping a chip appends the text instead of typing on iPad keyboard.
+const PAIN_POINT_PRESETS = [
+  'Long wait times for room service delivery',
+  'Housekeeping carts block corridors during peak hours',
+  'Linen delivery delays between laundry and guest floors',
+  'Lobby/restaurant cleaning only happens overnight, not during service',
+  'Staff spending too much time walking between floors',
+  'Elevator bottleneck during shift change',
+  'Food runners make 50+ trips per meal service',
+  'Pool towel restocking is manual and inconsistent',
+  'BOH corridors congested during event setup/teardown',
+  'High turnover in EVS — constant retraining',
+  'No after-hours cleaning capability',
+  'Guest complaints about cleanliness in public areas',
+];
+
+const AUTOMATION_PRESETS = [
+  'No current automation',
+  'Robotic vacuum in select areas (brand: ___)',
+  'Automated linen sorting system',
+  'Smart lock / keyless entry system',
+  'IPTV / in-room tablet for room service orders',
+  'POS integration for F&B ordering',
+  'Property management system (PMS: ___)',
+];
+
 function renderOperationsTab() {
   const ops = state.operations_data;
   let html = '';
 
-  // Shifts
+  // ── Shift Structure with presets ──
   html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Shift Structure</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+
+  // Quick-add preset chips
+  const existingNames = ops.shifts.map(s => s.name);
+  const availablePresets = SHIFT_PRESETS.filter(p => !existingNames.includes(p.name));
+  if (availablePresets.length > 0) {
+    html += '<div class="field-group"><label>Quick Add</label><div class="checkbox-grid">';
+    availablePresets.forEach((p, pi) => {
+      html += `<div class="checkbox-chip" onclick="addPresetShift(${pi})" style="cursor:pointer;">+ ${esc(p.name)}</div>`;
+    });
+    html += '</div></div>';
+  }
+
   ops.shifts.forEach((sh, i) => {
+    const staffVal = sh.staff_count || 0;
     html += `
       <div class="repeatable-row">
         <button class="row-remove" onclick="removeShift(${i})">&times;</button>
         <div class="field-row">
           <div class="field-group"><label>Shift Name</label>
             <input type="text" value="${esc(sh.name)}" placeholder="e.g., Morning, Swing, Night" oninput="state.operations_data.shifts[${i}].name = this.value; markDirty();"></div>
-          <div class="field-group"><label>Staff Count</label>
-            <input type="number" inputmode="numeric" value="${sh.staff_count || ''}" oninput="state.operations_data.shifts[${i}].staff_count = this.value ? parseInt(this.value) : null; markDirty();"></div>
+          <div class="field-group"><label>Staff Count: <strong id="staffVal${i}">${staffVal || '—'}</strong></label>
+            <input type="range" min="0" max="50" value="${staffVal}" class="slider"
+              oninput="state.operations_data.shifts[${i}].staff_count = parseInt(this.value); document.getElementById('staffVal${i}').textContent = this.value; markDirty();"></div>
         </div>
         <div class="field-row">
           <div class="field-group"><label>Start Time</label>
@@ -1305,55 +1390,84 @@ function renderOperationsTab() {
         </div>
       </div>`;
   });
-  html += '<button class="add-row-btn" onclick="addShift()">+ Add Shift</button>';
+  html += '<button class="add-row-btn" onclick="addShift()">+ Add Custom Shift</button>';
   html += '</div></div>';
 
-  // Contracted Services
+  // ── Contracted Services with presets ──
   html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Contracted Services</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+
+  // Quick-add service chips
+  const existingTypes = ops.contracted_services.map(s => s.service_type);
+  const availableServices = SERVICE_PRESETS.filter(p => !existingTypes.includes(p.service_type));
+  if (availableServices.length > 0) {
+    html += '<div class="field-group"><label>Tap to Add</label><div class="checkbox-grid">';
+    availableServices.forEach((p) => {
+      html += `<div class="checkbox-chip" onclick="addPresetService('${esc(p.service_type)}','${esc(p.label)}')" style="cursor:pointer;">+ ${esc(p.label)}</div>`;
+    });
+    html += '</div></div>';
+  }
+
   ops.contracted_services.forEach((svc, i) => {
+    const satisfactionOptions = ['excellent','good','fair','poor'];
     html += `
       <div class="repeatable-row">
         <button class="row-remove" onclick="removeContractedService(${i})">&times;</button>
-        <div class="field-row">
-          <div class="field-group"><label>Service Type</label>
-            <select onchange="state.operations_data.contracted_services[${i}].service_type = this.value; markDirty();">
-              <option value="">Select...</option>
-              <option value="cleaning" ${svc.service_type === 'cleaning' ? 'selected' : ''}>Cleaning</option>
-              <option value="security" ${svc.service_type === 'security' ? 'selected' : ''}>Security</option>
-              <option value="laundry" ${svc.service_type === 'laundry' ? 'selected' : ''}>Laundry</option>
-              <option value="landscaping" ${svc.service_type === 'landscaping' ? 'selected' : ''}>Landscaping</option>
-              <option value="pest_control" ${svc.service_type === 'pest_control' ? 'selected' : ''}>Pest Control</option>
-              <option value="other" ${svc.service_type === 'other' ? 'selected' : ''}>Other</option>
-            </select></div>
-          <div class="field-group"><label>Vendor Name</label>
-            <input type="text" value="${esc(svc.vendor_name)}" oninput="state.operations_data.contracted_services[${i}].vendor_name = this.value; markDirty();"></div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+          <strong style="font-size:0.88rem; color:var(--text);">${esc(svc.label || svc.service_type || 'Service')}</strong>
         </div>
         <div class="field-row">
+          <div class="field-group"><label>Vendor</label>
+            <input type="text" value="${esc(svc.vendor_name)}" placeholder="Company name" oninput="state.operations_data.contracted_services[${i}].vendor_name = this.value; markDirty();"></div>
           <div class="field-group"><label>Annual Cost ($)</label>
-            <input type="number" inputmode="numeric" value="${svc.annual_cost || ''}" oninput="state.operations_data.contracted_services[${i}].annual_cost = this.value ? parseInt(this.value) : null; markDirty();"></div>
-          <div class="field-group"><label>Contract End Date</label>
-            <input type="date" value="${esc(svc.contract_end)}" oninput="state.operations_data.contracted_services[${i}].contract_end = this.value; markDirty();"></div>
+            <input type="number" inputmode="numeric" value="${svc.annual_cost || ''}" placeholder="e.g., 48000" oninput="state.operations_data.contracted_services[${i}].annual_cost = this.value ? parseInt(this.value) : null; markDirty();"></div>
         </div>
-        <div class="field-group"><label>Satisfaction</label>
-          <select onchange="state.operations_data.contracted_services[${i}].satisfaction = this.value; markDirty();">
-            <option value="">Rate...</option>
-            <option value="excellent" ${svc.satisfaction === 'excellent' ? 'selected' : ''}>Excellent</option>
-            <option value="good" ${svc.satisfaction === 'good' ? 'selected' : ''}>Good</option>
-            <option value="fair" ${svc.satisfaction === 'fair' ? 'selected' : ''}>Fair</option>
-            <option value="poor" ${svc.satisfaction === 'poor' ? 'selected' : ''}>Poor</option>
-          </select></div>
+        <div class="field-row">
+          <div class="field-group"><label>Contract Ends</label>
+            <input type="date" value="${esc(svc.contract_end)}" oninput="state.operations_data.contracted_services[${i}].contract_end = this.value; markDirty();"></div>
+          <div class="field-group"><label>Satisfaction</label>
+            <div class="readiness-group" style="grid-template-columns:repeat(4,1fr);">
+              ${satisfactionOptions.map(opt => `<div class="readiness-option ${svc.satisfaction === opt ? 'active' : ''}" data-val="${opt}" onclick="state.operations_data.contracted_services[${i}].satisfaction='${opt}'; markDirty(); renderActiveTab();" style="${opt === 'excellent' ? '--c:var(--green);' : opt === 'good' ? '--c:var(--blue,#2563eb);' : opt === 'fair' ? '--c:var(--amber);' : '--c:var(--red);'} ${svc.satisfaction === opt ? 'background:color-mix(in srgb, var(--c) 12%, transparent); color:var(--c); border-color:var(--c);' : ''}">${opt[0].toUpperCase() + opt.slice(1)}</div>`).join('')}
+            </div>
+          </div>
+        </div>
       </div>`;
   });
-  html += '<button class="add-row-btn" onclick="addContractedService()">+ Add Service</button>';
+  html += '<button class="add-row-btn" onclick="addContractedService()">+ Add Other Service</button>';
   html += '</div></div>';
 
-  // Automation + Pain Points
-  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Notes</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
-  html += '<div class="field-group"><label>Current Automation</label><textarea class="auto-expand" oninput="state.operations_data.automation_notes = this.value; markDirty();">' + esc(ops.automation_notes) + '</textarea></div>';
-  html += '<div class="field-group"><label>Pain Points</label><textarea class="auto-expand" oninput="state.operations_data.pain_points = this.value; markDirty();">' + esc(ops.pain_points) + '</textarea></div>';
+  // ── Pain Points with tap-to-add presets ──
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Pain Points</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += '<div class="field-group"><label>Tap common issues to add them</label><div class="checkbox-grid" style="margin-bottom:12px;">';
+  const currentPains = ops.pain_points || '';
+  PAIN_POINT_PRESETS.forEach((pp) => {
+    const isActive = currentPains.includes(pp);
+    html += `<div class="checkbox-chip ${isActive ? 'checked' : ''}" onclick="togglePainPoint('${esc(pp.replace(/'/g, "\\'"))}')" style="cursor:pointer; font-size:0.75rem;">${isActive ? '&#10003; ' : ''}${esc(pp)}</div>`;
+  });
+  html += '</div></div>';
+  html += '<div class="field-group"><label>Additional Notes</label><textarea class="auto-expand" placeholder="Any other operational pain points..." oninput="state.operations_data.pain_points = this.value; markDirty();">' + esc(ops.pain_points) + '</textarea></div>';
+  html += '</div></div>';
+
+  // ── Current Automation with presets ──
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Current Automation</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += '<div class="field-group"><label>Tap to auto-fill</label><div class="checkbox-grid" style="margin-bottom:12px;">';
+  const currentAuto = ops.automation_notes || '';
+  AUTOMATION_PRESETS.forEach((ap) => {
+    const isActive = currentAuto.includes(ap);
+    html += `<div class="checkbox-chip ${isActive ? 'checked' : ''}" onclick="toggleAutomation('${esc(ap.replace(/'/g, "\\'"))}')" style="cursor:pointer; font-size:0.75rem;">${isActive ? '&#10003; ' : ''}${esc(ap)}</div>`;
+  });
+  html += '</div></div>';
+  html += '<div class="field-group"><label>Details</label><textarea class="auto-expand" placeholder="Describe any existing automation or technology..." oninput="state.operations_data.automation_notes = this.value; markDirty();">' + esc(ops.automation_notes) + '</textarea></div>';
   html += '</div></div>';
 
   return html;
+}
+
+function addPresetShift(presetIdx) {
+  const available = SHIFT_PRESETS.filter(p => !state.operations_data.shifts.map(s => s.name).includes(p.name));
+  if (available[presetIdx]) {
+    state.operations_data.shifts.push({ ...available[presetIdx] });
+    markDirty(); renderActiveTab(); renderTabBar();
+  }
 }
 
 function addShift() {
@@ -1368,9 +1482,17 @@ function removeShift(idx) {
   renderActiveTab();
   renderTabBar();
 }
+
+function addPresetService(type, label) {
+  state.operations_data.contracted_services.push({
+    service_type: type, label: label, vendor_name: '', annual_cost: null, contract_end: '', satisfaction: ''
+  });
+  markDirty(); renderActiveTab(); renderTabBar();
+}
+
 function addContractedService() {
   state.operations_data.contracted_services.push({
-    service_type: '', vendor_name: '', annual_cost: null, contract_end: '', satisfaction: ''
+    service_type: 'other', label: 'Other', vendor_name: '', annual_cost: null, contract_end: '', satisfaction: ''
   });
   markDirty();
   renderActiveTab();
@@ -1381,6 +1503,29 @@ function removeContractedService(idx) {
   markDirty();
   renderActiveTab();
   renderTabBar();
+}
+
+function togglePainPoint(text) {
+  let current = state.operations_data.pain_points || '';
+  if (current.includes(text)) {
+    // Remove it (and the bullet/newline)
+    current = current.replace(text, '').replace(/\n{2,}/g, '\n').replace(/^[\n• ]+|[\n• ]+$/g, '').trim();
+  } else {
+    current = current ? current + '\n' + text : text;
+  }
+  state.operations_data.pain_points = current;
+  markDirty(); renderActiveTab();
+}
+
+function toggleAutomation(text) {
+  let current = state.operations_data.automation_notes || '';
+  if (current.includes(text)) {
+    current = current.replace(text, '').replace(/\n{2,}/g, '\n').replace(/^[\n• ]+|[\n• ]+$/g, '').trim();
+  } else {
+    current = current ? current + '\n' + text : text;
+  }
+  state.operations_data.automation_notes = current;
+  markDirty(); renderActiveTab();
 }
 
 // ── Infrastructure Tab ──
