@@ -1407,8 +1407,9 @@ function generateFleet(robots) {
             // Outdoor requirement
             if (goal.requireOutdoor && !robot.outdoor_capable) return false;
 
-            // Payload minimum
-            if (goal.minPayloadKg && robot.payload_kg < goal.minPayloadKg) return false;
+            // Payload minimum — only exclude if payload is known AND below threshold
+            // WHY: robots with null payload_kg shouldn't be dropped; they'll score lower in specMatch instead
+            if (goal.minPayloadKg && robot.payload_kg != null && robot.payload_kg < goal.minPayloadKg) return false;
 
             return true;
         });
@@ -1632,16 +1633,10 @@ function swapRobot(slotIdx, candidateIdx) {
     if (!slot || candidateIdx === 0) return;
 
     const all = [slot.selected, ...slot.alternatives].filter(Boolean);
-    const newSelected = all[candidateIdx];
 
-    // Build new alternatives list: old selected + others, minus the promoted one
-    const newAlternatives = all.filter((_, i) => i !== candidateIdx);
-    // Remove the old selected (index 0) from the new alternatives and put it back
-    const oldSelected = newAlternatives.shift();
-    newAlternatives.unshift(oldSelected);
-
-    slot.selected = newSelected;
-    slot.alternatives = newAlternatives;
+    // Promote the clicked candidate; everyone else becomes an alternative
+    slot.selected = all[candidateIdx];
+    slot.alternatives = all.filter((_, i) => i !== candidateIdx);
 
     // Re-render the entire fleet (updates summary totals)
     renderFleet(currentSlots);
@@ -1684,15 +1679,10 @@ function initSurfaceChips() {
     const chips = document.querySelectorAll('.surface-chip');
     chips.forEach(chip => {
         const cb = chip.querySelector('input[type="checkbox"]');
-        // Update .checked class whenever the checkbox state changes
+        // WHY: change event alone is sufficient — the click listener caused
+        // double-toggle race conditions in some browsers
         cb.addEventListener('change', () => {
             chip.classList.toggle('checked', cb.checked);
-        });
-        // Clicking the label already toggles the checkbox via native HTML;
-        // we just need to keep the class in sync on the next tick.
-        chip.addEventListener('click', () => {
-            // setTimeout 0 lets the native checkbox toggle fire first
-            setTimeout(() => chip.classList.toggle('checked', cb.checked), 0);
         });
     });
 }
