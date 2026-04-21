@@ -201,7 +201,8 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
 }
 
 .field input[type="text"],
-.field input[type="number"] {
+.field input[type="number"],
+.field select {
     padding:8px 11px;
     border-radius:8px;
     border:1px solid var(--border);
@@ -214,7 +215,17 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
     width:100%;
 }
 
-.field input:focus {
+.field select {
+    cursor:pointer;
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 10px center;
+    padding-right:28px;
+}
+
+.field input:focus,
+.field select:focus {
     border-color:var(--blue);
     background:rgba(255,255,255,0.95);
     box-shadow:0 0 0 3px rgba(0,85,255,0.08);
@@ -1167,6 +1178,20 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
     border-color:rgba(220,38,38,0.3);
 }
 
+.export-btn.btn-proposal {
+    background:linear-gradient(135deg, #7c3aed, #a855f7);
+    color:white;
+    border-color:transparent;
+    box-shadow:0 2px 8px rgba(124,58,237,0.2);
+    text-decoration:none;
+    font-weight:700;
+}
+
+.export-btn.btn-proposal:hover {
+    box-shadow:0 4px 16px rgba(124,58,237,0.35);
+    transform:translateY(-1px);
+}
+
 .export-spacer { flex:1; }
 
 /* ── Empty state ── */
@@ -1287,8 +1312,31 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
             </div>
 
             <div class="field">
-                <label for="prop-name">Property Name</label>
-                <input type="text" id="prop-name" placeholder="Kimpton Sawyer Hotel">
+                <label for="prop-name">Property</label>
+                <select id="prop-name">
+                    <option value="">-- Select a property --</option>
+                    <optgroup label="Miami">
+                        <option value="thesis-hotel">Thesis Hotel — OPP-001</option>
+                        <option value="moore-miami">The Moore Miami — OPP-002</option>
+                    </optgroup>
+                    <optgroup label="Sarasota">
+                        <option value="art-ovation">Art Ovation Hotel — OPP-003</option>
+                    </optgroup>
+                    <optgroup label="East Bay, CA">
+                        <option value="san-ramon-marriott">San Ramon Marriott — OPP-004</option>
+                        <option value="lafayette-park">Lafayette Park Hotel — OPP-005</option>
+                        <option value="claremont-resort">Claremont Resort — OPP-006</option>
+                    </optgroup>
+                    <optgroup label="Sacramento">
+                        <option value="kimpton-sawyer">Kimpton Sawyer — OPP-007</option>
+                        <option value="citizen-hotel">The Citizen Hotel — OPP-008</option>
+                        <option value="westin-riverfront">Westin Riverfront — OPP-009</option>
+                    </optgroup>
+                    <optgroup label="Custom">
+                        <option value="custom">Enter manually...</option>
+                    </optgroup>
+                </select>
+                <input type="text" id="prop-name-custom" placeholder="Property name" style="display:none;margin-top:6px">
             </div>
 
             <!-- Size metrics — compact grid -->
@@ -1461,6 +1509,9 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
 
         <!-- Export bar (hidden until results are ready) -->
         <div class="export-bar" id="export-bar" style="display:none">
+            <a class="export-btn btn-proposal" id="proposal-btn" href="#" target="_blank" rel="noopener" style="display:none">
+                Generate Proposal
+            </a>
             <span class="export-bar-label">Export</span>
             <button class="export-btn btn-primary" id="export-yaml-btn" type="button">
                 Export fleet.yml
@@ -1523,15 +1574,32 @@ function parseMonthlyPrice(priceStr, fallback) {
         return fallback;
     }
 
-    // Helper: strip commas and parse float from a token like "$2,000"
+    // Helper: strip commas and parse float from a token like "$2,000" or "$100K"
     function parseNum(token) {
-        return parseFloat(token.replace(/[$,]/g, ''));
+        const clean = token.replace(/[$,]/g, '');
+        const v = parseFloat(clean);
+        // WHY: catalog prices frequently use K/k suffix (e.g. "$100K", "$5K")
+        if (/k$/i.test(clean)) return v * 1000;
+        if (/m$/i.test(clean)) return v * 1000000;
+        return v;
     }
 
-    // ── Priority 1: explicit /month or /mo ──────────────────────
+    // WHY: K/M suffix pattern used throughout — e.g. "$5K", "$100K", "$1.5M"
+    const numPat = '[\\d,]+(?:\\.\\d+)?[KkMm]?';
+
+    // ── Priority 1a: monthly range "$5K-$10K/mo" → midpoint ─────
+    // WHY: catalog strings like "~$5K-$10K/mo RaaS" — take midpoint of the monthly range
+    const monthRangeMatch = s.match(new RegExp('\\$\\s*(' + numPat + ')\\s*[-–]\\s*\\$?\\s*(' + numPat + ')\\s*/\\s*mo(?:nth)?', 'i'));
+    if (monthRangeMatch) {
+        const lo = parseNum(monthRangeMatch[1]);
+        const hi = parseNum(monthRangeMatch[2]);
+        if (isFinite(lo) && isFinite(hi) && lo > 0 && hi > 0) return Math.round((lo + hi) / 2);
+    }
+
+    // ── Priority 1b: explicit /month or /mo ──────────────────────
     // Match the number immediately before /month or /mo
-    // e.g. "$2,000/month" or "$599/month lease"
-    const monthMatch = s.match(/\$\s*([\d,]+(?:\.\d+)?)\s*\/\s*mo(?:nth)?/i);
+    // e.g. "$2,000/month" or "$599/month lease" or "$5K/mo"
+    const monthMatch = s.match(new RegExp('\\$\\s*(' + numPat + ')\\s*/\\s*mo(?:nth)?', 'i'));
     if (monthMatch) {
         const v = parseNum(monthMatch[1]);
         if (isFinite(v) && v > 0) return v;
@@ -1539,15 +1607,15 @@ function parseMonthlyPrice(priceStr, fallback) {
 
     // ── Priority 2: /hour or /hr ─────────────────────────────────
     // WHY 720: hours per month at 24/7 utilisation
-    const hourMatch = s.match(/\$\s*([\d,]+(?:\.\d+)?)\s*\/\s*h(?:ou)?r/i);
+    const hourMatch = s.match(new RegExp('\\$\\s*(' + numPat + ')\\s*/\\s*h(?:ou)?r', 'i'));
     if (hourMatch) {
         const v = parseNum(hourMatch[1]);
         if (isFinite(v) && v > 0) return Math.round(v * 720);
     }
 
     // ── Priority 3: price range $X-$Y → midpoint ÷ 36 ───────────
-    // Match patterns like "$11,500-$16,400" or "$11,500 - $16,400"
-    const rangeMatch = s.match(/\$\s*([\d,]+(?:\.\d+)?)\s*[-–]\s*\$?\s*([\d,]+(?:\.\d+)?)/);
+    // Match patterns like "$11,500-$16,400" or "$100K-$150K"
+    const rangeMatch = s.match(new RegExp('\\$\\s*(' + numPat + ')\\s*[-–]\\s*\\$?\\s*(' + numPat + ')', 'i'));
     if (rangeMatch) {
         const lo = parseNum(rangeMatch[1]);
         const hi = parseNum(rangeMatch[2]);
@@ -1559,7 +1627,7 @@ function parseMonthlyPrice(priceStr, fallback) {
     // ── Priority 4: single purchase price $X ÷ 36 ────────────────
     // Only match a plain dollar amount — not something already claimed
     // by rules 1-3. Take the FIRST dollar amount in the string.
-    const singleMatch = s.match(/\$\s*([\d,]+(?:\.\d+)?)/);
+    const singleMatch = s.match(new RegExp('\\$\\s*(' + numPat + ')'));
     if (singleMatch) {
         const v = parseNum(singleMatch[1]);
         if (isFinite(v) && v > 0) return Math.round(v / 36);
@@ -1591,6 +1659,11 @@ function parseMonthlyPrice(priceStr, fallback) {
     near(parseMonthlyPrice('$11,500-$16,400', FALLBACK),                              388,   '$11,500-$16,400 range');
     near(parseMonthlyPrice('$19,700', FALLBACK),                                      547,   '$19,700 single');
 
+    // K-suffix tests — catalog uses "$100K", "$5K/mo" etc.
+    near(parseMonthlyPrice('~$100K-$150K purchase / ~$5K-$10K/mo RaaS', FALLBACK),  7500,  '$5K-$10K/mo RaaS');
+    near(parseMonthlyPrice('$50K purchase', FALLBACK),                               1389,  '$50K single');
+    near(parseMonthlyPrice('$3K/month', FALLBACK),                                   3000,  '$3K/month');
+
     const fb1 = parseMonthlyPrice('not_publicly_listed', FALLBACK);
     if (fb1 !== FALLBACK) console.warn(`[parseMonthlyPrice] FAIL fallback string: got ${fb1}`);
 
@@ -1600,6 +1673,86 @@ function parseMonthlyPrice(priceStr, fallback) {
     console.log('[parseMonthlyPrice] Self-tests complete.');
 })();
 
+
+// ─────────────────────────────────────────────────────────────
+// Pipeline properties — pre-fill form when a known property is selected
+// WHY: saves manual entry for the 9 active pipeline hotels and
+// enables direct linking to each property's proposal page
+// ─────────────────────────────────────────────────────────────
+const PIPELINE = {
+    'thesis-hotel': {
+        name: 'Thesis Hotel',
+        type: 'hotel',
+        rooms: 245, floors: 10, guestFloors: '4-10', elevators: 2,
+        surfaces: ['carpet', 'tile', 'hardwood', 'outdoor'],
+        market: 'Miami',
+        proposalUrl: '../../accelerate-thesis-hotel/pages/proposal-interactive.html'
+    },
+    'moore-miami': {
+        name: 'The Moore Miami',
+        type: 'hotel', // WHY: members' club, but "hotel" type closest match for fleet sizing
+        rooms: 13, floors: 4, guestFloors: '2-4', elevators: 2,
+        surfaces: ['hardwood', 'tile'],
+        market: 'Miami',
+        proposalUrl: '../../accelerate-moore-miami/pages/proposal-interactive.html'
+    },
+    'art-ovation': {
+        name: 'Art Ovation Hotel',
+        type: 'hotel',
+        rooms: 162, floors: 6, guestFloors: '3-6', elevators: 3,
+        surfaces: ['carpet', 'tile', 'hardwood'],
+        market: 'Sarasota',
+        proposalUrl: '../../accelerate-art-ovation/pages/proposal-interactive.html'
+    },
+    'san-ramon-marriott': {
+        name: 'San Ramon Marriott',
+        type: 'hotel',
+        rooms: 368, floors: 6, guestFloors: '2-6', elevators: 4,
+        surfaces: ['carpet', 'tile'],
+        market: 'East Bay, CA',
+        proposalUrl: null
+    },
+    'lafayette-park': {
+        name: 'Lafayette Park Hotel & Spa',
+        type: 'hotel',
+        rooms: 136, floors: 4, guestFloors: '2-4', elevators: 2,
+        surfaces: ['carpet', 'hardwood'],
+        market: 'East Bay, CA',
+        proposalUrl: null
+    },
+    'claremont-resort': {
+        name: 'Claremont Resort & Club',
+        type: 'resort',
+        rooms: 276, floors: 10, guestFloors: '2-10', elevators: 4,
+        surfaces: ['carpet', 'hardwood', 'tile', 'outdoor'],
+        market: 'East Bay, CA',
+        proposalUrl: null
+    },
+    'kimpton-sawyer': {
+        name: 'Kimpton Sawyer',
+        type: 'hotel',
+        rooms: 250, floors: 16, guestFloors: '4-16', elevators: 4,
+        surfaces: ['carpet', 'tile', 'hardwood'],
+        market: 'Sacramento',
+        proposalUrl: null
+    },
+    'citizen-hotel': {
+        name: 'The Citizen Hotel',
+        type: 'hotel',
+        rooms: 196, floors: 14, guestFloors: '3-14', elevators: 3,
+        surfaces: ['carpet', 'hardwood', 'tile'],
+        market: 'Sacramento',
+        proposalUrl: null
+    },
+    'westin-riverfront': {
+        name: 'Westin Riverfront',
+        type: 'hotel',
+        rooms: 101, floors: 3, guestFloors: '1-3', elevators: 2,
+        surfaces: ['carpet', 'tile'],
+        market: 'Sacramento',
+        proposalUrl: null
+    }
+};
 
 // ─────────────────────────────────────────────────────────────
 // Robot data — loaded once at page startup
@@ -1946,6 +2099,7 @@ function renderFleet(slots) {
     emptyState.style.display = 'none';
     summaryStrip.style.display = 'flex';
     exportBar.style.display = 'flex';
+    updateProposalButton();
 
     // ── Summary calculations ─────────────────────────────────
     let totalRobots = 0;
@@ -2259,12 +2413,73 @@ function initPropertySection() {
         });
     });
 
+    // Property dropdown — auto-fill form when a pipeline property is selected
+    const propSelect = document.getElementById('prop-name');
+    const propCustom = document.getElementById('prop-name-custom');
+
+    propSelect.addEventListener('change', () => {
+        const key = propSelect.value;
+
+        // Show/hide custom name input
+        propCustom.style.display = key === 'custom' ? 'block' : 'none';
+
+        const p = PIPELINE[key];
+        if (!p) {
+            updateProposalButton();
+            return;
+        }
+
+        // Fill metrics
+        document.getElementById('prop-rooms').value = p.rooms;
+        document.getElementById('prop-floors').value = p.floors;
+        document.getElementById('prop-guest-floors').value = p.guestFloors;
+        document.getElementById('prop-elevators').value = p.elevators;
+
+        // Set property type
+        document.querySelectorAll('.prop-type').forEach(b => {
+            b.classList.toggle('active', b.dataset.type === p.type);
+        });
+
+        // Set surfaces
+        const allSurfaces = ['carpet', 'hardwood', 'tile', 'terrazzo', 'outdoor'];
+        allSurfaces.forEach(s => {
+            const chip = document.getElementById('surface-' + s);
+            if (!chip) return;
+            const cb = chip.querySelector('input[type="checkbox"]');
+            const checked = p.surfaces.includes(s);
+            cb.checked = checked;
+            chip.classList.toggle('checked', checked);
+        });
+
+        updatePropertyProfile();
+        updateProposalButton();
+    });
+
     // Auto-update profile on input changes
     ['prop-rooms', 'prop-floors', 'prop-elevators'].forEach(id => {
         document.getElementById(id).addEventListener('input', updatePropertyProfile);
     });
 
     updatePropertyProfile();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Proposal button — show/hide and link to the right proposal page
+// ─────────────────────────────────────────────────────────────
+function updateProposalButton() {
+    const btn = document.getElementById('proposal-btn');
+    if (!btn) return;
+
+    const key = document.getElementById('prop-name').value;
+    const p = PIPELINE[key];
+
+    if (p && p.proposalUrl) {
+        btn.style.display = 'inline-flex';
+        btn.href = p.proposalUrl;
+        btn.title = 'Open ' + p.name + ' proposal';
+    } else {
+        btn.style.display = 'none';
+    }
 }
 
 
@@ -2427,7 +2642,12 @@ function initGenerateButton() {
 // source comment with score and alternatives for traceability.
 // ─────────────────────────────────────────────────────────────
 function generateFleetYaml() {
-    const propName = document.getElementById('prop-name').value || 'Untitled Property';
+    const propSelect = document.getElementById('prop-name');
+    const propKey = propSelect.value;
+    // WHY: select value is a key like "thesis-hotel"; display name comes from PIPELINE or the custom input
+    const propName = propKey === 'custom'
+        ? (document.getElementById('prop-name-custom').value || 'Untitled Property')
+        : (PIPELINE[propKey] ? PIPELINE[propKey].name : (propSelect.options[propSelect.selectedIndex]?.text || 'Untitled Property'));
     const today = new Date().toISOString().slice(0, 10);
 
     let totalCost = 0;
