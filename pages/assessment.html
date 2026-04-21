@@ -986,8 +986,13 @@ let state = {
   id: null,
   property_name: '', property_address: '', property_type: '',
   facility_type: 'hotel',
+  brand_flag: '', management_company: '', star_rating: null,
   rooms: null, floors: null, elevators: null, elevator_make: '',
-  year_built: null, last_renovation: null,
+  total_sqft: null, year_built: null, last_renovation: null,
+  parking_type: '', parking_spaces: null, valet: false,
+  pool: false, pool_type: '', spa: false, fitness_center: false, business_center: false,
+  pms_system: '', key_system: '', phone_system: '', guest_wifi_provider: '',
+  avg_daily_rate: null, occupancy_pct: null, revpar: null,
   gm_name: '', gm_email: '', gm_phone: '',
   engineering_contact: '', engineering_email: '',
   fb_director: '', fb_outlets: null, event_space_sqft: null,
@@ -1659,10 +1664,10 @@ function renderOverviewTab() {
   }
   html += `</div></div>`;
 
-  // ── Property Basics ──
+  // ── Property Identity ──
   html += `<div class="section">
     <div class="section-header" onclick="toggleSection(this)">
-      <h3>Property Basics</h3>
+      <h3>Property Identity</h3>
       <span class="section-chevron">&#9660;</span>
     </div>
     <div class="section-body">
@@ -1674,6 +1679,42 @@ function renderOverviewTab() {
         <label>Address</label>
         <input type="text" value="${esc(s.property_address)}" oninput="state.property_address = this.value; markDirty();">
       </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Brand / Flag</label>
+          <input type="text" value="${esc(s.brand_flag)}" placeholder="e.g., Marriott Autograph, Hilton, Independent" oninput="state.brand_flag = this.value; markDirty();">
+        </div>
+        <div class="field-group">
+          <label>Management Company</label>
+          <input type="text" value="${esc(s.management_company)}" placeholder="e.g., Shaner, Aimbridge, self-managed" oninput="state.management_company = this.value; markDirty();">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Star Rating: <strong>${s.star_rating || '—'}</strong></label>
+          <input type="range" min="1" max="5" value="${s.star_rating || 3}" class="slider"
+            oninput="state.star_rating = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value; markDirty();">
+        </div>
+        <div class="field-group">
+          <label>Union Status</label>
+          <select onchange="state.union_status = this.value; markDirty();">
+            <option value="" ${!s.union_status ? 'selected' : ''}>Select...</option>
+            <option value="non_union" ${s.union_status === 'non_union' ? 'selected' : ''}>Non-Union</option>
+            <option value="union" ${s.union_status === 'union' ? 'selected' : ''}>Union</option>
+            <option value="partial" ${s.union_status === 'partial' ? 'selected' : ''}>Partial (some depts)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Building ──
+  html += `<div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h3>Building</h3>
+      <span class="section-chevron">&#9660;</span>
+    </div>
+    <div class="section-body">
       <div class="field-row">
         <div class="field-group">
           <label>Rooms / Keys: <strong>${s.rooms || '—'}</strong></label>
@@ -1688,14 +1729,33 @@ function renderOverviewTab() {
       </div>
       <div class="field-row">
         <div class="field-group">
+          <label>Total Sq Ft</label>
+          <input type="number" inputmode="numeric" value="${s.total_sqft || ''}" placeholder="e.g., 250000"
+            oninput="state.total_sqft = this.value ? parseInt(this.value) : null; markDirty();">
+        </div>
+        <div class="field-group">
+          <label>Year Built</label>
+          <input type="number" inputmode="numeric" value="${s.year_built || ''}" placeholder="e.g., 1998"
+            oninput="state.year_built = this.value ? parseInt(this.value) : null; markDirty();">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Last Renovation</label>
+          <input type="number" inputmode="numeric" value="${s.last_renovation || ''}" placeholder="e.g., 2019"
+            oninput="state.last_renovation = this.value ? parseInt(this.value) : null; markDirty();">
+        </div>
+        <div class="field-group">
           <label>Elevators: <strong>${s.elevators || '—'}</strong></label>
           <input type="range" min="0" max="15" value="${s.elevators || 1}" class="slider"
             oninput="state.elevators = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value; markDirty();">
         </div>
+      </div>
+      <div class="field-row">
         <div class="field-group">
           <label>Elevator Make</label>
           <select onchange="state.elevator_make = this.value; markDirty();">
-            <option value="">Select or type below...</option>
+            <option value="">Select...</option>
             <option value="ThyssenKrupp" ${s.elevator_make === 'ThyssenKrupp' ? 'selected' : ''}>ThyssenKrupp</option>
             <option value="Otis" ${s.elevator_make === 'Otis' ? 'selected' : ''}>Otis</option>
             <option value="KONE" ${s.elevator_make === 'KONE' ? 'selected' : ''}>KONE</option>
@@ -1704,17 +1764,110 @@ function renderOverviewTab() {
             <option value="Fujitec" ${s.elevator_make === 'Fujitec' ? 'selected' : ''}>Fujitec</option>
           </select>
         </div>
+        <div class="field-group">
+          <label>Parking</label>
+          <select onchange="state.parking_type = this.value; markDirty();">
+            <option value="" ${!s.parking_type ? 'selected' : ''}>Select...</option>
+            <option value="self" ${s.parking_type === 'self' ? 'selected' : ''}>Self-Park Only</option>
+            <option value="valet" ${s.parking_type === 'valet' ? 'selected' : ''}>Valet Only</option>
+            <option value="both" ${s.parking_type === 'both' ? 'selected' : ''}>Self-Park + Valet</option>
+            <option value="street" ${s.parking_type === 'street' ? 'selected' : ''}>Street Only</option>
+            <option value="none" ${s.parking_type === 'none' ? 'selected' : ''}>No Parking</option>
+          </select>
+        </div>
       </div>
-      <div class="field-row">
-      </div>
+    </div>
+  </div>`;
+
+  // ── Amenities ──
+  const amenityToggles = [
+    { key: 'pool', label: 'Pool' },
+    { key: 'spa', label: 'Spa' },
+    { key: 'fitness_center', label: 'Fitness Center' },
+    { key: 'business_center', label: 'Business Center' },
+    { key: 'valet', label: 'Valet Service' },
+  ];
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Amenities</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
+  amenityToggles.forEach(a => {
+    const active = !!s[a.key];
+    html += '<button class="chip-btn" onclick="state.' + a.key + ' = !state.' + a.key + '; markDirty(); renderTab(0);"'
+      + ' style="font-size:.85em;padding:8px 16px;border-radius:20px;border:1px solid ' + (active ? '#16a34a' : 'var(--border,#e2e8f0)') + ';'
+      + 'background:' + (active ? '#f0fdf4' : 'var(--card-bg,#fff)') + ';color:' + (active ? '#166534' : '#475569') + ';cursor:pointer;font-weight:' + (active ? '600' : '400') + ';min-height:44px;">'
+      + (active ? '&#10003; ' : '') + a.label + '</button>';
+  });
+  html += '</div>';
+  if (s.pool) {
+    html += '<div class="field-group" style="margin-bottom:8px;"><label>Pool Details</label>';
+    html += '<input type="text" value="' + esc(s.pool_type) + '" placeholder="e.g., rooftop, ground level, indoor, cabanas" oninput="state.pool_type = this.value; markDirty();"></div>';
+  }
+  html += '</div></div>';
+
+  // ── Technology Systems ──
+  html += `<div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h3>Technology Systems</h3>
+      <span class="section-chevron">&#9660;</span>
+    </div>
+    <div class="section-body">
       <div class="field-row">
         <div class="field-group">
-          <label>Year Built</label>
-          <input type="number" inputmode="numeric" value="${s.year_built || ''}" placeholder="e.g., 1998" oninput="state.year_built = this.value ? parseInt(this.value) : null; markDirty();">
+          <label>PMS (Property Mgmt System)</label>
+          <input type="text" value="${esc(s.pms_system)}" placeholder="e.g., Opera, Mews, StayNTouch, Cloudbeds"
+            oninput="state.pms_system = this.value; markDirty();">
         </div>
         <div class="field-group">
-          <label>Last Renovation</label>
-          <input type="number" inputmode="numeric" value="${s.last_renovation || ''}" placeholder="e.g., 2019" oninput="state.last_renovation = this.value ? parseInt(this.value) : null; markDirty();">
+          <label>Key / Lock System</label>
+          <input type="text" value="${esc(s.key_system)}" placeholder="e.g., Assa Abloy, Salto, Dormakaba, Kaba"
+            oninput="state.key_system = this.value; markDirty();">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Phone System</label>
+          <input type="text" value="${esc(s.phone_system)}" placeholder="e.g., Mitel, Avaya, RingCentral, Cisco"
+            oninput="state.phone_system = this.value; markDirty();">
+        </div>
+        <div class="field-group">
+          <label>Guest WiFi Provider</label>
+          <input type="text" value="${esc(s.guest_wifi_provider)}" placeholder="e.g., Ruckus, Cisco Meraki, Nomadix"
+            oninput="state.guest_wifi_provider = this.value; markDirty();">
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Performance Metrics ──
+  html += `<div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <h3>Performance Metrics</h3>
+      <span class="section-chevron">&#9660;</span>
+    </div>
+    <div class="section-body">
+      <div class="field-row">
+        <div class="field-group">
+          <label>Avg Daily Rate (ADR)</label>
+          <input type="number" inputmode="decimal" value="${s.avg_daily_rate || ''}" placeholder="e.g., 189"
+            oninput="state.avg_daily_rate = this.value ? parseFloat(this.value) : null; markDirty();"
+            style="padding-left:24px;">
+          <span style="position:absolute;left:12px;top:36px;color:#94a3b8;font-weight:600;pointer-events:none;">$</span>
+        </div>
+        <div class="field-group">
+          <label>Avg Occupancy: <strong>${s.occupancy_pct || '—'}%</strong></label>
+          <input type="range" min="20" max="100" value="${s.occupancy_pct || 70}" class="slider"
+            oninput="state.occupancy_pct = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value + '%'; markDirty();">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>RevPAR</label>
+          <input type="number" inputmode="decimal" value="${s.revpar || ''}" placeholder="Auto: ADR × Occ %"
+            oninput="state.revpar = this.value ? parseFloat(this.value) : null; markDirty();"
+            style="padding-left:24px;">
+          <span style="position:absolute;left:12px;top:36px;color:#94a3b8;font-weight:600;pointer-events:none;">$</span>
+        </div>
+        <div class="field-group" style="display:flex;flex-direction:column;justify-content:center;">
+          <span style="font-size:.78em;color:#64748b;line-height:1.4;">RevPAR helps size the ROI — higher RevPAR properties justify higher-value robot deployments.</span>
         </div>
       </div>
     </div>
