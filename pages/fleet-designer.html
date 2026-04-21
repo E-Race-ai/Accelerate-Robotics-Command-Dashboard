@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleet Designer — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Design tokens — mirror robot-catalog.html exactly ── */
+:root {
+    --bg: #f7f8fc;
+    --card: rgba(255,255,255,0.75);
+    --card-hover: rgba(255,255,255,0.95);
+    --border: rgba(0,0,0,0.08);
+    --text: #0f172a;
+    --muted: #64748b;
+    --blue: #0055ff;
+    --cyan: #00c8ff;
+    --purple: #7c3aed;
+    --green: #16a34a;
+    --amber: #d97706;
+    --red: #dc2626;
+    --pink: #db2777;
+    --teal: #0891b2;
+
+    /* WHY: left panel width chosen to fit all inputs comfortably at 360px
+       without taking too much real-estate from the results canvas */
+    --panel-w: 360px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--text);
+    min-height:100vh;
+    background:
+        radial-gradient(ellipse 80% 60% at 20% 30%, rgba(0,200,255,0.10), transparent),
+        radial-gradient(ellipse 60% 50% at 70% 20%, rgba(124,58,237,0.07), transparent),
+        radial-gradient(ellipse 50% 40% at 50% 80%, rgba(0,85,255,0.06), transparent),
+        linear-gradient(180deg, #eef2ff 0%, #f7f8fc 100%);
+    background-attachment:fixed;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow:hidden;
+}
+
+h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
+.mono { font-family:'JetBrains Mono',monospace; }
+
+/* ── Top navigation bar ── */
+.topbar {
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 24px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(24px);
+    border-bottom:1px solid var(--border);
+    box-shadow:0 2px 12px rgba(0,0,0,0.04);
+    z-index:100;
+    gap:12px;
+}
+
+.topbar-brand {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.9rem;
+    color:var(--text);
+}
+
+.brand-icon {
+    width:28px; height:28px; border-radius:7px;
+    background:linear-gradient(135deg, var(--blue), var(--cyan));
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; color:white; flex-shrink:0;
+}
+
+.topbar-center {
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.page-title {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.05rem;
+    color:var(--blue);
+}
+
+.robot-count-badge {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.72rem;
+    font-weight:600;
+    color:var(--blue);
+    background:rgba(0,85,255,0.06);
+    padding:3px 10px;
+    border-radius:6px;
+    border:1px solid rgba(0,85,255,0.15);
+}
+
+.topbar-actions {
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.catalog-link {
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:6px 13px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    color:var(--muted);
+    font-size:0.72rem;
+    font-weight:600;
+    text-decoration:none;
+    transition:all 0.15s;
+}
+.catalog-link:hover {
+    background:rgba(0,85,255,0.05);
+    color:var(--blue);
+    border-color:rgba(0,85,255,0.25);
+}
+
+/* ── Body: two-column layout ── */
+.body-wrap {
+    flex:1;
+    display:flex;
+    overflow:hidden;
+    min-height:0;
+}
+
+/* ── Left panel — inputs ── */
+.left-panel {
+    width:var(--panel-w);
+    flex-shrink:0;
+    overflow-y:auto;
+    border-right:1px solid var(--border);
+    background:rgba(255,255,255,0.55);
+    padding:20px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+}
+
+/* scrollbar style — subtle to match light theme */
+.left-panel::-webkit-scrollbar { width:4px; }
+.left-panel::-webkit-scrollbar-track { background:transparent; }
+.left-panel::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.12); border-radius:2px; }
+
+/* ── Form section chrome ── */
+.form-section {
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.section-heading {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:1.2px;
+    color:var(--muted);
+    padding-bottom:6px;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+.section-heading .sh-icon {
+    font-size:0.85rem;
+    line-height:1;
+}
+
+/* ── Form fields ── */
+.field {
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.field-row {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+}
+
+.field label {
+    font-size:0.63rem;
+    font-weight:600;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.7px;
+}
+
+.field input[type="text"],
+.field input[type="number"] {
+    padding:8px 11px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.8);
+    color:var(--text);
+    font-size:0.82rem;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    transition:all 0.15s;
+    width:100%;
+}
+
+.field input:focus {
+    border-color:var(--blue);
+    background:rgba(255,255,255,0.95);
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+}
+
+/* ── Surface checkboxes ── */
+.surface-grid {
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+}
+
+.surface-chip {
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:5px 10px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    font-size:0.67rem;
+    font-weight:600;
+    color:var(--muted);
+    cursor:pointer;
+    user-select:none;
+    transition:all 0.15s;
+}
+
+.surface-chip input[type="checkbox"] { display:none; }
+
+.surface-chip:hover {
+    background:rgba(22,163,74,0.06);
+    border-color:rgba(22,163,74,0.3);
+    color:var(--green);
+}
+
+.surface-chip.checked {
+    background:rgba(22,163,74,0.09);
+    border-color:var(--green);
+    color:var(--green);
+}
+
+/* ── Goal chips ── */
+.goals-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:5px;
+}
+
+.goal-chip {
+    display:flex;
+    align-items:center;
+    gap:5px;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    font-size:0.7rem;
+    font-weight:600;
+    color:var(--muted);
+    cursor:pointer;
+    user-select:none;
+    transition:all 0.18s;
+    line-height:1.2;
+}
+
+.goal-chip:hover {
+    background:rgba(0,85,255,0.05);
+    border-color:rgba(0,85,255,0.25);
+    color:var(--blue);
+}
+
+.goal-chip.active {
+    background:rgba(0,85,255,0.08);
+    border-color:var(--blue);
+    color:var(--blue);
+    box-shadow:0 0 0 2px rgba(0,85,255,0.08);
+}
+
+.goal-icon {
+    font-size:0.9rem;
+    line-height:1;
+    flex-shrink:0;
+}
+
+/* ── Budget inputs ── */
+.budget-display {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.72rem;
+    font-weight:600;
+    color:var(--blue);
+    margin-top:2px;
+}
+
+/* ── Generate button ── */
+.generate-btn {
+    width:100%;
+    padding:12px;
+    border-radius:10px;
+    border:none;
+    background:linear-gradient(135deg, var(--blue), var(--cyan));
+    color:white;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:0.9rem;
+    font-weight:700;
+    cursor:pointer;
+    transition:all 0.18s;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    box-shadow:0 4px 16px rgba(0,85,255,0.22);
+    letter-spacing:0.2px;
+}
+
+.generate-btn:hover {
+    transform:translateY(-1px);
+    box-shadow:0 6px 24px rgba(0,85,255,0.32);
+}
+
+.generate-btn:active {
+    transform:translateY(0);
+    box-shadow:0 2px 8px rgba(0,85,255,0.18);
+}
+
+/* ── Right panel ── */
+.right-panel {
+    flex:1;
+    overflow-y:auto;
+    padding:20px 24px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    min-width:0;
+}
+
+.right-panel::-webkit-scrollbar { width:4px; }
+.right-panel::-webkit-scrollbar-track { background:transparent; }
+.right-panel::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.12); border-radius:2px; }
+
+/* ── Summary strip ── */
+.summary-strip {
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.summary-chip {
+    flex:1;
+    min-width:120px;
+    padding:12px 14px;
+    border-radius:10px;
+    background:var(--card);
+    border:1px solid rgba(255,255,255,0.8);
+    box-shadow:0 2px 10px rgba(0,0,0,0.04);
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+.summary-chip .sc-val {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.3rem;
+    color:var(--text);
+    font-variant-numeric:tabular-nums;
+}
+
+.summary-chip .sc-label {
+    font-size:0.58rem;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.8px;
+    font-weight:600;
+}
+
+.summary-chip.chip-robots .sc-val { color:var(--blue); }
+.summary-chip.chip-raas .sc-val { color:var(--green); }
+.summary-chip.chip-savings .sc-val { color:var(--teal); }
+.summary-chip.chip-roi .sc-val { color:var(--purple); }
+
+/* ── Fleet slots container ── */
+#fleet-slots {
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+/* ── Export bar ── */
+.export-bar {
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    padding:14px 16px;
+    border-radius:10px;
+    background:var(--card);
+    border:1px solid rgba(255,255,255,0.8);
+    box-shadow:0 2px 10px rgba(0,0,0,0.04);
+    align-items:center;
+}
+
+.export-bar-label {
+    font-size:0.65rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.8px;
+    color:var(--muted);
+    flex-shrink:0;
+    margin-right:4px;
+}
+
+.export-btn {
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:7px 14px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.7);
+    color:var(--text);
+    font-size:0.72rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:all 0.15s;
+    font-family:'Inter',sans-serif;
+}
+
+.export-btn:hover {
+    background:rgba(255,255,255,0.95);
+    box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+
+.export-btn.btn-primary {
+    background:linear-gradient(135deg, var(--blue), var(--cyan));
+    color:white;
+    border-color:transparent;
+    box-shadow:0 2px 8px rgba(0,85,255,0.18);
+}
+
+.export-btn.btn-primary:hover {
+    box-shadow:0 4px 16px rgba(0,85,255,0.28);
+    transform:translateY(-1px);
+}
+
+.export-btn.btn-danger:hover {
+    background:rgba(220,38,38,0.06);
+    color:var(--red);
+    border-color:rgba(220,38,38,0.3);
+}
+
+.export-spacer { flex:1; }
+
+/* ── Empty state ── */
+.empty-state {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:60px 40px;
+    gap:14px;
+    border-radius:14px;
+    border:2px dashed rgba(0,0,0,0.08);
+    background:rgba(255,255,255,0.35);
+    min-height:320px;
+}
+
+.empty-icon {
+    font-size:3rem;
+    opacity:0.35;
+    line-height:1;
+}
+
+.empty-title {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.15rem;
+    color:var(--text);
+    opacity:0.5;
+}
+
+.empty-sub {
+    font-size:0.82rem;
+    color:var(--muted);
+    max-width:300px;
+    line-height:1.5;
+}
+
+.empty-hint {
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:7px 14px;
+    border-radius:7px;
+    background:rgba(0,85,255,0.06);
+    border:1px solid rgba(0,85,255,0.15);
+    font-size:0.72rem;
+    font-weight:600;
+    color:var(--blue);
+    margin-top:4px;
+}
+
+/* ── Responsive: stack below 900px ── */
+@media (max-width:900px) {
+    body {
+        height:auto;
+        overflow:auto;
+    }
+    .body-wrap {
+        flex-direction:column;
+        overflow:visible;
+        height:auto;
+    }
+    .left-panel {
+        width:100%;
+        border-right:none;
+        border-bottom:1px solid var(--border);
+        overflow-y:visible;
+    }
+    .right-panel {
+        overflow-y:visible;
+        padding:16px;
+    }
+    .topbar { flex-wrap:wrap; }
+}
+
+@media (max-width:600px) {
+    .goals-grid { grid-template-columns:1fr; }
+    .field-row { grid-template-columns:1fr; }
+    .summary-strip { flex-direction:column; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Top navigation bar ── -->
+<header class="topbar">
+    <div class="topbar-brand">
+        <div class="brand-icon">⚡</div>
+        <span>Accelerate Robotics</span>
+    </div>
+
+    <div class="topbar-center">
+        <h1 class="page-title">Fleet Designer</h1>
+        <span class="robot-count-badge mono" id="robot-count-badge">loading…</span>
+    </div>
+
+    <div class="topbar-actions">
+        <a href="./robot-catalog.html" class="catalog-link">
+            <span>🤖</span>
+            <span>Robot Catalog</span>
+        </a>
+    </div>
+</header>
+
+<!-- ── Two-column body ── -->
+<div class="body-wrap">
+
+    <!-- ────── LEFT PANEL — inputs ────── -->
+    <aside class="left-panel">
+
+        <!-- Property section -->
+        <div class="form-section">
+            <div class="section-heading">
+                <span class="sh-icon">🏨</span>
+                Property
+            </div>
+
+            <div class="field">
+                <label for="prop-name">Property Name</label>
+                <input type="text" id="prop-name" placeholder="Kimpton Sawyer Hotel">
+            </div>
+
+            <div class="field-row">
+                <div class="field">
+                    <label for="prop-rooms">Rooms</label>
+                    <input type="number" id="prop-rooms" placeholder="250" min="1">
+                </div>
+                <div class="field">
+                    <label for="prop-floors">Floors</label>
+                    <input type="number" id="prop-floors" placeholder="16" min="1">
+                </div>
+            </div>
+
+            <div class="field-row">
+                <div class="field">
+                    <label for="prop-guest-floors">Guest Floors</label>
+                    <input type="text" id="prop-guest-floors" placeholder="4-16">
+                </div>
+                <div class="field">
+                    <label for="prop-elevators">Elevators</label>
+                    <input type="number" id="prop-elevators" placeholder="4" min="0">
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Floor Surfaces</label>
+                <div class="surface-grid">
+                    <label class="surface-chip" id="surface-carpet">
+                        <input type="checkbox" value="carpet">
+                        🟫 Carpet
+                    </label>
+                    <label class="surface-chip" id="surface-hardwood">
+                        <input type="checkbox" value="hardwood">
+                        🟤 Hardwood
+                    </label>
+                    <label class="surface-chip" id="surface-tile">
+                        <input type="checkbox" value="tile">
+                        ⬜ Tile
+                    </label>
+                    <label class="surface-chip" id="surface-terrazzo">
+                        <input type="checkbox" value="terrazzo">
+                        🔷 Terrazzo
+                    </label>
+                    <label class="surface-chip" id="surface-outdoor">
+                        <input type="checkbox" value="outdoor">
+                        🌿 Outdoor
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Goals & Pain Points section -->
+        <div class="form-section">
+            <div class="section-heading">
+                <span class="sh-icon">🎯</span>
+                Goals &amp; Pain Points
+            </div>
+
+            <div class="goals-grid">
+                <div class="goal-chip" id="goal-roomservice" data-goal="roomservice" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-icon">🍽️</span>
+                    Room Service
+                </div>
+                <div class="goal-chip" id="goal-corridor" data-goal="corridor" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-icon">🧹</span>
+                    Corridor Cleaning
+                </div>
+                <div class="goal-chip" id="goal-lobby" data-goal="lobby" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-icon">🏛️</span>
+                    Lobby / Public Floor
+                </div>
+                <div class="goal-chip" id="goal-wow" data-goal="wow" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-icon">✨</span>
+                    Guest Wow Factor
+                </div>
+                <div class="goal-chip" id="goal-linen" data-goal="linen" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-icon">🛏️</span>
+                    Linen / Supply
+                </div>
+                <div class="goal-chip" id="goal-security" data-goal="security" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-icon">🔒</span>
+                    Security / Patrol
+                </div>
+                <div class="goal-chip" id="goal-disinfection" data-goal="disinfection" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-icon">🧪</span>
+                    Disinfection
+                </div>
+                <div class="goal-chip" id="goal-outdoor" data-goal="outdoor" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-icon">🌳</span>
+                    Outdoor Service
+                </div>
+                <div class="goal-chip" id="goal-pool" data-goal="pool" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-icon">🏊</span>
+                    Pool / Amenity Area
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget section -->
+        <div class="form-section">
+            <div class="section-heading">
+                <span class="sh-icon">💰</span>
+                Monthly RaaS Budget
+            </div>
+
+            <div class="field-row">
+                <div class="field">
+                    <label for="budget-min">Minimum</label>
+                    <input type="number" id="budget-min" value="5000" min="0" step="500">
+                    <div class="budget-display mono" id="budget-min-display">$5,000/mo</div>
+                </div>
+                <div class="field">
+                    <label for="budget-max">Maximum</label>
+                    <input type="number" id="budget-max" value="50000" min="0" step="500">
+                    <div class="budget-display mono" id="budget-max-display">$50,000/mo</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generate button -->
+        <button class="generate-btn" id="generate-btn" type="button">
+            ⚡ Design My Fleet
+        </button>
+
+    </aside>
+
+    <!-- ────── RIGHT PANEL — results ────── -->
+    <main class="right-panel">
+
+        <!-- Summary strip (hidden until results are ready) -->
+        <div class="summary-strip" id="summary-strip" style="display:none">
+            <div class="summary-chip chip-robots">
+                <div class="sc-val mono" id="sum-robots">—</div>
+                <div class="sc-label">Robots</div>
+            </div>
+            <div class="summary-chip chip-raas">
+                <div class="sc-val mono" id="sum-raas">—</div>
+                <div class="sc-label">Monthly RaaS</div>
+            </div>
+            <div class="summary-chip chip-savings">
+                <div class="sc-val mono" id="sum-savings">—</div>
+                <div class="sc-label">Est. Savings / yr</div>
+            </div>
+            <div class="summary-chip chip-roi">
+                <div class="sc-val mono" id="sum-roi">—</div>
+                <div class="sc-label">ROI Multiple</div>
+            </div>
+        </div>
+
+        <!-- Fleet slot cards injected here by Task 4 -->
+        <div id="fleet-slots"></div>
+
+        <!-- Export bar (hidden until results are ready) -->
+        <div class="export-bar" id="export-bar" style="display:none">
+            <span class="export-bar-label">Export</span>
+            <button class="export-btn btn-primary" id="export-yaml-btn" type="button">
+                📄 fleet.yml
+            </button>
+            <button class="export-btn" id="copy-clipboard-btn" type="button">
+                📋 Copy to Clipboard
+            </button>
+            <div class="export-spacer"></div>
+            <button class="export-btn btn-danger" id="reset-btn" type="button">
+                ↺ Reset
+            </button>
+        </div>
+
+        <!-- Empty state (visible by default) -->
+        <div class="empty-state" id="empty-state">
+            <div class="empty-icon">🤖</div>
+            <div class="empty-title">Design a Fleet</div>
+            <p class="empty-sub">
+                Fill in your property details and goals on the left,
+                then click <strong>Design My Fleet</strong> to get an
+                AI-recommended robot lineup matched to your space and budget.
+            </p>
+            <div class="empty-hint">
+                <span>⬅️</span>
+                <span>Start with property details</span>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────────────────────
+// parseMonthlyPrice — Task 2
+//
+// Extracts a monthly dollar estimate from catalog price strings.
+// Priority:
+//   1. Explicit /month or /mo    → use that number
+//   2. /hour or /hr              → × 720 (24h × 30d)
+//   3. Range $X-$Y               → midpoint ÷ 36 months
+//   4. Single purchase price $X  → ÷ 36 months
+//   5. Unrecognised / null       → return fallback
+//
+// WHY 720: normalises hourly MaaS to a monthly equivalent assuming
+//   continuous 24/7 operation as a conservative upper bound for
+//   comparison; this overstates some models but keeps the floor
+//   within range for budget-match purposes.
+//
+// WHY 36: standard 3-year RaaS/lease amortisation window —
+//   consistent with how the Accelerate proposal templates present ROI.
+// ─────────────────────────────────────────────────────────────
+function parseMonthlyPrice(priceStr, fallback) {
+    if (priceStr == null) return fallback;
+
+    const s = String(priceStr).trim();
+
+    // Guard: clearly non-numeric strings that mean "unknown"
+    if (/not_publicly_listed|not listed|n\/a|contact|undisclosed/i.test(s)) {
+        return fallback;
+    }
+
+    // Helper: strip commas and parse float from a token like "$2,000"
+    function parseNum(token) {
+        return parseFloat(token.replace(/[$,]/g, ''));
+    }
+
+    // ── Priority 1: explicit /month or /mo ──────────────────────
+    // Match the number immediately before /month or /mo
+    // e.g. "$2,000/month" or "$599/month lease"
+    const monthMatch = s.match(/\$\s*([\d,]+(?:\.\d+)?)\s*\/\s*mo(?:nth)?/i);
+    if (monthMatch) {
+        const v = parseNum(monthMatch[1]);
+        if (isFinite(v) && v > 0) return v;
+    }
+
+    // ── Priority 2: /hour or /hr ─────────────────────────────────
+    // WHY 720: hours per month at 24/7 utilisation
+    const hourMatch = s.match(/\$\s*([\d,]+(?:\.\d+)?)\s*\/\s*h(?:ou)?r/i);
+    if (hourMatch) {
+        const v = parseNum(hourMatch[1]);
+        if (isFinite(v) && v > 0) return Math.round(v * 720);
+    }
+
+    // ── Priority 3: price range $X-$Y → midpoint ÷ 36 ───────────
+    // Match patterns like "$11,500-$16,400" or "$11,500 - $16,400"
+    const rangeMatch = s.match(/\$\s*([\d,]+(?:\.\d+)?)\s*[-–]\s*\$?\s*([\d,]+(?:\.\d+)?)/);
+    if (rangeMatch) {
+        const lo = parseNum(rangeMatch[1]);
+        const hi = parseNum(rangeMatch[2]);
+        if (isFinite(lo) && isFinite(hi) && lo > 0 && hi > 0) {
+            return Math.round((lo + hi) / 2 / 36);
+        }
+    }
+
+    // ── Priority 4: single purchase price $X ÷ 36 ────────────────
+    // Only match a plain dollar amount — not something already claimed
+    // by rules 1-3. Take the FIRST dollar amount in the string.
+    const singleMatch = s.match(/\$\s*([\d,]+(?:\.\d+)?)/);
+    if (singleMatch) {
+        const v = parseNum(singleMatch[1]);
+        if (isFinite(v) && v > 0) return Math.round(v / 36);
+    }
+
+    // ── Priority 5: fallback ─────────────────────────────────────
+    return fallback;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Inline self-tests — run at load time, log results to console.
+// These verify against the spec's stated test cases (±15% tol).
+// ─────────────────────────────────────────────────────────────
+(function runTests() {
+    const FALLBACK = 2850;
+    const TOL = 0.15; // 15% tolerance
+
+    function near(actual, expected, label) {
+        if (expected === actual) return; // exact match (for fallback checks)
+        const diff = Math.abs(actual - expected) / expected;
+        if (diff > TOL) {
+            console.warn(`[parseMonthlyPrice] FAIL "${label}": expected ~${expected}, got ${actual} (${(diff*100).toFixed(1)}% off)`);
+        }
+    }
+
+    near(parseMonthlyPrice('$599/month lease; ~$18,000-$25,000 purchase', FALLBACK),  599,   '$599/month');
+    near(parseMonthlyPrice('$2,000/month RaaS (~$75,000/3yr)', FALLBACK),            2000,  '$2,000/month');
+    near(parseMonthlyPrice('$7/hour MaaS (~$100,000 purchase equivalent)', FALLBACK), 5040,  '$7/hr → ×720');
+    near(parseMonthlyPrice('$11,500-$16,400', FALLBACK),                              388,   '$11,500-$16,400 range');
+    near(parseMonthlyPrice('$19,700', FALLBACK),                                      547,   '$19,700 single');
+
+    const fb1 = parseMonthlyPrice('not_publicly_listed', FALLBACK);
+    if (fb1 !== FALLBACK) console.warn(`[parseMonthlyPrice] FAIL fallback string: got ${fb1}`);
+
+    const fb2 = parseMonthlyPrice(null, FALLBACK);
+    if (fb2 !== FALLBACK) console.warn(`[parseMonthlyPrice] FAIL null: got ${fb2}`);
+
+    console.log('[parseMonthlyPrice] Self-tests complete.');
+})();
+
+
+// ─────────────────────────────────────────────────────────────
+// Robot data — loaded once at page startup
+// ─────────────────────────────────────────────────────────────
+let allRobots = [];
+
+function updateRobotCountBadge(count) {
+    const badge = document.getElementById('robot-count-badge');
+    if (badge) {
+        badge.textContent = `${count} robots`;
+    }
+}
+
+async function loadRobots() {
+    try {
+        const res = await fetch('./data/robots.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status} loading robots.json`);
+        allRobots = await res.json();
+        updateRobotCountBadge(allRobots.length);
+    } catch (err) {
+        console.error('[Fleet Designer] Failed to load robots.json:', err);
+        updateRobotCountBadge(0);
+    }
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Goal chips — toggle .active class + aria-checked
+// ─────────────────────────────────────────────────────────────
+function initGoalChips() {
+    const chips = document.querySelectorAll('.goal-chip');
+
+    chips.forEach(chip => {
+        function toggle() {
+            const isActive = chip.classList.toggle('active');
+            chip.setAttribute('aria-checked', isActive ? 'true' : 'false');
+        }
+
+        chip.addEventListener('click', toggle);
+
+        // WHY: keyboard accessibility — space/enter should toggle chips
+        chip.addEventListener('keydown', e => {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                toggle();
+            }
+        });
+    });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Surface chips — sync visual state with underlying checkbox
+// ─────────────────────────────────────────────────────────────
+function initSurfaceChips() {
+    const chips = document.querySelectorAll('.surface-chip');
+    chips.forEach(chip => {
+        const cb = chip.querySelector('input[type="checkbox"]');
+        // Update .checked class whenever the checkbox state changes
+        cb.addEventListener('change', () => {
+            chip.classList.toggle('checked', cb.checked);
+        });
+        // Clicking the label already toggles the checkbox via native HTML;
+        // we just need to keep the class in sync on the next tick.
+        chip.addEventListener('click', () => {
+            // setTimeout 0 lets the native checkbox toggle fire first
+            setTimeout(() => chip.classList.toggle('checked', cb.checked), 0);
+        });
+    });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Budget display — format as currency on input
+// ─────────────────────────────────────────────────────────────
+function formatCurrency(value) {
+    const n = parseInt(value, 10);
+    if (!isFinite(n) || n < 0) return '—';
+    return '$' + n.toLocaleString('en-US') + '/mo';
+}
+
+function initBudgetDisplays() {
+    const minInput = document.getElementById('budget-min');
+    const maxInput = document.getElementById('budget-max');
+    const minDisplay = document.getElementById('budget-min-display');
+    const maxDisplay = document.getElementById('budget-max-display');
+
+    function update() {
+        minDisplay.textContent = formatCurrency(minInput.value);
+        maxDisplay.textContent = formatCurrency(maxInput.value);
+    }
+
+    minInput.addEventListener('input', update);
+    maxInput.addEventListener('input', update);
+
+    // Initialise display from default values
+    update();
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Generate button — placeholder (Task 4 will add real logic)
+// ─────────────────────────────────────────────────────────────
+function initGenerateButton() {
+    const btn = document.getElementById('generate-btn');
+    btn.addEventListener('click', () => {
+        console.log('Generate clicked', {
+            propertyName:  document.getElementById('prop-name').value,
+            rooms:         document.getElementById('prop-rooms').value,
+            floors:        document.getElementById('prop-floors').value,
+            guestFloors:   document.getElementById('prop-guest-floors').value,
+            elevators:     document.getElementById('prop-elevators').value,
+            budgetMin:     document.getElementById('budget-min').value,
+            budgetMax:     document.getElementById('budget-max').value,
+            goals:         [...document.querySelectorAll('.goal-chip.active')].map(c => c.dataset.goal),
+            surfaces:      [...document.querySelectorAll('.surface-chip input:checked')].map(c => c.value),
+        });
+        // Task 4 will replace this placeholder
+    });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    loadRobots();
+    initGoalChips();
+    initSurfaceChips();
+    initBudgetDisplays();
+    initGenerateButton();
+});
+</script>
+</body>
+</html>
