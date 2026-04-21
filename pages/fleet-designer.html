@@ -3614,12 +3614,12 @@ function updateProposalButton() {
         btn.title = 'Open ' + p.name + ' proposal';
         btn.onclick = null;
     } else {
-        // No existing proposal — download a pre-filled config.yml
+        // No existing proposal — launch universal proposal page
         btn.href = '#';
-        btn.title = 'Download config.yml for proposal generator';
+        btn.title = 'Generate interactive proposal';
         btn.onclick = function(e) {
             e.preventDefault();
-            downloadProposalConfig();
+            launchProposal();
         };
     }
 }
@@ -3765,6 +3765,105 @@ ${fleetLines}`;
     URL.revokeObjectURL(url);
 }
 
+// ─────────────────────────────────────────────────────────────
+// launchProposal — writes fleet data to localStorage and opens
+// the universal proposal page in a new tab.
+// ─────────────────────────────────────────────────────────────
+function launchProposal() {
+    const propSelect = document.getElementById('prop-name');
+    const propKey = propSelect.value;
+    const pipelineProp = PIPELINE[propKey];
+    const prospectKey = propKey.startsWith('prospect-') ? propKey.replace('prospect-', '') : null;
+    const prospect = prospectKey ? PROSPECTS[prospectKey] : null;
+    const p = pipelineProp || prospect;
+    const name = p ? p.name : (propSelect.options[propSelect.selectedIndex]?.text || 'New Property');
+
+    // Gather property basics from the form
+    const property = {
+        name: name,
+        type: document.querySelector('.prop-type.active')?.dataset.type || 'hotel',
+        rooms: parseInt(document.getElementById('prop-rooms').value) || 0,
+        floors: parseInt(document.getElementById('prop-floors').value) || 1,
+        guestFloors: document.getElementById('prop-guest-floors').value || '',
+        elevators: parseInt(document.getElementById('prop-elevators').value) || 0,
+        market: p?.market || null,
+    };
+
+    // Gather facility details
+    const elevMakeSelect = document.getElementById('fd-elevator-make');
+    const elevCustom = document.getElementById('fd-elevator-custom');
+    let elevMake = elevMakeSelect.value;
+    if (elevMake === 'Other' && elevCustom.value.trim()) {
+        elevMake = elevCustom.value.trim();
+    }
+
+    const outdoorAmenities = [];
+    document.querySelectorAll('#amenity-grid .amenity-chip input:checked').forEach(cb => outdoorAmenities.push(cb.value));
+
+    const surfaceZones = {};
+    document.querySelectorAll('.zone-group').forEach(group => {
+        const zoneKey = group.dataset.zone;
+        const checked = [];
+        group.querySelectorAll('.zone-chip.checked').forEach(chip => checked.push(chip.dataset.surface));
+        if (checked.length > 0) surfaceZones[zoneKey] = checked;
+    });
+
+    const surfaces = [];
+    document.querySelectorAll('.surface-chip input:checked').forEach(cb => surfaces.push(cb.value));
+
+    const facility = {
+        elevatorMake: elevMake || null,
+        elevatorGuestCount: parseInt(document.getElementById('fd-elevator-guest').value) || 0,
+        elevatorServiceCount: parseInt(document.getElementById('fd-elevator-service').value) || 0,
+        outdoorAmenities,
+        fbOutlets: parseInt(document.getElementById('fd-fb-outlets').value) || 0,
+        eventSpaceSqFt: parseInt(document.getElementById('fd-event-sqft').value) || 0,
+        surfaceZones: Object.keys(surfaceZones).length > 0 ? surfaceZones : null,
+        surfaces,
+    };
+
+    // Gather fleet slots (only those with a selected robot)
+    const fleet = currentSlots.filter(s => s.selected).map(s => ({
+        goalId: s.goalId,
+        serviceLine: s.serviceLine,
+        type: s.type,
+        savings: s.savings,
+        robot: {
+            company: s.selected.robot.company,
+            model_name: s.selected.robot.model_name,
+            image_url: s.selected.robot.image_url || '',
+            primary_use_cases: s.selected.robot.primary_use_cases || [],
+            payload_kg: s.selected.robot.payload_kg,
+            elevator_integration: s.selected.robot.elevator_integration || false,
+            public_price: s.selected.robot.public_price || '',
+        },
+        score: s.selected.score,
+        monthlyEstimate: s.selected.monthlyEstimate,
+    }));
+
+    // Compute summary
+    const totalMonthlyCost = fleet.reduce((sum, s) => sum + s.monthlyEstimate, 0);
+    const totalAnnualSavings = fleet.reduce((sum, s) => sum + s.savings, 0) * 12;
+    const annualCost = totalMonthlyCost * 12;
+    // WHY: ROI multiple = annual savings / annual cost — how many times the investment pays back
+    const roiMultiple = annualCost > 0 ? (totalAnnualSavings / annualCost) : 0;
+
+    const payload = {
+        property,
+        facility,
+        fleet,
+        summary: {
+            totalRobots: fleet.length,
+            totalMonthlyCost,
+            totalAnnualSavings,
+            roiMultiple: parseFloat(roiMultiple.toFixed(1)),
+        },
+        generatedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem('accelerate-proposal', JSON.stringify(payload));
+    window.open('proposal.html', '_blank');
+}
 
 // ─────────────────────────────────────────────────────────────
 // Goal chips — toggle .active class + aria-checked
