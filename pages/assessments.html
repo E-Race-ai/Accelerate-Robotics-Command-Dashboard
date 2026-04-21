@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facility Assessments — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Design tokens ── */
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --card: #16161f;
+  --card-hover: #1c1c28;
+  --border: rgba(255,255,255,0.08);
+  --border-hover: #f59e0b;
+  --text: #e8e4df;
+  --dim: #8a8a9a;
+  --accent: #f59e0b;   /* amber/gold — assessment toolkit accent */
+  --accent-soft: rgba(245,158,11,0.12);
+  --accent-text: #fbbf24;
+  --green: #00e676;
+  --blue: #448aff;
+  --grey: #5a5a6a;
+  --red: #ff5252;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+
+/* ── Top bar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 56px;
+  background: rgba(17,17,24,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brand-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(245,158,11,0.6);
+}
+
+/* ── Page header ── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32px 24px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 16px;
+}
+
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+
+.page-subtitle {
+  font-size: 0.85rem;
+  color: var(--dim);
+  margin-top: 4px;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #0a0a0f;
+}
+
+.btn-primary:hover {
+  background: #fbbf24;
+  box-shadow: 0 0 20px rgba(245,158,11,0.4);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--dim);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.18);
+}
+
+/* ── Filters row ── */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  font-size: 0.8rem;
+  color: var(--dim);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.filter-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  padding: 8px 32px 8px 12px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  /* WHY: Custom chevron SVG encoded inline to avoid external asset dependency */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8a9a' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.15s;
+}
+
+.filter-select:hover { border-color: rgba(255,255,255,0.18); }
+.filter-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+}
+
+.filter-count {
+  font-size: 0.8rem;
+  color: var(--dim);
+  margin-left: auto;
+}
+
+/* ── Main content area ── */
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+}
+
+/* ── Column header row ── */
+.list-header {
+  display: grid;
+  /* name | assigned | status | zones | photos | date */
+  grid-template-columns: 1fr 120px 100px 80px 60px 140px;
+  gap: 0 16px;
+  padding: 8px 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--dim);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+/* ── Assessment card ── */
+.assessment-card {
+  display: grid;
+  grid-template-columns: 1fr 120px 100px 80px 60px 140px;
+  gap: 0 16px;
+  align-items: center;
+  padding: 0 20px;
+  min-height: 60px; /* min touch target height */
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.assessment-card:hover {
+  border-color: var(--border-hover);
+  background: rgba(245,158,11,0.04);
+}
+
+.assessment-card:last-child { margin-bottom: 0; }
+
+/* ── Card columns ── */
+.col-name { min-width: 0; }
+
+.card-property-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.card-property-type {
+  font-size: 0.76rem;
+  color: var(--dim);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-assigned {
+  font-size: 0.85rem;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-status { display: flex; align-items: center; }
+
+/* ── Status badges — pill shape ── */
+.badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* WHY: Color coding matches conventional traffic light + amber=synced semantics:
+   draft=neutral grey, in_progress=informational blue, completed=positive green, synced=amber */
+.badge-draft    { background: rgba(90,90,106,0.25); color: #8a8a9a; }
+.badge-in_progress { background: rgba(68,138,255,0.18); color: #448aff; }
+.badge-completed { background: rgba(0,230,118,0.15); color: #00e676; }
+.badge-synced   { background: rgba(245,158,11,0.18); color: #fbbf24; }
+
+.col-zones, .col-photos {
+  font-size: 0.85rem;
+  color: var(--dim);
+  text-align: right;
+}
+
+.col-date {
+  font-size: 0.78rem;
+  color: var(--dim);
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 72px 24px;
+  color: var(--dim);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
+.empty-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.empty-subtitle {
+  font-size: 0.875rem;
+  color: var(--dim);
+  margin-bottom: 24px;
+}
+
+/* ── Loading skeleton ── */
+.skeleton-card {
+  height: 60px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.skeleton-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ── Error banner ── */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+
+.banner-warn {
+  background: rgba(255,171,0,0.1);
+  border: 1px solid rgba(255,171,0,0.25);
+  color: #ffab00;
+}
+
+.banner-icon { flex-shrink: 0; }
+
+/* ── Offline draft divider ── */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0 12px;
+  color: var(--dim);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Mobile: hide secondary columns ── */
+@media (max-width: 768px) {
+  .list-header { grid-template-columns: 1fr 100px; }
+  .list-header .col-zones,
+  .list-header .col-photos,
+  .list-header .col-date,
+  .list-header .col-assigned { display: none; }
+
+  .assessment-card { grid-template-columns: 1fr 100px; }
+  .assessment-card .col-assigned,
+  .assessment-card .col-zones,
+  .assessment-card .col-photos,
+  .assessment-card .col-date { display: none; }
+
+  .page-header { padding: 20px 16px 12px; }
+  .filters { padding: 0 16px 16px; }
+  .content { padding: 0 16px 48px; }
+  .list-header { padding: 8px 16px; }
+  .assessment-card { padding: 0 16px; }
+}
+
+/* ── Print ── */
+@media print {
+  body { background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .topbar, .filters, .btn { display: none; }
+  .assessment-card { border: 1px solid #ddd; break-inside: avoid; }
+  .badge { border: 1px solid currentColor; }
+}
+</style>
+</head>
+<body>
+
+<!-- Top navigation bar -->
+<header class="topbar">
+  <a href="/" class="brand">
+    <span class="brand-dot"></span>
+    Accelerate Robotics
+  </a>
+  <a href="/pages/assessment.html" class="btn btn-primary" id="new-btn-top">
+    + New Assessment
+  </a>
+</header>
+
+<!-- Page header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Facility Assessments</h1>
+    <p class="page-subtitle">Site survey records for all robot deployment opportunities</p>
+  </div>
+  <a href="/pages/assessment.html" class="btn btn-primary" id="new-btn-header">
+    + New Assessment
+  </a>
+</div>
+
+<!-- Filters row -->
+<div class="filters">
+  <span class="filter-label">Assigned To</span>
+  <select class="filter-select" id="filter-assigned" aria-label="Filter by team member">
+    <option value="">All</option>
+    <option value="Cory">Cory</option>
+    <option value="Tyler">Tyler</option>
+    <option value="David">David</option>
+    <option value="Eric">Eric</option>
+    <option value="Lydia">Lydia</option>
+    <option value="JB">JB</option>
+    <option value="Ben">Ben</option>
+  </select>
+
+  <span class="filter-label">Status</span>
+  <select class="filter-select" id="filter-status" aria-label="Filter by status">
+    <option value="">All</option>
+    <option value="draft">Draft</option>
+    <option value="in_progress">In Progress</option>
+    <option value="completed">Completed</option>
+    <option value="synced">Synced</option>
+  </select>
+
+  <span class="filter-count" id="result-count"></span>
+</div>
+
+<!-- Main content -->
+<div class="content" id="content">
+  <!-- Loading skeletons — replaced by JS once data arrives -->
+  <div class="list-header" id="list-header" style="display:none">
+    <span>Property</span>
+    <span>Assigned To</span>
+    <span>Status</span>
+    <span class="col-zones" style="text-align:right">Zones</span>
+    <span class="col-photos" style="text-align:right">Photos</span>
+    <span class="col-date" style="text-align:right">Last Updated</span>
+  </div>
+  <div id="skeleton-list">
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+  </div>
+  <div id="list-container"></div>
+</div>
+
+<script>
+// ── XSS safety: escape all user-controlled strings before rendering ──
+// WHY: Any text from the server or localStorage could contain HTML/script.
+//      Using textContent assignment is the safest DOM-based approach.
+function esc(str) {
+  if (str == null) return '';
+  const d = document.createElement('div');
+  d.textContent = String(str);
+  return d.innerHTML;
+}
+
+// ── Safe DOM text setter (preferred over esc() for direct insertion) ──
+function setText(el, str) {
+  el.textContent = str == null ? '' : String(str);
+}
+
+// ── Format ISO date string to readable relative/absolute ──
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  const now = new Date();
+  const diffMs = now - d;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return diffDays + 'd ago';
+  // WHY: After 7 days switch to calendar date — relative gets confusing beyond a week
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ── Status badge HTML (safe — status comes from server enum, not free-text) ──
+function statusBadge(status) {
+  const labels = {
+    draft: 'Draft',
+    in_progress: 'In Progress',
+    completed: 'Completed',
+    synced: 'Synced',
+  };
+  const safeStatus = ['draft', 'in_progress', 'completed', 'synced'].includes(status)
+    ? status : 'draft';
+  const label = labels[safeStatus] || safeStatus;
+  const span = document.createElement('span');
+  span.className = 'badge badge-' + safeStatus;
+  span.textContent = label;
+  return span;
+}
+
+// ── Build a single assessment card DOM node ──
+function buildCard(a) {
+  const card = document.createElement('a');
+  card.className = 'assessment-card';
+  card.href = '/pages/assessment.html?id=' + encodeURIComponent(a.id);
+
+  // Column: property name + type
+  const colName = document.createElement('div');
+  colName.className = 'col-name';
+  const nameEl = document.createElement('div');
+  nameEl.className = 'card-property-name';
+  setText(nameEl, a.property_name || 'Untitled');
+  const typeEl = document.createElement('div');
+  typeEl.className = 'card-property-type';
+  setText(typeEl, a.property_type || a.facility_type || '');
+  colName.append(nameEl, typeEl);
+
+  // Column: assigned to
+  const colAssigned = document.createElement('div');
+  colAssigned.className = 'col-assigned';
+  setText(colAssigned, a.assigned_to || '—');
+
+  // Column: status badge
+  const colStatus = document.createElement('div');
+  colStatus.className = 'col-status';
+  colStatus.appendChild(statusBadge(a.status));
+
+  // Column: zone count
+  const colZones = document.createElement('div');
+  colZones.className = 'col-zones';
+  setText(colZones, a.zone_count != null ? String(a.zone_count) : '—');
+
+  // Column: photo count
+  const colPhotos = document.createElement('div');
+  colPhotos.className = 'col-photos';
+  setText(colPhotos, a.photo_count != null ? String(a.photo_count) : '—');
+
+  // Column: last updated date
+  const colDate = document.createElement('div');
+  colDate.className = 'col-date';
+  setText(colDate, fmtDate(a.updated_at || a.last_updated));
+
+  card.append(colName, colAssigned, colStatus, colZones, colPhotos, colDate);
+  return card;
+}
+
+// ── Build empty state ──
+function buildEmpty(isOffline) {
+  const el = document.createElement('div');
+  el.className = 'empty-state';
+
+  const icon = document.createElement('div');
+  icon.className = 'empty-icon';
+  icon.textContent = '📋';
+
+  const title = document.createElement('div');
+  title.className = 'empty-title';
+  title.textContent = isOffline ? 'No offline drafts found' : 'No assessments yet';
+
+  const sub = document.createElement('div');
+  sub.className = 'empty-subtitle';
+  sub.textContent = isOffline
+    ? 'Start a new assessment to create your first draft.'
+    : 'Create your first facility assessment to get started.';
+
+  const btn = document.createElement('a');
+  btn.className = 'btn btn-primary';
+  btn.href = '/pages/assessment.html';
+  btn.textContent = '+ New Assessment';
+
+  el.append(icon, title, sub, btn);
+  return el;
+}
+
+// ── Load local drafts from localStorage (offline fallback) ──
+// WHY: Keys are prefixed with `assessment_draft_` so we don't accidentally
+//      load unrelated localStorage entries from other features.
+function loadLocalDrafts() {
+  const drafts = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('assessment_draft_')) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          // Normalize fields the list page expects
+          parsed.zone_count = parsed.zone_count ?? (Array.isArray(parsed.zones) ? parsed.zones.length : 0);
+          parsed.photo_count = parsed.photo_count ?? 0;
+          parsed.status = parsed.status || 'draft';
+          drafts.push(parsed);
+        }
+      } catch (_) {
+        // WHY: Silently skip corrupt draft entries — don't break the whole list
+      }
+    }
+  }
+  // Sort newest first by updated_at, falling back to created_at
+  drafts.sort((a, b) => {
+    const ta = a.updated_at || a.created_at || '';
+    const tb = b.updated_at || b.created_at || '';
+    return tb.localeCompare(ta);
+  });
+  return drafts;
+}
+
+// ── Render a list section ──
+function renderSection(container, assessments, label) {
+  if (label) {
+    const divider = document.createElement('div');
+    divider.className = 'section-divider';
+    divider.textContent = label;
+    container.appendChild(divider);
+  }
+  assessments.forEach(a => container.appendChild(buildCard(a)));
+}
+
+// ── Filter assessments client-side (for offline draft section) ──
+function filterList(list, assignedTo, status) {
+  return list.filter(a => {
+    if (assignedTo && a.assigned_to !== assignedTo) return false;
+    if (status && a.status !== status) return false;
+    return true;
+  });
+}
+
+// ── Update result count label ──
+function updateCount(n) {
+  const el = document.getElementById('result-count');
+  if (!el) return;
+  el.textContent = n === 1 ? '1 result' : n + ' results';
+}
+
+// ── Main load function ──
+async function loadAssessments() {
+  const assignedSelect = document.getElementById('filter-assigned');
+  const statusSelect   = document.getElementById('filter-status');
+  const listContainer  = document.getElementById('list-container');
+  const skeletonList   = document.getElementById('skeleton-list');
+  const listHeader     = document.getElementById('list-header');
+
+  const assigned = assignedSelect ? assignedSelect.value : '';
+  const status   = statusSelect   ? statusSelect.value   : '';
+
+  // Show skeletons while loading
+  if (skeletonList) skeletonList.style.display = 'block';
+  if (listHeader)   listHeader.style.display   = 'none';
+  listContainer.innerHTML = '';
+
+  // Build query string
+  const params = new URLSearchParams();
+  if (assigned) params.set('assigned_to', assigned);
+  if (status)   params.set('status', status);
+  const qs = params.toString() ? '?' + params.toString() : '';
+
+  let serverData = null;
+  let fetchError = false;
+
+  try {
+    const resp = await fetch('/api/assessments' + qs, { credentials: 'include' });
+    if (resp.ok) {
+      serverData = await resp.json();
+    } else if (resp.status === 401) {
+      // WHY: Redirect to login rather than showing a cryptic error for auth failures
+      window.location.href = '/admin-login.html?next=' + encodeURIComponent(window.location.pathname);
+      return;
+    } else {
+      fetchError = true;
+    }
+  } catch (_) {
+    fetchError = true;
+  }
+
+  // Hide skeletons
+  if (skeletonList) skeletonList.style.display = 'none';
+
+  if (fetchError) {
+    // ── Offline fallback: show locally-saved drafts ──
+    const banner = document.createElement('div');
+    banner.className = 'banner banner-warn';
+    banner.innerHTML = '<span class="banner-icon">⚠</span><span>Could not reach server — showing offline drafts from this device.</span>';
+    listContainer.appendChild(banner);
+
+    const drafts = filterList(loadLocalDrafts(), assigned, status);
+    if (drafts.length > 0) {
+      if (listHeader) listHeader.style.display = 'grid';
+      renderSection(listContainer, drafts, null);
+      updateCount(drafts.length);
+    } else {
+      listContainer.appendChild(buildEmpty(true));
+      updateCount(0);
+    }
+    return;
+  }
+
+  // ── Server data available ──
+  if (listHeader) listHeader.style.display = 'grid';
+
+  if (!serverData || serverData.length === 0) {
+    listContainer.appendChild(buildEmpty(false));
+    updateCount(0);
+    return;
+  }
+
+  // Render server assessments
+  serverData.forEach(a => listContainer.appendChild(buildCard(a)));
+  updateCount(serverData.length);
+
+  // ── Append local drafts not yet on the server ──
+  // WHY: Show drafts the user has started offline even when the server is reachable,
+  //      so they don't lose track of work that hasn't been synced yet.
+  const serverIds = new Set(serverData.map(a => a.id));
+  const unsyncedDrafts = filterList(loadLocalDrafts(), assigned, status)
+    .filter(d => !serverIds.has(d.id));
+
+  if (unsyncedDrafts.length > 0) {
+    renderSection(listContainer, unsyncedDrafts, 'Unsynced Local Drafts');
+    updateCount(serverData.length + unsyncedDrafts.length);
+  }
+}
+
+// ── Wire up filters to reload ──
+document.addEventListener('DOMContentLoaded', () => {
+  const assignedSelect = document.getElementById('filter-assigned');
+  const statusSelect   = document.getElementById('filter-status');
+
+  // Restore filter state from URL params so sharing a filtered URL works
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('assigned_to') && assignedSelect) {
+    assignedSelect.value = urlParams.get('assigned_to');
+  }
+  if (urlParams.has('status') && statusSelect) {
+    statusSelect.value = urlParams.get('status');
+  }
+
+  // Reload on filter change and update URL for shareability
+  function onFilterChange() {
+    const assigned = assignedSelect ? assignedSelect.value : '';
+    const status   = statusSelect   ? statusSelect.value   : '';
+    const params = new URLSearchParams();
+    if (assigned) params.set('assigned_to', assigned);
+    if (status)   params.set('status', status);
+    const qs = params.toString();
+    const newUrl = window.location.pathname + (qs ? '?' + qs : '');
+    history.replaceState(null, '', newUrl);
+    loadAssessments();
+  }
+
+  if (assignedSelect) assignedSelect.addEventListener('change', onFilterChange);
+  if (statusSelect)   statusSelect.addEventListener('change', onFilterChange);
+
+  loadAssessments();
+});
+</script>
+</body>
+</html>
