@@ -2788,6 +2788,10 @@ function generateFleet(robots) {
     // WHY: divide max budget evenly across goals to get per-slot budget ceiling
     const budgetPerSlot = activeGoals.length > 0 ? budgetMax / activeGoals.length : budgetMax;
 
+    // WHY: F&B-heavy and event-capable properties benefit more from delivery/logistics robots
+    const fbOutlets = parseInt(document.getElementById('fd-fb-outlets').value, 10) || 0;
+    const eventSqFt = parseInt(document.getElementById('fd-event-sqft').value, 10) || 0;
+
     const isMultiFloor = floors > 1;
 
     const slots = [];
@@ -2840,7 +2844,21 @@ function generateFleet(robots) {
         // ── Score each candidate ─────────────────────────────
         const scored = candidates.map(robot => {
             const result = scoreRobot(robot, goal, budgetPerSlot);
-            return { robot, ...result };
+            let adjustedScore = result.score;
+
+            // WHY: 10% boost for delivery/logistics goals when property has 3+ F&B outlets —
+            // more F&B = more delivery traffic = higher value from delivery robots
+            if (fbOutlets >= 3 && (goal.type === 'delivery' || goal.type === 'logistics')) {
+                adjustedScore = Math.min(100, Math.round(adjustedScore * 1.10));
+            }
+
+            // WHY: 10% boost for logistics goals when property has event space —
+            // events mean linen/supply surge, logistics robots earn their keep faster
+            if (eventSqFt > 0 && goal.type === 'logistics') {
+                adjustedScore = Math.min(100, Math.round(adjustedScore * 1.10));
+            }
+
+            return { robot, ...result, score: adjustedScore };
         });
 
         // ── Sort by score descending, take top 3 ─────────────
