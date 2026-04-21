@@ -1643,6 +1643,9 @@ function applyArchetype(key) {
   state.fb_outlets = state.operations_data.fb_venues.length;
   state.event_space_sqft = state.operations_data.event_spaces.reduce((sum, es) => sum + (es.sqft || 0), 0);
 
+  // Auto-seed org chart if empty
+  seedOrgChart();
+
   // Auto-create recommended zones if none exist yet
   if (state.zones.length === 0 && arch.zones) {
     arch.zones.forEach((zt, idx) => {
@@ -1750,48 +1753,63 @@ const ROLE_LABELS = {
   technical: 'Technical',
 };
 
-function renderStakeholdersTab() {
-  const shs = state.stakeholders;
-  // WHY: Find GM to display at top of org chart — GM is the first stakeholder with isGM flag
-  // or title containing "General Manager"
-  const gmIdx = shs.findIndex(sh => sh._isGM || (sh.title && sh.title.toLowerCase().includes('general manager')));
-
-  let html = '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Organization Chart <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + shs.length + ')</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
-
-  if (shs.length === 0) {
-    html += '<p style="color:#64748b;font-style:italic;margin:0 0 12px;">No stakeholders added yet. Tap a role below to add one, or they\'ll auto-populate with the property archetype.</p>';
-  } else {
-    html += '<div class="org-tree">';
-
-    // ── GM Card at top ──
-    if (gmIdx >= 0) {
-      html += '<div class="org-gm">' + renderStakeholderCard(gmIdx, true) + '</div>';
-      html += '<div class="org-connector"></div>';
-    }
-
-    // ── Department grid below ──
-    html += '<div class="org-departments">';
-    shs.forEach((sh, i) => {
-      if (i === gmIdx) return; // skip GM, already rendered above
-      html += '<div class="org-dept-card">' + renderStakeholderCard(i, false) + '</div>';
+// WHY: Auto-seed the full org chart on first visit so the rep walks into the
+// site walk with every role pre-populated. They fill in names and delete roles
+// that don't exist at this property. Faster than building up from scratch.
+function seedOrgChart() {
+  if (state.stakeholders.length > 0) return; // already seeded or user-modified
+  STAKEHOLDER_PRESETS.forEach((p, idx) => {
+    state.stakeholders.push({
+      id: generateUUID(), name: '', title: p.title, department: p.department,
+      role: p.role, email: '', phone: '', notes: '', sort_order: idx,
+      _isGM: p.isGM || false,
     });
-    html += '</div>';
+  });
+}
 
-    html += '</div>';
+function renderStakeholdersTab() {
+  // Auto-seed on first render
+  seedOrgChart();
+
+  const shs = state.stakeholders;
+  const gmIdx = shs.findIndex(sh => sh._isGM || (sh.title && sh.title.toLowerCase().includes('general manager')));
+  const filledCount = shs.filter(sh => sh.name).length;
+
+  let html = '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Organization Chart <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + filledCount + '/' + shs.length + ' filled)</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+
+  html += '<div class="org-tree">';
+
+  // ── GM Card at top ──
+  if (gmIdx >= 0) {
+    html += '<div class="org-gm">' + renderStakeholderCard(gmIdx, true) + '</div>';
+    html += '<div class="org-connector"></div>';
   }
 
-  // ── Quick-Add Presets ──
-  html += '<div style="margin-top:14px;"><span style="font-size:.78em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">+ Add Role</span>';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">';
-  STAKEHOLDER_PRESETS.forEach(p => {
-    // WHY: Dim presets that are already added to avoid duplicates
-    const exists = shs.some(sh => sh.title === p.title);
-    const dimStyle = exists ? 'opacity:0.4;pointer-events:none;' : '';
-    html += `<button class="chip-btn" onclick="addStakeholderPreset('${esc(p.title)}')" style="font-size:.82em;padding:6px 12px;border-radius:18px;border:1px solid var(--border);background:var(--card-bg,#fff);cursor:pointer;display:flex;align-items:center;gap:4px;min-height:36px;${dimStyle}"><span>${p.icon}</span> ${p.title}</button>`;
+  // ── Department grid below ──
+  html += '<div class="org-departments">';
+  shs.forEach((sh, i) => {
+    if (i === gmIdx) return;
+    html += '<div class="org-dept-card">' + renderStakeholderCard(i, false) + '</div>';
   });
   html += '</div>';
-  html += '<button class="add-row-btn" style="margin-top:8px;" onclick="addStakeholder()">+ Add Custom Stakeholder</button>';
   html += '</div>';
+
+  // ── Add Role (collapsed by default since chart is pre-filled) ──
+  const missingPresets = STAKEHOLDER_PRESETS.filter(p => !shs.some(sh => sh.title === p.title));
+  if (missingPresets.length > 0 || true) {
+    html += '<div style="margin-top:14px;">';
+    html += '<button class="add-row-btn" onclick="document.getElementById(\'addRolePanel\').style.display = document.getElementById(\'addRolePanel\').style.display === \'none\' ? \'block\' : \'none\';" style="margin-bottom:6px;">+ Add Role</button>';
+    html += '<div id="addRolePanel" style="display:none;">';
+    if (missingPresets.length > 0) {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">';
+      missingPresets.forEach(p => {
+        html += `<button class="chip-btn" onclick="addStakeholderPreset('${esc(p.title)}')" style="font-size:.82em;padding:6px 12px;border-radius:18px;border:1px solid var(--border);background:var(--card-bg,#fff);cursor:pointer;display:flex;align-items:center;gap:4px;min-height:36px;"><span>${p.icon}</span> ${p.title}</button>`;
+      });
+      html += '</div>';
+    }
+    html += '<button class="add-row-btn" style="margin-top:6px;" onclick="addStakeholder()">+ Custom Role</button>';
+    html += '</div></div>';
+  }
 
   html += '</div></div>';
   return html;
