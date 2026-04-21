@@ -170,7 +170,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS assessment_zones (
     id TEXT PRIMARY KEY,
     assessment_id TEXT NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,
-    zone_type TEXT NOT NULL,
+    zone_type TEXT NOT NULL CHECK(zone_type IN ('lobby', 'restaurant', 'guest_floor', 'pool_deck', 'kitchen', 'laundry', 'boh_corridor', 'parking_garage', 'event_space', 'fitness_center', 'spa', 'exterior', 'other')),
     zone_name TEXT NOT NULL,
     floor_number INTEGER,
     floor_surfaces TEXT,

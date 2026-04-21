@@ -947,8 +947,6 @@ async function initPage() {
       }
     }
   } else {
-    // Check for any existing draft
-    const draftKeys = Object.keys(localStorage).filter(k => k.startsWith('assessment_draft_'));
     // Start fresh — new assessment
     state.id = generateUUID();
     state.created_at = new Date().toISOString();
@@ -1883,8 +1881,10 @@ async function renderPhotoGridAsync(zoneIdx) {
       const photo = await getPhotoFromDB(photoRef.id);
       if (!photo) continue;
       const hasAnnotations = photo.annotations && photo.annotations.length > 0;
+      // WHY: Validate thumbnail is a data URL to prevent XSS via malicious src values
+      const safeSrc = (photo.thumbnail && photo.thumbnail.startsWith('data:image/')) ? photo.thumbnail : '';
       html += `<div class="photo-thumb" onclick="openAnnotation('${esc(photoRef.id)}')" oncontextmenu="event.preventDefault(); showPhotoMenu('${esc(photoRef.id)}', ${zoneIdx})">
-        <img src="${photo.thumbnail}" alt="${esc(photo.caption || 'Photo')}">
+        <img src="${safeSrc}" alt="${esc(photo.caption || 'Photo')}">
         ${hasAnnotations ? '<span class="photo-thumb-annotation-dot"></span>' : ''}
         <span class="photo-thumb-label">${esc(photo.caption || photo.checklistItem || 'Photo')}</span>
       </div>`;
@@ -2137,6 +2137,8 @@ async function loadFromServer(id) {
     const resp = await fetch('/api/assessments/' + encodeURIComponent(id), {
       credentials: 'include'
     });
+    // WHY: Redirect to login on 401 — token may have expired during site walk
+    if (resp.status === 401) { window.location.href = '/admin-login.html'; return null; }
     if (!resp.ok) return null;
     const data = await resp.json();
     if (!data || !data.id) return null;
@@ -2211,6 +2213,7 @@ async function syncToServer() {
       body: JSON.stringify(payload)
     });
 
+    if (resp.status === 401) { window.location.href = '/admin-login.html'; return; }
     if (!resp.ok) {
       const err = await resp.text();
       throw new Error('Server returned ' + resp.status + ': ' + err);
