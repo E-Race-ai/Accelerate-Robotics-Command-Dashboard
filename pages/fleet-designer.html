@@ -362,6 +362,7 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
 /* ── Property type selector ── */
 .prop-type-row {
     display:flex;
+    flex-wrap:wrap;
     gap:4px;
     background:rgba(0,0,0,0.03);
     padding:3px;
@@ -369,8 +370,7 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
 }
 
 .prop-type {
-    flex:1;
-    padding:6px 4px;
+    padding:6px 8px;
     border:none;
     border-radius:6px;
     background:transparent;
@@ -381,7 +381,24 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
     cursor:pointer;
     transition:all 0.12s;
     text-align:center;
+    white-space:nowrap;
 }
+
+/* WHY: Free-form "Other" input styled inline with the type buttons */
+.prop-type-other-input {
+    display:none;
+    padding:5px 8px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:0.62rem;
+    font-family:'Inter',sans-serif;
+    background:white;
+    color:var(--text);
+    width:100px;
+    outline:none;
+}
+.prop-type-other-input:focus { border-color:var(--blue); }
+.prop-type-other-input.visible { display:block; }
 
 .prop-type:hover { color:var(--text); }
 
@@ -1666,6 +1683,13 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
                 <button class="prop-type" data-type="resort" type="button">Resort</button>
                 <button class="prop-type" data-type="hospital" type="button">Hospital</button>
                 <button class="prop-type" data-type="senior" type="button">Senior Living</button>
+                <button class="prop-type" data-type="grocery" type="button">Grocery</button>
+                <button class="prop-type" data-type="theater" type="button">Movie Theater</button>
+                <button class="prop-type" data-type="sports" type="button">Sports Courts</button>
+                <button class="prop-type" data-type="pickleball" type="button">Pickleball</button>
+                <button class="prop-type" data-type="arena" type="button">Arena / Stadium</button>
+                <button class="prop-type" data-type="other" type="button">Other</button>
+                <input class="prop-type-other-input" id="prop-type-other" type="text" placeholder="Type here…">
             </div>
 
             <div class="field">
@@ -1786,8 +1810,9 @@ h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
                 </select>
             </div>
 
-            <!-- Research + Add Prospect bar -->
-            <div class="research-bar" id="research-bar">
+            <!-- WHY: Research + Add Prospect bar hidden for v1 — internal tools, not customer-facing.
+                 Kept in DOM so the JS doesn't throw errors. -->
+            <div class="research-bar" id="research-bar" style="display:none">
                 <a class="research-link" id="research-pipeline" href="/accelerate-robotics/pages/pipeline-prospects.html" target="_blank" rel="noopener" title="Browse 67 hotels across 14 markets">
                     Prospect Pipeline
                 </a>
@@ -3440,6 +3465,14 @@ function initPropertySection() {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.prop-type').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            // WHY: Show free-form input when "Other" is selected so user can type a custom property type
+            const otherInput = document.getElementById('prop-type-other');
+            if (btn.dataset.type === 'other') {
+                otherInput.classList.add('visible');
+                otherInput.focus();
+            } else {
+                otherInput.classList.remove('visible');
+            }
         });
     });
 
@@ -3838,7 +3871,10 @@ function downloadProposalConfig() {
 
     // Gather active type
     const activeType = document.querySelector('.prop-type.active');
-    const propType = activeType ? activeType.dataset.type : 'hotel';
+    // WHY: When "Other" is selected, use the free-form input value as the property type
+    const propType = activeType?.dataset.type === 'other'
+        ? (document.getElementById('prop-type-other').value.trim() || 'other')
+        : (activeType?.dataset.type || 'hotel');
 
     // Gather surfaces (global, derived from zones or manual)
     const surfaces = [];
@@ -3953,7 +3989,13 @@ function launchProposal() {
     // Gather property basics from the form
     const property = {
         name: name,
-        type: document.querySelector('.prop-type.active')?.dataset.type || 'hotel',
+        // WHY: When "Other" is selected, use the free-form input value as the property type
+        type: (() => {
+            const activeBtn = document.querySelector('.prop-type.active');
+            const t = activeBtn?.dataset.type || 'hotel';
+            if (t === 'other') return document.getElementById('prop-type-other').value.trim() || 'other';
+            return t;
+        })(),
         rooms: parseInt(document.getElementById('prop-rooms').value) || 0,
         floors: parseInt(document.getElementById('prop-floors').value) || 1,
         guestFloors: document.getElementById('prop-guest-floors').value || '',
