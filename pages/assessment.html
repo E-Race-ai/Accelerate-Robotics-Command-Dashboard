@@ -2193,16 +2193,14 @@ async function syncToServer() {
   updateSyncStatus('syncing');
 
   try {
-    // Prepare payload — clone state and stringify JSON fields for the API
+    // WHY: Send state as-is — server handles JSON.stringify on object/array fields.
+    // Pre-stringifying here would cause double-stringify because express.json()
+    // parses the outer JSON, leaving inner strings for the server to stringify again.
     const payload = { ...state };
-    payload.operations_data = JSON.stringify(state.operations_data);
-    payload.infrastructure_data = JSON.stringify(state.infrastructure_data);
 
-    // Zones: stringify floor_surfaces for API
+    // Remove photo references from zone payload (photos upload separately)
     payload.zones = state.zones.map(z => ({
       ...z,
-      floor_surfaces: JSON.stringify(z.floor_surfaces || []),
-      // Remove photo references from zone payload (photos upload separately)
       photos: undefined
     }));
 
@@ -2238,28 +2236,38 @@ async function syncToServer() {
 }
 
 async function uploadPhotoBatch(assessmentId, photos) {
-  for (const photo of photos) {
-    try {
-      const formData = new FormData();
-      formData.append('photo', photo.blob, 'photo.jpg');
-      formData.append('metadata', JSON.stringify({
+  // WHY: Server expects multer field name 'photos' (plural) and a parallel JSON array
+  // in the 'metadata' field. Batch up to 5 per request to balance speed vs timeout risk.
+  try {
+    const formData = new FormData();
+    const metadataArr = [];
+
+    for (const photo of photos) {
+      formData.append('photos', photo.blob, 'photo.jpg');
+      metadataArr.push({
         id: photo.id,
-        zoneId: photo.zoneId,
-        checklistItem: photo.checklistItem,
+        zone_id: photo.zoneId,
+        checklist_item: photo.checklistItem,
         caption: photo.caption,
         annotations: photo.annotations,
-        takenAt: photo.takenAt
-      }));
-
-      await fetch('/api/assessments/' + encodeURIComponent(assessmentId) + '/photos', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
+        taken_at: photo.takenAt
       });
-    } catch (err) {
-      console.error('Photo upload failed for ' + photo.id + ':', err);
-      // Continue with remaining photos
     }
+
+    formData.append('metadata', JSON.stringify(metadataArr));
+
+    const resp = await fetch('/api/assessments/' + encodeURIComponent(assessmentId) + '/photos', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error('Photo batch upload failed:', resp.status, err);
+    }
+  } catch (err) {
+    console.error('Photo batch upload failed:', err);
   }
 }
 

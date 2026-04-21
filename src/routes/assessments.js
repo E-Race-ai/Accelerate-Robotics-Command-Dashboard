@@ -68,8 +68,10 @@ function upsertAssessment(id, body, res) {
     fb_director || null, fb_outlets || null, event_space_sqft || null,
     union_status || null, union_details || null,
     assigned_to, status || 'draft',
-    operations_data != null ? JSON.stringify(operations_data) : null,
-    infrastructure_data != null ? JSON.stringify(infrastructure_data) : null,
+    // WHY: Guard against double-stringify — value may arrive as object (from JSON body)
+    // or as string (from a client that pre-stringified). Either way, store as JSON string.
+    operations_data != null ? (typeof operations_data === 'string' ? operations_data : JSON.stringify(operations_data)) : null,
+    infrastructure_data != null ? (typeof infrastructure_data === 'string' ? infrastructure_data : JSON.stringify(infrastructure_data)) : null,
     notes || null,
     // created_at COALESCE back-reference needs the id again
     id,
@@ -104,7 +106,8 @@ function upsertAssessment(id, body, res) {
         z.id || generateId(), id,
         z.zone_type || 'other', z.zone_name || 'Zone',
         z.floor_number ?? null,
-        z.floor_surfaces != null ? JSON.stringify(z.floor_surfaces) : null,
+        // WHY: Guard against double-stringify — may arrive as array or pre-stringified string
+        z.floor_surfaces != null ? (typeof z.floor_surfaces === 'string' ? z.floor_surfaces : JSON.stringify(z.floor_surfaces)) : null,
         z.corridor_width_ft ?? null, z.ceiling_height_ft ?? null, z.door_width_min_ft ?? null,
         z.wifi_strength || null, z.wifi_network || null,
         z.lighting || null, z.foot_traffic || null,
@@ -113,7 +116,7 @@ function upsertAssessment(id, body, res) {
         z.delivery_method || null, z.staffing_notes || null,
         z.pain_points || null,
         z.robot_readiness || null, z.readiness_notes || null,
-        z.template_data != null ? JSON.stringify(z.template_data) : null,
+        z.template_data != null ? (typeof z.template_data === 'string' ? z.template_data : JSON.stringify(z.template_data)) : null,
         z.notes || null,
         z.sort_order ?? idx,
       );
