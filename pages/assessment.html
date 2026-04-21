@@ -1341,36 +1341,277 @@ const EVENT_SPACE_TYPES = {
 
 // WHY: Department profiles with industry KPIs show we understand their org chart.
 // These are typical for full-service hotels — scaled by property archetype.
+// WHY: Each department profile is a comprehensive assessment module.
+// Industry benchmarks let the rep discuss metrics credibly during the site walk.
+// "Their numbers" fields capture actual property data that feeds the assessment report.
+// Challenge and opportunity toggles build the narrative automatically.
 const DEPARTMENT_PROFILES = [
   {
     id: 'housekeeping', name: 'Housekeeping / EVS', icon: '&#128722;',
-    kpis: ['Rooms cleaned per housekeeper per shift: 12–16', 'Average room turn time: 25–35 min', 'Inspection pass rate target: 95%+', 'Linen lbs per occupied room: 8–12 lbs'],
-    common_challenges: ['High turnover (60–80% annually)', 'Guest floors during peak checkout (10am–1pm)', 'Linen cart traffic in corridors', 'Night-shift deep cleaning understaffed'],
-    robot_opportunities: ['Autonomous floor scrubbing in corridors overnight', 'Linen delivery to staging areas per floor', 'Public area vacuuming during low-traffic hours'],
+    kpis: [
+      { label: 'Rooms per housekeeper per shift', benchmark: '12–16', unit: 'rooms' },
+      { label: 'Average room turn time', benchmark: '25–35', unit: 'min' },
+      { label: 'Inspection pass rate', benchmark: '95%+', unit: '%' },
+      { label: 'Linen per occupied room', benchmark: '8–12', unit: 'lbs' },
+      { label: 'Night-shift deep cleaning staff', benchmark: '2–4', unit: 'FTE' },
+      { label: 'Public area cleaning frequency', benchmark: '2–3x daily', unit: '' },
+    ],
+    // WHY: "Their numbers" — fields the rep fills in during the walk to compare against benchmarks
+    property_fields: [
+      { key: 'staff_am', label: 'AM Shift Housekeepers', type: 'slider', min: 0, max: 80, unit: 'FTE' },
+      { key: 'staff_pm', label: 'PM Shift Housekeepers', type: 'slider', min: 0, max: 40, unit: 'FTE' },
+      { key: 'staff_night', label: 'Night / Deep Clean Staff', type: 'slider', min: 0, max: 20, unit: 'FTE' },
+      { key: 'rooms_per_hk', label: 'Rooms Assigned per Housekeeper', type: 'slider', min: 8, max: 25, unit: '' },
+      { key: 'turn_time', label: 'Actual Room Turn Time', type: 'slider', min: 15, max: 60, unit: 'min' },
+      { key: 'inspection_rate', label: 'Inspection Pass Rate', type: 'slider', min: 50, max: 100, unit: '%' },
+      { key: 'cleaning_contractor', label: 'Outsourced Cleaning Provider', type: 'text', placeholder: 'e.g., ABM, Marsden, in-house' },
+      { key: 'cleaning_contract_cost', label: 'Monthly Contract Cost', type: 'number', placeholder: 'e.g., 45000', prefix: '$' },
+      { key: 'turnover_rate', label: 'Annual Turnover Rate', type: 'slider', min: 0, max: 200, unit: '%' },
+      { key: 'vacancy_rate', label: 'Current Open Positions', type: 'slider', min: 0, max: 30, unit: '' },
+    ],
+    common_challenges: [
+      'High turnover (60–80% annually)',
+      'Guest floors during peak checkout (10am–1pm)',
+      'Linen cart traffic in corridors',
+      'Night-shift deep cleaning understaffed',
+      'Can\'t find enough qualified housekeepers',
+      'Overtime costs exceeding budget',
+      'Guest complaints about room cleanliness',
+      'Carpet stains not addressed same-day',
+      'Public area restrooms need more frequent attention',
+      'Supply closet restocking takes staff off floors',
+    ],
+    robot_opportunities: [
+      { label: 'Autonomous floor scrubbing in corridors overnight', impact: 'high', robot_type: 'Floor Scrubber (C30)' },
+      { label: 'Linen delivery to staging areas per floor', impact: 'high', robot_type: 'Delivery Robot (W3)' },
+      { label: 'Public area vacuuming during low-traffic hours', impact: 'medium', robot_type: 'Vacuum Robot' },
+      { label: 'Supply cart delivery to floor closets', impact: 'medium', robot_type: 'Delivery Robot (W3)' },
+      { label: 'Lobby/pre-function hard floor maintenance', impact: 'medium', robot_type: 'Floor Scrubber (C30)' },
+      { label: 'Restroom check/supply monitoring', impact: 'low', robot_type: 'Patrol/Sensor Robot' },
+    ],
   },
   {
     id: 'fb', name: 'Food & Beverage', icon: '&#127860;',
-    kpis: ['Average room service delivery: 30–45 min', 'Covers per server per meal: 20–30', 'Kitchen-to-table distance: varies', 'Food cost target: 28–35% of revenue'],
-    common_challenges: ['Food runner trips during peak service (50+ per meal)', 'Room service delivery time exceeds guest expectations', 'Bussing bottleneck during event meals', 'BOH corridor congestion at shift change'],
-    robot_opportunities: ['Autonomous food delivery from kitchen to dining room', 'Room service delivery to guest floor', 'Bus cart transport from dining to dish pit'],
+    kpis: [
+      { label: 'Room service delivery time', benchmark: '30–45', unit: 'min' },
+      { label: 'Covers per server per meal', benchmark: '20–30', unit: '' },
+      { label: 'Food runner trips per peak meal', benchmark: '50–100', unit: 'trips' },
+      { label: 'Food cost % of revenue', benchmark: '28–35', unit: '%' },
+      { label: 'Kitchen-to-dining distance', benchmark: 'varies', unit: 'ft' },
+      { label: 'Banquet setup/teardown cycle', benchmark: '2–4', unit: 'hrs' },
+    ],
+    property_fields: [
+      { key: 'staff_foh', label: 'FOH Staff (servers, hosts, bussers)', type: 'slider', min: 0, max: 80, unit: 'FTE' },
+      { key: 'staff_boh', label: 'BOH Staff (kitchen, prep, dish)', type: 'slider', min: 0, max: 60, unit: 'FTE' },
+      { key: 'room_svc_staff', label: 'Room Service Staff', type: 'slider', min: 0, max: 15, unit: 'FTE' },
+      { key: 'room_svc_hours', label: 'Room Service Hours', type: 'text', placeholder: 'e.g., 6am–11pm or 24/7' },
+      { key: 'avg_delivery_time', label: 'Actual Room Service Delivery', type: 'slider', min: 10, max: 90, unit: 'min' },
+      { key: 'peak_covers', label: 'Peak Meal Period Covers', type: 'slider', min: 0, max: 500, unit: '' },
+      { key: 'banquet_events_weekly', label: 'Banquet Events per Week', type: 'slider', min: 0, max: 20, unit: '' },
+      { key: 'fb_revenue_monthly', label: 'Monthly F&B Revenue', type: 'number', placeholder: 'e.g., 250000', prefix: '$' },
+    ],
+    common_challenges: [
+      'Food runner trips during peak service (50+ per meal)',
+      'Room service delivery exceeds guest expectations',
+      'Bussing bottleneck during event meals',
+      'BOH corridor congestion at shift change',
+      'Kitchen-to-ballroom distance too far for hot food',
+      'Not enough food runners during banquets',
+      'Dish pit backup at end of service',
+      'Room service tray collection inconsistent',
+      'Late-night room service staffing too expensive',
+      'Catering setup requires multiple cart trips',
+    ],
+    robot_opportunities: [
+      { label: 'Food delivery from kitchen to dining room', impact: 'high', robot_type: 'Tray Delivery (T8)' },
+      { label: 'Room service delivery to guest floors', impact: 'high', robot_type: 'Enclosed Delivery (W3)' },
+      { label: 'Bus cart transport to dish pit', impact: 'medium', robot_type: 'Tray Delivery (T8)' },
+      { label: 'Kitchen-to-ballroom bulk food transport', impact: 'high', robot_type: 'Cart Robot' },
+      { label: 'Room service tray collection sweeps', impact: 'medium', robot_type: 'Delivery Robot (W3)' },
+      { label: 'Bar restocking from BOH storage', impact: 'low', robot_type: 'Delivery Robot (W3)' },
+    ],
   },
   {
     id: 'engineering', name: 'Engineering / Facilities', icon: '&#128295;',
-    kpis: ['Work orders per day: 15–40', 'Preventive maintenance completion: 85%+ target', 'Energy cost per sqft per year: $3–6', 'Elevator uptime target: 99.5%'],
-    common_challenges: ['Elevator maintenance windows conflict with guest traffic', 'HVAC system monitoring across all zones', 'Parts/supply delivery between shops and floors', 'After-hours emergency response with skeleton crew'],
-    robot_opportunities: ['Supply delivery from shop to work order location', 'Environmental sensor deployment (air quality, humidity)', 'Predictive elevator maintenance data collection'],
+    kpis: [
+      { label: 'Work orders per day', benchmark: '15–40', unit: '' },
+      { label: 'PM completion rate', benchmark: '85%+', unit: '%' },
+      { label: 'Energy cost per sqft/year', benchmark: '$3–6', unit: '' },
+      { label: 'Elevator uptime target', benchmark: '99.5%+', unit: '%' },
+      { label: 'Average response time', benchmark: '<30', unit: 'min' },
+      { label: 'Overnight engineering coverage', benchmark: '1–2', unit: 'FTE' },
+    ],
+    property_fields: [
+      { key: 'staff_day', label: 'Day Shift Engineers', type: 'slider', min: 0, max: 20, unit: 'FTE' },
+      { key: 'staff_night', label: 'Night Shift Engineers', type: 'slider', min: 0, max: 10, unit: 'FTE' },
+      { key: 'work_orders_daily', label: 'Avg Work Orders per Day', type: 'slider', min: 0, max: 80, unit: '' },
+      { key: 'pm_completion', label: 'PM Completion Rate', type: 'slider', min: 0, max: 100, unit: '%' },
+      { key: 'cmms_system', label: 'CMMS / Work Order System', type: 'text', placeholder: 'e.g., HotSOS, Quore, Alice, paper' },
+      { key: 'elevator_service_provider', label: 'Elevator Service Provider', type: 'text', placeholder: 'e.g., ThyssenKrupp, Otis, KONE' },
+      { key: 'elevator_contract_type', label: 'Elevator Contract Type', type: 'text', placeholder: 'e.g., Full service, oil & grease, T&M' },
+      { key: 'bms_system', label: 'Building Mgmt System (BMS)', type: 'text', placeholder: 'e.g., Honeywell, Johnson Controls, Schneider' },
+    ],
+    common_challenges: [
+      'Elevator maintenance conflicts with guest traffic',
+      'HVAC monitoring across all zones',
+      'Parts/supply delivery between shop and floors',
+      'After-hours emergency response with skeleton crew',
+      'Aging infrastructure requiring constant attention',
+      'No real-time visibility into equipment status',
+      'Engineer time lost walking between calls',
+      'Elevator downtime during peak periods',
+      'Deferred maintenance backlog growing',
+      'Energy costs above benchmark',
+    ],
+    robot_opportunities: [
+      { label: 'Supply/parts delivery from shop to work location', impact: 'medium', robot_type: 'Delivery Robot (W3)' },
+      { label: 'Environmental sensor patrol (air quality, temp, humidity)', impact: 'medium', robot_type: 'Patrol Robot' },
+      { label: 'Elevator integration for multi-floor robot access', impact: 'high', robot_type: 'Platform (Accelerate OS)' },
+      { label: 'Predictive maintenance data collection', impact: 'low', robot_type: 'Sensor Robot' },
+      { label: 'Security/safety patrol during overnight', impact: 'medium', robot_type: 'Patrol Robot' },
+    ],
   },
   {
     id: 'front_office', name: 'Front Office / Guest Services', icon: '&#128179;',
-    kpis: ['Average check-in time: 3–5 min', 'Concierge requests per shift: 20–50', 'Guest complaint resolution: <15 min target', 'Luggage delivery avg: 5–10 min'],
-    common_challenges: ['Luggage delivery backlog during group arrivals', 'Amenity delivery (extra pillows, rollaway beds)', 'Late checkout → housekeeping cascade delay', 'Lobby congestion during large group check-in/out'],
-    robot_opportunities: ['Autonomous amenity delivery to guest rooms', 'Luggage transport from bell closet to room', 'Lobby wayfinding and information kiosk'],
+    kpis: [
+      { label: 'Average check-in time', benchmark: '3–5', unit: 'min' },
+      { label: 'Concierge requests per shift', benchmark: '20–50', unit: '' },
+      { label: 'Guest complaint resolution', benchmark: '<15', unit: 'min' },
+      { label: 'Luggage delivery time', benchmark: '5–10', unit: 'min' },
+      { label: 'Amenity delivery requests/day', benchmark: '10–30', unit: '' },
+      { label: 'Bell staff per shift', benchmark: '2–4', unit: 'FTE' },
+    ],
+    property_fields: [
+      { key: 'staff_front_desk', label: 'Front Desk Agents per Shift', type: 'slider', min: 0, max: 15, unit: 'FTE' },
+      { key: 'staff_bell', label: 'Bell/Door Staff per Shift', type: 'slider', min: 0, max: 10, unit: 'FTE' },
+      { key: 'staff_concierge', label: 'Concierge per Shift', type: 'slider', min: 0, max: 6, unit: 'FTE' },
+      { key: 'avg_luggage_time', label: 'Actual Luggage Delivery Time', type: 'slider', min: 1, max: 30, unit: 'min' },
+      { key: 'amenity_requests_daily', label: 'Amenity Requests per Day', type: 'slider', min: 0, max: 80, unit: '' },
+      { key: 'pms_system', label: 'PMS System', type: 'text', placeholder: 'e.g., Opera, Mews, Cloudbeds, StayNTouch' },
+      { key: 'guest_messaging', label: 'Guest Messaging Platform', type: 'text', placeholder: 'e.g., Kipsu, Zingle, Alice, WhatsApp' },
+    ],
+    common_challenges: [
+      'Luggage backlog during group arrivals',
+      'Amenity delivery (pillows, rollaway beds, cribs)',
+      'Late checkout → housekeeping cascade delay',
+      'Lobby congestion during group check-in/out',
+      'Bell staff pulled from door for deliveries',
+      'After-hours amenity requests with no bell staff',
+      'VIP welcome amenity coordination',
+      'Guest packages/deliveries piling up',
+      'Lost & found retrieval takes too long',
+      'Wheelchair/mobility aid transport',
+    ],
+    robot_opportunities: [
+      { label: 'Amenity delivery to guest rooms (pillows, towels, toiletries)', impact: 'high', robot_type: 'Enclosed Delivery (W3)' },
+      { label: 'Welcome amenity delivery (champagne, fruit, robes)', impact: 'medium', robot_type: 'Enclosed Delivery (W3)' },
+      { label: 'Guest package/parcel delivery', impact: 'medium', robot_type: 'Enclosed Delivery (W3)' },
+      { label: 'Lobby wayfinding and information kiosk', impact: 'low', robot_type: 'Concierge Robot' },
+      { label: 'After-hours automated guest requests', impact: 'high', robot_type: 'Enclosed Delivery (W3)' },
+    ],
   },
   {
     id: 'laundry', name: 'Laundry / Linen', icon: '&#129531;',
-    kpis: ['Linen processed per shift: 2000–5000 lbs', 'Linen loss rate: 3–5% annually', 'Par level: 3x occupied rooms', 'Linen cost per occupied room: $4–8'],
-    common_challenges: ['Cart transport between laundry room and floors', 'Peak demand during AM checkout wave', 'Linen inventory tracking/loss prevention', 'Outsourced laundry pickup/delivery scheduling'],
-    robot_opportunities: ['Automated linen cart delivery to floor staging areas', 'Soiled linen transport from floors to laundry', 'Linen inventory tracking via RFID integration'],
+    kpis: [
+      { label: 'Linen processed per shift', benchmark: '2000–5000', unit: 'lbs' },
+      { label: 'Linen loss rate', benchmark: '3–5%', unit: '' },
+      { label: 'Par level vs occupied rooms', benchmark: '3x', unit: '' },
+      { label: 'Linen cost per occupied room', benchmark: '$4–8', unit: '' },
+      { label: 'Cart trips per floor per day', benchmark: '3–6', unit: '' },
+      { label: 'Laundry labor % of total', benchmark: '8–12%', unit: '' },
+    ],
+    property_fields: [
+      { key: 'staff_laundry', label: 'Laundry Staff', type: 'slider', min: 0, max: 30, unit: 'FTE' },
+      { key: 'on_premise', label: 'On-Premise Laundry?', type: 'toggle', options: ['Yes', 'No', 'Partial'] },
+      { key: 'outsource_provider', label: 'Outsourced Provider', type: 'text', placeholder: 'e.g., Cintas, ALSCO, local' },
+      { key: 'outsource_cost', label: 'Monthly Outsource Cost', type: 'number', placeholder: 'e.g., 35000', prefix: '$' },
+      { key: 'linen_par', label: 'Current Par Level', type: 'text', placeholder: 'e.g., 2.5x, 3x' },
+      { key: 'cart_trips_daily', label: 'Cart Trips per Day (all floors)', type: 'slider', min: 0, max: 60, unit: '' },
+      { key: 'laundry_floor', label: 'Laundry Room Floor', type: 'text', placeholder: 'e.g., B1, ground, 2nd' },
+      { key: 'staging_locations', label: 'Staging Closet Count', type: 'slider', min: 0, max: 20, unit: '' },
+    ],
+    common_challenges: [
+      'Cart transport between laundry and floors',
+      'Peak demand during AM checkout wave',
+      'Linen inventory tracking / loss prevention',
+      'Outsourced pickup/delivery scheduling',
+      'Elevator wait time with linen carts',
+      'No staging space on guest floors',
+      'Soiled linen sitting in corridors',
+      'Staff injuries from cart pushing',
+      'Banquet linen surge requirements',
+      'Towel pool service during summer',
+    ],
+    robot_opportunities: [
+      { label: 'Clean linen cart delivery to floor staging areas', impact: 'high', robot_type: 'Cart Towing Robot' },
+      { label: 'Soiled linen transport from floors to laundry', impact: 'high', robot_type: 'Cart Towing Robot' },
+      { label: 'Linen inventory tracking via RFID integration', impact: 'medium', robot_type: 'Platform (Accelerate OS)' },
+      { label: 'Pool towel delivery/collection', impact: 'medium', robot_type: 'Delivery Robot (W3)' },
+      { label: 'Banquet linen staging and retrieval', impact: 'medium', robot_type: 'Cart Towing Robot' },
+    ],
+  },
+  {
+    id: 'security', name: 'Security / Loss Prevention', icon: '&#128737;',
+    kpis: [
+      { label: 'Patrol frequency per zone', benchmark: '1–2x/hr', unit: '' },
+      { label: 'Incident response time', benchmark: '<5', unit: 'min' },
+      { label: 'Camera coverage % of property', benchmark: '85–95', unit: '%' },
+      { label: 'Overnight patrol staff', benchmark: '1–3', unit: 'FTE' },
+    ],
+    property_fields: [
+      { key: 'staff_day', label: 'Day Shift Security', type: 'slider', min: 0, max: 15, unit: 'FTE' },
+      { key: 'staff_night', label: 'Night Shift Security', type: 'slider', min: 0, max: 10, unit: 'FTE' },
+      { key: 'outsourced', label: 'In-house or Contracted?', type: 'toggle', options: ['In-house', 'Contracted', 'Mixed'] },
+      { key: 'security_provider', label: 'Security Provider', type: 'text', placeholder: 'e.g., Allied Universal, Securitas, in-house' },
+      { key: 'camera_system', label: 'Camera/CCTV System', type: 'text', placeholder: 'e.g., Milestone, Genetec, Avigilon' },
+      { key: 'access_control', label: 'Access Control System', type: 'text', placeholder: 'e.g., ASSA ABLOY, Salto, Dormakaba' },
+    ],
+    common_challenges: [
+      'Coverage gaps during patrol rounds',
+      'Parking garage requires dedicated patrol',
+      'Loading dock monitoring inconsistent',
+      'Guest floor corridor visibility limited',
+      'Pool/fitness center after-hours access',
+      'Large event crowd management',
+    ],
+    robot_opportunities: [
+      { label: 'Autonomous patrol during overnight (corridors, garage, exterior)', impact: 'high', robot_type: 'Security Patrol Robot' },
+      { label: 'Real-time anomaly detection and alerting', impact: 'medium', robot_type: 'Patrol Robot' },
+      { label: 'Parking garage surveillance patrol', impact: 'medium', robot_type: 'Outdoor Patrol Robot' },
+      { label: 'Loading dock monitoring', impact: 'low', robot_type: 'Stationary/Patrol Robot' },
+    ],
+  },
+  {
+    id: 'events', name: 'Events / Conferences', icon: '&#127917;',
+    kpis: [
+      { label: 'Events per week', benchmark: '5–15', unit: '' },
+      { label: 'Setup crew size', benchmark: '4–12', unit: 'FTE' },
+      { label: 'Avg setup/teardown time', benchmark: '2–4', unit: 'hrs' },
+      { label: 'AV equipment moves per week', benchmark: '10–30', unit: '' },
+    ],
+    property_fields: [
+      { key: 'staff_setup', label: 'Setup/Teardown Crew', type: 'slider', min: 0, max: 30, unit: 'FTE' },
+      { key: 'events_weekly', label: 'Events per Week (avg)', type: 'slider', min: 0, max: 30, unit: '' },
+      { key: 'largest_event', label: 'Largest Event Capacity', type: 'slider', min: 0, max: 3000, unit: 'pax' },
+      { key: 'setup_time', label: 'Average Setup Time', type: 'slider', min: 0, max: 12, unit: 'hrs' },
+      { key: 'av_provider', label: 'AV Provider', type: 'text', placeholder: 'e.g., PSAV/Encore, in-house, AVI-SPL' },
+      { key: 'event_software', label: 'Event Mgmt Software', type: 'text', placeholder: 'e.g., Cvent, Delphi, Social Tables' },
+    ],
+    common_challenges: [
+      'Back-to-back events with tight turnaround',
+      'Heavy equipment transport (tables, staging, AV)',
+      'Post-event floor cleaning on tight timeline',
+      'F&B coordination for 500+ attendees',
+      'Pre-function area refresh between sessions',
+      'Overnight ballroom conversion',
+      'Chair/table storage distant from event space',
+    ],
+    robot_opportunities: [
+      { label: 'Post-event large-area floor cleaning overnight', impact: 'high', robot_type: 'Floor Scrubber (C30)' },
+      { label: 'Equipment/supply transport from storage to ballroom', impact: 'medium', robot_type: 'Cart Towing Robot' },
+      { label: 'Pre-function area floor maintenance between sessions', impact: 'medium', robot_type: 'Floor Scrubber (C30)' },
+      { label: 'Beverage/supply delivery to break stations', impact: 'low', robot_type: 'Tray Delivery (T8)' },
+    ],
   },
 ];
 
@@ -1965,68 +2206,114 @@ function renderOperationsTab() {
   let html = '';
 
   // ── Department Profiles ──
-  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Department Assessment</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
-  html += '<div class="field-group"><label>Tap each department to assess — pre-filled with industry benchmarks</label></div>';
+  const assessedCount = DEPARTMENT_PROFILES.filter(dep => (ops.departments[dep.id] || {}).assessed).length;
+  html += `<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Department Assessment <span style="font-weight:400;opacity:.6;font-size:.85em;">(${assessedCount}/${DEPARTMENT_PROFILES.length})</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">`;
 
   DEPARTMENT_PROFILES.forEach(dept => {
     const d = ops.departments[dept.id] || {};
     const isExpanded = d._expanded;
     const isAssessed = d.assessed;
-    html += `<div style="background:${isAssessed ? 'var(--green-soft)' : '#f9fafb'}; border:1px solid ${isAssessed ? 'var(--green)' : 'var(--border)'}; border-radius:10px; margin-bottom:8px; overflow:hidden;">`;
+    // WHY: Count filled property fields to show progress on collapsed card
+    const filledFields = dept.property_fields ? dept.property_fields.filter(f => d[f.key] != null && d[f.key] !== '' && d[f.key] !== 0).length : 0;
+    const totalFields = dept.property_fields ? dept.property_fields.length : 0;
+    const challengeCount = (d.challenges || []).length;
+    const oppCount = (d.opportunities || []).length;
+
+    html += `<div style="background:${isAssessed ? '#f0fdf4' : '#f9fafb'}; border:1px solid ${isAssessed ? '#86efac' : 'var(--border)'}; border-radius:10px; margin-bottom:10px; overflow:hidden;">`;
     html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer; min-height:52px;" onclick="toggleDeptExpand('${dept.id}')">
       <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-size:1.2rem;">${dept.icon}</span>
+        <span style="font-size:1.3rem;">${dept.icon}</span>
         <div>
-          <div style="font-weight:600; font-size:0.88rem; color:var(--text);">${esc(dept.name)}</div>
-          <div style="font-size:0.7rem; color:var(--text-dim);">${isAssessed ? '&#10003; Assessed' : 'Tap to assess'}</div>
+          <div style="font-weight:600; font-size:0.9rem; color:var(--text);">${esc(dept.name)}</div>
+          <div style="font-size:0.68rem; color:var(--text-dim);">${isAssessed ? '&#10003; Assessed' : filledFields > 0 ? filledFields + '/' + totalFields + ' fields &middot; ' + challengeCount + ' challenges &middot; ' + oppCount + ' opportunities' : 'Tap to assess'}</div>
         </div>
       </div>
       <span style="font-size:0.7rem; color:var(--text-dim);">${isExpanded ? '&#9650;' : '&#9660;'}</span>
     </div>`;
 
     if (isExpanded) {
-      // KPIs
       html += '<div style="padding:0 14px 14px;">';
-      html += '<div style="font-size:0.72rem; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Industry KPIs</div>';
-      html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:14px;">';
+
+      // ── Industry Benchmarks vs Their Numbers (side-by-side) ──
+      html += '<div style="font-size:0.72rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px;">Industry Benchmarks</div>';
+      html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:16px;">';
       dept.kpis.forEach(kpi => {
-        html += `<div style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-size:0.73rem; color:var(--text-muted); line-height:1.4;">${esc(kpi)}</div>`;
+        html += `<div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px 10px;">
+          <div style="font-size:0.7rem; color:var(--text-dim); margin-bottom:2px;">${esc(kpi.label)}</div>
+          <div style="font-size:0.88rem; font-weight:600; color:var(--text);">${esc(kpi.benchmark)} <span style="font-size:0.68rem; font-weight:400; color:var(--text-dim);">${esc(kpi.unit)}</span></div>
+        </div>`;
       });
       html += '</div>';
 
-      // Common challenges — tappable
-      html += '<div style="font-size:0.72rem; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Common Challenges</div>';
-      html += '<div class="checkbox-grid" style="margin-bottom:14px;">';
+      // ── Their Numbers — property-specific fields ──
+      html += '<div style="font-size:0.72rem; font-weight:700; color:#2563eb; text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px;">This Property\'s Numbers</div>';
+
+      dept.property_fields.forEach(field => {
+        const val = d[field.key];
+        if (field.type === 'slider') {
+          const displayVal = val != null ? val : '—';
+          html += `<div class="field-group" style="margin-bottom:8px;"><label>${esc(field.label)}: <strong>${displayVal}</strong> <span style="font-size:0.7rem;color:var(--text-dim);">${esc(field.unit)}</span></label>
+            <input type="range" min="${field.min}" max="${field.max}" value="${val || field.min}" class="slider"
+              oninput="setDeptField('${dept.id}', '${field.key}', parseInt(this.value)); this.closest('.field-group').querySelector('strong').textContent = this.value;"></div>`;
+        } else if (field.type === 'number') {
+          html += `<div class="field-group" style="margin-bottom:8px;"><label>${field.prefix ? field.prefix + ' ' : ''}${esc(field.label)}</label>
+            <input type="number" inputmode="numeric" value="${val || ''}" placeholder="${esc(field.placeholder || '')}"
+              oninput="setDeptField('${dept.id}', '${field.key}', this.value ? parseInt(this.value) : null);"></div>`;
+        } else if (field.type === 'toggle') {
+          html += `<div class="field-group" style="margin-bottom:8px;"><label>${esc(field.label)}</label>
+            <div class="toggle-group">`;
+          field.options.forEach(opt => {
+            html += `<div class="toggle-option ${val === opt ? 'active' : ''}" onclick="setDeptField('${dept.id}', '${field.key}', '${esc(opt)}'); renderActiveTab();">${esc(opt)}</div>`;
+          });
+          html += `</div></div>`;
+        } else {
+          html += `<div class="field-group" style="margin-bottom:8px;"><label>${esc(field.label)}</label>
+            <input type="text" value="${esc(val || '')}" placeholder="${esc(field.placeholder || '')}"
+              oninput="setDeptField('${dept.id}', '${field.key}', this.value);"></div>`;
+        }
+      });
+
+      // ── Pain Points / Challenges ──
+      html += '<div style="font-size:0.72rem; font-weight:700; color:#ea580c; text-transform:uppercase; letter-spacing:.05em; margin:16px 0 8px; border-bottom:1px solid var(--border); padding-bottom:4px;">Operational Challenges <span style="font-weight:400;">(' + challengeCount + ' selected)</span></div>';
+      html += '<div class="checkbox-grid" style="margin-bottom:6px;">';
       const deptChallenges = d.challenges || [];
       dept.common_challenges.forEach(ch => {
         const isActive = deptChallenges.includes(ch);
         html += `<div class="checkbox-chip ${isActive ? 'checked' : ''}" style="cursor:pointer; font-size:0.73rem;" onclick="toggleDeptChallenge('${dept.id}', '${esc(ch.replace(/'/g, "\\'"))}')">${isActive ? '&#10003; ' : ''}${esc(ch)}</div>`;
       });
       html += '</div>';
+      html += `<div class="field-group" style="margin-top:6px;"><label>Additional Challenges</label>
+        <textarea class="auto-expand" placeholder="Type any challenges not listed above..." oninput="setDeptField('${dept.id}', 'custom_challenges', this.value);">${esc(d.custom_challenges || '')}</textarea></div>`;
 
-      // Robot opportunities — tappable
-      html += '<div style="font-size:0.72rem; font-weight:600; color:var(--green); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Robot Opportunities</div>';
-      html += '<div class="checkbox-grid" style="margin-bottom:14px;">';
+      // ── Robot Opportunities with impact & robot type ──
+      html += '<div style="font-size:0.72rem; font-weight:700; color:#16a34a; text-transform:uppercase; letter-spacing:.05em; margin:16px 0 8px; border-bottom:1px solid var(--border); padding-bottom:4px;">Robot Opportunities <span style="font-weight:400;">(' + oppCount + ' selected)</span></div>';
       const deptOpps = d.opportunities || [];
       dept.robot_opportunities.forEach(opp => {
-        const isActive = deptOpps.includes(opp);
-        html += `<div class="checkbox-chip ${isActive ? 'checked' : ''}" style="cursor:pointer; font-size:0.73rem;" onclick="toggleDeptOpportunity('${dept.id}', '${esc(opp.replace(/'/g, "\\'"))}')">${isActive ? '&#10003; ' : ''}${esc(opp)}</div>`;
+        const oppLabel = typeof opp === 'string' ? opp : opp.label;
+        const oppImpact = typeof opp === 'object' ? opp.impact : '';
+        const oppRobot = typeof opp === 'object' ? opp.robot_type : '';
+        const isActive = deptOpps.includes(oppLabel);
+        const impactColor = oppImpact === 'high' ? '#16a34a' : oppImpact === 'medium' ? '#d97706' : '#64748b';
+        html += `<div style="display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:4px; background:${isActive ? '#f0fdf4' : '#fff'}; border:1px solid ${isActive ? '#86efac' : 'var(--border)'}; border-radius:8px; cursor:pointer; min-height:44px;" onclick="toggleDeptOpportunity('${dept.id}', '${esc(oppLabel.replace(/'/g, "\\'"))}')">
+          <span style="font-size:1.1rem; flex-shrink:0;">${isActive ? '&#9989;' : '&#9898;'}</span>
+          <div style="flex:1;">
+            <div style="font-size:0.78rem; font-weight:${isActive ? '600' : '400'}; color:var(--text);">${esc(oppLabel)}</div>
+            <div style="display:flex; gap:6px; margin-top:2px;">
+              ${oppImpact ? `<span style="font-size:0.62rem; padding:1px 6px; border-radius:8px; background:${impactColor}18; color:${impactColor}; font-weight:600; text-transform:uppercase;">${oppImpact} impact</span>` : ''}
+              ${oppRobot ? `<span style="font-size:0.62rem; padding:1px 6px; border-radius:8px; background:#e0e7ff; color:#3730a3;">${esc(oppRobot)}</span>` : ''}
+            </div>
+          </div>
+        </div>`;
       });
-      html += '</div>';
 
-      // Staff count slider for this department
-      const staffCount = d.staff_count || 0;
-      html += `<div class="field-group"><label>Staff in this department: <strong>${staffCount || '—'}</strong></label>
-        <input type="range" min="0" max="200" value="${staffCount}" class="slider"
-          oninput="setDeptField('${dept.id}', 'staff_count', parseInt(this.value)); this.previousElementSibling.querySelector('strong').textContent = this.value;"></div>`;
+      // ── Observations / Notes ──
+      html += `<div style="font-size:0.72rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:.05em; margin:16px 0 8px; border-bottom:1px solid var(--border); padding-bottom:4px;">Observations &amp; Notes</div>`;
+      html += `<div class="field-group"><textarea class="auto-expand" style="min-height:60px;" placeholder="Site-walk observations for ${esc(dept.name)}... What did you see? What stood out? What's the current workflow?" oninput="setDeptField('${dept.id}', 'notes', this.value);">${esc(d.notes || '')}</textarea></div>`;
 
-      // Notes
-      html += `<div class="field-group"><label>Notes</label>
-        <textarea class="auto-expand" placeholder="Specific observations for ${esc(dept.name)}..." oninput="setDeptField('${dept.id}', 'notes', this.value);">${esc(d.notes || '')}</textarea></div>`;
-
-      // Mark as assessed button
-      html += `<div style="text-align:right; margin-top:8px;">
-        <button class="checkbox-chip ${isAssessed ? 'checked' : ''}" style="cursor:pointer; font-weight:600; border:none;" onclick="setDeptField('${dept.id}', 'assessed', ${!isAssessed}); renderActiveTab();">
+      // Mark as assessed
+      html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:8px; border-top:1px solid var(--border);">
+        <span style="font-size:0.7rem; color:var(--text-dim);">${filledFields}/${totalFields} fields &middot; ${challengeCount} challenges &middot; ${oppCount} opportunities</span>
+        <button class="checkbox-chip ${isAssessed ? 'checked' : ''}" style="cursor:pointer; font-weight:600; border:none; padding:8px 16px;" onclick="setDeptField('${dept.id}', 'assessed', ${!isAssessed}); renderActiveTab();">
           ${isAssessed ? '&#10003; Assessed' : 'Mark as Assessed'}
         </button></div>`;
 
@@ -2300,12 +2587,53 @@ function renderInfrastructureTab() {
   });
   html += '</div></div>';
 
+  // WHY: Speed test results are critical for robot deployment — robots need 5+ Mbps sustained.
+  // Embedding speedtest.net via link since they don't allow iframe embedding.
+  html += `<div style="font-size:0.72rem; font-weight:700; color:#2563eb; text-transform:uppercase; letter-spacing:.05em; margin:12px 0 8px; border-bottom:1px solid var(--border); padding-bottom:4px;">Speed Test Results</div>`;
+  html += `<div style="display:flex; gap:8px; margin-bottom:10px;">
+    <a href="https://fast.com" target="_blank" rel="noopener" class="checkbox-chip" style="cursor:pointer; font-weight:600; color:#2563eb; border-color:#2563eb; text-decoration:none; text-align:center; padding:10px 16px; flex:1; min-height:44px; display:flex; align-items:center; justify-content:center; gap:6px;">&#128246; Run Fast.com Test</a>
+    <a href="https://www.speedtest.net" target="_blank" rel="noopener" class="checkbox-chip" style="cursor:pointer; font-weight:600; color:#2563eb; border-color:#2563eb; text-decoration:none; text-align:center; padding:10px 16px; flex:1; min-height:44px; display:flex; align-items:center; justify-content:center; gap:6px;">&#128246; Run Speedtest.net</a>
+  </div>`;
+  html += `<div class="field-row">
+    <div class="field-group"><label>Download (Mbps)</label>
+      <input type="number" inputmode="decimal" value="${infra.wifi.speed_down || ''}" placeholder="e.g., 150" oninput="state.infrastructure_data.wifi.speed_down = this.value ? parseFloat(this.value) : null; markDirty();"></div>
+    <div class="field-group"><label>Upload (Mbps)</label>
+      <input type="number" inputmode="decimal" value="${infra.wifi.speed_up || ''}" placeholder="e.g., 25" oninput="state.infrastructure_data.wifi.speed_up = this.value ? parseFloat(this.value) : null; markDirty();"></div>
+    <div class="field-group"><label>Ping (ms)</label>
+      <input type="number" inputmode="numeric" value="${infra.wifi.ping || ''}" placeholder="e.g., 12" oninput="state.infrastructure_data.wifi.ping = this.value ? parseInt(this.value) : null; markDirty();"></div>
+  </div>`;
+  // WHY: Robot minimum thresholds — show pass/fail inline
+  const speedDown = infra.wifi.speed_down;
+  const speedUp = infra.wifi.speed_up;
+  const ping = infra.wifi.ping;
+  if (speedDown || speedUp || ping) {
+    html += '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">';
+    if (speedDown) {
+      const ok = speedDown >= 10; // WHY: 10 Mbps minimum for robot video streaming + cloud sync
+      html += `<span style="font-size:0.7rem; padding:3px 8px; border-radius:10px; background:${ok ? '#f0fdf4' : '#fef2f2'}; color:${ok ? '#166534' : '#991b1b'}; font-weight:600;">${ok ? '&#10003;' : '&#10007;'} Download ${ok ? 'OK' : 'BELOW 10 Mbps MIN'}</span>`;
+    }
+    if (speedUp) {
+      const ok = speedUp >= 5; // WHY: 5 Mbps minimum for robot telemetry upload
+      html += `<span style="font-size:0.7rem; padding:3px 8px; border-radius:10px; background:${ok ? '#f0fdf4' : '#fef2f2'}; color:${ok ? '#166534' : '#991b1b'}; font-weight:600;">${ok ? '&#10003;' : '&#10007;'} Upload ${ok ? 'OK' : 'BELOW 5 Mbps MIN'}</span>`;
+    }
+    if (ping) {
+      const ok = ping <= 50; // WHY: <50ms for responsive robot control
+      html += `<span style="font-size:0.7rem; padding:3px 8px; border-radius:10px; background:${ok ? '#f0fdf4' : '#fef2f2'}; color:${ok ? '#166534' : '#991b1b'}; font-weight:600;">${ok ? '&#10003;' : '&#10007;'} Ping ${ok ? 'OK' : 'ABOVE 50ms MAX'}</span>`;
+    }
+    html += '</div>';
+  }
+
+  html += `<div class="field-group"><label>Bandwidth</label>
+    <input type="text" value="${esc(infra.wifi.bandwidth)}" placeholder="e.g., 200 Mbps fiber, 50 Mbps cable" oninput="state.infrastructure_data.wifi.bandwidth = this.value; markDirty();"></div>`;
+
   html += `<div class="field-row">
       <div class="field-group"><label>IT Contact Name</label>
         <input type="text" value="${esc(infra.wifi.it_contact)}" oninput="state.infrastructure_data.wifi.it_contact = this.value; markDirty();"></div>
       <div class="field-group"><label>IT Contact Email</label>
         <input type="email" value="${esc(infra.wifi.it_email)}" oninput="state.infrastructure_data.wifi.it_email = this.value; markDirty();"></div>
     </div>`;
+  html += `<div class="field-group"><label>ISP / Provider</label>
+    <input type="text" value="${esc(infra.wifi.isp || '')}" placeholder="e.g., AT&T Fiber, Comcast Business" oninput="state.infrastructure_data.wifi.isp = this.value; markDirty();"></div>`;
   html += '</div></div>';
 
   // Elevators
@@ -2356,6 +2684,34 @@ function renderInfrastructureTab() {
         <div class="field-group"><label>Notes</label>
           <input type="text" value="${esc(el.notes)}" placeholder="Service contract, maintenance schedule, access restrictions..." oninput="state.infrastructure_data.elevators[${i}].notes = this.value; markDirty();"></div>
       </div>`;
+    // WHY: Elevator management company is critical for robot integration — we need
+    // their cooperation to install relay-parallel or API integration.
+    // Only show once, after first elevator entry.
+    if (i === 0) {
+        html += `<div style="background:#f8fafc; border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px;">
+          <div style="font-size:0.78rem; font-weight:700; color:var(--text); margin-bottom:10px;">&#128295; Elevator Service Company</div>
+          <div class="field-row">
+            <div class="field-group"><label>Company Name</label>
+              <input type="text" value="${esc(infra.elevator_company || '')}" placeholder="e.g., ThyssenKrupp Elevator, Otis Elevator" oninput="state.infrastructure_data.elevator_company = this.value; markDirty();"></div>
+            <div class="field-group"><label>Contract Type</label>
+              <input type="text" value="${esc(infra.elevator_contract || '')}" placeholder="e.g., Full service, Oil & grease, T&M" oninput="state.infrastructure_data.elevator_contract = this.value; markDirty();"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-group"><label>Contact Name</label>
+              <input type="text" value="${esc(infra.elevator_contact_name || '')}" placeholder="Service rep or account manager" oninput="state.infrastructure_data.elevator_contact_name = this.value; markDirty();"></div>
+            <div class="field-group"><label>Contact Phone</label>
+              <input type="tel" value="${esc(infra.elevator_contact_phone || '')}" placeholder="+1 (___) ___-____" oninput="state.infrastructure_data.elevator_contact_phone = this.value; markDirty();"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-group"><label>Contact Email</label>
+              <input type="email" value="${esc(infra.elevator_contact_email || '')}" placeholder="rep@elevatorco.com" oninput="state.infrastructure_data.elevator_contact_email = this.value; markDirty();"></div>
+            <div class="field-group"><label>Website</label>
+              <input type="url" value="${esc(infra.elevator_website || '')}" placeholder="https://..." oninput="state.infrastructure_data.elevator_website = this.value; markDirty();"></div>
+          </div>
+          <div class="field-group"><label>Service Schedule / Notes</label>
+            <input type="text" value="${esc(infra.elevator_service_notes || '')}" placeholder="e.g., Monthly PM visits, next inspection date..." oninput="state.infrastructure_data.elevator_service_notes = this.value; markDirty();"></div>
+        </div>`;
+    }
   });
   html += '<button class="add-row-btn" onclick="addInfraElevator()">+ Add Elevator</button>';
   html += '</div></div>';
@@ -2365,7 +2721,31 @@ function renderInfrastructureTab() {
 
   // Charging / docking
   html += '<div class="field-group"><label>Available Charging Locations</label><div class="checkbox-grid">';
-  const chargingLocations = ['Housekeeping closet', 'Engineering shop', 'Basement/service area', 'Loading dock', 'Back-of-house corridor', 'Dedicated robot room (to build)', 'Other'];
+  // WHY: Comprehensive list — robots need charging stations near their operating zones.
+  // Multiple stations reduce deadhead time (robot traveling empty just to charge).
+  const chargingLocations = [
+    'Housekeeping closet (each floor)',
+    'Floor linen staging area',
+    'Engineering shop / workshop',
+    'Basement / service corridor',
+    'Loading dock area',
+    'Back-of-house corridor (main)',
+    'Laundry room',
+    'Kitchen / BOH corridor',
+    'Parking garage (B1/B2)',
+    'Pool equipment room',
+    'Fitness center storage',
+    'Banquet storage / pre-function',
+    'Bell closet / luggage room',
+    'Front desk back office',
+    'Elevator machine room',
+    'Electrical / telecom closet',
+    'Rooftop mechanical room',
+    'Exterior covered alcove',
+    'Valet / porte-cochère alcove',
+    'Dedicated robot room (to build)',
+    'Other',
+  ];
   const currentCharging = infra.charging_locations || [];
   chargingLocations.forEach(loc => {
     const isActive = currentCharging.includes(loc);
