@@ -112,17 +112,10 @@
         </div>
       </div>
 
-      <!-- Cluster filters -->
+      <!-- Cluster filters (rendered dynamically from API) -->
       <div class="flex flex-wrap gap-2 mb-3">
         <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide self-center mr-1">Market</span>
-        <button class="chip active bg-gray-100 text-gray-600" onclick="toggleFilter('cluster','all')" data-filter="cluster" data-val="all">All</button>
-        <button class="chip bg-blue-50 text-blue-600" onclick="toggleFilter('cluster','sf-bay')" data-filter="cluster" data-val="sf-bay">SF Bay</button>
-        <button class="chip bg-purple-50 text-purple-600" onclick="toggleFilter('cluster','sacramento')" data-filter="cluster" data-val="sacramento">Sacramento</button>
-        <button class="chip bg-amber-50 text-amber-600" onclick="toggleFilter('cluster','la-west')" data-filter="cluster" data-val="la-west">LA West</button>
-        <button class="chip bg-cyan-50 text-cyan-600" onclick="toggleFilter('cluster','san-diego')" data-filter="cluster" data-val="san-diego">San Diego</button>
-        <button class="chip bg-rose-50 text-rose-600" onclick="toggleFilter('cluster','south-fl')" data-filter="cluster" data-val="south-fl">South FL</button>
-        <button class="chip bg-teal-50 text-teal-600" onclick="toggleFilter('cluster','gulf-fl')" data-filter="cluster" data-val="gulf-fl">Gulf Coast</button>
-        <button class="chip bg-orange-50 text-orange-600" onclick="toggleFilter('cluster','dallas')" data-filter="cluster" data-val="dallas">Dallas</button>
+        <div id="marketChips" class="flex flex-wrap gap-2"></div>
       </div>
 
       <!-- Brand class filters -->
@@ -190,77 +183,62 @@
   </div>
 
 <script>
-// ── Data ──────────────────────────────────────────────────────────
-const PROSPECTS = [
-  {name:'Fairmont San Francisco',address:'950 Mason St, Nob Hill',market:'San Francisco',cluster:'sf-bay',brand:'FAIRMONT / ACCOR',brandClass:'luxury',keys:606,floors:23,stars:5,signal:'Luxury flagship, 3 restaurants, 55K sq ft events, highest key count in any market',operator:'Accor / Fairmont',portfolio:'',monogram:'FM',monoColor:'#c9a96e'},
-  {name:'Palace Hotel',address:'2 New Montgomery St, SoMa',market:'San Francisco',cluster:'sf-bay',brand:'LUXURY COLLECTION / MARRIOTT',brandClass:'luxury',keys:556,floors:9,stars:5,signal:'3 grand ballrooms, 44K sq ft events, near Moscone Convention Center',operator:'Marriott International',portfolio:'',monogram:'PH',monoColor:'#7c3aed'},
-  {name:'InterContinental San Francisco',address:'888 Howard St, SoMa',market:'San Francisco',cluster:'sf-bay',brand:'INTERCONTINENTAL / IHG',brandClass:'luxury',keys:550,floors:32,stars:5,signal:'Tallest single-building in SF, Michelin-starred Luce, spa, Club Lounge',operator:'IHG Hotels',portfolio:'6 IHG prospects',monogram:'IC',monoColor:'#448aff'},
-  {name:'Hotel Nikko San Francisco',address:'222 Mason St, Union Square',market:'San Francisco',cluster:'sf-bay',brand:'OKURA NIKKO',brandClass:'independent',keys:532,floors:25,stars:4,signal:'Japanese-managed, Imperial Club premium tier, quality-conscious operator',operator:'Okura Nikko Hotels',portfolio:'',monogram:'NK',monoColor:'#2d6a6a'},
-  {name:'Beacon Grand',address:'450 Powell St, Union Square',market:'San Francisco',cluster:'sf-bay',brand:'INDEPENDENT / NORTHVIEW',brandClass:'independent',keys:418,floors:21,stars:4,signal:'Starlite rooftop bar (fl 21), 17K sq ft events, independent operator = fast decisions',operator:'Northview Hotel Group',portfolio:'',monogram:'BG',monoColor:'#1a6b3a'},
-  {name:'Walnut Creek Marriott',address:'2355 N. Main St',market:'Walnut Creek',cluster:'sf-bay',brand:'MARRIOTT',brandClass:'chain',keys:342,floors:6,stars:4,signal:'Largest in market, 18K sq ft meetings, Atrio restaurant',operator:'WCG Hotels',portfolio:'',monogram:'WM',monoColor:'#1e40af'},
-  {name:'Renaissance Walnut Creek',address:'2805 Jones Rd',market:'Walnut Creek',cluster:'sf-bay',brand:'RENAISSANCE / MARRIOTT',brandClass:'soft',keys:175,floors:5,stars:4,signal:'Lifestyle brand, spa, 3 pools, Bay Club fitness campus integration',operator:'The Bay Club',portfolio:'',monogram:'RW',monoColor:'#0e7490'},
-  {name:'Embassy Suites Walnut Creek',address:'1345 Treat Blvd',market:'Walnut Creek',cluster:'sf-bay',brand:'EMBASSY SUITES / HILTON',brandClass:'chain',keys:249,floors:8,stars:3,signal:'All-suite, 8-story atrium, 2 daily F&B services, 7K sq ft events',operator:'Hilton',portfolio:'',monogram:'ES',monoColor:'#4338ca'},
-  {name:'Hyatt Regency Sacramento',address:'1209 L St, Downtown',market:'Sacramento',cluster:'sacramento',brand:'HYATT REGENCY',brandClass:'chain',keys:505,floors:15,stars:4,signal:'Largest in market, spa, convention-adjacent, Regency Club lounge (fl 12)',operator:'Hyatt Hotels Corp',portfolio:'',monogram:'HR',monoColor:'#b45309'},
-  {name:'Sheraton Grand Sacramento',address:'1230 J St, Downtown',market:'Sacramento',cluster:'sacramento',brand:'SHERATON GRAND / MARRIOTT',brandClass:'chain',keys:503,floors:27,stars:4,signal:'Tallest hotel in Sacramento (27 floors), farm-to-table restaurant, ballroom',operator:'Marriott (Sheraton)',portfolio:'',monogram:'SG',monoColor:'#7c3aed'},
-  {name:'Hyatt Centric Downtown Sacramento',address:'1122 7th St, Downtown',market:'Sacramento',cluster:'sacramento',brand:'HYATT CENTRIC',brandClass:'soft',keys:172,floors:11,stars:4,signal:'Lifestyle soft brand, rooftop lounge, managed by Aimbridge/Evolution',operator:'Aimbridge Hospitality',portfolio:'3 Aimbridge prospects',monogram:'HC',monoColor:'#92400e'},
-  {name:'The Exchange Sacramento',address:'1006 4th St, Downtown',market:'Sacramento',cluster:'sacramento',brand:'CURIO COLLECTION / HILTON',brandClass:'soft',keys:100,floors:10,stars:4,signal:'Curio soft brand in historic 10-story building, boutique, Golden 1 Center proximity',operator:'Independent / boutique',portfolio:'',monogram:'EX',monoColor:'#0e7490'},
-  {name:'Fort Sutter Hotel',address:'1308 28th St, Midtown',market:'Sacramento',cluster:'sacramento',brand:'TAPESTRY / HILTON',brandClass:'soft',keys:105,floors:4,stars:4,signal:'Tapestry soft brand, Cafe Bernardo F&B partner, Midtown location',operator:'Independent / boutique',portfolio:'',monogram:'FS',monoColor:'#1a6b3a'},
-  {name:'Waldorf Astoria Beverly Hills',address:'9850 Wilshire Blvd',market:'Beverly Hills',cluster:'la-west',brand:'WALDORF ASTORIA / HILTON',brandClass:'luxury',keys:170,floors:12,stars:5,signal:'2017 tower, rooftop F&B, La Prairie Spa, private balconies on all rooms',operator:'Hilton Hotels',portfolio:'',monogram:'WA',monoColor:'#8b7340'},
-  {name:'The Peninsula Beverly Hills',address:'9882 S Santa Monica Blvd',market:'Beverly Hills',cluster:'la-west',brand:'PENINSULA HOTELS',brandClass:'luxury',keys:195,floors:4,stars:5,signal:'AAA Five Diamond since 1993, 3 restaurants, independent luxury brand',operator:'Hongkong & Shanghai Hotels',portfolio:'',monogram:'PB',monoColor:'#5b21b6'},
-  {name:'Beverly Wilshire',address:'9500 Wilshire Blvd (Rodeo Dr)',market:'Beverly Hills',cluster:'la-west',brand:'INDEPENDENT (POST-FOUR SEASONS)',brandClass:'independent',keys:345,floors:14,stars:5,signal:'Largest in BH, CUT by Wolfgang Puck, mgmt transition = window to influence new operator',operator:'TBD (management transition 2026)',portfolio:'',monogram:'BW',monoColor:'#92400e'},
-  {name:'The Maybourne Beverly Hills',address:'225 N Canon Dr',market:'Beverly Hills',cluster:'la-west',brand:'MAYBOURNE HOTEL GROUP',brandClass:'luxury',keys:205,floors:9,stars:5,signal:"Dante restaurant, 20K sq ft spa, 4 bars, Claridge's/Connaught pedigree",operator:'Maybourne Hotel Group',portfolio:'',monogram:'MB',monoColor:'#9d174d'},
-  {name:"L'Ermitage Beverly Hills",address:'9291 Burton Way',market:'Beverly Hills',cluster:'la-west',brand:'INDEPENDENT',brandClass:'independent',keys:116,floors:8,stars:5,signal:'All-suite (805 sq ft avg), rooftop restaurant, independent = fast decisions',operator:'EOS Investors',portfolio:'',monogram:'LE',monoColor:'#1a6b3a'},
-  {name:'Fairmont Miramar Hotel & Bungalows',address:'101 Wilshire Blvd',market:'Santa Monica',cluster:'la-west',brand:'FAIRMONT / ACCOR',brandClass:'luxury',keys:297,floors:10,stars:5,signal:'5 restaurants, Exhale Spa, 64K sq ft events, multi-building campus',operator:'Accor / Fairmont',portfolio:'',monogram:'FM',monoColor:'#8b7340'},
-  {name:'Regent Santa Monica Beach',address:'1700 Ocean Ave',market:'Santa Monica',cluster:'la-west',brand:'REGENT / IHG',brandClass:'luxury',keys:167,floors:8,stars:5,signal:'Ultra-luxury IHG flagship (opened 2024), Michael Mina, Guerlain Spa',operator:'IHG Hotels',portfolio:'6 IHG prospects',monogram:'RS',monoColor:'#5b21b6'},
-  {name:'Santa Monica Proper',address:'700 Wilshire Blvd',market:'Santa Monica',cluster:'la-west',brand:'PROPER HOTELS',brandClass:'soft',keys:267,floors:7,stars:4,signal:'Only rooftop pool in SM, Surya Spa, Proper Hospitality portfolio',operator:'Proper Hospitality',portfolio:'',monogram:'SP',monoColor:'#0e7490'},
-  {name:'Viceroy Santa Monica',address:'1819 Ocean Ave',market:'Santa Monica',cluster:'la-west',brand:'VICEROY HOTELS',brandClass:'independent',keys:169,floors:5,stars:4,signal:'Beachfront, 2 pools, restaurant, independent lifestyle brand',operator:'Viceroy Hotels & Resorts',portfolio:'',monogram:'VS',monoColor:'#2d6a6a'},
-  {name:'Shore Hotel',address:'1515 Ocean Ave',market:'Santa Monica',cluster:'la-west',brand:'INDEPENDENT',brandClass:'independent',keys:164,floors:4,stars:4,signal:'LEED certified, family-owned, beachfront restaurant, fast decisions',operator:'Independent (family-owned)',portfolio:'',monogram:'SH',monoColor:'#1a6b3a'},
-  {name:'The West Hollywood EDITION',address:'9040 Sunset Blvd',market:'West Hollywood',cluster:'la-west',brand:'EDITION / MARRIOTT',brandClass:'luxury',keys:190,floors:13,stars:5,signal:'Sunset rooftop nightclub, Ardor restaurant, 40K sq ft events',operator:'Marriott International',portfolio:'',monogram:'ED',monoColor:'#9d174d'},
-  {name:'Andaz West Hollywood',address:'8401 Sunset Blvd',market:'West Hollywood',cluster:'la-west',brand:'ANDAZ / HYATT',brandClass:'soft',keys:239,floors:14,stars:4,signal:'Sunset Strip, Panorama Ballroom, Hyatt portfolio entry point',operator:'Hyatt Hotels Corporation',portfolio:'',monogram:'AZ',monoColor:'#1e40af'},
-  {name:'The Valorian',address:'8440 Sunset Blvd',market:'West Hollywood',cluster:'la-west',brand:'CURIO COLLECTION / HILTON',brandClass:'soft',keys:236,floors:13,stars:4,signal:'Davidson Hospitality Group manages dozens of properties — major portfolio play',operator:'Davidson Hospitality',portfolio:'Portfolio operator',monogram:'VL',monoColor:'#0e7490'},
-  {name:'Sunset Marquis Hotel & Villas',address:'1200 Alta Loma Rd',market:'West Hollywood',cluster:'la-west',brand:'INDEPENDENT',brandClass:'independent',keys:152,floors:4,stars:4,signal:'All-suite + villas, recording studio, celebrity clientele, 3-acre campus',operator:'Independent (privately owned)',portfolio:'',monogram:'SM',monoColor:'#1a6b3a'},
-  {name:'Kimpton Everly Hotel',address:'1800 Argyle Ave, Hollywood',market:'West Hollywood',cluster:'la-west',brand:'KIMPTON / IHG',brandClass:'soft',keys:216,floors:15,stars:4,signal:'IHG cross-sell with Regent Santa Monica — 2-property IHG pitch',operator:'IHG (Kimpton)',portfolio:'6 IHG prospects',monogram:'KE',monoColor:'#1e40af'},
-  {name:'Hotel Erwin',address:'1697 Pacific Ave, Venice Beach',market:'Venice / Marina del Rey',cluster:'la-west',brand:'INDEPENDENT / SPRINGBOARD',brandClass:'independent',keys:120,floors:5,stars:4,signal:'Only 100+ key hotel in Venice proper, Springboard Hospitality portfolio',operator:'Springboard Hospitality',portfolio:'',monogram:'HE',monoColor:'#1a6b3a'},
-  {name:'Ritz-Carlton Marina del Rey',address:'4375 Admiralty Way',market:'Venice / Marina del Rey',cluster:'la-west',brand:'RITZ-CARLTON / MARRIOTT',brandClass:'luxury',keys:304,floors:12,stars:5,signal:'Volume driver for Venice/MDR corridor, spa, marina, tennis, 304 keys',operator:'Marriott International',portfolio:'',monogram:'RC',monoColor:'#5b21b6'},
-  {name:'Hotel MdR — DoubleTree',address:'13480 Maxella Ave',market:'Venice / Marina del Rey',cluster:'la-west',brand:'DOUBLETREE / HILTON',brandClass:'chain',keys:283,floors:4,stars:3,signal:'283 keys, restaurant & pool, Hilton cross-sell with Waldorf Astoria BH',operator:'Hilton',portfolio:'',monogram:'MD',monoColor:'#1e40af'},
-  {name:'Marina del Rey Hotel',address:'13534 Bali Way',market:'Venice / Marina del Rey',cluster:'la-west',brand:'INDEPENDENT / PACIFIC HOSPITALITY',brandClass:'independent',keys:160,floors:5,stars:4,signal:'Waterfront F&B, Pacific Hospitality Group (regional CA operator)',operator:'Pacific Hospitality Group',portfolio:'',monogram:'MR',monoColor:'#2d6a6a'},
-  {name:'Pendry San Diego',address:'550 J St, Gaslamp Quarter',market:'San Diego',cluster:'san-diego',brand:'PENDRY / MONTAGE',brandClass:'luxury',keys:317,floors:12,stars:5,signal:'6 F&B outlets, 35K sq ft events, Montage Hotels management',operator:'Montage Hotels & Resorts',portfolio:'',monogram:'PD',monoColor:'#8b7340'},
-  {name:'The US Grant',address:'326 Broadway, Downtown',market:'San Diego',cluster:'san-diego',brand:'LUXURY COLLECTION / MARRIOTT',brandClass:'luxury',keys:270,floors:11,stars:4,signal:'AAA Four Diamond, Grant Grill, historic landmark, Sycuan tribal ownership',operator:'Marriott (Sycuan-owned)',portfolio:'',monogram:'UG',monoColor:'#5b21b6'},
-  {name:'Kimpton Hotel Palomar',address:'1047 Fifth Ave, Gaslamp',market:'San Diego',cluster:'san-diego',brand:'KIMPTON / IHG',brandClass:'soft',keys:183,floors:23,stars:4,signal:'Tallest in cluster (23 floors), rooftop infinity pool, spa, IHG portfolio',operator:'IHG (Kimpton)',portfolio:'6 IHG prospects',monogram:'KP',monoColor:'#1e40af'},
-  {name:'Hotel Republic',address:'421 W B St, Downtown',market:'San Diego',cluster:'san-diego',brand:'AUTOGRAPH COLLECTION / MARRIOTT',brandClass:'soft',keys:258,floors:19,stars:4,signal:'Autograph soft brand, rooftop dining, Club Lounge, 24-hr room service',operator:'Marriott International',portfolio:'',monogram:'HR',monoColor:'#0e7490'},
-  {name:'Carte Hotel',address:'401 W Ash St, Downtown',market:'San Diego',cluster:'san-diego',brand:'CURIO COLLECTION / HILTON',brandClass:'soft',keys:246,floors:16,stars:4,signal:'Curio soft brand, 16th-floor rooftop bar, FIT Athletic Club, modern tower',operator:'Hilton Hotels',portfolio:'',monogram:'CH',monoColor:'#0e7490'},
-  {name:'JW Marriott Marquis Miami',address:'255 Biscayne Blvd Way',market:'Miami',cluster:'south-fl',brand:'JW MARRIOTT',brandClass:'luxury',keys:313,floors:41,stars:5,signal:'20K sq ft ballroom, NBA sports complex, 41 floors, Boulud Sud',operator:'Marriott International',portfolio:'',monogram:'JW',monoColor:'#5b21b6'},
-  {name:'Four Seasons Hotel Miami',address:'1435 Brickell Ave',market:'Miami',cluster:'south-fl',brand:'FOUR SEASONS',brandClass:'luxury',keys:221,floors:70,stars:5,signal:'Brickell tower (hotel fl 7-36), EDGE Steak, Equinox spa, 2-acre pool',operator:'Four Seasons Hotels',portfolio:'',monogram:'FS',monoColor:'#8b7340'},
-  {name:'EAST Miami',address:'788 Brickell Plaza',market:'Miami',cluster:'south-fl',brand:'EAST / SWIRE HOTELS',brandClass:'independent',keys:263,floors:40,stars:4,signal:'Sugar rooftop (fl 40), 4 pools, Swire is innovation-forward — fastest decisions',operator:'Swire Hotels',portfolio:'Innovation-forward',monogram:'EA',monoColor:'#1a6b3a'},
-  {name:'InterContinental Miami',address:'100 Chopin Plaza',market:'Miami',cluster:'south-fl',brand:'INTERCONTINENTAL / IHG',brandClass:'luxury',keys:653,floors:34,stars:4,signal:'Largest in market (653 keys), 3 restaurants, Club Lounge, maximum volume',operator:'IHG Hotels',portfolio:'6 IHG prospects',monogram:'IC',monoColor:'#1e40af'},
-  {name:'JW Marriott Miami (Brickell)',address:'1109 Brickell Ave',market:'Miami',cluster:'south-fl',brand:'JW MARRIOTT',brandClass:'luxury',keys:296,floors:20,stars:4,signal:'Salus Spa, 25K sq ft meetings, JW portfolio play with JW Marquis',operator:'Marriott International',portfolio:'',monogram:'JB',monoColor:'#5b21b6'},
-  {name:'Four Seasons Fort Lauderdale',address:'525 N Ft Lauderdale Beach Blvd',market:'Fort Lauderdale',cluster:'south-fl',brand:'FOUR SEASONS',brandClass:'luxury',keys:148,floors:22,stars:5,signal:'Only Five-Diamond in FLL, Michelin-star chef (MAASS), yacht services',operator:'Four Seasons / Fort Partners',portfolio:'',monogram:'FS',monoColor:'#8b7340'},
-  {name:'W Fort Lauderdale',address:'401 N Fort Lauderdale Beach Blvd',market:'Fort Lauderdale',cluster:'south-fl',brand:'W HOTELS / MARRIOTT',brandClass:'luxury',keys:517,floors:25,stars:4,signal:'Largest beachfront, WET rooftop deck, full spa, high-volume F&B',operator:'Marriott International',portfolio:'',monogram:'WF',monoColor:'#9d174d'},
-  {name:'The Ritz-Carlton Fort Lauderdale',address:'1 N Fort Lauderdale Beach Blvd',market:'Fort Lauderdale',cluster:'south-fl',brand:'RITZ-CARLTON / MARRIOTT',brandClass:'luxury',keys:166,floors:24,stars:5,signal:'17K sq ft European Spa, 500-bottle wine room, Club Lounge (fl 8)',operator:'Ritz-Carlton Management',portfolio:'',monogram:'RC',monoColor:'#5b21b6'},
-  {name:'Marriott Harbor Beach Resort & Spa',address:'3030 Holiday Dr',market:'Fort Lauderdale',cluster:'south-fl',brand:'MARRIOTT',brandClass:'chain',keys:650,floors:12,stars:4,signal:'16 private beachfront acres, 4 restaurants, 22K sq ft spa, convention space',operator:'Marriott International',portfolio:'',monogram:'HB',monoColor:'#1e40af'},
-  {name:'Diplomat Beach Resort',address:'3555 S Ocean Dr, Hollywood FL',market:'Fort Lauderdale',cluster:'south-fl',brand:'CURIO COLLECTION / HILTON',brandClass:'soft',keys:1000,floors:36,stars:4,signal:'Highest single-property volume (1,000 keys), 8 restaurants, 30K sq ft spa, Highgate-managed',operator:'Highgate Hotels',portfolio:'Innovation operator',monogram:'DB',monoColor:'#92400e'},
-  {name:'Mayfair House Hotel & Garden',address:'3000 Florida Ave',market:'Coconut Grove',cluster:'south-fl',brand:'INDEPENDENT / 2 MICHELIN KEYS',brandClass:'independent',keys:179,floors:7,stars:4,signal:'HEI management (Nov 2025), Michelin Keys, 18K sq ft events, cross-portfolio with San Ramon',operator:'HEI Hotels & Resorts',portfolio:'Pipeline crossover',monogram:'MF',monoColor:'#1a6b3a'},
-  {name:'The Ritz-Carlton Coconut Grove',address:'3300 SW 27th Ave',market:'Coconut Grove',cluster:'south-fl',brand:'RITZ-CARLTON / MARRIOTT',brandClass:'luxury',keys:115,floors:20,stars:5,signal:'Boutique luxury Ritz in residential tower, ballroom, garden courtyard',operator:'Ritz-Carlton Management',portfolio:'',monogram:'RC',monoColor:'#5b21b6'},
-  {name:'Mr. C Miami — Coconut Grove',address:'2988 McFarlane Rd',market:'Coconut Grove',cluster:'south-fl',brand:'CIPRIANI',brandClass:'independent',keys:100,floors:22,stars:5,signal:'Cipriani family owner-operated, Bellini rooftop, direct decision access',operator:'Cipriani family',portfolio:'',monogram:'MC',monoColor:'#8b7340'},
-  {name:'Courtyard Miami Coconut Grove',address:'2649 S Bayshore Dr',market:'Coconut Grove',cluster:'south-fl',brand:'COURTYARD / MARRIOTT',brandClass:'chain',keys:196,floors:20,stars:3,signal:'Highest key count in Grove, 20th-floor ballroom with marina views',operator:'Marriott International',portfolio:'',monogram:'CY',monoColor:'#1e40af'},
-  {name:'The Mutiny Hotel',address:'2951 S Bayshore Dr',market:'Coconut Grove',cluster:'south-fl',brand:'INDEPENDENT / PROVIDENT',brandClass:'independent',keys:170,floors:12,stars:4,signal:'F&B + room service, pool; condo-hotel structure, ownership flux risk',operator:'Provident Resorts',portfolio:'',monogram:'MU',monoColor:'#555'},
-  {name:'The Biltmore Hotel Miami',address:'1200 Anastasia Ave',market:'Coral Gables',cluster:'south-fl',brand:'INDEPENDENT / HISTORIC LANDMARK',brandClass:'independent',keys:271,floors:16,stars:5,signal:'150 acres, golf, largest hotel pool in US, Fontana fine dining, grand ballroom',operator:'Teneo Hospitality Group',portfolio:'',monogram:'BM',monoColor:'#8b7340'},
-  {name:'Loews Coral Gables',address:'2901 Ponce de Leon Blvd',market:'Coral Gables',cluster:'south-fl',brand:'LOEWS HOTELS',brandClass:'independent',keys:242,floors:18,stars:4,signal:'Loews is innovation-receptive self-managed operator, 4 F&B venues, rooftop lounge',operator:'Loews Hotels & Co.',portfolio:'Innovation-receptive',monogram:'LW',monoColor:'#1a6b3a'},
-  {name:'Hotel Colonnade, Autograph Collection',address:'180 Aragon Ave, Miracle Mile',market:'Coral Gables',cluster:'south-fl',brand:'AUTOGRAPH COLLECTION / MARRIOTT',brandClass:'soft',keys:157,floors:9,stars:4,signal:'Autograph Collection (preferred soft brand), Miracle Mile, 28K sq ft meetings',operator:'Marriott International',portfolio:'',monogram:'HC',monoColor:'#0e7490'},
-  {name:'Hyatt Regency Coral Gables',address:'50 Alhambra Plaza',market:'Coral Gables',cluster:'south-fl',brand:'HYATT REGENCY',brandClass:'chain',keys:254,floors:14,stars:4,signal:'20K sq ft events, grand ballroom, strong business clientele',operator:'Hyatt Hotels Corporation',portfolio:'',monogram:'HY',monoColor:'#1e40af'},
-  {name:'St. Regis Longboat Key Resort',address:'1601 Gulf of Mexico Dr',market:'Sarasota / Longboat Key',cluster:'gulf-fl',brand:'ST. REGIS / MARRIOTT',brandClass:'luxury',keys:194,floors:6,stars:5,signal:'Brand new ($376M, opened 2024), 5 dining venues, Remede Spa, no legacy constraints',operator:'Marriott International',portfolio:'',monogram:'SR',monoColor:'#8b7340'},
-  {name:'The Ritz-Carlton Sarasota',address:'1111 Ritz-Carlton Dr',market:'Sarasota / Longboat Key',cluster:'gulf-fl',brand:'RITZ-CARLTON / MARRIOTT',brandClass:'luxury',keys:276,floors:9,stars:5,signal:'AAA Five Diamond, 26K sq ft meetings, Beach Club, largest luxury in downtown',operator:'Marriott International',portfolio:'',monogram:'RC',monoColor:'#5b21b6'},
-  {name:'The Westin Sarasota',address:'100 Marina View Dr',market:'Sarasota / Longboat Key',cluster:'gulf-fl',brand:'WESTIN / MARRIOTT',brandClass:'chain',keys:270,floors:19,stars:4,signal:'Tallest in market (19 floors), rooftop bar, Kolter Hospitality — most independent decision authority',operator:'Kolter Hospitality',portfolio:'',monogram:'WS',monoColor:'#0e7490'},
-  {name:'Resort at Longboat Key Club',address:'220 Sands Point Rd',market:'Sarasota / Longboat Key',cluster:'gulf-fl',brand:'INDEPENDENT / AAA FOUR DIAMOND',brandClass:'independent',keys:226,floors:10,stars:4,signal:'5 restaurants, spa, golf, marina, 33K sq ft events, Opal Collection managed',operator:'Opal Collection',portfolio:'2-property bundle',monogram:'LK',monoColor:'#2d6a6a'},
-  {name:'Zota Beach Resort',address:'4711 Gulf of Mexico Dr',market:'Sarasota / Longboat Key',cluster:'gulf-fl',brand:'INDEPENDENT / OPAL COLLECTION',brandClass:'independent',keys:187,floors:6,stars:4,signal:'Opal Collection sibling to Longboat Key Club — single conversation unlocks both',operator:'Opal Collection',portfolio:'2-property bundle',monogram:'ZB',monoColor:'#2d6a6a'},
-  {name:'The Statler Dallas',address:'1914 Commerce St, Downtown',market:'Dallas',cluster:'dallas',brand:'CURIO COLLECTION / HILTON',brandClass:'soft',keys:159,floors:19,stars:4,signal:'4 restaurants, rooftop bar, Grand Ballroom, Aimbridge-managed',operator:'Aimbridge Hospitality',portfolio:'3 Aimbridge prospects',monogram:'SD',monoColor:'#0e7490'},
-  {name:'HALL Arts Hotel',address:'1717 Leonard St, Arts District',market:'Dallas',cluster:'dallas',brand:'AUTOGRAPH COLLECTION / MARRIOTT',brandClass:'soft',keys:183,floors:11,stars:4,signal:"Autograph soft brand + Aimbridge management, Ellie's restaurant, Arts District prestige",operator:'Aimbridge Hospitality',portfolio:'3 Aimbridge prospects',monogram:'HA',monoColor:'#0e7490'},
-  {name:'Hotel Crescent Court',address:'400 Crescent Ct, Uptown',market:'Dallas',cluster:'dallas',brand:'INDEPENDENT (FORMER ROSEWOOD)',brandClass:'independent',keys:226,floors:7,stars:5,signal:'Nobu restaurant, Crescent Club, 19K sq ft events, direct owner negotiation',operator:'Crescent Real Estate',portfolio:'',monogram:'CC',monoColor:'#8b7340'},
-  {name:'Kimpton Pittman Hotel',address:'2551 Elm St, Deep Ellum',market:'Dallas',cluster:'dallas',brand:'KIMPTON / IHG',brandClass:'soft',keys:165,floors:7,stars:4,signal:'LEED-certified, Beaux-Arts landmark, Deep Ellum, IHG portfolio entry',operator:'IHG (Kimpton)',portfolio:'6 IHG prospects',monogram:'KP',monoColor:'#1e40af'},
-  {name:'Virgin Hotels Dallas',address:'1445 Turtle Creek Blvd',market:'Dallas',cluster:'dallas',brand:'VIRGIN HOTELS',brandClass:'independent',keys:268,floors:16,stars:4,signal:'3 F&B outlets, tech-brand alignment, Design District, 268 keys across 16 floors',operator:'Virgin Hotels (self-managed)',portfolio:'',monogram:'VH',monoColor:'#9d174d'},
-];
+// ── Data (loaded from API) ─────────────────────────────────────
+let PROSPECTS = [];
+let MARKETS = [];
+let STAGED_PROSPECTS = [];
+let STAGED_CONNECTIONS = {};
+let CLUSTER_LABELS = {};
 
-const CLUSTER_LABELS = {'sf-bay':'SF Bay Area','sacramento':'Sacramento','la-west':'LA West','san-diego':'San Diego','south-fl':'South Florida','gulf-fl':'Gulf Coast FL','dallas':'Dallas'};
+async function loadData() {
+  const [prospectsRes, marketsRes, stagedRes] = await Promise.all([
+    fetch('/api/prospects?status=confirmed'),
+    fetch('/api/markets'),
+    fetch('/api/prospects?status=staged'),
+  ]);
+
+  PROSPECTS = prospectsRes.ok ? await prospectsRes.json() : [];
+  MARKETS = marketsRes.ok ? await marketsRes.json() : [];
+  STAGED_PROSPECTS = stagedRes.ok ? await stagedRes.json() : [];
+
+  // WHY: Build cluster labels from market data (replaces hardcoded CLUSTER_LABELS)
+  buildClusterLabels();
+  renderAll();
+  renderMarketChips();
+}
+
+function buildClusterLabels() {
+  CLUSTER_LABELS = {};
+  for (const m of MARKETS) {
+    if (m.cluster && !CLUSTER_LABELS[m.cluster]) {
+      // WHY: Capitalize cluster slug for display (sf-bay -> SF Bay)
+      CLUSTER_LABELS[m.cluster] = m.cluster
+        .split('-')
+        .map(w => w.length <= 2 ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1))
+        .join(' ');
+    }
+  }
+}
+
+function renderMarketChips() {
+  const container = document.getElementById('marketChips');
+  if (!container) return;
+
+  const clusters = Object.entries(CLUSTER_LABELS);
+  container.innerHTML =
+    `<span class="chip active" data-filter="cluster" data-val="all" onclick="toggleFilter('cluster','all')" style="color:#111;border-color:#d1d5db">All</span>` +
+    clusters.map(([slug, label]) =>
+      `<span class="chip" data-filter="cluster" data-val="${slug}" onclick="toggleFilter('cluster','${slug}')" style="color:${getClusterColor(slug)}">${label}</span>`
+    ).join('') +
+    `<button onclick="openAddMarketForm()" class="chip" style="color:var(--blue);border:1.5px dashed var(--blue);font-weight:700" title="Add Market">+</button>`;
+}
+
+function getClusterColor(cluster) {
+  const m = MARKETS.find(mk => mk.cluster === cluster);
+  return m?.color || '#64748b';
+}
+
+function openAddMarketForm() { /* Task 9 */ }
 const BRAND_CLASS_COLORS = {luxury:'#7c3aed',soft:'#2563eb',chain:'#6b7280',independent:'#16a34a'};
 const BRAND_CLASS_BG = {luxury:'bg-purple-50 text-purple-700',soft:'bg-blue-50 text-blue-700',chain:'bg-gray-100 text-gray-600',independent:'bg-green-50 text-green-700'};
 
@@ -278,9 +256,9 @@ function getFiltered() {
   const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
   return PROSPECTS.filter(p => {
     if (clusterFilter !== 'all' && p.cluster !== clusterFilter) return false;
-    if (brandFilter !== 'all' && p.brandClass !== brandFilter) return false;
+    if (brandFilter !== 'all' && p.brand_class !== brandFilter) return false;
     if (q) {
-      const hay = [p.name, p.market, p.brand, p.operator, p.signal, p.address].join(' ').toLowerCase();
+      const hay = [p.name, p.market_name, p.brand, p.operator, p.signal, p.address].join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -304,8 +282,8 @@ function renderAll() {
 
 function renderStats(filtered) {
   const totalKeys = filtered.reduce((s, p) => s + (p.keys || 0), 0);
-  const markets = new Set(filtered.map(p => p.market)).size;
-  const luxury = filtered.filter(p => p.brandClass === 'luxury').length;
+  const markets = new Set(filtered.map(p => p.market_name)).size;
+  const luxury = filtered.filter(p => p.brand_class === 'luxury').length;
   const avgFloors = filtered.length ? Math.round(filtered.reduce((s, p) => s + (p.floors || 0), 0) / filtered.length) : 0;
 
   const stats = [
@@ -333,18 +311,18 @@ const STRIPE_GRADIENTS = {
 function renderCards(filtered) {
   const el = document.getElementById('cardView');
   el.innerHTML = filtered.map((p, i) => {
-    const bcClass = BRAND_CLASS_BG[p.brandClass] || 'bg-gray-100 text-gray-600';
-    const stripe = STRIPE_GRADIENTS[p.brandClass] || STRIPE_GRADIENTS.chain;
+    const bcClass = BRAND_CLASS_BG[p.brand_class] || 'bg-gray-100 text-gray-600';
+    const stripe = STRIPE_GRADIENTS[p.brand_class] || STRIPE_GRADIENTS.chain;
     /* WHY: Stagger card reveals by 30ms per card, capped at 600ms to avoid long waits on large sets */
     const delay = Math.min(i * 0.03, 0.6);
     return `
     <div class="brand-deal-card brand-reveal" data-delay="${delay}">
       <div class="brand-deal-stripe" style="background:${stripe}"></div>
       <div class="flex items-start gap-3 mb-3" style="padding-left:8px;">
-        <div class="monogram" style="background:${p.monoColor}">${p.monogram}</div>
+        <div class="monogram" style="background:${p.mono_color}">${p.monogram}</div>
         <div class="flex-1 min-w-0">
           <div class="brand-deal-name text-[0.95rem] leading-tight">${esc(p.name)}</div>
-          <div class="brand-deal-meta mt-0.5">${esc(p.address)} &middot; ${esc(p.market)}</div>
+          <div class="brand-deal-meta mt-0.5">${esc(p.address)} &middot; ${esc(p.market_name)}</div>
           <span class="inline-block text-[0.65rem] font-semibold px-2 py-0.5 rounded mt-1 ${bcClass}">${esc(p.brand)}</span>
         </div>
       </div>
@@ -354,12 +332,13 @@ function renderCards(filtered) {
         <div class="text-center"><div class="font-bold text-gray-900">${p.stars ? '★'.repeat(p.stars) : '—'}</div><div class="text-[0.6rem] text-gray-400 uppercase">Stars</div></div>
       </div>
       <div class="text-xs text-gray-500 leading-relaxed mb-3" style="padding-left:8px;"><strong class="text-blue-600">Signal:</strong> ${esc(p.signal)}</div>
+      ${p.source === 'ai_research' ? `<div class="text-[0.6rem] text-purple-500 font-semibold mt-1" style="padding-left:8px;">&#128300; AI Researched${p.research_date ? ' — ' + new Date(p.research_date).toLocaleDateString() : ''}</div>` : ''}
       <div class="flex items-center justify-between" style="padding-left:8px;">
         <div class="text-xs text-gray-400">
           <span class="font-medium text-gray-500">${esc(p.operator)}</span>
           ${p.portfolio ? `<span class="ml-1 inline-block text-[0.6rem] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-600">${esc(p.portfolio)}</span>` : ''}
         </div>
-        <button onclick="openDealModal(${PROSPECTS.indexOf(p)})" class="no-print text-[0.7rem] font-semibold text-blue-600 hover:text-blue-800 transition px-2 py-1 rounded-lg hover:bg-blue-50">+ Deal</button>
+        <button onclick="openDealModal(${p.id})" class="no-print text-[0.7rem] font-semibold text-blue-600 hover:text-blue-800 transition px-2 py-1 rounded-lg hover:bg-blue-50">+ Deal</button>
       </div>
     </div>`;
   }).join('');
@@ -370,17 +349,17 @@ function renderCards(filtered) {
 function renderTable(filtered) {
   const el = document.getElementById('tableBody');
   el.innerHTML = filtered.map(p => {
-    const bcClass = BRAND_CLASS_BG[p.brandClass] || 'bg-gray-100 text-gray-600';
+    const bcClass = BRAND_CLASS_BG[p.brand_class] || 'bg-gray-100 text-gray-600';
     return `<tr>
       <td class="name-cell">${esc(p.name)}</td>
-      <td class="text-gray-500 text-xs">${esc(p.market)}</td>
+      <td class="text-gray-500 text-xs">${esc(p.market_name)}</td>
       <td><span class="inline-block text-[0.65rem] font-semibold px-2 py-0.5 rounded ${bcClass}">${esc(p.brand)}</span></td>
       <td class="font-semibold">${p.keys || '—'}</td>
       <td>${p.floors || '—'}</td>
       <td>${p.stars || '—'}</td>
       <td class="text-gray-500 text-xs">${esc(p.operator)}</td>
       <td class="signal-cell">${esc(p.signal)}</td>
-      <td class="no-print"><button onclick="openDealModal(${PROSPECTS.indexOf(p)})" class="text-[0.7rem] font-semibold text-blue-600 hover:underline">+ Deal</button></td>
+      <td class="no-print"><button onclick="openDealModal(${p.id})" class="text-[0.7rem] font-semibold text-blue-600 hover:underline">+ Deal</button></td>
     </tr>`;
   }).join('');
 }
@@ -422,16 +401,17 @@ function toggleFilter(type, val) {
 }
 
 // ── Deal modal ────────────────────────────────────────────────────
-function openDealModal(idx) {
-  const p = PROSPECTS[idx];
+function openDealModal(prospectId) {
+  const p = PROSPECTS.find(pr => pr.id === prospectId) || STAGED_PROSPECTS.find(pr => pr.id === prospectId);
+  if (!p) return;
   document.getElementById('dealModal').classList.remove('hidden');
-  document.getElementById('modalSubtitle').textContent = `${p.name} — ${p.market} (${p.keys} keys, ${p.floors} floors)`;
+  document.getElementById('modalSubtitle').textContent = `${p.name} — ${p.market_name || ''} (${p.keys} keys, ${p.floors} floors)`;
   document.getElementById('dealName').value = p.name;
   document.getElementById('dealFacilityName').value = p.name;
-  document.getElementById('dealCity').value = p.market;
-  document.getElementById('dealKeys').value = p.keys;
-  document.getElementById('dealFloors').value = p.floors;
-  document.getElementById('dealBrand').value = p.brand;
+  document.getElementById('dealCity').value = p.market_name || '';
+  document.getElementById('dealKeys').value = p.keys || '';
+  document.getElementById('dealFloors').value = p.floors || '';
+  document.getElementById('dealBrand').value = p.brand || '';
   document.getElementById('dealError').classList.add('hidden');
 }
 
@@ -489,7 +469,7 @@ function logout() {
 
 // ── Init ──────────────────────────────────────────────────────────
 setSort('keys'); // Default sort by keys descending
-renderAll();
+loadData();
 </script>
 <script src="/js/brand.js"></script>
 </body>
