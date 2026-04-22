@@ -368,15 +368,14 @@ function openAddMarketForm() {
     `<button onclick="selectColor('${c}')" class="w-7 h-7 rounded-full border-2 transition" style="background:${c};border-color:${c === selectedColor ? '#111' : 'transparent'}" data-color="${c}"></button>`
   ).join('');
 
-  // Research toggle
-  document.getElementById('mktResearch').addEventListener('change', e => {
+  // WHY: Use onchange instead of addEventListener to prevent stacking
+  // when the form is opened/closed repeatedly
+  document.getElementById('mktResearch').onchange = e => {
     document.getElementById('mktResearchCount').classList.toggle('hidden', !e.target.checked);
-  });
-
-  // Cluster new toggle
-  sel.addEventListener('change', () => {
+  };
+  sel.onchange = () => {
     document.getElementById('mktClusterNew').classList.toggle('hidden', sel.value !== '__new__');
-  });
+  };
 }
 
 function closeAddMarketForm() {
@@ -669,7 +668,7 @@ function renderStagingArea() {
       <div class="flex items-center justify-between mb-3">
         <div>
           <h3 class="headline text-sm font-bold text-gray-900">&#128300; Research Results — ${esc(group.name)}</h3>
-          <p class="text-xs text-gray-400 mt-0.5">${group.prospects.length} hotels found · AI Researched — ${new Date().toLocaleDateString()}</p>
+          <p class="text-xs text-gray-400 mt-0.5">${group.prospects.length} hotels found · AI Researched — ${group.prospects[0]?.research_date ? new Date(group.prospects[0].research_date).toLocaleDateString() : new Date().toLocaleDateString()}</p>
         </div>
         <div class="flex gap-2">
           <button onclick="selectAllStaged('${esc(mktId)}')" class="text-xs font-semibold text-blue-600 hover:underline">Select All</button>
@@ -875,9 +874,14 @@ function logout() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────
-setSort('keys'); // Default sort by keys descending
-loadData();
+(async () => {
+  const ok = await checkAuth();
+  if (!ok) return;
+  setSort('keys'); // Default sort by keys descending
+  loadData();
+})();
 </script>
+<script src="/js/admin-auth.js"></script>
 <script src="/js/brand.js"></script>
 </body>
 </html>

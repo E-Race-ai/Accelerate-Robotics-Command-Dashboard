@@ -74,7 +74,8 @@ router.delete('/:id', requireAuth, (req, res) => {
 const { runResearch } = require('../services/market-research');
 
 router.post('/:id/research', requireAuth, async (req, res) => {
-  const { count } = req.body;
+  // WHY: parseInt handles both number and string values from JSON body
+  const count = parseInt(req.body.count, 10);
   const validCounts = [5, 8, 10];
   const targetCount = validCounts.includes(count) ? count : 10;
 

@@ -82,8 +82,12 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
 app.use('/pages', express.static(path.join(__dirname, '..', 'pages')));
 
-// WHY: Serve data/ directory for shared JSON files (CRM contacts, seed data)
-app.use('/data', express.static(path.join(__dirname, '..', 'data')));
+// WHY: Serve only .json files from data/ — the directory also contains the SQLite
+// database, which must NEVER be exposed via HTTP. Reject non-JSON requests.
+app.use('/data', (req, res, next) => {
+  if (!req.path.endsWith('.json')) return res.status(404).send('Not found');
+  next();
+}, express.static(path.join(__dirname, '..', 'data')));
 
 // WHY: Serve each hotel repo so proposal pages (with relative asset paths) work correctly from the deals dashboard
 const HOTEL_REPOS_DIR = path.join(__dirname, '..', '..');
