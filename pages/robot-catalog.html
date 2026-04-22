@@ -6,12 +6,13 @@
 <title>Accelerate Robotics — Robot Intelligence Platform</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../public/css/brand.css">
 <style>
+/* WHY: Page-specific tokens supplement brand.css — card glass effects and colors not in the shared palette */
 :root {
-    --bg: #f7f8fc; --card: rgba(255,255,255,0.75); --card-hover: rgba(255,255,255,0.95);
-    --border: rgba(0,0,0,0.08); --text: #0f172a; --muted: #64748b;
-    --blue: #0055ff; --cyan: #00c8ff; --purple: #7c3aed; --green: #16a34a;
-    --amber: #d97706; --red: #dc2626; --pink: #db2777; --teal: #0891b2;
+    --card: rgba(255,255,255,0.75); --card-hover: rgba(255,255,255,0.95);
+    --muted: #64748b; /* WHY: Alias for --text-dim — used extensively in page-specific card/filter CSS */
+    --red: #dc2626; --pink: #db2777;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
@@ -26,17 +27,10 @@ body {
 h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
 .mono { font-family:'JetBrains Mono',monospace; }
 
-/* WHY: Old .header CSS removed — hero section replaces it */
-
-.stats-row { display:flex; gap:1px; background:var(--border); }
-.stat-card { flex:1; background:rgba(255,255,255,0.6); padding:12px 16px; text-align:center; min-width:80px; }
-.stat-card .sv { font-family:'Space Grotesk'; font-size:1.3rem; font-weight:700; }
-.stat-card .sl { font-size:0.55rem; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px; margin-top:1px; }
-
 /* ── Navigator Panel ────────────────── */
+/* WHY: Sticky below the 56px brand-nav so filters stay visible while scrolling */
 .navigator {
-    position:sticky; top:0; z-index:100;
-    background:rgba(255,255,255,0.92); backdrop-filter:blur(24px);
+    position:sticky; top:56px; z-index:40;
     border-bottom:1px solid var(--border);
     box-shadow:0 2px 12px rgba(0,0,0,0.04);
 }
@@ -199,12 +193,12 @@ select.fsel.filtered { border-color:var(--blue); background:rgba(0,85,255,0.04);
 .rg { display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr)); gap:16px; }
 .rc {
     background:var(--card); backdrop-filter:blur(20px);
-    border:1px solid rgba(255,255,255,0.8); border-radius:14px;
+    border:1px solid var(--border); border-radius:14px;
     overflow:hidden; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
-    box-shadow:0 4px 24px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
     display:flex; flex-direction:column;
 }
-.rc:hover { background:var(--card-hover); transform:translateY(-2px); box-shadow:0 12px 40px rgba(0,0,0,0.08); }
+/* WHY: Hover transform handled by brand-deal-card class from brand.css */
+.rc:hover { background:var(--card-hover); }
 
 .ca { height:3px; width:100%; flex-shrink:0; }
 .ca.delivery { background:linear-gradient(90deg, var(--blue), var(--cyan)); }
@@ -348,108 +342,6 @@ table.rt a:hover { text-decoration:underline; }
 .empty { text-align:center; padding:60px 20px; color:var(--muted); }
 .empty h3 { font-size:1rem; margin-bottom:6px; }
 
-/* ── Hero Section ────────────────── */
-.hero {
-    position:relative; overflow:hidden;
-    background:linear-gradient(135deg, #0a0f1e 0%, #0d1530 35%, #111b3a 65%, #0a0f1e 100%);
-    padding:48px 40px 40px; color:#fff;
-}
-.hero::before {
-    content:''; position:absolute; inset:0;
-    background:
-        radial-gradient(ellipse 60% 50% at 15% 40%, rgba(0,140,255,0.15), transparent),
-        radial-gradient(ellipse 40% 60% at 80% 30%, rgba(124,58,237,0.12), transparent),
-        radial-gradient(ellipse 50% 40% at 50% 90%, rgba(0,200,255,0.08), transparent);
-    pointer-events:none;
-}
-.hero-inner { position:relative; z-index:1; max-width:1400px; margin:0 auto; }
-.hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:32px; flex-wrap:wrap; }
-.hero-brand { flex:1; min-width:300px; }
-.hero-badge {
-    display:inline-flex; align-items:center; gap:6px;
-    padding:4px 14px; border-radius:999px; font-size:0.65rem; font-weight:700;
-    background:rgba(0,200,255,0.12); color:#00c8ff; border:1px solid rgba(0,200,255,0.2);
-    text-transform:uppercase; letter-spacing:1.5px; margin-bottom:16px;
-}
-.hero-badge .pulse {
-    width:6px; height:6px; border-radius:50%; background:#00c8ff;
-    animation:pulse 2s ease-in-out infinite;
-}
-@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-.hero h1 {
-    font-family:'Space Grotesk',sans-serif; font-size:2.8rem; font-weight:800;
-    line-height:1.1; margin-bottom:10px;
-    background:linear-gradient(135deg, #fff 0%, #94c5ff 50%, #00c8ff 100%);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-}
-.hero-sub {
-    font-size:1rem; color:rgba(255,255,255,0.55); line-height:1.6; max-width:520px;
-    font-weight:400;
-}
-.hero-sub strong { color:rgba(255,255,255,0.85); font-weight:600; }
-
-.hero-kpi { display:flex; gap:2px; margin-top:32px; flex-wrap:wrap; }
-.kpi {
-    flex:1; min-width:120px; padding:18px 20px;
-    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06);
-    text-align:center; position:relative; overflow:hidden;
-}
-.kpi:first-child { border-radius:12px 0 0 12px; }
-.kpi:last-child { border-radius:0 12px 12px 0; }
-.kpi-val {
-    font-family:'Space Grotesk',sans-serif; font-size:2rem; font-weight:800;
-    background:linear-gradient(135deg, #fff, #00c8ff);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-}
-.kpi-label {
-    font-size:0.6rem; color:rgba(255,255,255,0.4); text-transform:uppercase;
-    letter-spacing:1.5px; font-weight:600; margin-top:2px;
-}
-
-/* Category pills in hero */
-.hero-cats { display:flex; flex-wrap:wrap; gap:6px; margin-top:24px; }
-.cat-pill {
-    display:inline-flex; align-items:center; gap:5px;
-    padding:5px 12px; border-radius:8px; font-size:0.68rem; font-weight:600;
-    background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7);
-    border:1px solid rgba(255,255,255,0.08); cursor:pointer;
-    transition:all 0.2s;
-}
-.cat-pill:hover { background:rgba(0,200,255,0.12); color:#00c8ff; border-color:rgba(0,200,255,0.3); }
-.cat-pill .ct { font-family:'JetBrains Mono',monospace; font-size:0.6rem; color:rgba(255,255,255,0.35); }
-
-/* Company logos strip */
-.hero-logos {
-    display:flex; align-items:center; gap:16px; margin-top:20px;
-    padding-top:20px; border-top:1px solid rgba(255,255,255,0.06);
-    flex-wrap:wrap;
-}
-.hero-logos-label { font-size:0.55rem; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:1.5px; font-weight:700; white-space:nowrap; }
-.hero-logos .logo-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.hero-logos .co-logo {
-    width:28px; height:28px; border-radius:6px; object-fit:contain;
-    background:rgba(255,255,255,0.08); padding:3px; opacity:0.6;
-    transition:opacity 0.2s;
-}
-.hero-logos .co-logo:hover { opacity:1; }
-
-/* Capability cards in hero right */
-.hero-caps { display:flex; flex-direction:column; gap:10px; min-width:280px; }
-.cap-card {
-    display:flex; align-items:center; gap:12px;
-    padding:14px 18px; border-radius:12px;
-    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06);
-    transition:all 0.25s;
-}
-.cap-card:hover { background:rgba(255,255,255,0.07); border-color:rgba(0,200,255,0.15); }
-.cap-icon {
-    width:38px; height:38px; border-radius:10px; display:flex;
-    align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;
-}
-.cap-card .cap-text { flex:1; }
-.cap-card .cap-title { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.82rem; }
-.cap-card .cap-desc { font-size:0.68rem; color:rgba(255,255,255,0.45); margin-top:2px; line-height:1.3; }
-
 @media (max-width:768px) {
     .rg { grid-template-columns:1fr; }
     .stats-row { flex-wrap:wrap; }
@@ -458,94 +350,46 @@ table.rt a:hover { text-decoration:underline; }
     .sg { grid-template-columns:1fr 1fr; }
     .card-top { flex-direction:column; }
     .robot-img-wrap { width:100%; height:140px; }
-    .hero { padding:32px 20px 28px; }
-    .hero h1 { font-size:1.8rem; }
-    .hero-top { flex-direction:column; }
-    .hero-kpi { flex-wrap:wrap; }
-    .kpi { min-width:calc(50% - 2px); }
-    .kpi:first-child { border-radius:12px 0 0 0; }
-    .kpi:last-child { border-radius:0 0 12px 0; }
-    .kpi:nth-child(2) { border-radius:0 12px 0 0; }
-    .kpi:nth-child(5) { border-radius:0 0 0 12px; }
 }
 </style>
 </head>
 <body>
 
-<!-- ── Hero ───────────────────────────────────────────────── -->
-<div class="hero">
-    <div class="hero-inner">
-        <div class="hero-top">
-            <div class="hero-brand">
-                <div class="hero-badge"><span class="pulse"></span> Live Database</div>
-                <h1>Robot Intelligence<br>Platform</h1>
-                <div class="hero-sub">
-                    The most comprehensive commercial robotics database for hospitality, healthcare, and facility operations.
-                    <strong>Compare specs, assess import risk, and build deployment fleets</strong> — all in one place.
-                </div>
-            </div>
-            <div class="hero-caps">
-                <div class="cap-card">
-                    <div class="cap-icon" style="background:rgba(0,200,255,0.12);">&#x1F50D;</div>
-                    <div class="cap-text">
-                        <div class="cap-title">Multi-Axis Filtering</div>
-                        <div class="cap-desc">Category, company, country, status, elevator, outdoor, pricing — all combinable</div>
-                    </div>
-                </div>
-                <div class="cap-card">
-                    <div class="cap-icon" style="background:rgba(239,68,68,0.12);">&#x1F6E1;</div>
-                    <div class="cap-text">
-                        <div class="cap-title">Import Risk Scoring</div>
-                        <div class="cap-desc">0–10 risk score with tariff rates, supply chain analysis for every product</div>
-                    </div>
-                </div>
-                <div class="cap-card">
-                    <div class="cap-icon" style="background:rgba(124,58,237,0.12);">&#x2699;</div>
-                    <div class="cap-text">
-                        <div class="cap-title">Fleet Configuration</div>
-                        <div class="cap-desc">Match robots to operational challenges — cleaning, delivery, transport, security</div>
-                    </div>
-                </div>
-                <div class="cap-card">
-                    <div class="cap-icon" style="background:rgba(22,163,74,0.12);">&#x1F4CA;</div>
-                    <div class="cap-text">
-                        <div class="cap-title">Spec Comparison</div>
-                        <div class="cap-desc">Payload, runtime, speed, navigation, connectivity — side-by-side analysis</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="hero-kpi">
-            <div class="kpi"><div class="kpi-val" id="hk-products">—</div><div class="kpi-label">Products</div></div>
-            <div class="kpi"><div class="kpi-val" id="hk-companies">—</div><div class="kpi-label">Companies</div></div>
-            <div class="kpi"><div class="kpi-val" id="hk-countries">—</div><div class="kpi-label">Countries</div></div>
-            <div class="kpi"><div class="kpi-val" id="hk-categories">—</div><div class="kpi-label">Categories</div></div>
-            <div class="kpi"><div class="kpi-val" id="hk-elevator">—</div><div class="kpi-label">Elevator-Ready</div></div>
-            <div class="kpi"><div class="kpi-val" id="hk-priced">—</div><div class="kpi-label">Priced</div></div>
-        </div>
-
-        <div class="hero-cats" id="hero-cats"></div>
-
-        <div class="hero-logos">
-            <span class="hero-logos-label">Tracked manufacturers</span>
-            <div class="logo-row" id="hero-logos"></div>
-        </div>
-    </div>
+<!-- ── Branded Nav ────────────────────────────────────────── -->
+<nav class="brand-nav">
+  <div class="brand-nav-logo">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white" stroke="white" stroke-width="1.5"/></svg>
+  </div>
+  <div class="brand-nav-identity">
+    <div class="brand-nav-name">Accelerate <span>Robotics</span></div>
+    <div class="brand-nav-tagline">One Brain. Many Bots.</div>
+  </div>
+  <div class="brand-nav-links">
+    <a href="/admin">Command Center</a>
+    <a href="/admin/deals">Deals</a>
+    <a href="/pages/pipeline-prospects.html">Prospects</a>
+    <a href="/pages/robot-catalog.html" class="active">Catalog</a>
+    <a href="/pages/fleet-designer.html">Fleet</a>
+    <a href="/pages/national-rollout-strategy.html">Rollout</a>
+  </div>
+  <div style="margin-left:16px;display:flex;align-items:center;gap:12px;">
+    <a href="/" style="font-size:0.78rem;color:var(--text-dim);text-decoration:none;">View Site</a>
+  </div>
+</nav>
+<!-- ── Compact Page Header ───────────────────────────────── -->
+<div class="brand-reveal" style="max-width:1400px;margin:0 auto;padding:24px 28px 0;">
+  <h1 class="brand-headline gradient-text" style="font-size:1.6rem;font-weight:800;">Robot Intelligence Platform</h1>
+  <p style="color:var(--text-dim);font-size:0.88rem;"><span id="hk-products">—</span> robots across <span id="hk-companies">—</span> companies — live database</p>
 </div>
 
-<!-- WHY: Kept original stats row IDs so existing JS render() still updates them; hidden with display:none -->
-<div class="stats-row" style="display:none;">
-    <div class="stat-card"><div class="sv" id="st-t">0</div><div class="sl">Total</div></div>
-    <div class="stat-card"><div class="sv" id="st-a">—</div><div class="sl">Available</div></div>
-    <div class="stat-card"><div class="sv" id="st-e">—</div><div class="sl">Elevator</div></div>
-    <div class="stat-card"><div class="sv" id="st-p">—</div><div class="sl">Priced</div></div>
-    <div class="stat-card"><div class="sv" id="st-o">—</div><div class="sl">Outdoor</div></div>
-    <div class="stat-card"><div class="sv" id="st-i">—</div><div class="sl">With Image</div></div>
+<!-- WHY: Hidden stat IDs kept so existing JS render() still updates them without errors -->
+<div style="display:none;">
+    <span id="st-t">0</span><span id="st-a">0</span><span id="st-e">0</span>
+    <span id="st-p">0</span><span id="st-o">0</span><span id="st-i">0</span>
 </div>
 
 <!-- ── Navigator Panel ────────────────────────────── -->
-<div class="navigator">
+<div class="navigator brand-glass brand-reveal" data-delay="0.1">
     <div class="nav-header">
         <div class="nav-title">
             <span class="nav-icon">&#x2699;</span>
@@ -590,7 +434,7 @@ table.rt a:hover { text-decoration:underline; }
     <div class="nav-analysis" id="nav-analysis"></div>
 </div>
 
-<div class="main">
+<div class="main brand-reveal" data-delay="0.2">
     <div class="rg" id="gv"></div>
     <div class="tw" id="tv">
         <table class="rt">
@@ -700,6 +544,15 @@ fetch('./data/robots.json')
       });
   }
   
+  // WHY: Map robot category to brand stripe gradient color for left-side card stripes
+  const STRIPE_COLORS = {
+      cleaning: 'linear-gradient(180deg, var(--teal), #06b6d4)',
+      delivery: 'linear-gradient(180deg, var(--blue), var(--cyan))',
+      humanoid: 'linear-gradient(180deg, var(--purple), #a78bfa)',
+      quadruped: 'linear-gradient(180deg, var(--amber), #fbbf24)',
+      security: 'linear-gradient(180deg, var(--green), #4ade80)',
+  };
+
   function renderCards(rs){
       const g=document.getElementById('gv');
       if(!rs.length){g.innerHTML='<div class="empty"><h3>No robots match</h3><p>Adjust filters or search</p></div>';return;}
@@ -714,8 +567,10 @@ fetch('./data/robots.json')
           const titleLink=r.product_url?`<a href="${r.product_url}" target="_blank" rel="noopener">${r.model_name}</a>`:r.model_name;
           const compLink=r.company_website?`<a href="${r.company_website}" target="_blank" rel="noopener">${r.company}</a>`:r.company;
           const logoHtml=r.logo_url?`<img src="${r.logo_url}" alt="" style="width:16px;height:16px;border-radius:3px">`:''
+          const stripeGrad = STRIPE_COLORS[ac(r.primary_category)] || 'linear-gradient(180deg, var(--blue), var(--cyan))';
           return `
-          <div class="rc">
+          <div class="rc brand-deal-card">
+              <div class="brand-deal-stripe" style="background:${stripeGrad}"></div>
               <div class="ca ${ac(r.primary_category)}"></div>
               <div class="card-top">
                   <div class="robot-img-wrap">${imgHtml}</div>
@@ -733,10 +588,10 @@ fetch('./data/robots.json')
               <div class="card-body">
                   <span class="cc">${fc(r.primary_category)}</span>
                   <div class="sg">
-                      <div class="si"><span class="sl">Payload</span><span class="sv">${f(r.payload_kg,' kg')}</span></div>
-                      <div class="si"><span class="sl">Runtime</span><span class="sv">${f(r.runtime_hours,'h')}</span></div>
-                      <div class="si"><span class="sl">Speed</span><span class="sv">${f(r.max_speed_mps,' m/s')}</span></div>
-                      <div class="si"><span class="sl">Weight</span><span class="sv">${f(r.weight_kg,' kg')}</span></div>
+                      <div class="si"><span class="sl">Payload</span><span class="sv brand-headline">${f(r.payload_kg,' kg')}</span></div>
+                      <div class="si"><span class="sl">Runtime</span><span class="sv brand-headline">${f(r.runtime_hours,'h')}</span></div>
+                      <div class="si"><span class="sl">Speed</span><span class="sv brand-headline">${f(r.max_speed_mps,' m/s')}</span></div>
+                      <div class="si"><span class="sl">Weight</span><span class="sv brand-headline">${f(r.weight_kg,' kg')}</span></div>
                       <div class="si"><span class="sl">Elevator</span><span class="sv ${el?'yes':'no'}">${el?'\u2713 Yes':'No'}</span></div>
                       <div class="si"><span class="sl">Nav</span><span class="sv" style="font-size:0.68rem">${r.navigation_method||'\u2014'}</span></div>
                   </div>
@@ -932,53 +787,11 @@ fetch('./data/robots.json')
       });
   });
   
-  // ── Hero dynamic stats ─────────────────────────
-  (function populateHero(){
+  // ── Compact header dynamic stats ─────────────────────────
+  (function populateHeader(){
       const companies = [...new Set(R.map(r=>r.company))];
-      // WHY: Normalize "USA" and "United States" to one entry for accurate country count
-      const countries = [...new Set(R.map(r=>r.country==='United States'?'USA':r.country))];
-      const categories = [...new Set(R.map(r=>r.primary_category))];
-  
       document.getElementById('hk-products').textContent = R.length;
       document.getElementById('hk-companies').textContent = companies.length;
-      document.getElementById('hk-countries').textContent = countries.length;
-      document.getElementById('hk-categories').textContent = categories.length;
-      document.getElementById('hk-elevator').textContent = R.filter(r=>r.elevator_integration===true).length;
-      document.getElementById('hk-priced').textContent = R.filter(r=>r.public_price && r.public_price!=='null').length;
-  
-      // Category pills — top 10 by count
-      const catCounts = {};
-      R.forEach(r=>{ catCounts[r.primary_category]=(catCounts[r.primary_category]||0)+1; });
-      const topCats = Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
-      const catsEl = document.getElementById('hero-cats');
-      if(catsEl) {
-          catsEl.innerHTML = topCats.map(([cat,count])=>{
-              const label = fc(cat);
-              return `<span class="cat-pill" data-cat="${cat}">${label} <span class="ct">${count}</span></span>`;
-          }).join('');
-          // WHY: Clicking a category pill scrolls to the catalog and sets the category filter
-          catsEl.querySelectorAll('.cat-pill').forEach(pill=>{
-              pill.addEventListener('click',function(){
-                  const cat = this.dataset.cat;
-                  const sel = document.getElementById('fc');
-                  if(sel) { sel.value = cat; sel.dispatchEvent(new Event('change')); }
-                  document.querySelector('.navigator').scrollIntoView({behavior:'smooth'});
-              });
-          });
-      }
-  
-      // Company logos — top 20 by product count
-      const compCounts = {};
-      R.forEach(r=>{ if(!compCounts[r.company]) compCounts[r.company]={count:0,logo:r.logo_url,url:r.company_website}; compCounts[r.company].count++; });
-      const topComps = Object.entries(compCounts).sort((a,b)=>b[1].count-a[1].count).slice(0,20);
-      const logosEl = document.getElementById('hero-logos');
-      if(logosEl) {
-          logosEl.innerHTML = topComps.map(([name,info])=>{
-              if(!info.logo) return '';
-              const link = info.url ? `href="${info.url}" target="_blank" rel="noopener"` : '';
-              return `<a ${link} title="${name} (${info.count} models)"><img class="co-logo" src="${info.logo}" alt="${name}" onerror="this.style.display='none'"></a>`;
-          }).join('');
-      }
   })();
   
   // ── Quick Sort Buttons ─────────────────────────
@@ -1151,5 +964,6 @@ fetch('./data/robots.json')
       '<div class="empty"><h3>Failed to load robot data</h3><p>' + err.message + '</p></div>';
   });
 </script>
+<script src="../public/js/brand.js"></script>
 </body>
 </html>
