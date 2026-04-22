@@ -138,7 +138,7 @@ function renderKanban(filtered) {
             return `
             <div class="deal-card brand-deal-card">
               <div class="brand-deal-stripe" style="background:linear-gradient(180deg, ${STAGE_COLORS[stage]}, ${STAGE_COLORS[stage]}88);"></div>
-              <a href="/admin/deals/${d.id}" style="text-decoration:none;color:inherit;">
+              <a href="/admin/deals/${d.id}#overview" style="text-decoration:none;color:inherit;">
                 <div class="brand-deal-name">${escapeHtml(d.name)}</div>
                 <div class="brand-deal-meta">${escapeHtml(d.facility_type || '')}${d.facility_type && (d.city || d.state) ? ' &middot; ' : ''}${escapeHtml(d.city || '')}${d.state ? ', ' + escapeHtml(d.state) : ''}</div>
                 ${d.value_monthly ? `<div class="brand-deal-arr">$${Number(d.value_monthly).toLocaleString()}/mo</div>` : ''}
@@ -148,7 +148,7 @@ function renderKanban(filtered) {
                 <div class="deal-owner">${escapeHtml(d.owner || 'Unassigned')}</div>
               </a>
               <div class="card-actions" onclick="event.stopPropagation()">
-                <a href="/admin/deals/${d.id}" class="card-action">Edit</a>
+                <a href="/admin/deals/${d.id}#overview" class="card-action">Edit</a>
                 <select class="card-move-select" onchange="moveDeal('${d.id}', this.value)">
                   <option value="">Move to...</option>
                   ${moveOptions}
@@ -218,10 +218,10 @@ function renderTable(filtered) {
     return `
     <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
       <td class="px-4 py-3 font-semibold text-gray-400 text-xs">
-        <a href="/admin/deals/${d.id}" class="hover:text-blue-600 transition">${escapeHtml(d.id)}</a>
+        <a href="/admin/deals/${d.id}#overview" class="hover:text-blue-600 transition">${escapeHtml(d.id)}</a>
       </td>
       <td class="px-4 py-3 font-semibold text-gray-900">
-        <a href="/admin/deals/${d.id}" class="hover:text-blue-600 transition">${escapeHtml(d.name)}</a>
+        <a href="/admin/deals/${d.id}#overview" class="hover:text-blue-600 transition">${escapeHtml(d.name)}</a>
       </td>
       <td class="px-4 py-3">
         <select class="stage-select"
@@ -406,7 +406,7 @@ function initMap(container, filtered) {
           <span class="popup-stage" style="background:${stageColor}20;color:${stageColor}">${STAGE_LABELS[d.stage] || d.stage}</span>
           ${d.value_monthly ? `<div class="popup-meta">$${Number(d.value_monthly).toLocaleString()}/mo</div>` : ''}
           <div class="popup-meta">${escapeHtml(d.owner || 'Unassigned')}</div>
-          <a href="/admin/deals/${d.id}" class="popup-link">View Deal &rarr;</a>
+          <a href="/admin/deals/${d.id}#overview" class="popup-link">View Deal &rarr;</a>
         </div>
       `);
     });
