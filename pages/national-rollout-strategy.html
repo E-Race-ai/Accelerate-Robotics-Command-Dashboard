@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>National Rollout Strategy — Accelerate Robotics</title>
+<link rel="stylesheet" href="../public/css/brand.css">
 <style>
   :root {
     --bg: #0a0a0f;
@@ -221,11 +222,20 @@
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 24px;
+    padding: 24px 24px 24px 28px;
+    position: relative;
+    overflow: hidden;
     transition: border-color 0.2s;
   }
   .market-card:hover {
     border-color: rgba(0,212,255,0.3);
+  }
+  /* WHY: Left stripe gives visual phase identity — matches phase badge colors */
+  .market-card .market-stripe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    border-radius: 12px 0 0 12px;
   }
   .market-card .rank {
     font-size: 2.2rem;
@@ -481,6 +491,7 @@
   }
 
   /* Nav TOC */
+  /* WHY: top: 56px clears the brand-nav height so both bars stack when sticky */
   .toc {
     display: flex;
     justify-content: center;
@@ -490,8 +501,8 @@
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     position: sticky;
-    top: 0;
-    z-index: 100;
+    top: 56px;
+    z-index: 40;
   }
   .toc a {
     color: var(--dim);
@@ -538,10 +549,60 @@
     border-radius: 50%;
   }
 
+  /* WHY: Override brand-nav light theme for this dark page */
+  .brand-nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand-nav-name { color: var(--text); }
+  .brand-nav-name span { color: var(--accent); }
+  .brand-nav-tagline { color: var(--dim); }
+  .brand-nav-links a {
+    color: var(--dim);
+  }
+  .brand-nav-links a:hover {
+    color: var(--accent);
+    background: rgba(0,212,255,0.06);
+  }
+  .brand-nav-links a.active {
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+  }
+  .brand-nav-links a.active::after {
+    background: var(--accent);
+  }
+
+  /* WHY: Gradient text for TAM/revenue values on dark background — bright accent palette */
+  .gradient-text-dark {
+    background: linear-gradient(135deg, var(--accent), var(--teal));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* WHY: Chain cards get hover elevation on dark theme */
+  .chain-card {
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .chain-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
+  /* WHY: Market cards get hover elevation too */
+  .market-card {
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .market-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
   /* Print styles */
   @media print {
     body { background: #fff; color: #111; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     *, *::before, *::after { animation: none !important; transition: none !important; }
+    .brand-nav { display: none; }
     .toc { display: none; }
     .hero { background: #f5f5f5; border-bottom: 2px solid #ccc; padding: 30px 20px; }
     .hero h1 { color: #111; }
@@ -581,10 +642,37 @@
     .market-card .ms { background: #f5f5f5; }
     .footer { border-top: 1px solid #ccc; color: #999; }
     a { color: #0066cc; }
+    .gradient-text-dark {
+      -webkit-text-fill-color: #b37600 !important;
+      background: none !important;
+    }
+    .market-card .market-stripe { display: none; }
   }
 </style>
 </head>
 <body>
+
+<!-- Brand Nav -->
+<nav class="brand-nav">
+  <div class="brand-nav-logo">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white" stroke="white" stroke-width="1.5"/></svg>
+  </div>
+  <div class="brand-nav-identity">
+    <div class="brand-nav-name">Accelerate <span>Robotics</span></div>
+    <div class="brand-nav-tagline">One Brain. Many Bots.</div>
+  </div>
+  <div class="brand-nav-links">
+    <a href="/admin">Command Center</a>
+    <a href="/admin/deals">Deals</a>
+    <a href="/pages/pipeline-prospects.html">Prospects</a>
+    <a href="/pages/robot-catalog.html">Catalog</a>
+    <a href="/pages/fleet-designer.html">Fleet</a>
+    <a href="/pages/national-rollout-strategy.html" class="active">Rollout</a>
+  </div>
+  <div style="margin-left:16px;display:flex;align-items:center;gap:12px;">
+    <a href="/" style="font-size:0.78rem;color:var(--dim);text-decoration:none;">View Site</a>
+  </div>
+</nav>
 
 <!-- Hero -->
 <div class="hero">
@@ -594,7 +682,7 @@
 </div>
 
 <!-- Stats bar -->
-<div class="stats-bar">
+<div class="stats-bar brand-reveal">
   <div class="stat-item">
     <div class="stat-value">10</div>
     <div class="stat-label">Target Markets</div>
@@ -604,7 +692,7 @@
     <div class="stat-label">Sweet-Spot Properties</div>
   </div>
   <div class="stat-item">
-    <div class="stat-value amber">$468M–$764M</div>
+    <div class="stat-value amber gradient-text-dark">$468M–$764M</div>
     <div class="stat-label">Total Addressable RaaS</div>
   </div>
   <div class="stat-item">
@@ -870,6 +958,7 @@
     <div class="market-grid">
       <!-- Market 1 -->
       <div class="market-card">
+        <div class="market-stripe" style="background: linear-gradient(180deg, var(--accent), var(--blue));"></div>
         <div class="rank">#1</div>
         <h3>South Florida</h3>
         <div class="market-meta">
@@ -888,6 +977,7 @@
 
       <!-- Market 2 -->
       <div class="market-card">
+        <div class="market-stripe" style="background: linear-gradient(180deg, var(--accent), var(--blue));"></div>
         <div class="rank">#2</div>
         <h3>Dallas–Fort Worth</h3>
         <div class="market-meta">
@@ -906,6 +996,7 @@
 
       <!-- Market 3 -->
       <div class="market-card">
+        <div class="market-stripe" style="background: linear-gradient(180deg, var(--blue), var(--accent));"></div>
         <div class="rank">#3</div>
         <h3>Phoenix / Scottsdale</h3>
         <div class="market-meta">
@@ -924,6 +1015,7 @@
 
       <!-- Market 4 -->
       <div class="market-card">
+        <div class="market-stripe" style="background: linear-gradient(180deg, var(--blue), var(--accent));"></div>
         <div class="rank">#4</div>
         <h3>Nashville</h3>
         <div class="market-meta">
@@ -942,6 +1034,7 @@
 
       <!-- Market 5 -->
       <div class="market-card">
+        <div class="market-stripe" style="background: linear-gradient(180deg, var(--blue), var(--accent));"></div>
         <div class="rank">#5</div>
         <h3>Orlando</h3>
         <div class="market-meta">
@@ -960,6 +1053,7 @@
 
       <!-- Market 6 -->
       <div class="market-card">
+        <div class="market-stripe" style="background: linear-gradient(180deg, var(--purple), #6633aa);"></div>
         <div class="rank">#6</div>
         <h3>Atlanta</h3>
         <div class="market-meta">
@@ -978,6 +1072,7 @@
 
       <!-- Market 7 -->
       <div class="market-card">
+        <div class="market-stripe" style="background: linear-gradient(180deg, var(--purple), #6633aa);"></div>
         <div class="rank">#7</div>
         <h3>Austin</h3>
         <div class="market-meta">
@@ -996,6 +1091,7 @@
 
       <!-- Market 8 -->
       <div class="market-card">
+        <div class="market-stripe" style="background: linear-gradient(180deg, var(--purple), #6633aa);"></div>
         <div class="rank">#8</div>
         <h3>Washington DC / Northern Virginia</h3>
         <div class="market-meta">
@@ -1014,6 +1110,7 @@
 
       <!-- Market 9 -->
       <div class="market-card">
+        <div class="market-stripe" style="background: linear-gradient(180deg, var(--dim), #555);"></div>
         <div class="rank">#9</div>
         <h3>Denver</h3>
         <div class="market-meta">
@@ -1032,6 +1129,7 @@
 
       <!-- Market 10 -->
       <div class="market-card">
+        <div class="market-stripe" style="background: linear-gradient(180deg, var(--dim), #555);"></div>
         <div class="rank">#10</div>
         <h3>San Diego</h3>
         <div class="market-meta">
@@ -1272,7 +1370,7 @@
         <tr><td style="font-weight:600;">Hilton</td><td>400–700</td><td>4,000–7,000</td><td class="rev-highlight">$124.8M–$218.4M</td></tr>
         <tr><td style="font-weight:600;">Hyatt</td><td>200–350</td><td>2,000–3,500</td><td class="rev-highlight">$62.4M–$109.2M</td></tr>
         <tr><td style="font-weight:600;">IHG</td><td>100–200</td><td>1,000–2,000</td><td class="rev-highlight">$31.2M–$62.4M</td></tr>
-        <tr style="background: rgba(0,230,118,0.04);"><td style="font-weight:800;">TOTAL</td><td style="font-weight:700;">1,500–2,450</td><td style="font-weight:700;">15,000–24,500</td><td class="rev-highlight" style="font-size: 1rem;">$468M–$764.4M</td></tr>
+        <tr style="background: rgba(0,230,118,0.04);"><td style="font-weight:800;">TOTAL</td><td style="font-weight:700;">1,500–2,450</td><td style="font-weight:700;">15,000–24,500</td><td class="rev-highlight gradient-text-dark" style="font-size: 1rem;">$468M–$764.4M</td></tr>
       </tbody>
     </table>
   </div>
@@ -1367,5 +1465,6 @@
   Source of truth: <code>docs/pipeline/national-rollout-strategy.md</code>
 </div>
 
+<script src="../public/js/brand.js"></script>
 </body>
 </html>
