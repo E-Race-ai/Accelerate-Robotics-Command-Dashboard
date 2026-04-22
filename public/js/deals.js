@@ -4,6 +4,8 @@
 let deals = [];
 let view = 'kanban'; // 'kanban', 'table', or 'map'
 let dealMap = null; // Leaflet map instance — lazy-initialized
+// WHY: URL param ?stage=won&stage=deploying filters the view to specific stages (used by Deploy tab)
+let stageFilter = null;
 
 const STAGES = ['lead', 'qualified', 'site_walk', 'configured', 'proposed', 'negotiation', 'won', 'deploying', 'active', 'lost'];
 const STAGE_LABELS = {
@@ -61,6 +63,7 @@ async function moveDeal(id, newStage) {
 function render() {
   const q = document.getElementById('deal-search')?.value?.toLowerCase() || '';
   const filtered = deals.filter(d => {
+    if (stageFilter && !stageFilter.includes(d.stage)) return false;
     if (!q) return true;
     return [d.name, d.facility_name, d.city, d.state, d.owner].filter(Boolean).join(' ').toLowerCase().includes(q);
   });
@@ -118,33 +121,115 @@ const STAGE_BADGE_CLASSES = {
   lost: 'brand-badge brand-badge-amber'
 };
 
+// WHY: Probability color gradient — green for high confidence, amber for medium, red for low
+function probColor(pct) {
+  if (pct >= 70) return '#16a34a';
+  if (pct >= 40) return '#f59e0b';
+  return '#ef4444';
+}
+
+// WHY: Generate initials from a name for the avatar circle (e.g. "Eric Race" → "ER")
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+// WHY: Format relative time for activity timestamps — "2d ago" is faster to scan than "4/20/2026"
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return days + 'd ago';
+  return Math.floor(days / 30) + 'mo ago';
+}
+
 function renderKanban(filtered) {
   const el = document.getElementById('deal-kanban');
   if (!el) return;
-  // WHY: Only show active pipeline stages in kanban — won/deploying/active/lost are outcomes, not pipeline
-  const pipelineStages = ['lead', 'qualified', 'site_walk', 'configured', 'proposed', 'negotiation'];
+  // WHY: When stage-filtered (Deploy tab), show those stages; otherwise show pipeline stages only
+  const pipelineStages = stageFilter
+    ? stageFilter.filter(s => STAGES.includes(s))
+    : ['lead', 'qualified', 'site_walk', 'configured', 'proposed', 'negotiation'];
   el.innerHTML = pipelineStages.map(stage => {
     const stageDeals = filtered.filter(d => d.stage === stage);
+    // WHY: Sum MRR per column so pipeline value is visible at a glance
+    const colMRR = stageDeals.reduce((sum, d) => sum + (Number(d.value_monthly) || 0), 0);
     return `
       <div class="kanban-col">
         <div class="kanban-header" style="border-top: 3px solid ${STAGE_COLORS[stage]}">
           <span>${STAGE_LABELS[stage]}</span>
-          <span class="kanban-count">${stageDeals.length}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${colMRR ? `<span style="font-size:0.65rem;color:${STAGE_COLORS[stage]};font-weight:700;">$${colMRR.toLocaleString()}</span>` : ''}
+            <span class="kanban-count">${stageDeals.length}</span>
+          </div>
         </div>
         <div class="kanban-cards">
           ${stageDeals.map(d => {
             const moveOptions = STAGES.filter(s => s !== stage && s !== 'lost')
               .map(s => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('');
+            const prob = Number(d.close_probability) || 0;
+            const keys = d.rooms_or_units ? Number(d.rooms_or_units) : null;
+            const floors = d.facility_floors ? Number(d.facility_floors) : null;
+            const elevators = d.elevator_count ? Number(d.elevator_count) : null;
+            const hasStats = keys || floors || elevators;
+            const actorShort = d.last_activity_actor ? d.last_activity_actor.split('@')[0] : '';
+            const actLabel = ACTION_LABELS[d.last_activity_action] || '';
+
             return `
             <div class="deal-card brand-deal-card">
               <div class="brand-deal-stripe" style="background:linear-gradient(180deg, ${STAGE_COLORS[stage]}, ${STAGE_COLORS[stage]}88);"></div>
               <a href="/admin/deals/${d.id}#overview" style="text-decoration:none;color:inherit;">
                 <div class="brand-deal-name">${escapeHtml(d.name)}</div>
-                <div class="brand-deal-meta">${escapeHtml(d.facility_type || '')}${d.facility_type && (d.city || d.state) ? ' &middot; ' : ''}${escapeHtml(d.city || '')}${d.state ? ', ' + escapeHtml(d.state) : ''}</div>
+                ${d.facility_brand ? `<div class="deal-brand-tag">${escapeHtml(d.facility_brand)}${d.facility_operator && d.facility_operator !== d.facility_brand ? ' · ' + escapeHtml(d.facility_operator) : ''}</div>` : ''}
+                <div class="brand-deal-meta">
+                  ${escapeHtml(d.facility_type || '')}${d.facility_type && (d.city || d.state) ? ' · ' : ''}${escapeHtml(d.city || '')}${d.state ? ', ' + escapeHtml(d.state) : ''}
+                </div>
+
                 ${d.value_monthly ? `<div class="brand-deal-arr">$${Number(d.value_monthly).toLocaleString()}/mo</div>` : ''}
+
+                ${hasStats ? `
+                <div class="deal-stats-grid">
+                  ${keys ? `<div class="deal-stat-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="deal-stat-val">${keys}</span> keys</div>` : ''}
+                  ${floors ? `<div class="deal-stat-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="6" x2="12" y2="6.01"/><line x1="12" y1="10" x2="12" y2="10.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg><span class="deal-stat-val">${floors}</span> floors</div>` : ''}
+                  ${elevators ? `<div class="deal-stat-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><polyline points="8 8 6 10 8 12"/><polyline points="16 8 18 10 16 12"/></svg><span class="deal-stat-val">${elevators}</span> elevators</div>` : ''}
+                  ${d.source ? `<div class="deal-stat-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg><span class="deal-stat-val" style="text-transform:capitalize;">${escapeHtml(d.source)}</span></div>` : ''}
+                </div>` : ''}
+
+                ${prob > 0 ? `
+                <div class="deal-prob-bar">
+                  <div class="deal-prob-track">
+                    <div class="deal-prob-fill" style="width:${prob}%;background:${probColor(prob)};"></div>
+                  </div>
+                  <span class="deal-prob-pct" style="color:${probColor(prob)};">${prob}%</span>
+                </div>` : ''}
+
                 <div class="brand-deal-badges">
                   <span class="${STAGE_BADGE_CLASSES[stage] || 'brand-badge brand-badge-blue'}">${STAGE_LABELS[stage]}</span>
+                  ${d.value_monthly && prob > 0 ? `<span class="brand-badge brand-badge-green">$${Math.round(Number(d.value_monthly) * prob / 100).toLocaleString()} wtd</span>` : ''}
                 </div>
+
+                ${d.decision_maker_name || d.gm_name ? `
+                <div class="deal-contact">
+                  <div class="deal-contact-avatar" style="background:${STAGE_COLORS[stage]};">
+                    ${initials(d.decision_maker_name || d.gm_name)}
+                  </div>
+                  <div class="deal-contact-info">
+                    <div class="deal-contact-name">${escapeHtml(d.decision_maker_name || d.gm_name)}</div>
+                    ${d.decision_maker_title ? `<div class="deal-contact-title">${escapeHtml(d.decision_maker_title)}</div>` : d.gm_name ? `<div class="deal-contact-title">General Manager</div>` : ''}
+                  </div>
+                </div>` : ''}
+
+                ${actLabel ? `
+                <div class="deal-card-activity">
+                  <span class="dot"></span>
+                  <span>${escapeHtml(actorShort)} ${actLabel}</span>
+                  ${d.last_activity_at ? `<span>· ${timeAgo(d.last_activity_at)}</span>` : ''}
+                </div>` : ''}
+
                 <div class="deal-owner">${escapeHtml(d.owner || 'Unassigned')}</div>
               </a>
               <div class="card-actions" onclick="event.stopPropagation()">
@@ -445,12 +530,28 @@ function closeNewDealModal() {
 
 // ── Init ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  const user = await checkAuth();
-  if (!user) return window.location.href = '/admin-login';
-
+  // WHY: Show dashboard immediately — auth is disabled server-side, so
+  // checkAuth() returns null on stale/missing JWT cookies. Guarding on
+  // it blocks all event listeners and leaves the page dead.
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('dashboard').classList.remove('hidden');
-  document.getElementById('adminEmail').textContent = user.email;
+
+  const user = typeof checkAuth === 'function' ? await checkAuth() : null;
+  if (user?.email) {
+    document.getElementById('adminEmail').textContent = user.email;
+  }
+
+  // WHY: Read stage filter from URL — Deploy tab links to ?stage=won&stage=deploying&stage=active
+  const urlStages = new URLSearchParams(window.location.search).getAll('stage');
+  if (urlStages.length > 0) {
+    stageFilter = urlStages;
+    view = 'table'; // WHY: Table view is better for filtered stage views — shows all deals in one list
+    // Update page heading to reflect the filter
+    const heading = document.querySelector('h1.headline');
+    if (heading) heading.textContent = 'Deployments';
+    const subtitle = document.querySelector('h1.headline + p');
+    if (subtitle) subtitle.textContent = 'Won deals, active deployments, and go-live tracking';
+  }
 
   // WHY: Register event listeners BEFORE async data loading so they're
   // always wired up even if fetchDeals() fails

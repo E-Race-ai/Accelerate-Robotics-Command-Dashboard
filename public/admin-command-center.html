@@ -10,14 +10,13 @@
   <!-- WHY: Leaflet for embedded US deal map — same CDN as admin-deals.html -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- WHY: MarkerCluster groups nearby prospect pins into numbered badges at low zoom.
-       Without it, 66 prospect pins in ~14 cities pile up and hide each other. -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- WHY: MarkerCluster removed — prospects now grouped by city as circle markers, no clustering needed -->
   <style>
     * { font-family: 'Inter', system-ui, sans-serif; }
     h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+    /* ── Map fullscreen ──────────────────────────────────── */
+    .map-fullscreen { border-radius: 12px; }
 
     /* ── Tool cards ──────────────────────────────────────── */
     .tool-card {
@@ -75,7 +74,48 @@
 
     /* WHY: .stat-pill styles removed — now using .brand-stat from brand.css */
 
-    /* ── Deal list in sidebar ────────────────────────────── */
+    /* ── Toolkit dashboard cards ────────────────────────── */
+    .ql-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 18px 16px;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 8px;
+      transition: box-shadow 0.2s, transform 0.15s, border-color 0.2s;
+      cursor: pointer;
+    }
+    .ql-card:hover {
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      transform: translateY(-2px);
+      border-color: var(--ql-accent, #2563eb);
+    }
+    .ql-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .ql-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.2;
+    }
+    .ql-desc {
+      font-size: 0.7rem;
+      color: #9ca3af;
+      line-height: 1.3;
+    }
+
+    /* WHY: Keep legacy .deal-row styles for renderDealList fallback */
     .deal-row {
       display: flex;
       align-items: center;
@@ -231,24 +271,87 @@
       white-space: nowrap;
     }
 
-    /* ── Prospect cluster badges ──────────────────────────── */
-    /* WHY: Override default MarkerCluster blue circles with indigo to match prospect pins */
-    .prospect-cluster {
-      background: rgba(99, 102, 241, 0.25);
-      border-radius: 50%;
+    /* ── Regional micro maps ────────────────────────────────── */
+    .region-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
     }
-    .prospect-cluster div {
-      background: rgba(99, 102, 241, 0.85);
-      color: white;
-      border-radius: 50%;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 800;
-      font-size: 13px;
+    @media (max-width: 1024px) { .region-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px)  { .region-grid { grid-template-columns: 1fr; } }
+    .region-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      transition: box-shadow 0.2s;
+    }
+    .region-card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .region-map-container {
+      height: 180px;
+      width: 100%;
+    }
+    .region-card-info {
+      padding: 12px 16px;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+      border-top: 1px solid #f3f4f6;
+    }
+    .region-card-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #111827;
+    }
+    .region-card-stats {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .region-stat {
+      text-align: center;
+    }
+    .region-stat-val {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #6366f1;
+      line-height: 1;
+    }
+    .region-stat-lbl {
+      font-size: 0.62rem;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .region-card-link {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #6366f1;
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: #eef2ff;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .region-card-link:hover { background: #e0e7ff; }
+
+    /* WHY: Hide attribution — too small. Shrink zoom controls to fit mini maps. */
+    .region-map-container .leaflet-control-attribution { display: none !important; }
+    .region-map-container .leaflet-control-zoom {
+      transform: scale(0.75);
+      transform-origin: top left;
+      margin: 6px !important;
+    }
+    .region-card-info:hover {
+      background: #f9fafb;
     }
 
+    /* ── Prospect cluster badges ──────────────────────────── */
     /* ── Leaflet overrides ───────────────────────────────── */
     .deal-marker { background: none !important; border: none !important; }
     .leaflet-popup-content-wrapper {
@@ -320,9 +423,10 @@
         <a href="/admin" class="active">Command Center</a>
         <a href="/admin/deals">Deals</a>
         <a href="/pages/pipeline-prospects.html">Prospects</a>
+        <a href="/pages/assessments.html">Assessments</a>
         <a href="/pages/robot-catalog.html">Catalog</a>
         <a href="/pages/fleet-designer.html">Fleet</a>
-        <a href="/pages/national-rollout-strategy.html">Rollout</a>
+        <a href="/admin/deals?stage=won&stage=deploying&stage=active">Deploy</a>
       </div>
       <div style="margin-left:16px;display:flex;align-items:center;gap:12px;">
         <span id="adminEmail" style="font-size:0.78rem;color:var(--text-faint);"></span>
@@ -352,7 +456,8 @@
         <!-- Step 1: Prospect -->
         <div class="wf-step">
           <div class="wf-step-stripe" style="background: linear-gradient(90deg, #64748b, #94a3b8);"></div>
-          <a href="/admin/deals" class="wf-step-inner brand-wf-step">
+          <!-- WHY: Using div instead of <a> so the two tool chips can be separate links -->
+          <div class="wf-step-inner brand-wf-step">
             <div class="brand-wf-bar"><div class="brand-wf-bar-fill" style="width:20%;background:linear-gradient(90deg,#64748b,#94a3b8);"></div></div>
             <span class="wf-count" id="wf-count-prospect" style="color:#64748b;">0</span>
             <span class="wf-step-num" style="color:#64748b;">Step 1</span>
@@ -362,10 +467,10 @@
             <div class="wf-step-title">Prospect</div>
             <div class="wf-step-desc">Identify target, create deal in pipeline, assign owner</div>
             <div class="wf-step-tools">
-              <span class="wf-tool-chip" style="background:#f1f5f9;color:#475569;">Deal Pipeline</span>
-              <span class="wf-tool-chip" style="background:#fdf4ff;color:#86198f;">Prospects</span>
+              <a href="/admin/deals" class="wf-tool-chip" style="background:#f1f5f9;color:#475569;text-decoration:none;">Deal Pipeline</a>
+              <a href="/pages/pipeline-prospects.html" class="wf-tool-chip" style="background:#fdf4ff;color:#86198f;text-decoration:none;">Prospects</a>
             </div>
-          </a>
+          </div>
           <div class="wf-arrow"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 4l8 6-8 6V4z" fill="#cbd5e1"/></svg></div>
         </div>
 
@@ -392,7 +497,8 @@
         <!-- Step 3: Assessment -->
         <div class="wf-step">
           <div class="wf-step-stripe" style="background: linear-gradient(90deg, #7c3aed, #a78bfa);"></div>
-          <a href="/pages/assessments.html" class="wf-step-inner brand-wf-step">
+          <!-- WHY: Using div so tool chips can be separate links -->
+          <div class="wf-step-inner brand-wf-step">
             <div class="brand-wf-bar"><div class="brand-wf-bar-fill" style="width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);"></div></div>
             <span class="wf-count" id="wf-count-assess" style="color:#7c3aed;">0</span>
             <span class="wf-step-num" style="color:#7c3aed;">Step 3</span>
@@ -402,10 +508,10 @@
             <div class="wf-step-title">Assessment</div>
             <div class="wf-step-desc">On-site or digital facility assessment with iPad toolkit</div>
             <div class="wf-step-tools">
-              <span class="wf-tool-chip" style="background:#f5f3ff;color:#6d28d9;">Site Walk</span>
-              <span class="wf-tool-chip" style="background:#fdf4ff;color:#86198f;">Photos + Data</span>
+              <a href="/pages/assessments.html" class="wf-tool-chip" style="background:#f5f3ff;color:#6d28d9;text-decoration:none;">Site Walk</a>
+              <a href="/pages/assessment.html" class="wf-tool-chip" style="background:#fdf4ff;color:#86198f;text-decoration:none;">+ New Assessment</a>
             </div>
-          </a>
+          </div>
           <div class="wf-arrow"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 4l8 6-8 6V4z" fill="#cbd5e1"/></svg></div>
         </div>
 
@@ -451,93 +557,192 @@
 
       </div>
 
-      <!-- ═══ Main Content: Map + Deal List ═══ -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 brand-reveal" data-delay="0.2">
-
-        <!-- Map (2/3 width) -->
-        <div class="lg:col-span-2">
-          <div class="bg-white rounded-2xl shadow-sm overflow-hidden" style="height: 480px; position: relative;">
-            <div class="absolute top-4 left-4 z-[500] bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md" style="display:flex;align-items:center;gap:12px;">
-              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Deal Map</span>
-              <div class="map-legend">
-                <div class="map-legend-item"><span class="map-legend-dot" style="background:#64748b"></span>Lead</div>
-                <div class="map-legend-item"><span class="map-legend-dot" style="background:#0891b2"></span>Qualified</div>
-                <div class="map-legend-item"><span class="map-legend-dot" style="background:#7c3aed"></span>Site Walk</div>
-                <div class="map-legend-item"><span class="map-legend-dot" style="background:#d97706"></span>Proposed</div>
-                <div class="map-legend-item"><span class="map-legend-dot" style="background:#16a34a"></span>Won/Active</div>
-                <div class="map-legend-item"><span class="map-legend-dot" style="background:#6366f1;border-color:#4338ca"></span>Prospect</div>
-              </div>
+      <!-- ═══ Deal Map ═══ -->
+      <div class="mb-8 brand-reveal" data-delay="0.2">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Deal Map</h3>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div class="map-legend" style="display:flex;gap:12px;flex-wrap:wrap;">
+              <div class="map-legend-item"><span class="map-legend-dot" style="background:#64748b"></span>Lead</div>
+              <div class="map-legend-item"><span class="map-legend-dot" style="background:#0891b2"></span>Qualified</div>
+              <div class="map-legend-item"><span class="map-legend-dot" style="background:#7c3aed"></span>Site Walk</div>
+              <div class="map-legend-item"><span class="map-legend-dot" style="background:#d97706"></span>Proposed</div>
+              <div class="map-legend-item"><span class="map-legend-dot" style="background:#16a34a"></span>Won/Active</div>
+              <div class="map-legend-item"><span class="map-legend-dot" style="background:rgba(99,102,241,0.18);border:2px solid #6366f1;"></span>Market</div>
             </div>
-            <div id="cc-map" style="height: 100%; width: 100%;"></div>
+            <button onclick="toggleMapFullscreen()" id="mapFullscreenBtn" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;color:#475569;font-family:'Space Grotesk',sans-serif;letter-spacing:.03em;text-transform:uppercase;" title="Toggle fullscreen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              Expand
+            </button>
           </div>
         </div>
-
-        <!-- Deal list (1/3 width) -->
-        <div class="bg-white rounded-2xl shadow-sm p-5 flex flex-col" style="max-height: 480px;">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Active Deals</h3>
-            <a href="/admin/deals" class="text-xs font-medium text-blue-600 hover:underline">View All</a>
-          </div>
-          <div class="flex-1 overflow-y-auto -mx-2" id="dealList">
-            <!-- Populated by JS -->
-          </div>
+        <div id="mapContainer" class="bg-white rounded-2xl shadow-sm overflow-hidden" style="height: 600px; position: relative; transition: height 0.3s ease;">
+          <div id="cc-map" style="height: 100%; width: 100%;"></div>
         </div>
-
       </div>
 
-      <!-- ═══ Bottom row: Activity Feed + Quick Links ═══ -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 brand-reveal" data-delay="0.25">
+      <!-- ═══ Toolkit Dashboard ═══ -->
+      <div class="mb-8 brand-reveal" data-delay="0.22">
+        <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Toolkit</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
 
-        <!-- Activity feed (2/3) -->
-        <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
+          <!-- Deal Pipeline — bar chart icon -->
+          <a href="/admin/deals" class="ql-card" style="--ql-accent:#2563eb;">
+            <div class="ql-icon" style="background:#eff6ff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>
+            </div>
+            <div class="ql-title">Deal Pipeline</div>
+            <div class="ql-desc">Active deals + kanban</div>
+          </a>
+
+          <!-- Prospects — crosshair/target icon -->
+          <a href="/pages/pipeline-prospects.html" class="ql-card" style="--ql-accent:#dc2626;">
+            <div class="ql-icon" style="background:#fef2f2;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="#dc2626"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+            </div>
+            <div class="ql-title">Prospects</div>
+            <div class="ql-desc">Lead generation targets</div>
+          </a>
+
+          <!-- Assessments — clipboard with checkmark -->
+          <a href="/pages/assessments.html" class="ql-card" style="--ql-accent:#d97706;">
+            <div class="ql-icon" style="background:#fffbeb;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15l2 2 4-4"/></svg>
+            </div>
+            <div class="ql-title">Assessments</div>
+            <div class="ql-desc">Site walk + readiness</div>
+          </a>
+
+          <!-- Robot Command — terminal/command prompt -->
+          <a href="http://localhost:3100/#command" class="ql-card" target="_blank" style="--ql-accent:#0891b2;">
+            <div class="ql-icon" style="background:#ecfeff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 9l4 3-4 3"/><line x1="12" y1="15" x2="18" y2="15"/></svg>
+            </div>
+            <div class="ql-title">Robot Command</div>
+            <div class="ql-desc">Fleet controls</div>
+          </a>
+
+          <!-- Robot Catalog — robot/bot icon -->
+          <a href="/pages/robot-catalog.html" class="ql-card" style="--ql-accent:#7c3aed;">
+            <div class="ql-icon" style="background:#f5f3ff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="14" height="10" rx="2"/><circle cx="9.5" cy="13" r="1.5" fill="#7c3aed"/><circle cx="14.5" cy="13" r="1.5" fill="#7c3aed"/><path d="M12 3v5"/><circle cx="12" cy="3" r="1"/><path d="M3 12v2"/><path d="M21 12v2"/></svg>
+            </div>
+            <div class="ql-title">Robot Catalog</div>
+            <div class="ql-desc">Models + specs</div>
+          </a>
+
+          <!-- Investor CRM — trending up with dollar -->
+          <a href="/pages/investor-crm.html" class="ql-card" style="--ql-accent:#16a34a;">
+            <div class="ql-icon" style="background:#f0fdf4;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            </div>
+            <div class="ql-title">Investor CRM</div>
+            <div class="ql-desc">Fundraise tracking</div>
+          </a>
+
+          <!-- National Rollout — US map pin / expansion -->
+          <a href="/pages/national-rollout-strategy.html" class="ql-card" style="--ql-accent:#e11d48;">
+            <div class="ql-icon" style="background:#fff1f2;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="3"/></svg>
+            </div>
+            <div class="ql-title">National Rollout</div>
+            <div class="ql-desc">Market expansion</div>
+          </a>
+
+          <!-- Financial Analysis — line chart -->
+          <a href="/financial-analysis.html" class="ql-card" style="--ql-accent:#059669;">
+            <div class="ql-icon" style="background:#ecfdf5;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-6 4 4 5-8"/></svg>
+            </div>
+            <div class="ql-title">Financial Analysis</div>
+            <div class="ql-desc">Revenue + projections</div>
+          </a>
+
+          <!-- Robots Dossier — file/dossier icon -->
+          <a href="/repos/accelerate-carts/pages/robots-dossier.html" class="ql-card" target="_blank" style="--ql-accent:#6366f1;">
+            <div class="ql-icon" style="background:#eef2ff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+            </div>
+            <div class="ql-title">Robots Dossier</div>
+            <div class="ql-desc">Fleet intelligence</div>
+          </a>
+
+          <!-- Service Van — truck icon -->
+          <a href="/repos/accelerate-thesis-hotel/pages/service-van.html" class="ql-card" target="_blank" style="--ql-accent:#ea580c;">
+            <div class="ql-icon" style="background:#fff7ed;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="14" height="10" rx="1"/><path d="M15 10h4l3 4v2h-7V10z"/><circle cx="6" cy="18" r="2"/><circle cx="19" cy="18" r="2"/></svg>
+            </div>
+            <div class="ql-title">Service Van</div>
+            <div class="ql-desc">Deployment loadout</div>
+          </a>
+
+          <!-- Elevator Simulator — circuit/button emulator -->
+          <a href="/repos/accelerate-elevator/pages/button-emulator-sim.html" class="ql-card" target="_blank" style="--ql-accent:#0284c7;">
+            <div class="ql-icon" style="background:#e0f2fe;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="8" r="2"/><line x1="12" y1="10" x2="12" y2="14"/><circle cx="12" cy="16" r="1.5" fill="#0284c7"/><line x1="8" y1="5" x2="8" y2="5.01"/><line x1="8" y1="8" x2="8" y2="8.01"/><line x1="8" y1="11" x2="8" y2="11.01"/></svg>
+            </div>
+            <div class="ql-title">Elevator Sim</div>
+            <div class="ql-desc">Button emulator test</div>
+          </a>
+
+          <!-- Elevator Install Guide — wrench/install -->
+          <a href="/repos/accelerate-elevator/pages/install-guide.html" class="ql-card" target="_blank" style="--ql-accent:#7c3aed;">
+            <div class="ql-icon" style="background:#f5f3ff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div class="ql-title">Elevator Install</div>
+            <div class="ql-desc">Field install guide</div>
+          </a>
+
+          <!-- Elevator BOM — parts list -->
+          <a href="/repos/accelerate-elevator/pages/bom-order-guide.html" class="ql-card" target="_blank" style="--ql-accent:#ca8a04;">
+            <div class="ql-icon" style="background:#fefce8;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            </div>
+            <div class="ql-title">Elevator BOM</div>
+            <div class="ql-desc">Parts + ordering</div>
+          </a>
+
+          <!-- Inquiries — inbox/mail icon -->
+          <a href="/admin/inquiries" class="ql-card" style="--ql-accent:#4f46e5;">
+            <div class="ql-icon" style="background:#eef2ff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22 7 12 14 2 7"/></svg>
+            </div>
+            <div class="ql-title">Inquiries</div>
+            <div class="ql-desc">Contact submissions</div>
+          </a>
+
+          <!-- Public Website — globe icon -->
+          <a href="/" class="ql-card" style="--ql-accent:#64748b;">
+            <div class="ql-icon" style="background:#f8fafc;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4" ry="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+            </div>
+            <div class="ql-title">Public Website</div>
+            <div class="ql-desc">acceleraterobotics.com</div>
+          </a>
+
+        </div>
+      </div>
+
+      <!-- ═══ Regional Micro Maps ═══ -->
+      <div class="brand-reveal mb-8" data-delay="0.22">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Regional Focus Areas</h3>
+          <a href="/pages/pipeline-prospects.html" class="text-xs font-medium text-blue-600 hover:underline">View All Prospects &rarr;</a>
+        </div>
+        <div class="region-grid" id="regionGrid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- ═══ Bottom row: Activity Feed ═══ -->
+      <div class="brand-reveal" data-delay="0.25">
+        <div class="bg-white rounded-2xl shadow-sm p-6">
           <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Recent Activity</h3>
           <div id="activityFeed">
             <p class="text-sm text-gray-400 py-4">Loading activity...</p>
           </div>
         </div>
-
-        <!-- Quick links (1/3) -->
-        <div class="bg-white rounded-2xl shadow-sm p-6">
-          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Quick Links</h3>
-          <div class="space-y-2">
-            <a href="/pages/robot-catalog.html" class="deal-row">
-              <span class="text-lg">&#129302;</span>
-              <div>
-                <div class="deal-name">Robot Catalog</div>
-                <div class="deal-meta">Browse fleet models + specs</div>
-              </div>
-            </a>
-            <a href="/admin/inquiries" class="deal-row">
-              <span class="text-lg">&#128233;</span>
-              <div>
-                <div class="deal-name">Inquiries</div>
-                <div class="deal-meta">Website contact submissions</div>
-              </div>
-            </a>
-            <a href="/pages/investor-crm.html" class="deal-row">
-              <span class="text-lg">&#128176;</span>
-              <div>
-                <div class="deal-name">Investor CRM</div>
-                <div class="deal-meta">Fundraise tracking</div>
-              </div>
-            </a>
-            <a href="/pages/pipeline-prospects.html" class="deal-row">
-              <span class="text-lg">&#127919;</span>
-              <div>
-                <div class="deal-name">Pipeline Prospects</div>
-                <div class="deal-meta">Lead generation targets</div>
-              </div>
-            </a>
-            <a href="/" class="deal-row">
-              <span class="text-lg">&#127760;</span>
-              <div>
-                <div class="deal-name">Public Website</div>
-                <div class="deal-meta">acceleraterobotics.com</div>
-              </div>
-            </a>
-          </div>
-        </div>
-
       </div>
     </main>
   </div>
@@ -579,7 +784,7 @@ const CITY_COORDS = {
   'santa monica':[34.0195,-118.4912], 'west hollywood':[34.0901,-118.3617],
   'venice / marina del rey':[33.98,-118.4517], 'marina del rey':[33.98,-118.4517],
   'coconut grove':[25.7291,-80.2429], 'coral gables':[25.7217,-80.2684],
-  'sarasota / longboat key':[27.3869,-82.5961], 'longboat key':[27.4069,-82.6561],
+  'sarasota / longboat key':[27.336,-82.537], 'longboat key':[27.395,-82.578],
 };
 
 // WHY: 66 prospect hotels extracted from pipeline-prospects.html — plotted on map
@@ -657,9 +862,10 @@ let deals = [];
 let ccMap = null;
 
 // ── Init ────────────────────────────────────────────────────────
+// WHY: Show dashboard immediately — auth is disabled server-side, so
+// checkAuth() returns null on stale/missing JWT cookies. Guarding on
+// it blocks all rendering and leaves the page dead.
 document.addEventListener('DOMContentLoaded', async () => {
-  const ok = await checkAuth();
-  if (!ok) return;
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('dashboard').classList.remove('hidden');
   refreshAll();
@@ -679,6 +885,7 @@ async function refreshAll() {
   renderDealList();
   renderActivityFeed();
   renderMap();
+  renderRegionalMaps();
   document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
@@ -754,12 +961,15 @@ function renderWorkflowCounts() {
 
 // ── Deal list (sidebar) ─────────────────────────────────────────
 function renderDealList() {
+  const el = document.getElementById('dealList');
+  if (!el) return; // WHY: dealList removed when Quick Links replaced Active Deals sidebar
+
   // WHY: Show active deals sorted by stage progression (most advanced first)
   const sorted = deals
     .filter(d => d.stage !== 'lost')
     .sort((a, b) => STAGES.indexOf(b.stage) - STAGES.indexOf(a.stage));
 
-  document.getElementById('dealList').innerHTML = sorted.map(d => {
+  el.innerHTML = sorted.map(d => {
     const color = STAGE_COLORS[d.stage] || '#64748b';
     const label = STAGE_LABELS[d.stage] || d.stage;
     const loc = [d.city, d.state].filter(Boolean).join(', ');
@@ -893,6 +1103,22 @@ function createProspectIcon() {
   });
 }
 
+// ── Map fullscreen toggle ──
+function toggleMapFullscreen() {
+  const container = document.getElementById('mapContainer');
+  const btn = document.getElementById('mapFullscreenBtn');
+  const isExpanded = container.classList.toggle('map-fullscreen');
+  if (isExpanded) {
+    container.style.height = 'calc(100vh - 100px)';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>Collapse';
+  } else {
+    container.style.height = '600px';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>Expand';
+  }
+  // WHY: Leaflet needs invalidateSize after container resize to recalculate tile positions
+  setTimeout(() => { if (ccMap) ccMap.invalidateSize(); }, 350);
+}
+
 function renderMap() {
   const container = document.getElementById('cc-map');
   if (!container || typeof L === 'undefined') return;
@@ -901,7 +1127,10 @@ function renderMap() {
 
 function initMap(container) {
   if (!ccMap) {
-    ccMap = L.map('cc-map', { scrollWheelZoom: true, zoomControl: true }).setView([37, -96], 4);
+    // WHY: Initial view shows full continental US — fitBounds below locks to the same frame
+    ccMap = L.map('cc-map', { scrollWheelZoom: true, zoomControl: false }).setView([36.5, -96], 4);
+    // WHY: Position zoom controls top-right to avoid overlapping the legend header
+    L.control.zoom({ position: 'topright' }).addTo(ccMap);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 19, subdomains: 'abcd',
       attribution: '&copy; <a href="https://openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -909,58 +1138,71 @@ function initMap(container) {
   }
 
   ccMap.invalidateSize();
-  // WHY: Remove existing markers AND cluster layers before re-rendering
+  // WHY: Remove existing markers and circle markers before re-rendering
   ccMap.eachLayer(layer => {
-    if (layer instanceof L.Marker || layer instanceof L.MarkerClusterGroup) ccMap.removeLayer(layer);
+    if (layer instanceof L.Marker || layer instanceof L.CircleMarker) ccMap.removeLayer(layer);
   });
 
   const allCoords = [];
 
-  // ── Prospect pins in a cluster group ──
-  // WHY: MarkerClusterGroup groups nearby prospect pins into numbered badges at low zoom.
-  // Clicking a cluster zooms in to reveal individual pins. Prevents 66 pins from piling up.
-  const prospectCluster = L.markerClusterGroup({
-    maxClusterRadius: 40, // WHY: 40px — clusters nearby pins but keeps distinct cities separate when zoomed
-    iconCreateFunction: function(cluster) {
-      const count = cluster.getChildCount();
-      const size = count > 10 ? 44 : count > 5 ? 38 : 32;
-      return L.divIcon({
-        html: `<div style="width:${size - 8}px;height:${size - 8}px;">${count}</div>`,
-        className: 'prospect-cluster',
-        iconSize: [size, size],
-      });
-    },
-    spiderfyOnMaxZoom: true,
-    showCoverageOnHover: false,
-    zoomToBoundsOnClick: true,
-  });
-
+  // ── Prospect market circles ──
+  // WHY: Group prospects by city to show one marker per market instead of 66 overlapping pins.
+  // Each market marker shows count + total keys, popup lists all hotels in that market.
+  const prospectsByCity = {};
   for (const p of PROSPECTS) {
-    const coords = lookupCoords(p.city);
-    if (!coords) continue;
-    // WHY: Small random jitter (±0.005° ≈ 500m) prevents exact coordinate stacking
-    // within the same city — gives the cluster algo distinct points to work with
-    const jitterLat = (Math.random() - 0.5) * 0.01;
-    const jitterLng = (Math.random() - 0.5) * 0.01;
-    const pos = [coords[0] + jitterLat, coords[1] + jitterLng];
-    allCoords.push(pos);
-
-    const marker = L.marker(pos, { icon: createProspectIcon() });
-    marker.bindPopup(`
-      <div class="map-popup">
-        <div class="popup-name">${escapeHtml(p.name)}</div>
-        <div class="popup-meta">${escapeHtml(p.brand)} &middot; ${escapeHtml(p.city)}</div>
-        <span class="popup-stage" style="background:#e0e7ff;color:#4338ca">Prospect</span>
-        <div class="popup-stats">
-          <div class="popup-stat"><span class="popup-stat-val">${p.keys || '—'}</span><span class="popup-stat-lbl">Keys</span></div>
-          <div class="popup-stat"><span class="popup-stat-val">${p.floors || '—'}</span><span class="popup-stat-lbl">Floors</span></div>
-        </div>
-        <a href="/pages/pipeline-prospects.html" class="popup-link">View Prospects &rarr;</a>
-      </div>
-    `);
-    prospectCluster.addLayer(marker);
+    const key = p.city.toLowerCase().trim();
+    if (!prospectsByCity[key]) prospectsByCity[key] = { city: p.city, hotels: [], coords: lookupCoords(p.city) };
+    prospectsByCity[key].hotels.push(p);
   }
-  ccMap.addLayer(prospectCluster);
+
+  for (const [, market] of Object.entries(prospectsByCity)) {
+    if (!market.coords) continue;
+    const count = market.hotels.length;
+    const totalKeys = market.hotels.reduce((s, h) => s + (h.keys || 0), 0);
+    allCoords.push(market.coords);
+
+    // WHY: Circle marker sized by hotel count — visually communicates market density
+    const radius = Math.max(14, Math.min(28, 10 + count * 3));
+    const marker = L.circleMarker(market.coords, {
+      radius,
+      fillColor: '#6366f1',
+      fillOpacity: 0.18,
+      color: '#6366f1',
+      weight: 2,
+      opacity: 0.7,
+    }).addTo(ccMap);
+
+    // WHY: Label overlay shows hotel count inside the circle
+    const label = L.marker(market.coords, {
+      icon: L.divIcon({
+        className: 'market-label',
+        html: `<div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#4338ca;text-align:center;line-height:1;white-space:nowrap;">${count}</div>`,
+        iconSize: [30, 16],
+        iconAnchor: [15, 8],
+      }),
+      interactive: false,
+    }).addTo(ccMap);
+
+    // WHY: Popup lists every hotel in the market so a rep can scan the full opportunity
+    const hotelRows = market.hotels
+      .sort((a, b) => (b.keys || 0) - (a.keys || 0))
+      .map(h => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:.78rem;">
+        <span style="color:#111827;font-weight:500;">${escapeHtml(h.name)}</span>
+        <span style="color:#6b7280;font-family:'JetBrains Mono',monospace;font-size:.7rem;margin-left:12px;white-space:nowrap;">${h.keys||'—'} keys</span>
+      </div>`).join('');
+
+    marker.bindPopup(`
+      <div class="map-popup" style="min-width:280px;max-width:360px;">
+        <div class="popup-name" style="font-size:1rem;">${escapeHtml(market.city)}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin:6px 0 10px;">
+          <span class="popup-stage" style="background:#e0e7ff;color:#4338ca">${count} Prospect${count > 1 ? 's' : ''}</span>
+          <span style="font-size:.75rem;font-weight:600;color:#6b7280;">${totalKeys.toLocaleString()} total keys</span>
+        </div>
+        <div style="max-height:200px;overflow-y:auto;">${hotelRows}</div>
+        <a href="/pages/pipeline-prospects.html" class="popup-link" style="margin-top:8px;">View All Prospects &rarr;</a>
+      </div>
+    `, { maxWidth: 380 });
+  }
 
   // ── Deal pins ──
   const groups = {};
@@ -974,15 +1216,19 @@ function initMap(container) {
   }
 
   for (const [, g] of Object.entries(groups)) {
+    // WHY: Slight angular offset around the city center prevents pin stacking.
+    // Deals spread in a small arc so each pin is clickable independently.
     g.deals.forEach((d, i) => {
-      const pos = [g.coords[0] + i * 0.008, g.coords[1] + i * 0.012];
+      const angle = (i * 2 * Math.PI) / Math.max(g.deals.length, 1);
+      const spread = g.deals.length > 1 ? 0.012 : 0; // WHY: ~1.3km offset — enough to separate visually, close enough to look like same city
+      const pos = [g.coords[0] + Math.sin(angle) * spread, g.coords[1] + Math.cos(angle) * spread];
       allCoords.push(pos);
       const marker = L.marker(pos, { icon: createStageIcon(d.stage) }).addTo(ccMap);
       const sc = STAGE_COLORS[d.stage] || '#64748b';
       const owner = d.owner ? d.owner.split('@')[0] : 'Unassigned';
 
       marker.bindPopup(`
-        <div class="map-popup" style="min-width:220px">
+        <div class="map-popup" style="min-width:240px">
           <div class="popup-name">${escapeHtml(d.name)}</div>
           <div class="popup-meta">${escapeHtml(d.facility_type || 'Hotel')} &middot; ${escapeHtml(d.city||'')}${d.state?', '+escapeHtml(d.state):''}</div>
           <div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap;">
@@ -1008,10 +1254,164 @@ function initMap(container) {
     });
   }
 
-  if (allCoords.length > 0) {
-    ccMap.fitBounds(allCoords, { padding: [40, 40], maxZoom: 12 });
-  }
+  // WHY: Always show full continental US — fixed bounds so the view never zooms in
+  // to just the marker cluster. Matches the "wall map" view the team prefers.
+  ccMap.fitBounds([[23, -128], [50, -64]], { padding: [10, 10] });
   setTimeout(() => ccMap.invalidateSize(), 250);
+}
+
+// ── Regional Micro Maps ──────────────────────────────────────────
+// WHY: Each region groups prospect markets by geographic cluster.
+// Center + zoom chosen to frame all markets in the cluster comfortably.
+const REGIONS = [
+  {
+    id: 'norcal',
+    name: 'Northern California',
+    center: [37.77, -122.42],
+    zoom: 9, // WHY: zoom 9 centers on San Francisco — Walnut Creek and Sacramento visible east
+    cities: ['San Francisco', 'Walnut Creek', 'Sacramento'],
+    clusters: ['sf-bay', 'sacramento'], // WHY: NorCal spans two clusters
+    color: '#6366f1',
+  },
+  {
+    id: 'la',
+    name: 'Los Angeles',
+    center: [34.05, -118.24],
+    zoom: 12, // WHY: zoom 12 centers on downtown LA — BH, WeHo, Santa Monica, Venice visible west
+    cities: ['Beverly Hills', 'Santa Monica', 'West Hollywood', 'Venice / Marina del Rey'],
+    clusters: ['la-west'],
+    color: '#6366f1',
+  },
+  {
+    id: 'san-diego',
+    name: 'San Diego',
+    center: [32.72, -117.16],
+    zoom: 13, // WHY: zoom 13 centers tight on downtown San Diego prospect cluster
+    cities: ['San Diego'],
+    clusters: ['san-diego'],
+    color: '#6366f1',
+  },
+  {
+    id: 'south-fl',
+    name: 'South Florida',
+    center: [25.76, -80.19],
+    zoom: 11, // WHY: zoom 11 centers on downtown Miami — Ft Lauderdale, Coconut Grove, Coral Gables visible
+    cities: ['Miami', 'Fort Lauderdale', 'Coconut Grove', 'Coral Gables'],
+    clusters: ['south-fl'],
+    color: '#6366f1',
+  },
+  {
+    id: 'gulf-fl',
+    name: 'Sarasota / Gulf Coast',
+    center: [27.34, -82.53],
+    zoom: 12, // WHY: zoom 12 centers on Sarasota downtown + Longboat Key
+    cities: ['Sarasota / Longboat Key'],
+    clusters: ['gulf-fl'],
+    color: '#0891b2',
+  },
+  {
+    id: 'dallas',
+    name: 'Dallas',
+    center: [32.78, -96.80],
+    zoom: 13, // WHY: zoom 13 centers tight on downtown Dallas prospect cluster
+    cities: ['Dallas'],
+    clusters: ['dallas'],
+    color: '#6366f1',
+  },
+];
+
+const regionMaps = {}; // WHY: Track instances for cleanup
+
+function renderRegionalMaps() {
+  const grid = document.getElementById('regionGrid');
+  if (!grid) return;
+
+  // WHY: Destroy previous instances to avoid Leaflet map-already-initialized errors
+  Object.values(regionMaps).forEach(m => m.remove());
+  Object.keys(regionMaps).forEach(k => delete regionMaps[k]);
+
+  grid.innerHTML = REGIONS.map(r => {
+    const regionProspects = PROSPECTS.filter(p => r.cities.includes(p.city));
+    const totalKeys = regionProspects.reduce((s, p) => s + (p.keys || 0), 0);
+    // WHY: Pass cluster slugs as query param so the prospect page pre-filters to this region
+    const clusterParam = r.clusters.join(',');
+    return `
+      <div class="region-card">
+        <div class="region-map-container" id="rmap-${r.id}"></div>
+        <div class="region-card-info">
+          <div>
+            <div class="region-card-name">${r.name}</div>
+          </div>
+          <div class="region-card-stats">
+            <div class="region-stat">
+              <div class="region-stat-val">${regionProspects.length}</div>
+              <div class="region-stat-lbl">Hotels</div>
+            </div>
+            <div class="region-stat">
+              <div class="region-stat-val">${totalKeys.toLocaleString()}</div>
+              <div class="region-stat-lbl">Keys</div>
+            </div>
+            <a href="/pages/pipeline-prospects.html?cluster=${clusterParam}&view=map" class="region-card-link" title="View ${r.name} prospects on map">View &rsaquo;</a>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // WHY: requestAnimationFrame ensures DOM is laid out before Leaflet measures container size
+  requestAnimationFrame(() => {
+    REGIONS.forEach(r => {
+      const container = document.getElementById(`rmap-${r.id}`);
+      if (!container) return;
+
+      const map = L.map(container, {
+        scrollWheelZoom: true,
+        dragging: true,
+        zoomControl: true,
+        attributionControl: false,
+        doubleClickZoom: true,
+        boxZoom: true,
+        keyboard: false, // WHY: Prevent arrow keys from scrolling map instead of page
+        touchZoom: true,
+      }).setView(r.center, r.zoom);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+
+      // WHY: Plot each prospect as a small indigo circle marker — same color as the main map's prospect pins
+      const regionProspects = PROSPECTS.filter(p => r.cities.includes(p.city));
+      regionProspects.forEach(p => {
+        const cityKey = p.city.toLowerCase();
+        const coords = CITY_COORDS[cityKey];
+        if (!coords) return;
+
+        // WHY: Small jitter so pins don't stack — 0.004 keeps them on land in coastal cities
+        const jitterLat = coords[0] + (Math.random() - 0.5) * 0.004;
+        const jitterLng = coords[1] + (Math.random() - 0.5) * 0.004;
+
+        L.circleMarker([jitterLat, jitterLng], {
+          radius: 7, // WHY: 7px radius — visible without dominating the small map
+          fillColor: r.color,
+          color: '#fff',
+          weight: 1.5,
+          fillOpacity: 0.85,
+        }).bindPopup(`
+          <div class="map-popup">
+            <div class="popup-name">${escapeHtml(p.name)}</div>
+            <div class="popup-meta">${escapeHtml(p.brand)}</div>
+            <div class="popup-stats" style="grid-template-columns:repeat(3,1fr);">
+              <div class="popup-stat"><div class="popup-stat-val">${p.keys.toLocaleString()}</div><div class="popup-stat-lbl">Keys</div></div>
+              <div class="popup-stat"><div class="popup-stat-val">${p.floors}</div><div class="popup-stat-lbl">Floors</div></div>
+              <div class="popup-stat"><div class="popup-stat-val">${escapeHtml(p.city)}</div><div class="popup-stat-lbl">Market</div></div>
+            </div>
+          </div>
+        `, { minWidth: 240 }).addTo(map);
+      });
+
+      regionMaps[r.id] = map;
+    });
+  });
 }
 
 // ── Helpers ─────────────────────────────────────────────────────

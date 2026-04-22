@@ -43,8 +43,8 @@ app.use(helmet({
       // WHY: https: already covers OSM tiles, but explicit entry documents the dependency
       imgSrc: ["'self'", "data:", "https://img.youtube.com", "https:", "http:", "https://tile.openstreetmap.org"],
       connectSrc: ["'self'"],
-      // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) require iframe permission
-      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
+      // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) + Creative Labs robot command embed
+      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com", "http://localhost:3100"],
       // WHY: Helmet defaults script-src-attr to 'none', which blocks ALL inline event
       // handlers (onclick, onchange, etc.) even when script-src allows 'unsafe-inline'.
       // Our admin pages use onclick handlers extensively — allow them.
@@ -81,7 +81,10 @@ const narrateLimiter = rateLimit({
 // ── Static files ───────────────��────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
 // WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
-app.use('/pages', express.static(path.join(__dirname, '..', 'pages')));
+// WHY: no-cache ensures dev changes are always picked up — browser still validates with the server
+app.use('/pages', express.static(path.join(__dirname, '..', 'pages'), {
+  setHeaders: (res) => { res.setHeader('Cache-Control', 'no-cache'); }
+}));
 
 // WHY: Serve only .json files from data/ — the directory also contains the SQLite
 // database, which must NEVER be exposed via HTTP. Reject non-JSON requests.
@@ -104,6 +107,8 @@ const hotelRepos = [
   'accelerate-westin-sacramento',
   'accelerate-westin-sarasota',
   'accelerate-hotel-template',
+  'accelerate-carts',
+  'accelerate-elevator',
 ];
 for (const repo of hotelRepos) {
   const repoPath = path.join(HOTEL_REPOS_DIR, repo);

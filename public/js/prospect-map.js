@@ -12,7 +12,9 @@
 let map = null;
 let markerGroup = null;       // L.layerGroup for market bubbles
 let connectionGroup = null;   // L.layerGroup for connection lines
-let showConnections = true;
+// WHY: Off by default — connection lines between markets are noisy at national zoom.
+// Sales reps can toggle them on via the map controls when needed.
+let showConnections = false;
 let displayMode = 'count';    // 'count' or 'keys'
 
 // WHY: Store market data keyed by id for fast lookup when rendering popups and list
@@ -75,9 +77,15 @@ function initProspectMap(containerId, markets, prospects) {
   renderConnectionLines(markets, prospects);
   renderMapProspectList(markets, prospects);
 
-  // WHY: Fit bounds only on first init (no saved state) so user sees all markets
+  // WHY: Fit bounds only on first init (no saved state) so user sees all markets.
+  // When a cluster filter is active, fit to only the markets with filtered prospects
+  // so the map zooms into the relevant region.
   if (!saved) {
-    fitToMarkets(markets);
+    const activeMarketIds = new Set(prospects.map(p => p.market_id));
+    const fitMarkets = activeMarketIds.size > 0 && activeMarketIds.size < markets.length
+      ? markets.filter(m => activeMarketIds.has(m.id))
+      : markets;
+    fitToMarkets(fitMarkets);
   }
 }
 
@@ -307,7 +315,7 @@ function addMapControls() {
         display:block;padding:6px 10px;background:#fff;font-size:0.7rem;
         font-weight:600;color:#555;text-decoration:none;white-space:nowrap;
         border-radius:4px;
-      " title="Toggle connection lines">Connections: On</a>`;
+      " title="Toggle connection lines">Connections: Off</a>`;
 
       L.DomEvent.disableClickPropagation(container);
 

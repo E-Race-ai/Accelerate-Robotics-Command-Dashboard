@@ -70,9 +70,10 @@
       <a href="/admin">Command Center</a>
       <a href="/admin/deals">Deals</a>
       <a href="/pages/pipeline-prospects.html" class="active">Prospects</a>
+      <a href="/pages/assessments.html">Assessments</a>
       <a href="/pages/robot-catalog.html">Catalog</a>
       <a href="/pages/fleet-designer.html">Fleet</a>
-      <a href="/pages/national-rollout-strategy.html">Rollout</a>
+        <a href="/admin/deals?stage=won&amp;stage=deploying&amp;stage=active">Deploy</a>
     </div>
     <div style="margin-left:16px;display:flex;align-items:center;gap:12px;">
       <span id="adminEmail" style="font-size:0.78rem;color:var(--text-faint);"></span>
@@ -86,9 +87,21 @@
     <div class="flex items-center justify-between mb-6 brand-reveal" data-delay="0.05">
       <div>
         <h1 class="headline text-2xl font-bold text-gray-900 gradient-text">Prospect Pipeline</h1>
-        <p class="text-sm text-gray-400 mt-1">66 research-qualified targets across 14 markets</p>
+        <p class="text-sm text-gray-400 mt-1" id="subtitleText">66 research-qualified targets across 14 markets</p>
       </div>
-      <button onclick="window.print()" class="no-print brand-btn-secondary">Print / PDF</button>
+      <div class="no-print flex items-center gap-2">
+        <button onclick="openAddMarketForm()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style="background:linear-gradient(135deg,#eff6ff,#dbeafe);color:#2563eb;border:1px solid #bfdbfe;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+          Add Market
+        </button>
+        <button onclick="openAddProspectForm()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);color:#16a34a;border:1px solid #bbf7d0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M3 7l9-4 9 4M4 7v10M20 7v10M8 11v6M12 11v6M16 11v6"/></svg>
+          Add Prospect
+        </button>
+        <button onclick="window.print()" class="brand-btn-secondary px-4 py-2 text-sm">Print / PDF</button>
+      </div>
     </div>
 
     <!-- Stats -->
@@ -325,6 +338,28 @@ async function loadData() {
 
   // WHY: Build cluster labels from market data (replaces hardcoded CLUSTER_LABELS)
   buildClusterLabels();
+
+  // WHY: Read ?cluster= from URL so Command Center regional maps can deep-link
+  // into a pre-filtered view. Supports comma-separated for multi-cluster regions (e.g. sf-bay,sacramento).
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlCluster = urlParams.get('cluster');
+  if (urlCluster) {
+    clusterFilter = urlCluster;
+  }
+
+  // WHY: ?view=map opens directly in map view — used by Command Center regional cards.
+  // When coming from a deep link with a cluster filter, clear saved map state so the
+  // map auto-fits to the filtered region instead of restoring the last position.
+  const urlView = urlParams.get('view');
+  if (urlView === 'map' || urlView === 'table') {
+    currentView = urlView;
+    if (urlCluster && urlView === 'map') {
+      // WHY: Clear saved map position so fitToMarkets runs for the filtered region
+      try { sessionStorage.removeItem('prospectMapState'); } catch(e) {}
+    }
+    setView(urlView);
+  }
+
   renderAll();
   renderMarketChips();
   renderStagingArea();
@@ -348,13 +383,14 @@ function renderMarketChips() {
   if (!container) return;
 
   const clusters = Object.entries(CLUSTER_LABELS);
+  // WHY: When a multi-cluster filter is active (e.g. sf-bay,sacramento from URL),
+  // highlight each matching chip and deactivate "All"
+  const activeClusters = clusterFilter !== 'all' ? clusterFilter.split(',') : null;
   container.innerHTML =
-    `<span class="chip active" data-filter="cluster" data-val="all" onclick="toggleFilter('cluster','all')" style="color:#111;border-color:#d1d5db">All</span>` +
+    `<span class="chip ${!activeClusters ? 'active' : ''}" data-filter="cluster" data-val="all" onclick="toggleFilter('cluster','all')" style="color:#111;border-color:#d1d5db">All</span>` +
     clusters.map(([slug, label]) =>
-      `<span class="chip" data-filter="cluster" data-val="${slug}" onclick="toggleFilter('cluster','${slug}')" style="color:${getClusterColor(slug)}">${label}</span>`
-    ).join('') +
-    `<button onclick="openAddMarketForm()" class="chip" style="color:var(--blue);border:1.5px dashed var(--blue);font-weight:700" title="Add Market">+</button>` +
-    `<button onclick="openAddProspectForm()" class="chip" style="color:var(--green);border:1.5px dashed var(--green);font-weight:700" title="Add Prospect">+ Prospect</button>`;
+      `<span class="chip ${activeClusters && activeClusters.includes(slug) ? 'active' : ''}" data-filter="cluster" data-val="${slug}" onclick="toggleFilter('cluster','${slug}')" style="color:${getClusterColor(slug)}">${label}</span>`
+    ).join('');
 }
 
 function getClusterColor(cluster) {
@@ -547,8 +583,10 @@ function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').repl
 
 function getFiltered() {
   const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  // WHY: Split comma-separated clusters so NorCal (sf-bay,sacramento) works as a multi-cluster filter
+  const activeClusters = clusterFilter !== 'all' ? clusterFilter.split(',') : null;
   return PROSPECTS.filter(p => {
-    if (clusterFilter !== 'all' && p.cluster !== clusterFilter) return false;
+    if (activeClusters && !activeClusters.includes(p.cluster)) return false;
     if (brandFilter !== 'all' && p.brand_class !== brandFilter) return false;
     if (q) {
       const hay = [p.name, p.market_name, p.brand, p.operator, p.signal, p.address].join(' ').toLowerCase();
@@ -587,6 +625,9 @@ function renderAll() {
 function renderStats(filtered) {
   const totalKeys = filtered.reduce((s, p) => s + (p.keys || 0), 0);
   const markets = new Set(filtered.map(p => p.market_name)).size;
+  // WHY: Update subtitle with real counts from loaded data
+  const sub = document.getElementById('subtitleText');
+  if (sub) sub.textContent = `${PROSPECTS.length} research-qualified targets across ${new Set(PROSPECTS.map(p => p.market_name)).size} markets`;
   const luxury = filtered.filter(p => p.brand_class === 'luxury').length;
   const avgFloors = filtered.length ? Math.round(filtered.reduce((s, p) => s + (p.floors || 0), 0) / filtered.length) : 0;
 
@@ -600,8 +641,9 @@ function renderStats(filtered) {
   document.getElementById('statsRow').innerHTML = stats.map(s =>
     `<div class="brand-stat"><div class="brand-stat-val" data-counter="${s.val}">0</div><div class="brand-stat-lbl">${s.lbl}</div></div>`
   ).join('');
-  /* WHY: Re-init counters after dynamic stat render so data-counter attributes animate */
-  initCounters();
+  /* WHY: Re-init counters after dynamic stat render so data-counter attributes animate.
+     Guard: brand.js may not have loaded yet on first render (it's a later script tag). */
+  if (typeof initCounters === 'function') initCounters();
 }
 
 /* WHY: Map brand class to stripe gradient so card tier is visible at a glance */
@@ -646,8 +688,9 @@ function renderCards(filtered) {
       </div>
     </div>`;
   }).join('');
-  /* WHY: Re-init reveal animations after dynamic card render so staggered delays apply */
-  initRevealAnimations();
+  /* WHY: Re-init reveal animations after dynamic card render so staggered delays apply.
+     Guard: brand.js may not have loaded yet on first render (it's a later script tag). */
+  if (typeof initRevealAnimations === 'function') initRevealAnimations();
 }
 
 function renderTable(filtered) {
@@ -823,12 +866,21 @@ function setSort(field) {
 }
 
 function toggleFilter(type, val) {
-  if (type === 'cluster') clusterFilter = val;
-  if (type === 'brand') brandFilter = val;
-  // Update chip states
-  document.querySelectorAll(`.chip[data-filter="${type}"]`).forEach(c => {
-    c.classList.toggle('active', c.dataset.val === val);
-  });
+  if (type === 'cluster') {
+    clusterFilter = val;
+    // WHY: When clicking a chip, highlight just that chip (or All).
+    // Multi-cluster mode (from URL param) collapses to single on any chip click.
+    const activeClusters = val !== 'all' ? val.split(',') : null;
+    document.querySelectorAll('.chip[data-filter="cluster"]').forEach(c => {
+      c.classList.toggle('active', val === 'all' ? c.dataset.val === 'all' : activeClusters.includes(c.dataset.val));
+    });
+  }
+  if (type === 'brand') {
+    brandFilter = val;
+    document.querySelectorAll('.chip[data-filter="brand"]').forEach(c => {
+      c.classList.toggle('active', c.dataset.val === val);
+    });
+  }
   renderAll();
 }
 
@@ -900,11 +952,16 @@ function logout() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────
+// WHY: Auth disabled for local dev — skip the checkAuth guard so data always loads
 (async () => {
-  const ok = await checkAuth();
-  if (!ok) return;
-  setSort('keys'); // Default sort by keys descending
-  loadData();
+  try {
+    setSort('keys'); // Default sort by keys descending
+    await loadData();
+  } catch (err) {
+    console.error('[pipeline-prospects] Init failed:', err);
+    document.getElementById('emptyState').textContent = 'Error loading data: ' + err.message;
+    document.getElementById('emptyState').classList.remove('hidden');
+  }
 })();
 </script>
 <script src="https://unpkg.com/leaflet@1.9/dist/leaflet.js"></script>
