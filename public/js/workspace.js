@@ -42,6 +42,9 @@ var wsSwitcherOpen = false;
 var wsLoadedTabs = {};
 /* WHY: Track save state so the indicator can show Saved/Saving/Error */
 var wsSaveTimer = null;
+/* WHY: Store the last save function so wsFlushSave and wsRetrySave can
+   invoke it outside the debounce closure */
+var wsLastSaveFn = null;
 var wsHashChangeHandler = null;
 var wsClickHandler = null;
 
@@ -125,7 +128,7 @@ function renderWorkspaceBar() {
     '</div>' +
     '<div class="ws-save">' +
       '<div class="ws-save-dot saved" id="ws-save-dot"></div>' +
-      '<span class="ws-save-text" id="ws-save-text">Saved</span>' +
+      '<span class="ws-save-text" id="ws-save-text" onclick="wsRetrySave()">Saved</span>' +
     '</div>';
 }
 
@@ -192,6 +195,10 @@ function filterDealSwitcher(query) {
  * Loads iframe content on first visit (lazy).
  */
 function switchTab(tabId) {
+  /* WHY: Flush pending auto-save before leaving current tab — prevents data loss
+     if user types and immediately clicks another tab */
+  wsFlushSave();
+
   wsCurrentTab = tabId;
 
   /* Update URL hash without triggering hashchange listener */
@@ -230,6 +237,27 @@ function switchTab(tabId) {
   }
 }
 
+/* WHY: Force-flush any pending auto-save — used before tab switches to prevent data loss */
+async function wsFlushSave() {
+  if (wsSaveTimer && wsLastSaveFn) {
+    clearTimeout(wsSaveTimer);
+    wsSaveTimer = null;
+    try {
+      await wsLastSaveFn();
+      wsSetSaveState('saved');
+    } catch (e) {
+      wsSetSaveState('error');
+    }
+    wsLastSaveFn = null;
+  }
+}
+
+function wsRetrySave() {
+  if (wsLastSaveFn) {
+    wsAutoSave(wsLastSaveFn);
+  }
+}
+
 /**
  * Update the auto-save indicator.
  * @param {'saved'|'saving'|'error'} state
@@ -260,6 +288,7 @@ function wsSetSaveState(state, message) {
  */
 function wsAutoSave(saveFn) {
   if (wsSaveTimer) clearTimeout(wsSaveTimer);
+  wsLastSaveFn = saveFn;
   wsSetSaveState('saving');
   /* WHY: 500ms debounce — spec requirement. Fires after last keystroke settles. */
   wsSaveTimer = setTimeout(async function() {
