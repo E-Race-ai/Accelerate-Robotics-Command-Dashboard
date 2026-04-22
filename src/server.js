@@ -40,7 +40,8 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       // WHY: Proposal pages embed robot product images from manufacturer CDNs and Google favicons
-      imgSrc: ["'self'", "data:", "https://img.youtube.com", "https:", "http:"],
+      // WHY: https: already covers OSM tiles, but explicit entry documents the dependency
+      imgSrc: ["'self'", "data:", "https://img.youtube.com", "https:", "http:", "https://tile.openstreetmap.org"],
       connectSrc: ["'self'"],
       // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) require iframe permission
       frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
