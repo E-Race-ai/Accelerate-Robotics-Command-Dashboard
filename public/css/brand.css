@@ -347,6 +347,197 @@
   animation: brand-reveal-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ── Workspace Bar ─────────────────────────────────────── */
+.ws-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  position: sticky;
+  /* WHY: 56px = height of brand-nav above; workspace bar sticks directly below */
+  top: 56px;
+  z-index: 49;
+  gap: 0;
+}
+
+/* ── Deal identity (left side of workspace bar) ────────── */
+.ws-deal-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 16px;
+  margin-right: 8px;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.ws-deal-stripe {
+  width: 4px;
+  height: 28px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.ws-deal-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ws-deal-opp {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+.ws-deal-arr {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+/* ── Deal switcher button ──────────────────────────────── */
+.ws-switcher-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--text-faint);
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+}
+.ws-switcher-btn:hover {
+  background: var(--badge-blue-bg);
+  color: var(--blue);
+}
+
+/* ── Deal switcher dropdown ────────────────────────────── */
+.ws-switcher-dropdown {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  width: 320px;
+  max-height: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  overflow: hidden;
+  display: none;
+}
+.ws-switcher-dropdown.open { display: block; }
+.ws-switcher-search {
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+}
+.ws-switcher-search:focus {
+  box-shadow: inset 0 -2px 0 var(--blue);
+}
+.ws-switcher-list {
+  max-height: 340px;
+  overflow-y: auto;
+}
+.ws-switcher-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+  text-decoration: none;
+  color: inherit;
+}
+.ws-switcher-item:hover { background: #f8fafc; }
+.ws-switcher-item.current { background: var(--badge-blue-bg); }
+.ws-switcher-item .ws-deal-stripe { height: 22px; }
+
+/* ── Tool tabs (center of workspace bar) ───────────────── */
+.ws-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+  flex: 1;
+}
+.ws-tab {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  text-decoration: none;
+  border: none;
+  background: none;
+}
+.ws-tab:hover { color: var(--blue); background: var(--badge-blue-bg); }
+.ws-tab.active {
+  color: var(--blue);
+  background: var(--badge-blue-bg);
+  font-weight: 700;
+}
+.ws-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Auto-save indicator (right side) ──────────────────── */
+.ws-save {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.ws-save-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transition: background 0.3s;
+}
+.ws-save-dot.saved { background: var(--green); }
+.ws-save-dot.saving { background: var(--blue); animation: ws-pulse 1s ease-in-out infinite; }
+.ws-save-dot.error { background: #dc2626; }
+.ws-save-text { color: var(--text-faint); }
+.ws-save-text.saving { color: var(--blue); }
+.ws-save-text.error { color: #dc2626; cursor: pointer; }
+
+@keyframes ws-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Tab panels ────────────────────────────────────────── */
+.ws-panel { display: none; }
+.ws-panel.active { display: block; }
+.ws-panel-iframe {
+  width: 100%;
+  border: none;
+  /* WHY: 104px = brand-nav (56px) + workspace bar (48px); iframe fills remaining viewport */
+  min-height: calc(100vh - 104px);
+}
+
 /* ── Print Overrides ───────────────────────────────────── */
 @media print {
   *, *::before, *::after {
@@ -365,4 +556,6 @@
     -webkit-text-fill-color: var(--text) !important;
     background: none !important;
   }
+  .ws-bar { display: none; }
+  .ws-panel-iframe { min-height: auto; height: auto; }
 }
