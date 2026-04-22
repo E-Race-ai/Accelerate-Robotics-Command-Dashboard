@@ -6,9 +6,15 @@
   <title>Command Center — Accelerate Robotics</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/brand.css">
   <!-- WHY: Leaflet for embedded US deal map — same CDN as admin-deals.html -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- WHY: MarkerCluster groups nearby prospect pins into numbered badges at low zoom.
+       Without it, 66 prospect pins in ~14 cities pile up and hide each other. -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <style>
     * { font-family: 'Inter', system-ui, sans-serif; }
     h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
@@ -67,31 +73,7 @@
       height: 3px;
     }
 
-    /* ── Stats ───────────────────────────────────────────── */
-    .stat-pill {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: white;
-      border-radius: 14px;
-      padding: 16px 24px;
-      min-width: 90px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-    .stat-pill .stat-val {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 2rem;
-      font-weight: 800;
-      line-height: 1;
-    }
-    .stat-pill .stat-lbl {
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: #9ca3af;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-top: 6px;
-    }
+    /* WHY: .stat-pill styles removed — now using .brand-stat from brand.css */
 
     /* ── Deal list in sidebar ────────────────────────────── */
     .deal-row {
@@ -249,6 +231,24 @@
       white-space: nowrap;
     }
 
+    /* ── Prospect cluster badges ──────────────────────────── */
+    /* WHY: Override default MarkerCluster blue circles with indigo to match prospect pins */
+    .prospect-cluster {
+      background: rgba(99, 102, 241, 0.25);
+      border-radius: 50%;
+    }
+    .prospect-cluster div {
+      background: rgba(99, 102, 241, 0.85);
+      color: white;
+      border-radius: 50%;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 800;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     /* ── Leaflet overrides ───────────────────────────────── */
     .deal-marker { background: none !important; border: none !important; }
     .leaflet-popup-content-wrapper {
@@ -307,29 +307,24 @@
 
   <!-- Dashboard -->
   <div id="dashboard" class="hidden">
-    <!-- Header -->
-    <header class="bg-white border-b border-gray-100 sticky top-0 z-40">
-      <div class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-md">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white"/></svg>
-          </div>
-          <nav class="flex items-center gap-1">
-            <a href="/admin" class="px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 bg-blue-50">Command Center</a>
-            <a href="/admin/deals" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Deals</a>
-            <a href="/pages/pipeline-prospects.html" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Prospects</a>
-            <a href="/pages/assessments.html" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Assessments</a>
-            <a href="/admin/inquiries" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition">Inquiries</a>
-          </nav>
-          <span class="text-gray-200 select-none">|</span>
-          <span id="adminEmail" class="text-sm text-gray-400"></span>
-        </div>
-        <div class="flex items-center gap-4">
-          <a href="/" class="text-sm text-gray-400 hover:text-blue-600 transition">View Site</a>
-          <button onclick="logout()" class="text-sm text-gray-400 hover:text-red-600 transition">Sign Out</button>
-        </div>
+    <!-- Branded Nav -->
+    <nav class="brand-nav">
+      <div class="brand-nav-logo">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white" stroke="white" stroke-width="1.5"/></svg>
       </div>
-    </header>
+      <div class="brand-nav-identity">
+        <div class="brand-nav-name">Accelerate <span>Robotics</span></div>
+        <div class="brand-nav-tagline">One Brain. Many Bots.</div>
+      </div>
+      <div class="brand-nav-links">
+        <a href="/admin" class="active">Command Center</a>
+        <a href="/admin/deals">Deals</a>
+        <a href="/pages/pipeline-prospects.html">Prospects</a>
+        <a href="/pages/robot-catalog.html">Catalog</a>
+        <a href="/pages/fleet-designer.html">Fleet</a>
+        <a href="/pages/national-rollout-strategy.html">Rollout</a>
+      </div>
+    </nav>
 
     <main class="max-w-[1400px] mx-auto px-6 py-8">
       <!-- Title row -->
@@ -342,17 +337,18 @@
       </div>
 
       <!-- Stats row -->
-      <div class="flex gap-3 flex-wrap mb-8" id="statsRow">
+      <div class="flex gap-3 flex-wrap mb-8 brand-reveal" data-delay="0.1" id="statsRow">
         <!-- Populated by JS -->
       </div>
 
       <!-- ═══ Sales Workflow Pipeline ═══ -->
-      <div class="wf-pipeline" id="workflowPipeline">
+      <div class="wf-pipeline brand-reveal" data-delay="0.15" id="workflowPipeline">
 
         <!-- Step 1: Prospect -->
         <div class="wf-step">
           <div class="wf-step-stripe" style="background: linear-gradient(90deg, #64748b, #94a3b8);"></div>
-          <a href="/admin/deals" class="wf-step-inner">
+          <a href="/admin/deals" class="wf-step-inner brand-wf-step">
+            <div class="brand-wf-bar"><div class="brand-wf-bar-fill" style="width:20%;background:linear-gradient(90deg,#64748b,#94a3b8);"></div></div>
             <span class="wf-count" id="wf-count-prospect" style="color:#64748b;">0</span>
             <span class="wf-step-num" style="color:#64748b;">Step 1</span>
             <div class="wf-step-title">Prospect</div>
@@ -368,7 +364,8 @@
         <!-- Step 2: V1 Proposal -->
         <div class="wf-step">
           <div class="wf-step-stripe" style="background: linear-gradient(90deg, #0891b2, #06b6d4);"></div>
-          <a href="/pages/fleet-designer.html" class="wf-step-inner">
+          <a href="/pages/fleet-designer.html" class="wf-step-inner brand-wf-step">
+            <div class="brand-wf-bar"><div class="brand-wf-bar-fill" style="width:40%;background:linear-gradient(90deg,#0891b2,#06b6d4);"></div></div>
             <span class="wf-count" id="wf-count-v1" style="color:#0891b2;">0</span>
             <span class="wf-step-num" style="color:#0891b2;">Step 2</span>
             <div class="wf-step-title">V1 Proposal</div>
@@ -384,7 +381,8 @@
         <!-- Step 3: Assessment -->
         <div class="wf-step">
           <div class="wf-step-stripe" style="background: linear-gradient(90deg, #7c3aed, #a78bfa);"></div>
-          <a href="/pages/assessments.html" class="wf-step-inner">
+          <a href="/pages/assessments.html" class="wf-step-inner brand-wf-step">
+            <div class="brand-wf-bar"><div class="brand-wf-bar-fill" style="width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);"></div></div>
             <span class="wf-count" id="wf-count-assess" style="color:#7c3aed;">0</span>
             <span class="wf-step-num" style="color:#7c3aed;">Step 3</span>
             <div class="wf-step-title">Assessment</div>
@@ -400,7 +398,8 @@
         <!-- Step 4: V2 Proposal + Pipeline -->
         <div class="wf-step">
           <div class="wf-step-stripe" style="background: linear-gradient(90deg, #d97706, #f59e0b);"></div>
-          <a href="/admin/deals" class="wf-step-inner">
+          <a href="/admin/deals" class="wf-step-inner brand-wf-step">
+            <div class="brand-wf-bar"><div class="brand-wf-bar-fill" style="width:80%;background:linear-gradient(90deg,#d97706,#f59e0b);"></div></div>
             <span class="wf-count" id="wf-count-v2" style="color:#d97706;">0</span>
             <span class="wf-step-num" style="color:#d97706;">Step 4</span>
             <div class="wf-step-title">V2 Proposal + Pipeline</div>
@@ -417,7 +416,8 @@
         <!-- Step 5: Deploy -->
         <div class="wf-step">
           <div class="wf-step-stripe" style="background: linear-gradient(90deg, #16a34a, #22c55e);"></div>
-          <a href="/repos/accelerate-thesis-hotel/pages/playbook.html" class="wf-step-inner">
+          <a href="/repos/accelerate-thesis-hotel/pages/playbook.html" class="wf-step-inner brand-wf-step">
+            <div class="brand-wf-bar"><div class="brand-wf-bar-fill" style="width:100%;background:linear-gradient(90deg,#16a34a,#22c55e);"></div></div>
             <span class="wf-count" id="wf-count-deploy" style="color:#16a34a;">0</span>
             <span class="wf-step-num" style="color:#16a34a;">Step 5</span>
             <div class="wf-step-title">Deploy</div>
@@ -432,7 +432,7 @@
       </div>
 
       <!-- ═══ Main Content: Map + Deal List ═══ -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 brand-reveal" data-delay="0.2">
 
         <!-- Map (2/3 width) -->
         <div class="lg:col-span-2">
@@ -445,7 +445,7 @@
                 <div class="map-legend-item"><span class="map-legend-dot" style="background:#7c3aed"></span>Site Walk</div>
                 <div class="map-legend-item"><span class="map-legend-dot" style="background:#d97706"></span>Proposed</div>
                 <div class="map-legend-item"><span class="map-legend-dot" style="background:#16a34a"></span>Won/Active</div>
-                <div class="map-legend-item"><span class="map-legend-dot" style="background:#e0e7ff;border-color:#818cf8"></span>Prospect</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#6366f1;border-color:#4338ca"></span>Prospect</div>
               </div>
             </div>
             <div id="cc-map" style="height: 100%; width: 100%;"></div>
@@ -466,7 +466,7 @@
       </div>
 
       <!-- ═══ Bottom row: Activity Feed + Quick Links ═══ -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 brand-reveal" data-delay="0.25">
 
         <!-- Activity feed (2/3) -->
         <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
@@ -675,22 +675,43 @@ function renderStats() {
     .filter(d => ['won','deploying','active'].includes(d.stage) && d.value_monthly)
     .reduce((sum, d) => sum + Number(d.value_monthly), 0);
 
+  // WHY: MRR is a dollar value — split into prefix/suffix for the counter animation.
+  // Values under 1000 display raw; over 1000 display as "XK" shorthand.
+  const mrrDisplay = totalMRR >= 1000
+    ? { val: (totalMRR / 1000).toFixed(1), prefix: '$', suffix: 'K' }
+    : { val: totalMRR, prefix: '$', suffix: '' };
+
   const stats = [
-    { val: total, lbl: 'Pipeline', color: '#111827' },
-    { val: leads, lbl: 'Leads', color: '#64748b' },
-    { val: qualified, lbl: 'Qualified', color: '#0891b2' },
-    { val: proposed, lbl: 'Proposed', color: '#d97706' },
-    { val: won, lbl: 'Won', color: '#16a34a' },
-    { val: PROSPECTS.length, lbl: 'Prospects', color: '#6366f1' },
-    { val: totalMRR ? '$' + totalMRR.toLocaleString() : '$0', lbl: 'MRR', color: '#059669' },
+    { val: total, lbl: 'Pipeline', prefix: '', suffix: '' },
+    { val: leads, lbl: 'Leads', prefix: '', suffix: '' },
+    { val: qualified, lbl: 'Qualified', prefix: '', suffix: '' },
+    { val: proposed, lbl: 'Proposed', prefix: '', suffix: '' },
+    { val: won, lbl: 'Won', prefix: '', suffix: '' },
+    { val: PROSPECTS.length, lbl: 'Prospects', prefix: '', suffix: '' },
+    { val: mrrDisplay.val, lbl: 'MRR', prefix: mrrDisplay.prefix, suffix: mrrDisplay.suffix },
   ];
 
-  document.getElementById('statsRow').innerHTML = stats.map(s => `
-    <div class="stat-pill">
-      <span class="stat-val" style="color:${s.color}">${s.val}</span>
-      <span class="stat-lbl">${s.lbl}</span>
-    </div>
-  `).join('');
+  document.getElementById('statsRow').innerHTML = stats.map((s, i) => {
+    const delay = (0.1 + i * 0.05).toFixed(2);
+    return `
+    <div class="brand-stat brand-reveal" data-delay="${delay}">
+      <div class="brand-stat-val" data-counter="${s.val}" data-prefix="${s.prefix}" data-suffix="${s.suffix}">0</div>
+      <div class="brand-stat-lbl">${s.lbl}</div>
+      <div class="brand-stat-sparkline">
+        <div class="bar" style="height:8px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.4 + i * 0.08}s;"></div>
+        <div class="bar" style="height:14px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.5 + i * 0.08}s;"></div>
+        <div class="bar" style="height:10px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.6 + i * 0.08}s;"></div>
+        <div class="bar" style="height:18px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.7 + i * 0.08}s;"></div>
+        <div class="bar" style="height:12px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.8 + i * 0.08}s;"></div>
+        <div class="bar" style="height:22px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.9 + i * 0.08}s;"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // WHY: Re-init counters after dynamic render — brand.js auto-init runs on DOMContentLoaded
+  // which fires before deals are fetched, so we must trigger counters manually here.
+  initCounters();
+  initRevealAnimations();
 }
 
 // ── Workflow step counts ────────────────────────────────────────
@@ -834,16 +855,21 @@ function lookupCoords(city) {
 }
 
 function createProspectIcon() {
+  // WHY: Larger (28x38) and more saturated (#6366f1 indigo-500, opacity 0.85) than original
+  // so prospect pins are clearly visible at US-wide zoom level alongside deal pins
   return L.divIcon({
     className: 'deal-marker',
-    html: `<svg width="22" height="30" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+    html: `<svg width="28" height="38" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+      <defs><filter id="ds-prospect" x="-20%" y="-10%" width="140%" height="130%">
+        <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#4338ca" flood-opacity="0.3"/>
+      </filter></defs>
       <path d="M16 1C7.72 1 1 7.72 1 16c0 12 15 25 15 25s15-13 15-25C31 7.72 24.28 1 16 1z"
-            fill="#a5b4fc" stroke="white" stroke-width="1.5" opacity="0.7"/>
-      <circle cx="16" cy="16" r="4" fill="white" opacity="0.9"/>
+            fill="#6366f1" filter="url(#ds-prospect)" stroke="white" stroke-width="1.5" opacity="0.85"/>
+      <circle cx="16" cy="16" r="4.5" fill="white" opacity="0.95"/>
     </svg>`,
-    iconSize: [22, 30],
-    iconAnchor: [11, 30],
-    popupAnchor: [0, -26],
+    iconSize: [28, 38],
+    iconAnchor: [14, 38],
+    popupAnchor: [0, -34],
   });
 }
 
@@ -863,42 +889,58 @@ function initMap(container) {
   }
 
   ccMap.invalidateSize();
-  ccMap.eachLayer(layer => { if (layer instanceof L.Marker) ccMap.removeLayer(layer); });
+  // WHY: Remove existing markers AND cluster layers before re-rendering
+  ccMap.eachLayer(layer => {
+    if (layer instanceof L.Marker || layer instanceof L.MarkerClusterGroup) ccMap.removeLayer(layer);
+  });
 
   const allCoords = [];
 
-  // ── Prospect pins (render first so deal pins draw on top) ──
-  const prospectGroups = {};
+  // ── Prospect pins in a cluster group ──
+  // WHY: MarkerClusterGroup groups nearby prospect pins into numbered badges at low zoom.
+  // Clicking a cluster zooms in to reveal individual pins. Prevents 66 pins from piling up.
+  const prospectCluster = L.markerClusterGroup({
+    maxClusterRadius: 40, // WHY: 40px — clusters nearby pins but keeps distinct cities separate when zoomed
+    iconCreateFunction: function(cluster) {
+      const count = cluster.getChildCount();
+      const size = count > 10 ? 44 : count > 5 ? 38 : 32;
+      return L.divIcon({
+        html: `<div style="width:${size - 8}px;height:${size - 8}px;">${count}</div>`,
+        className: 'prospect-cluster',
+        iconSize: [size, size],
+      });
+    },
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+  });
+
   for (const p of PROSPECTS) {
     const coords = lookupCoords(p.city);
     if (!coords) continue;
-    const key = p.city.toLowerCase();
-    if (!prospectGroups[key]) prospectGroups[key] = { coords, items: [] };
-    prospectGroups[key].items.push(p);
-  }
-  for (const [, g] of Object.entries(prospectGroups)) {
-    g.items.forEach((p, i) => {
-      // WHY: Spread prospect pins in a circle around city center to avoid stacking
-      const angle = (i / g.items.length) * 2 * Math.PI;
-      const spread = 0.015 + (g.items.length > 5 ? 0.01 : 0); // Wider spread for bigger clusters
-      const pos = [g.coords[0] + Math.sin(angle) * spread, g.coords[1] + Math.cos(angle) * spread];
-      allCoords.push(pos);
+    // WHY: Small random jitter (±0.005° ≈ 500m) prevents exact coordinate stacking
+    // within the same city — gives the cluster algo distinct points to work with
+    const jitterLat = (Math.random() - 0.5) * 0.01;
+    const jitterLng = (Math.random() - 0.5) * 0.01;
+    const pos = [coords[0] + jitterLat, coords[1] + jitterLng];
+    allCoords.push(pos);
 
-      const marker = L.marker(pos, { icon: createProspectIcon() }).addTo(ccMap);
-      marker.bindPopup(`
-        <div class="map-popup">
-          <div class="popup-name">${escapeHtml(p.name)}</div>
-          <div class="popup-meta">${escapeHtml(p.brand)} &middot; ${escapeHtml(p.city)}</div>
-          <span class="popup-stage" style="background:#e0e7ff;color:#4338ca">Prospect</span>
-          <div class="popup-stats">
-            <div class="popup-stat"><span class="popup-stat-val">${p.keys || '—'}</span><span class="popup-stat-lbl">Keys</span></div>
-            <div class="popup-stat"><span class="popup-stat-val">${p.floors || '—'}</span><span class="popup-stat-lbl">Floors</span></div>
-          </div>
-          <a href="/pages/pipeline-prospects.html" class="popup-link">View Prospects &rarr;</a>
+    const marker = L.marker(pos, { icon: createProspectIcon() });
+    marker.bindPopup(`
+      <div class="map-popup">
+        <div class="popup-name">${escapeHtml(p.name)}</div>
+        <div class="popup-meta">${escapeHtml(p.brand)} &middot; ${escapeHtml(p.city)}</div>
+        <span class="popup-stage" style="background:#e0e7ff;color:#4338ca">Prospect</span>
+        <div class="popup-stats">
+          <div class="popup-stat"><span class="popup-stat-val">${p.keys || '—'}</span><span class="popup-stat-lbl">Keys</span></div>
+          <div class="popup-stat"><span class="popup-stat-val">${p.floors || '—'}</span><span class="popup-stat-lbl">Floors</span></div>
         </div>
-      `);
-    });
+        <a href="/pages/pipeline-prospects.html" class="popup-link">View Prospects &rarr;</a>
+      </div>
+    `);
+    prospectCluster.addLayer(marker);
   }
+  ccMap.addLayer(prospectCluster);
 
   // ── Deal pins ──
   const groups = {};
@@ -958,5 +1000,6 @@ function escapeHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
   </script>
+  <script src="/js/brand.js"></script>
 </body>
 </html>
