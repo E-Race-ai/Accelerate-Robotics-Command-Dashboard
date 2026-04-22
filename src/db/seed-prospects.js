@@ -20,8 +20,8 @@ function seedProspects() {
   const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
 
   const insertMarket = db.prepare(`
-    INSERT OR IGNORE INTO markets (id, name, cluster, color)
-    VALUES (?, ?, ?, ?)
+    INSERT OR IGNORE INTO markets (id, name, cluster, color, lat, lng)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
   const insertProspect = db.prepare(`
@@ -32,7 +32,7 @@ function seedProspects() {
 
   const seedAll = db.transaction(() => {
     for (const m of seed.markets) {
-      insertMarket.run(m.id, m.name, m.cluster, m.color);
+      insertMarket.run(m.id, m.name, m.cluster, m.color, m.lat || null, m.lng || null);
     }
     for (const p of seed.prospects) {
       insertProspect.run(
@@ -45,6 +45,15 @@ function seedProspects() {
   });
 
   seedAll();
+
+  // WHY: Backfill coordinates for markets seeded before lat/lng existed.
+  // Only updates markets where lat IS NULL, so manual overrides are preserved.
+  const updateCoords = db.prepare('UPDATE markets SET lat = ?, lng = ? WHERE id = ? AND lat IS NULL');
+  for (const m of seed.markets) {
+    if (m.lat != null && m.lng != null) {
+      updateCoords.run(m.lat, m.lng, m.id);
+    }
+  }
 }
 
 module.exports = { seedProspects };
