@@ -85,7 +85,38 @@ async function loadDeal() {
   activities = actRes.ok ? await actRes.json() : [];
 
   await discoverProposals();
+
+  /* WHY: Check if deal has a linked assessment for the workspace tab */
+  try {
+    const asmRes = await fetch(`/api/assessments?deal_id=${id}`);
+    if (asmRes.ok) {
+      const assessments = await asmRes.json();
+      if (assessments.length > 0) {
+        deal._assessmentId = assessments[0].id;
+      }
+    }
+  } catch (e) { /* No assessment endpoint or no assessment — OK */ }
+
   renderAll();
+
+  /* WHY: Fetch all deals for the deal switcher dropdown */
+  let allDeals = [];
+  try {
+    const allRes = await fetch('/api/deals');
+    if (allRes.ok) allDeals = await allRes.json();
+  } catch (e) { /* Switcher will just be empty */ }
+
+  /* Initialize workspace if workspace.js is loaded */
+  if (typeof initWorkspace === 'function') {
+    initWorkspace(deal, allDeals);
+
+    /* Set tab status dots based on available data */
+    wsUpdateTabDots({
+      assessment: deal._assessmentId ? 'in_progress' : 'not_started',
+      fleet: 'not_started',
+      proposal: availableProposals.length > 0 ? 'complete' : 'not_started',
+    });
+  }
 }
 
 // ── Mutations ──────────────────────────────────────────────────
@@ -167,6 +198,10 @@ function renderAll() {
   renderContacts();
   renderTimeline();
   renderNotes();
+  /* WHY: Workspace panels need their own render calls */
+  renderContactsPanel();
+  renderProposalsPanel();
+  initNotesEditor();
 }
 
 // ── Header ─────────────────────────────────────────────────────
@@ -230,6 +265,26 @@ function renderProposals() {
 
   if (!availableProposals.length) {
     el.innerHTML = '<p class="text-gray-400 text-sm">No proposals generated yet for this deal</p>';
+    return;
+  }
+
+  el.innerHTML = availableProposals.map(p => `
+    <a href="${p.url}" target="_blank" class="proposal-card" style="border-top: 3px solid ${p.color}">
+      <div class="proposal-icon">${p.icon}</div>
+      <div class="proposal-label">${escapeHtml(p.label)}</div>
+      <div class="proposal-desc">${escapeHtml(p.desc)}</div>
+      <div class="proposal-open">Open &rarr;</div>
+    </a>
+  `).join('');
+}
+
+
+function renderProposalsPanel() {
+  const el = document.getElementById('proposals-panel-grid');
+  if (!el) return;
+
+  if (!availableProposals.length) {
+    el.innerHTML = '<p class="text-gray-400 text-sm">No proposals generated yet for this deal.</p>';
     return;
   }
 
@@ -344,6 +399,32 @@ function renderContacts() {
   `).join('');
 }
 
+
+function renderContactsPanel() {
+  const el = document.getElementById('contacts-panel-list');
+  if (!el) return;
+  const contacts = facility?.contacts || [];
+
+  if (!contacts.length) {
+    el.innerHTML = '<p class="text-gray-400 text-sm">No contacts yet. Click "+ Add Contact" to add the first one.</p>';
+    return;
+  }
+
+  el.innerHTML = contacts.map(c => `
+    <div class="brand-glass" style="padding:16px;">
+      <div class="flex items-center flex-wrap gap-2 mb-2">
+        <strong class="text-sm text-gray-900">${escapeHtml(c.name)}</strong>
+        ${c.role ? `<span class="brand-badge brand-badge-purple">${escapeHtml(c.role.replace(/_/g, ' '))}</span>` : ''}
+      </div>
+      ${c.title ? `<p class="text-xs text-gray-500 mb-2">${escapeHtml(c.title)}</p>` : ''}
+      <div class="flex flex-wrap items-center gap-3">
+        ${c.email ? `<a href="mailto:${escapeHtml(c.email)}" class="text-xs text-blue-600 hover:underline">${escapeHtml(c.email)}</a>` : ''}
+        ${c.phone ? `<span class="text-xs text-gray-400">${escapeHtml(c.phone)}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
 // ── Activity timeline ──────────────────────────────────────────
 function renderTimeline() {
   const el = document.getElementById('activity-timeline');
@@ -391,6 +472,30 @@ function renderNotes() {
   const el = document.getElementById('notes-content');
   if (!el) return;
   el.textContent = deal.notes || 'No notes';
+}
+
+
+function initNotesEditor() {
+  const editor = document.getElementById('notes-editor');
+  if (!editor || !deal) return;
+  editor.value = deal.notes || '';
+}
+
+function onNotesChange() {
+  if (typeof wsAutoSave !== 'function') return;
+  wsAutoSave(async function() {
+    const editor = document.getElementById('notes-editor');
+    if (!editor || !deal) return;
+    const res = await fetch(`/api/deals/${deal.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: editor.value }),
+    });
+    if (!res.ok) throw new Error('Save failed');
+    deal.notes = editor.value;
+    /* WHY: Also update the notes display in the overview panel */
+    renderNotes();
+  });
 }
 
 // ── Modals ─────────────────────────────────────────────────────
