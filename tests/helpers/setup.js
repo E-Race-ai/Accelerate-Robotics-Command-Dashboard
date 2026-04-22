@@ -199,6 +199,42 @@ function createTestDb() {
       taken_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- WHY: Markets define geographic areas where Accelerate targets hotel prospects.
+    CREATE TABLE IF NOT EXISTS markets (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      cluster TEXT,
+      color TEXT,
+      notes TEXT,
+      lat REAL,
+      lng REAL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS prospects (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      market_id TEXT REFERENCES markets(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'staged' CHECK(status IN ('staged', 'confirmed')),
+      name TEXT NOT NULL,
+      address TEXT,
+      brand TEXT,
+      brand_class TEXT CHECK(brand_class IN ('luxury', 'soft', 'chain', 'independent')),
+      keys INTEGER,
+      floors INTEGER,
+      stars INTEGER CHECK(stars BETWEEN 1 AND 5),
+      signal TEXT,
+      operator TEXT,
+      portfolio TEXT,
+      monogram TEXT,
+      mono_color TEXT,
+      source TEXT NOT NULL DEFAULT 'manual' CHECK(source IN ('ai_research', 'manual')),
+      research_date TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_prospects_market ON prospects(market_id);
+    CREATE INDEX IF NOT EXISTS idx_prospects_status ON prospects(status);
     CREATE INDEX IF NOT EXISTS idx_deals_stage ON deals(stage);
     CREATE INDEX IF NOT EXISTS idx_deals_owner ON deals(owner);
     CREATE INDEX IF NOT EXISTS idx_facilities_type ON facilities(type);

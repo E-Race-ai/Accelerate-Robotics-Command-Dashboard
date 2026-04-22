@@ -243,6 +243,8 @@ db.exec(`
     cluster TEXT,
     color TEXT,
     notes TEXT,
+    lat REAL,
+    lng REAL,
     created_at TEXT DEFAULT (datetime('now'))
   );
 
@@ -277,6 +279,18 @@ try {
   db.exec("ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin' CHECK(role IN ('admin', 'sales', 'ops', 'viewer'))");
 } catch (e) {
   // WHY: SQLite throws "duplicate column name" if column already exists — safe to ignore
+  if (!e.message.includes('duplicate column')) throw e;
+}
+
+// WHY: Add lat/lng for map view — market-level geocoding is sufficient for territory visualization
+try {
+  db.exec("ALTER TABLE markets ADD COLUMN lat REAL");
+} catch (e) {
+  if (!e.message.includes('duplicate column')) throw e;
+}
+try {
+  db.exec("ALTER TABLE markets ADD COLUMN lng REAL");
+} catch (e) {
   if (!e.message.includes('duplicate column')) throw e;
 }
 
