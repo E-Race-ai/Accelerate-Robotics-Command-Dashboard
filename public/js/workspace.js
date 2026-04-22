@@ -31,6 +31,8 @@ var wsSwitcherOpen = false;
 var wsLoadedTabs = {};
 /* WHY: Track save state so the indicator can show Saved/Saving/Error */
 var wsSaveTimer = null;
+var wsHashChangeHandler = null;
+var wsClickHandler = null;
 
 /**
  * Initialize the workspace. Called after deal data is loaded.
@@ -53,12 +55,27 @@ function initWorkspace(deal, allDeals) {
   switchTab(wsCurrentTab);
 
   /* WHY: Listen for hash changes so browser back/forward navigates tabs */
-  window.addEventListener('hashchange', function() {
+  /* WHY: Remove previous listener to prevent double-fire if initWorkspace is called again */
+  if (wsHashChangeHandler) window.removeEventListener('hashchange', wsHashChangeHandler);
+  wsHashChangeHandler = function() {
     var h = window.location.hash.replace('#', '');
     if (h && h !== wsCurrentTab && WS_TABS.some(function(t) { return t.id === h; })) {
       switchTab(h);
     }
-  });
+  };
+  window.addEventListener('hashchange', wsHashChangeHandler);
+
+  /* WHY: Close switcher on outside click — standard dropdown UX.
+     Registered in initWorkspace so it can be cleaned up on re-init. */
+  if (wsClickHandler) document.removeEventListener('click', wsClickHandler);
+  wsClickHandler = function(e) {
+    if (wsSwitcherOpen && !e.target.closest('.ws-switcher-dropdown') && !e.target.closest('.ws-switcher-btn')) {
+      wsSwitcherOpen = false;
+      var dropdown = document.getElementById('ws-switcher');
+      if (dropdown) dropdown.classList.remove('open');
+    }
+  };
+  document.addEventListener('click', wsClickHandler);
 }
 
 /**
@@ -79,7 +96,7 @@ function renderWorkspaceBar() {
       '<div>' +
         '<div class="ws-deal-name">' + escapeHtml(wsDeal.name) + '</div>' +
         '<div class="ws-deal-opp">' + escapeHtml(wsDeal.id) + (arr ? ' · ' : '') +
-          '<span class="ws-deal-arr">' + arr + '</span>' +
+          '<span class="ws-deal-arr">' + escapeHtml(arr) + '</span>' +
         '</div>' +
       '</div>' +
       '<button class="ws-switcher-btn" onclick="toggleDealSwitcher()" title="Switch deal">' +
@@ -136,7 +153,7 @@ function renderDealSwitcherList(query) {
       '<div>' +
         '<div style="font-weight:700;font-size:0.82rem;color:var(--text)">' + escapeHtml(d.name) + '</div>' +
         '<div style="font-size:0.65rem;color:var(--text-faint)">' + escapeHtml(d.id) +
-          (arr ? ' · <span style="color:var(--blue);font-weight:700">' + arr + '</span>' : '') +
+          (arr ? ' · <span style="color:var(--blue);font-weight:700">' + escapeHtml(arr) + '</span>' : '') +
         '</div>' +
       '</div>' +
     '</a>';
@@ -158,15 +175,6 @@ function toggleDealSwitcher() {
 function filterDealSwitcher(query) {
   renderDealSwitcherList(query);
 }
-
-/* WHY: Close switcher on outside click — standard dropdown UX */
-document.addEventListener('click', function(e) {
-  if (wsSwitcherOpen && !e.target.closest('.ws-switcher-dropdown') && !e.target.closest('.ws-switcher-btn')) {
-    wsSwitcherOpen = false;
-    var dropdown = document.getElementById('ws-switcher');
-    if (dropdown) dropdown.classList.remove('open');
-  }
-});
 
 /**
  * Switch to a tab by id. Hides all panels, shows the target.
