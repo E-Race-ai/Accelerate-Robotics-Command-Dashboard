@@ -18,6 +18,9 @@ const assessmentRoutes = require('./routes/assessments');
 const assessmentPhotoRoutes = require('./routes/assessment-photos');
 const assessmentPdfRoutes = require('./routes/assessment-pdf');
 const narrateRoutes = require('./routes/narrate');
+const marketRoutes = require('./routes/markets');
+const prospectRoutes = require('./routes/prospects');
+const { seedProspects } = require('./db/seed-prospects');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -79,6 +82,9 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
 app.use('/pages', express.static(path.join(__dirname, '..', 'pages')));
 
+// WHY: Serve data/ directory for shared JSON files (CRM contacts, seed data)
+app.use('/data', express.static(path.join(__dirname, '..', 'data')));
+
 // WHY: Serve each hotel repo so proposal pages (with relative asset paths) work correctly from the deals dashboard
 const HOTEL_REPOS_DIR = path.join(__dirname, '..', '..');
 const hotelRepos = [
@@ -118,6 +124,8 @@ app.use('/api/assessments/:id/photos', assessmentPhotoRoutes);
 // the main assessment router. mergeParams gives it access to :id.
 app.use('/api/assessments/:id/pdf', assessmentPdfRoutes);
 app.use('/api/narrate', narrateLimiter, narrateRoutes);
+app.use('/api/markets', marketRoutes);
+app.use('/api/prospects', prospectRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
 // WHY: /admin is the master command center — unified dashboard for all tools
@@ -140,6 +148,8 @@ app.get('/admin/deals/:id', (req, res) => {
 });
 
 // ── Start ───────────────────────────────────────────────────────
+// WHY: Seed prospect data on first boot — idempotent, skips if data exists
+seedProspects();
 app.listen(PORT, () => {
   console.log(`[server] Accelerate Robotics running at http://localhost:${PORT}`);
 });

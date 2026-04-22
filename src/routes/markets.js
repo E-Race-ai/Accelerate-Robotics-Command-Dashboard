@@ -70,4 +70,28 @@ router.delete('/:id', requireAuth, (req, res) => {
   res.json({ deleted: true });
 });
 
+// ── Trigger AI market research ───────────────────────────────
+const { runResearch } = require('../services/market-research');
+
+router.post('/:id/research', requireAuth, async (req, res) => {
+  const { count } = req.body;
+  const validCounts = [5, 8, 10];
+  const targetCount = validCounts.includes(count) ? count : 10;
+
+  try {
+    const result = await runResearch(req.params.id, targetCount);
+    res.json(result);
+  } catch (err) {
+    // WHY: Distinguish between config errors (503) and API errors (502)
+    if (err.message.includes('not configured')) {
+      return res.status(503).json({ error: err.message });
+    }
+    if (err.message.includes('not found')) {
+      return res.status(404).json({ error: err.message });
+    }
+    console.error('[research]', err);
+    res.status(502).json({ error: err.message || 'Research failed — try again' });
+  }
+});
+
 module.exports = router;
