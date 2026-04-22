@@ -234,6 +234,42 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_assessment_stakeholders_assessment ON assessment_stakeholders(assessment_id);
   CREATE INDEX IF NOT EXISTS idx_assessment_photos_assessment ON assessment_photos(assessment_id);
   CREATE INDEX IF NOT EXISTS idx_assessment_photos_zone ON assessment_photos(zone_id);
+
+  -- WHY: Markets define geographic areas where Accelerate targets hotel prospects.
+  -- Prospects in the pipeline directly shape operational footprint and hiring pools.
+  CREATE TABLE IF NOT EXISTS markets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    cluster TEXT,
+    color TEXT,
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS prospects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    market_id TEXT REFERENCES markets(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'staged' CHECK(status IN ('staged', 'confirmed')),
+    name TEXT NOT NULL,
+    address TEXT,
+    brand TEXT,
+    brand_class TEXT CHECK(brand_class IN ('luxury', 'soft', 'chain', 'independent')),
+    keys INTEGER,
+    floors INTEGER,
+    stars INTEGER CHECK(stars BETWEEN 1 AND 5),
+    signal TEXT,
+    operator TEXT,
+    portfolio TEXT,
+    monogram TEXT,
+    mono_color TEXT,
+    source TEXT NOT NULL DEFAULT 'manual' CHECK(source IN ('ai_research', 'manual')),
+    research_date TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_prospects_market ON prospects(market_id);
+  CREATE INDEX IF NOT EXISTS idx_prospects_status ON prospects(status);
 `);
 
 // WHY: Add role column for role-based access control. ALTER TABLE ADD COLUMN is safe with IF NOT EXISTS guard.
