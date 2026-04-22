@@ -88,6 +88,9 @@
     <!-- Stats -->
     <div class="flex gap-3 flex-wrap mb-6 brand-reveal" data-delay="0.15" id="statsRow"></div>
 
+    <!-- Staging area for AI research results (rendered dynamically when STAGED_PROSPECTS exist) -->
+    <div id="stagingArea"></div>
+
     <!-- Controls -->
     <div class="no-print bg-white rounded-2xl shadow-sm p-5 mb-6 brand-reveal" data-delay="0.25">
       <div class="flex flex-wrap gap-4 items-center mb-4">
@@ -250,6 +253,7 @@ async function loadData() {
   buildClusterLabels();
   renderAll();
   renderMarketChips();
+  renderStagingArea();
 }
 
 function buildClusterLabels() {
@@ -524,6 +528,133 @@ function renderTable(filtered) {
       <td class="no-print"><button onclick="openDealModal(${p.id})" class="text-[0.7rem] font-semibold text-blue-600 hover:underline">+ Deal</button></td>
     </tr>`;
   }).join('');
+}
+
+// ── Staging Area ──────────────────────────────────────────────────
+function renderStagingArea() {
+  const container = document.getElementById('stagingArea');
+  if (!container) return;
+
+  if (!STAGED_PROSPECTS.length) {
+    container.innerHTML = '';
+    return;
+  }
+
+  // WHY: Group by market so each research batch is reviewable as a unit
+  const byMarket = {};
+  for (const p of STAGED_PROSPECTS) {
+    const key = p.market_id || 'unknown';
+    if (!byMarket[key]) byMarket[key] = { name: p.market_name || key, prospects: [] };
+    byMarket[key].prospects.push(p);
+  }
+
+  container.innerHTML = Object.entries(byMarket).map(([mktId, group]) => {
+    const connections = STAGED_CONNECTIONS[mktId] || [];
+    return `
+    <div class="bg-white rounded-2xl shadow-sm border border-blue-100 p-5 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="headline text-sm font-bold text-gray-900">&#128300; Research Results — ${esc(group.name)}</h3>
+          <p class="text-xs text-gray-400 mt-0.5">${group.prospects.length} hotels found · AI Researched — ${new Date().toLocaleDateString()}</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="selectAllStaged('${esc(mktId)}')" class="text-xs font-semibold text-blue-600 hover:underline">Select All</button>
+          <button onclick="confirmStaged('${esc(mktId)}')" class="brand-btn-primary px-4 py-1.5 text-xs">Add Selected to Pipeline</button>
+          <button onclick="discardStaged('${esc(mktId)}')" class="px-4 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-xl transition text-xs">Discard All</button>
+        </div>
+      </div>
+      <div class="space-y-2">
+        ${group.prospects.map(p => `
+          <div class="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:border-blue-200 transition" data-staged-id="${p.id}">
+            <input type="checkbox" checked class="mt-1 rounded staged-check" data-id="${p.id}" data-market="${esc(mktId)}">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <strong class="text-sm text-gray-900">${esc(p.name)}</strong>
+                <span class="text-xs text-gray-400">${p.keys || '?'} keys · ${p.floors || '?'} fl</span>
+                <span class="inline-block text-[0.6rem] font-semibold px-2 py-0.5 rounded ${BRAND_CLASS_BG[p.brand_class] || 'bg-gray-100 text-gray-600'}">${esc(p.brand || '')}</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">${esc(p.signal || '')}</p>
+              <p class="text-[0.6rem] text-gray-400 mt-0.5">${esc(p.operator || '')}${p.portfolio ? ' · ' + esc(p.portfolio) : ''}</p>
+            </div>
+            <button onclick="editStagedProspect(${p.id})" class="text-xs text-blue-600 hover:underline flex-shrink-0">Edit</button>
+          </div>
+        `).join('')}
+      </div>
+      ${connections.length ? `
+        <div class="mt-4 pt-4 border-t border-gray-100">
+          <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Strategic Connections</h4>
+          ${connections.map(c => `
+            <div class="flex items-start gap-2 mb-2">
+              <span class="inline-block text-[0.6rem] font-semibold px-2 py-0.5 rounded bg-purple-50 text-purple-700">${esc(c.keyword)}</span>
+              <span class="text-xs text-gray-400">(${c.prospectCount} prospect${c.prospectCount > 1 ? 's' : ''})</span>
+              <span class="text-xs text-gray-600">—</span>
+              ${c.contacts.map(ct => `<span class="text-xs"><strong class="text-gray-700">${esc(ct.name)}</strong>: <span class="text-gray-500">${esc(ct.snippet)}</span></span>`).join(', ')}
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>`;
+  }).join('');
+}
+
+function selectAllStaged(marketId) {
+  document.querySelectorAll(`.staged-check[data-market="${marketId}"]`).forEach(cb => { cb.checked = true; });
+}
+
+async function confirmStaged(marketId) {
+  const ids = Array.from(document.querySelectorAll(`.staged-check[data-market="${marketId}"]:checked`))
+    .map(cb => parseInt(cb.dataset.id, 10));
+
+  if (!ids.length) return;
+
+  const res = await fetch('/api/prospects/bulk-confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (res.ok) {
+    delete STAGED_CONNECTIONS[marketId];
+    await loadData();
+  }
+}
+
+async function discardStaged(marketId) {
+  const ids = STAGED_PROSPECTS.filter(p => p.market_id === marketId).map(p => p.id);
+  if (!ids.length) return;
+
+  if (!confirm(`Discard all ${ids.length} research results for this market?`)) return;
+
+  const res = await fetch('/api/prospects/bulk-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (res.ok) {
+    delete STAGED_CONNECTIONS[marketId];
+    await loadData();
+  }
+}
+
+function editStagedProspect(id) {
+  const p = STAGED_PROSPECTS.find(pr => pr.id === id);
+  if (!p) return;
+
+  const name = prompt('Hotel name:', p.name);
+  if (name === null) return;
+  const keys = prompt('Keys (room count):', p.keys);
+  const signal = prompt('Signal (opportunity reason):', p.signal);
+
+  fetch(`/api/prospects/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: name || p.name,
+      keys: keys ? parseInt(keys, 10) : p.keys,
+      signal: signal || p.signal,
+    }),
+  }).then(() => loadData());
 }
 
 // ── Controls ──────────────────────────────────────────────────────
