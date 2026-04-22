@@ -28,9 +28,45 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// WHY: Map deal IDs to their repo slugs so we can link to proposal pages served from /repos/{slug}/pages/
+const DEAL_REPO_MAP = {
+  'OPP-001': 'accelerate-thesis-hotel',
+  'OPP-002': 'accelerate-moore-miami',
+  'OPP-003': 'accelerate-art-ovation',
+  'OPP-004': 'accelerate-san-ramon-marriott',
+  'OPP-005': 'accelerate-lafayette-park',
+  'OPP-006': 'accelerate-claremont-resort',
+  'OPP-007': 'accelerate-kimpton-sawyer',
+  'OPP-008': 'accelerate-citizen-hotel',
+  'OPP-009': 'accelerate-westin-sacramento',
+};
+
+// WHY: Each proposal type has an icon, label, and description for the card grid
+const PROPOSAL_TYPES = [
+  { file: 'proposal-interactive.html', label: 'Interactive Proposal', desc: 'Fleet configurator with ROI calculator', icon: '⚡', color: '#7c3aed' },
+  { file: 'proposal.html', label: 'Full Proposal', desc: 'Print-ready executive proposal', icon: '📄', color: '#0055ff' },
+  { file: 'onepager.html', label: 'One-Pager', desc: 'Single-page overview for decision makers', icon: '📋', color: '#0891b2' },
+  { file: 'site-profile.html', label: 'Site Profile', desc: 'Facility assessment and floor plans', icon: '🏢', color: '#16a34a' },
+];
+
+// WHY: Moore Miami has extra pages beyond the standard set
+const EXTRA_PAGES = {
+  'accelerate-moore-miami': [
+    { file: 'intelligence-platform.html', label: 'Intelligence Platform', desc: 'AI-powered operations brain', icon: '🧠', color: '#d97706' },
+    { file: 'member-intel.html', label: 'Member Intelligence', desc: 'VIP recognition and personalization', icon: '👤', color: '#db2777' },
+    { file: 'ops-chatbot.html', label: 'Ops Chatbot', desc: 'Staff command interface', icon: '💬', color: '#059669' },
+  ],
+  'accelerate-thesis-hotel': [
+    { file: 'playbook.html', label: 'Deployment Playbook', desc: 'Phase-by-phase rollout guide', icon: '📘', color: '#d97706' },
+    { file: 'robot-solutions.html', label: 'Robot Solutions', desc: 'Solution comparison matrix', icon: '🤖', color: '#db2777' },
+    { file: 'carpet-robot-comparison.html', label: 'Carpet Robot Eval', desc: 'Cleaning robot head-to-head', icon: '🔬', color: '#059669' },
+  ],
+};
+
 let deal = null;
 let facility = null;
 let activities = [];
+let availableProposals = [];
 
 // ── Data loading ───────────────────────────────────────────────
 async function loadDeal() {
@@ -48,6 +84,7 @@ async function loadDeal() {
   // WHY: activities endpoint may 404 if deal has no activity yet — treat failure as empty
   activities = actRes.ok ? await actRes.json() : [];
 
+  await discoverProposals();
   renderAll();
 }
 
@@ -62,29 +99,69 @@ async function advanceStage(newStage) {
 }
 
 async function addChallenge(data) {
-  if (!facility) return;
-  await fetch(`/api/facilities/${facility.id}/challenges`, {
+  if (!facility) {
+    alert('This deal has no facility linked. Add a facility first.');
+    return;
+  }
+  const res = await fetch(`/api/facilities/${facility.id}/challenges`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to add challenge' }));
+    throw new Error(err.error);
+  }
   await loadDeal();
 }
 
 async function addContact(data) {
-  if (!facility) return;
-  await fetch(`/api/facilities/${facility.id}/contacts`, {
+  if (!facility) {
+    alert('This deal has no facility linked. Add a facility first.');
+    return;
+  }
+  const res = await fetch(`/api/facilities/${facility.id}/contacts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to add contact' }));
+    throw new Error(err.error);
+  }
   await loadDeal();
+}
+
+// ── Proposal discovery ────────────────────────────────────────
+async function discoverProposals() {
+  const repo = DEAL_REPO_MAP[deal.id];
+  if (!repo) {
+    availableProposals = [];
+    return;
+  }
+
+  const allTypes = [...PROPOSAL_TYPES, ...(EXTRA_PAGES[repo] || [])];
+  const checks = allTypes.map(async (t) => {
+    const url = `/repos/${repo}/pages/${t.file}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      // WHY: Some hotel repos still have raw template files with {{PLACEHOLDER}} tokens.
+      // Check for any unresolved {{...}} markers so we don't show broken proposals.
+      const html = await res.text();
+      if (/\{\{[A-Z_]{3,}\}\}/.test(html)) return null;
+      return { ...t, url };
+    } catch { return null; }
+  });
+
+  availableProposals = (await Promise.all(checks)).filter(Boolean);
 }
 
 // ── Render orchestration ───────────────────────────────────────
 function renderAll() {
   renderHeader();
   renderStageBar();
+  renderProposals();
   renderFacility();
   renderChallenges();
   renderContacts();
@@ -100,15 +177,14 @@ function renderHeader() {
     <div class="flex items-center gap-4 flex-wrap">
       <h1 class="text-2xl font-bold headline text-gray-900">${escapeHtml(deal.name)}</h1>
       <span class="px-3 py-1 rounded-lg text-xs font-bold bg-gray-100 text-gray-500">${escapeHtml(deal.id)}</span>
-      <span class="px-3 py-1 rounded-lg text-xs font-bold"
-            style="background:${STAGE_COLORS[deal.stage]}20;color:${STAGE_COLORS[deal.stage]}">
+      <span class="brand-badge" style="background:${STAGE_COLORS[deal.stage]}20;color:${STAGE_COLORS[deal.stage]}">
         ${STAGE_LABELS[deal.stage] || escapeHtml(deal.stage)}
       </span>
     </div>
     <p class="text-sm text-gray-400 mt-1">
       ${escapeHtml(deal.owner || 'Unassigned')}
       ${deal.source ? ' &middot; ' + escapeHtml(deal.source) : ''}
-      ${deal.value_monthly ? ' &middot; $' + Number(deal.value_monthly).toLocaleString() + '/mo' : ''}
+      ${deal.value_monthly ? ' &middot; <span class="gradient-text" style="font-weight:700">$' + Number(deal.value_monthly).toLocaleString() + '/mo</span>' : ''}
     </p>
   `;
 }
@@ -127,15 +203,16 @@ function renderStageBar() {
   el.innerHTML = pipelineStages.map((s, i) => {
     const isCurrent = s === deal.stage;
     const isPast = currentIdx >= 0 && i < currentIdx;
+    const isFuture = currentIdx >= 0 && i > currentIdx;
     const dotColor = isCurrent ? STAGE_COLORS[s] : (isPast ? '#16a34a' : '#e2e8f0');
     const textColor = isCurrent || isPast ? (isCurrent ? STAGE_COLORS[s] : '#16a34a') : '#94a3b8';
-    // WHY: Only allow advancing one step at a time — skipping stages loses audit trail
-    const clickable = i === currentIdx + 1 && deal.stage !== 'lost';
+    // WHY: Any non-current stage is clickable — Eric wants chess-piece movement along the pipeline
+    const clickable = !isCurrent && deal.stage !== 'lost';
 
     return `
-      <div class="stage-step ${clickable ? 'cursor-pointer hover:opacity-80' : ''}"
-           ${clickable ? `onclick="advanceStage('${s}')" title="Advance to ${STAGE_LABELS[s]}"` : ''}>
-        <div class="stage-dot"
+      <div class="stage-step ${clickable ? 'stage-clickable' : ''}"
+           ${clickable ? `onclick="advanceStage('${s}')" title="Move to ${STAGE_LABELS[s]}"` : ''}>
+        <div class="stage-dot ${isCurrent ? 'stage-dot-current' : ''}"
              style="background:${dotColor};${isCurrent ? 'box-shadow:0 0 0 4px ' + STAGE_COLORS[s] + '30' : ''}"></div>
         <span class="stage-label" style="color:${textColor}">${STAGE_LABELS[s]}</span>
       </div>
@@ -144,6 +221,26 @@ function renderStageBar() {
         : ''}
     `;
   }).join('');
+}
+
+// ── Proposals ─────────────────────────────────────────────────
+function renderProposals() {
+  const el = document.getElementById('proposals-grid');
+  if (!el) return;
+
+  if (!availableProposals.length) {
+    el.innerHTML = '<p class="text-gray-400 text-sm">No proposals generated yet for this deal</p>';
+    return;
+  }
+
+  el.innerHTML = availableProposals.map(p => `
+    <a href="${p.url}" target="_blank" class="proposal-card" style="border-top: 3px solid ${p.color}">
+      <div class="proposal-icon">${p.icon}</div>
+      <div class="proposal-label">${escapeHtml(p.label)}</div>
+      <div class="proposal-desc">${escapeHtml(p.desc)}</div>
+      <div class="proposal-open">Open &rarr;</div>
+    </a>
+  `).join('');
 }
 
 // ── Facility profile ───────────────────────────────────────────
@@ -233,11 +330,11 @@ function renderContacts() {
   }
 
   el.innerHTML = contacts.map(c => `
-    <div class="contact-item">
+    <div class="contact-item brand-glass">
       <div class="flex items-center flex-wrap gap-2">
         <strong class="text-sm text-gray-900">${escapeHtml(c.name)}</strong>
         ${c.title ? `<span class="text-xs text-gray-400">— ${escapeHtml(c.title)}</span>` : ''}
-        ${c.role ? `<span class="contact-role">${escapeHtml(c.role.replace(/_/g, ' '))}</span>` : ''}
+        ${c.role ? `<span class="brand-badge brand-badge-purple">${escapeHtml(c.role.replace(/_/g, ' '))}</span>` : ''}
       </div>
       <div class="flex flex-wrap items-center gap-3 mt-1">
         ${c.email ? `<a href="mailto:${escapeHtml(c.email)}" class="text-xs text-blue-600 hover:underline">${escapeHtml(c.email)}</a>` : ''}
@@ -321,31 +418,53 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('dashboard').classList.remove('hidden');
   document.getElementById('adminEmail').textContent = user.email;
 
-  await loadDeal();
-
+  // WHY: Register event listeners BEFORE async data loading so they're
+  // always wired up even if loadDeal() fails
   document.getElementById('challenge-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
-    await addChallenge({
-      category: form.category.value,
-      description: form.description.value,
-      priority: form.priority.value || 'medium',
-      current_cost_monthly: form.current_cost_monthly.value ? Number(form.current_cost_monthly.value) : null,
-      area_sqft: form.area_sqft.value ? Number(form.area_sqft.value) : null,
-    });
-    closeChallengeModal();
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Adding…';
+    try {
+      await addChallenge({
+        category: form.category.value,
+        description: form.description.value,
+        priority: form.priority.value || 'medium',
+        current_cost_monthly: form.current_cost_monthly.value ? Number(form.current_cost_monthly.value) : null,
+        area_sqft: form.area_sqft.value ? Number(form.area_sqft.value) : null,
+      });
+      closeChallengeModal();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Challenge';
+    }
   });
 
   document.getElementById('contact-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
-    await addContact({
-      name: form.contact_name.value,
-      title: form.title.value || null,
-      email: form.email.value || null,
-      phone: form.phone.value || null,
-      role: form.role.value || null,
-    });
-    closeContactModal();
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Adding…';
+    try {
+      await addContact({
+        name: form.contact_name.value,
+        title: form.title.value || null,
+        email: form.email.value || null,
+        phone: form.phone.value || null,
+        role: form.role.value || null,
+      });
+      closeContactModal();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Contact';
+    }
   });
+
+  await loadDeal();
 });
