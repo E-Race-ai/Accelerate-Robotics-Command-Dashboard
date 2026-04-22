@@ -129,6 +129,51 @@
       </div>
     </div>
 
+    <!-- Add Market form (collapsible) -->
+    <div id="addMarketForm" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+      <h3 class="headline text-sm font-bold text-gray-900 mb-4">Add New Market</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Market Name <span class="text-red-400">*</span></label>
+          <input type="text" id="mktName" placeholder="e.g. Austin" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Cluster</label>
+          <select id="mktCluster" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white">
+            <option value="">— Existing cluster or new —</option>
+          </select>
+          <input type="text" id="mktClusterNew" placeholder="New cluster name" class="hidden w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm mt-2">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Color</label>
+          <div class="flex gap-2" id="mktColorSwatches"></div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Strategic Notes</label>
+          <textarea id="mktNotes" rows="2" placeholder="Why this market? Hiring pool, operational footprint..." class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"></textarea>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 mt-4">
+        <label class="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" id="mktResearch" class="rounded"> Run AI Research
+        </label>
+        <select id="mktResearchCount" class="hidden px-3 py-1.5 rounded-lg border border-gray-200 text-sm">
+          <option value="5">5 hotels</option>
+          <option value="8" selected>8 hotels</option>
+          <option value="10">10 hotels</option>
+        </select>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button onclick="submitMarket()" class="brand-btn-primary px-5 py-2 text-sm">Add Market</button>
+        <button onclick="closeAddMarketForm()" class="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl transition text-sm">Cancel</button>
+      </div>
+      <div id="mktLoading" class="hidden mt-4 flex items-center gap-3 text-sm text-blue-600">
+        <div class="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+        <span id="mktLoadingText">Researching hotels...</span>
+      </div>
+      <p id="mktError" class="hidden text-red-600 text-xs font-medium mt-3"></p>
+    </div>
+
     <!-- Results count -->
     <div class="flex items-center justify-between mb-4">
       <span id="resultCount" class="text-sm font-medium text-gray-400"></span>
@@ -238,7 +283,124 @@ function getClusterColor(cluster) {
   return m?.color || '#64748b';
 }
 
-function openAddMarketForm() { /* Task 9 */ }
+// WHY: 8 distinct swatch colors — covers the hue wheel so adjacent markets are visually separable
+const SWATCH_COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#d97706', '#16a34a', '#dc2626', '#f59e0b', '#64748b'];
+let selectedColor = SWATCH_COLORS[0];
+
+function openAddMarketForm() {
+  const form = document.getElementById('addMarketForm');
+  form.classList.remove('hidden');
+
+  // Populate cluster dropdown
+  const sel = document.getElementById('mktCluster');
+  const clusters = [...new Set(MARKETS.map(m => m.cluster).filter(Boolean))];
+  sel.innerHTML = `<option value="">— Select cluster —</option>` +
+    clusters.map(c => `<option value="${c}">${CLUSTER_LABELS[c] || c}</option>`).join('') +
+    `<option value="__new__">+ New cluster</option>`;
+
+  // Color swatches
+  document.getElementById('mktColorSwatches').innerHTML = SWATCH_COLORS.map(c =>
+    `<button onclick="selectColor('${c}')" class="w-7 h-7 rounded-full border-2 transition" style="background:${c};border-color:${c === selectedColor ? '#111' : 'transparent'}" data-color="${c}"></button>`
+  ).join('');
+
+  // Research toggle
+  document.getElementById('mktResearch').addEventListener('change', e => {
+    document.getElementById('mktResearchCount').classList.toggle('hidden', !e.target.checked);
+  });
+
+  // Cluster new toggle
+  sel.addEventListener('change', () => {
+    document.getElementById('mktClusterNew').classList.toggle('hidden', sel.value !== '__new__');
+  });
+}
+
+function closeAddMarketForm() {
+  document.getElementById('addMarketForm').classList.add('hidden');
+  document.getElementById('mktError').classList.add('hidden');
+  document.getElementById('mktLoading').classList.add('hidden');
+}
+
+function selectColor(c) {
+  selectedColor = c;
+  document.querySelectorAll('#mktColorSwatches button').forEach(b => {
+    b.style.borderColor = b.dataset.color === c ? '#111' : 'transparent';
+  });
+}
+
+async function submitMarket() {
+  const name = document.getElementById('mktName').value.trim();
+  if (!name) {
+    showMktError('Market name is required');
+    return;
+  }
+
+  const clusterSel = document.getElementById('mktCluster').value;
+  const cluster = clusterSel === '__new__'
+    ? document.getElementById('mktClusterNew').value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    : clusterSel || null;
+
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+  const notes = document.getElementById('mktNotes').value.trim() || null;
+  const doResearch = document.getElementById('mktResearch').checked;
+  const count = parseInt(document.getElementById('mktResearchCount').value, 10);
+
+  const errEl = document.getElementById('mktError');
+  errEl.classList.add('hidden');
+
+  try {
+    // Create market
+    const res = await fetch('/api/markets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name, cluster, color: selectedColor, notes }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create market');
+    }
+
+    if (doResearch) {
+      // Show loading state
+      document.getElementById('mktLoading').classList.remove('hidden');
+      document.getElementById('mktLoadingText').textContent = `Researching ${name} hotels... this takes 15\u201330 seconds`;
+
+      const rRes = await fetch(`/api/markets/${id}/research`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count }),
+      });
+      document.getElementById('mktLoading').classList.add('hidden');
+
+      if (!rRes.ok) {
+        const err = await rRes.json();
+        // WHY: Market was created even if research fails — still show it
+        await loadData();
+        closeAddMarketForm();
+        showMktError(err.error || 'Research failed — market created but no prospects added');
+        return;
+      }
+
+      const result = await rRes.json();
+      // Store connections for this market's staging area
+      if (result.connections?.length) {
+        STAGED_CONNECTIONS[id] = result.connections;
+      }
+    }
+
+    await loadData();
+    closeAddMarketForm();
+  } catch (err) {
+    document.getElementById('mktLoading').classList.add('hidden');
+    showMktError(err.message);
+  }
+}
+
+function showMktError(msg) {
+  const el = document.getElementById('mktError');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
 const BRAND_CLASS_COLORS = {luxury:'#7c3aed',soft:'#2563eb',chain:'#6b7280',independent:'#16a34a'};
 const BRAND_CLASS_BG = {luxury:'bg-purple-50 text-purple-700',soft:'bg-blue-50 text-blue-700',chain:'bg-gray-100 text-gray-600',independent:'bg-green-50 text-green-700'};
 
