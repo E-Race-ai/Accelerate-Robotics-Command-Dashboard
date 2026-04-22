@@ -2,7 +2,8 @@
 
 // ── State ──────────────────────────────────────────────────────
 let deals = [];
-let view = 'kanban'; // 'kanban' or 'table'
+let view = 'kanban'; // 'kanban', 'table', or 'map'
+let dealMap = null; // Leaflet map instance — lazy-initialized
 
 const STAGES = ['lead', 'qualified', 'site_walk', 'configured', 'proposed', 'negotiation', 'won', 'deploying', 'active', 'lost'];
 const STAGE_LABELS = {
@@ -46,6 +47,16 @@ async function updateDealStage(id, stage) {
   await fetchDeals();
 }
 
+// WHY: Called from kanban card "Move to..." dropdown — wraps updateDealStage with reset on cancel
+async function moveDeal(id, newStage) {
+  if (!newStage) return; // User selected the placeholder "Move to..." option
+  await updateDealStage(id, newStage);
+  // WHY: Celebrate closing a deal — visual reward reinforces pipeline momentum
+  if (newStage === 'won' && typeof fireConfetti === 'function') {
+    fireConfetti(document.getElementById('confettiCanvas'));
+  }
+}
+
 // ── Render ──────────────────────────────────────────────────────
 function render() {
   const q = document.getElementById('deal-search')?.value?.toLowerCase() || '';
@@ -55,23 +66,24 @@ function render() {
   });
 
   renderStats(filtered);
-  if (view === 'kanban') {
-    document.getElementById('deal-kanban').classList.remove('hidden');
-    document.getElementById('deal-table-wrap')?.classList.add('hidden');
-    renderKanban(filtered);
-  } else {
-    document.getElementById('deal-kanban').classList.add('hidden');
-    document.getElementById('deal-table-wrap')?.classList.remove('hidden');
-    renderTable(filtered);
-  }
+
+  // Show/hide view containers
+  document.getElementById('deal-kanban').classList.toggle('hidden', view !== 'kanban');
+  document.getElementById('deal-table-wrap')?.classList.toggle('hidden', view !== 'table');
+  document.getElementById('deal-map-wrap')?.classList.toggle('hidden', view !== 'map');
+
+  if (view === 'kanban') renderKanban(filtered);
+  else if (view === 'table') renderTable(filtered);
+  else if (view === 'map') renderMap(filtered);
 
   // Update toggle button states
-  document.getElementById('view-kanban')?.classList.toggle('bg-blue-600', view === 'kanban');
-  document.getElementById('view-kanban')?.classList.toggle('text-white', view === 'kanban');
-  document.getElementById('view-kanban')?.classList.toggle('text-gray-500', view !== 'kanban');
-  document.getElementById('view-table')?.classList.toggle('bg-blue-600', view === 'table');
-  document.getElementById('view-table')?.classList.toggle('text-white', view === 'table');
-  document.getElementById('view-table')?.classList.toggle('text-gray-500', view !== 'table');
+  for (const v of ['kanban', 'table', 'map']) {
+    const btn = document.getElementById('view-' + v);
+    if (!btn) continue;
+    btn.classList.toggle('bg-blue-600', view === v);
+    btn.classList.toggle('text-white', view === v);
+    btn.classList.toggle('text-gray-500', view !== v);
+  }
 }
 
 function renderStats(filtered) {
@@ -82,12 +94,29 @@ function renderStats(filtered) {
   filtered.forEach(d => { if (stageCounts[d.stage] !== undefined) stageCounts[d.stage]++; });
 
   el.innerHTML = `
-    <div class="stat"><span class="stat-value">${filtered.length}</span><span class="stat-label">Total</span></div>
+    <div class="brand-stat"><span class="brand-stat-val" data-counter="${filtered.length}">${filtered.length}</span><span class="brand-stat-lbl">Total</span></div>
     ${['lead', 'qualified', 'proposed', 'won', 'active'].map(s =>
-      `<div class="stat"><span class="stat-value" style="color:${STAGE_COLORS[s]}">${stageCounts[s]}</span><span class="stat-label">${STAGE_LABELS[s]}</span></div>`
+      `<div class="brand-stat"><span class="brand-stat-val" data-counter="${stageCounts[s]}">${stageCounts[s]}</span><span class="brand-stat-lbl">${STAGE_LABELS[s]}</span></div>`
     ).join('')}
   `;
+
+  // WHY: Re-run counters after dynamic stat rendering — brand.js auto-init fires only on DOMContentLoaded
+  if (typeof initCounters === 'function') initCounters();
 }
+
+// WHY: Map stage keys to badge color classes for branded stage badges
+const STAGE_BADGE_CLASSES = {
+  lead: 'brand-badge brand-badge-blue',
+  qualified: 'brand-badge brand-badge-cyan',
+  site_walk: 'brand-badge brand-badge-purple',
+  configured: 'brand-badge brand-badge-blue',
+  proposed: 'brand-badge brand-badge-amber',
+  negotiation: 'brand-badge brand-badge-amber',
+  won: 'brand-badge brand-badge-green',
+  deploying: 'brand-badge brand-badge-green',
+  active: 'brand-badge brand-badge-green',
+  lost: 'brand-badge brand-badge-amber'
+};
 
 function renderKanban(filtered) {
   const el = document.getElementById('deal-kanban');
@@ -103,18 +132,69 @@ function renderKanban(filtered) {
           <span class="kanban-count">${stageDeals.length}</span>
         </div>
         <div class="kanban-cards">
-          ${stageDeals.map(d => `
-            <a href="/admin/deals/${d.id}" class="deal-card">
-              <div class="deal-name">${escapeHtml(d.name)}</div>
-              <div class="deal-meta">${escapeHtml(d.facility_type || '')}${d.facility_type && (d.city || d.state) ? ' &middot; ' : ''}${escapeHtml(d.city || '')}${d.state ? ', ' + escapeHtml(d.state) : ''}</div>
-              ${d.value_monthly ? `<div class="deal-value">$${Number(d.value_monthly).toLocaleString()}/mo</div>` : ''}
-              <div class="deal-owner">${escapeHtml(d.owner || 'Unassigned')}</div>
-            </a>
-          `).join('')}
+          ${stageDeals.map(d => {
+            const moveOptions = STAGES.filter(s => s !== stage && s !== 'lost')
+              .map(s => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('');
+            return `
+            <div class="deal-card brand-deal-card">
+              <div class="brand-deal-stripe" style="background:linear-gradient(180deg, ${STAGE_COLORS[stage]}, ${STAGE_COLORS[stage]}88);"></div>
+              <a href="/admin/deals/${d.id}" style="text-decoration:none;color:inherit;">
+                <div class="brand-deal-name">${escapeHtml(d.name)}</div>
+                <div class="brand-deal-meta">${escapeHtml(d.facility_type || '')}${d.facility_type && (d.city || d.state) ? ' &middot; ' : ''}${escapeHtml(d.city || '')}${d.state ? ', ' + escapeHtml(d.state) : ''}</div>
+                ${d.value_monthly ? `<div class="brand-deal-arr">$${Number(d.value_monthly).toLocaleString()}/mo</div>` : ''}
+                <div class="brand-deal-badges">
+                  <span class="${STAGE_BADGE_CLASSES[stage] || 'brand-badge brand-badge-blue'}">${STAGE_LABELS[stage]}</span>
+                </div>
+                <div class="deal-owner">${escapeHtml(d.owner || 'Unassigned')}</div>
+              </a>
+              <div class="card-actions" onclick="event.stopPropagation()">
+                <a href="/admin/deals/${d.id}" class="card-action">Edit</a>
+                <select class="card-move-select" onchange="moveDeal('${d.id}', this.value)">
+                  <option value="">Move to...</option>
+                  ${moveOptions}
+                </select>
+                <button class="card-action danger" onclick="deleteDeal('${d.id}', '${escapeHtml(d.name).replace(/'/g, "\\'")}')">Delete</button>
+              </div>
+            </div>`;
+          }).join('')}
         </div>
       </div>
     `;
   }).join('');
+}
+
+// WHY: Human-readable labels for activity actions — matches what the API stores
+const ACTION_LABELS = {
+  deal_created: 'created deal',
+  stage_changed: 'moved stage',
+  note_added: 'added note',
+  contact_added: 'added contact',
+  challenge_added: 'added challenge',
+};
+
+function formatActivity(d) {
+  if (!d.last_activity_action) return '<span class="text-gray-300">—</span>';
+
+  const actor = escapeHtml((d.last_activity_actor || '').split('@')[0]); // WHY: Show "eric" not full email — saves column width
+  const action = ACTION_LABELS[d.last_activity_action] || escapeHtml(d.last_activity_action.replace(/_/g, ' '));
+
+  // WHY: For stage changes, show the transition (e.g. "Lead → Qualified") so Eric sees at a glance what happened
+  let extra = '';
+  if (d.last_activity_action === 'stage_changed' && d.last_activity_detail) {
+    try {
+      const parsed = JSON.parse(d.last_activity_detail);
+      if (parsed.from && parsed.to) {
+        extra = ` <span class="text-gray-400">${STAGE_LABELS[parsed.from] || parsed.from} → ${STAGE_LABELS[parsed.to] || parsed.to}</span>`;
+      }
+    } catch { /* non-JSON detail, skip */ }
+  }
+
+  const when = d.last_activity_at ? new Date(d.last_activity_at).toLocaleDateString() : '';
+
+  return `<div class="activity-snippet">
+    <div class="text-xs"><span class="actor">${actor}</span> <span class="action">${action}</span>${extra}</div>
+    ${when ? `<div class="when">${when}</div>` : ''}
+  </div>`;
 }
 
 function renderTable(filtered) {
@@ -129,18 +209,217 @@ function renderTable(filtered) {
   }
   emptyEl?.classList.add('hidden');
 
-  el.innerHTML = filtered.map(d => `
-    <tr onclick="window.location='/admin/deals/${d.id}'" style="cursor:pointer" class="border-t border-gray-50 hover:bg-gray-50 transition">
-      <td class="px-4 py-3 font-semibold text-gray-400 text-xs">${escapeHtml(d.id)}</td>
-      <td class="px-4 py-3 font-semibold text-gray-900">${escapeHtml(d.name)}</td>
-      <td class="px-4 py-3"><span style="background:${STAGE_COLORS[d.stage]}20;color:${STAGE_COLORS[d.stage]};padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;white-space:nowrap">${STAGE_LABELS[d.stage] || d.stage}</span></td>
-      <td class="px-4 py-3 text-gray-500">${escapeHtml(d.facility_type || '—')}</td>
+  el.innerHTML = filtered.map(d => {
+    // WHY: Build <option> list with current stage selected — allows any stage, not just "next"
+    const stageOptions = STAGES.map(s =>
+      `<option value="${s}" ${s === d.stage ? 'selected' : ''}>${STAGE_LABELS[s]}</option>`
+    ).join('');
+
+    return `
+    <tr class="border-t border-gray-50 hover:bg-gray-50 transition">
+      <td class="px-4 py-3 font-semibold text-gray-400 text-xs">
+        <a href="/admin/deals/${d.id}" class="hover:text-blue-600 transition">${escapeHtml(d.id)}</a>
+      </td>
+      <td class="px-4 py-3 font-semibold text-gray-900">
+        <a href="/admin/deals/${d.id}" class="hover:text-blue-600 transition">${escapeHtml(d.name)}</a>
+      </td>
+      <td class="px-4 py-3">
+        <select class="stage-select"
+                style="background-color:${STAGE_COLORS[d.stage]}15;color:${STAGE_COLORS[d.stage]}"
+                onchange="handleStageChange('${d.id}', this.value, this)">
+          ${stageOptions}
+        </select>
+      </td>
       <td class="px-4 py-3 text-gray-500">${escapeHtml(d.city || '')}${d.state ? ', ' + escapeHtml(d.state) : (d.city ? '' : '—')}</td>
-      <td class="px-4 py-3 text-gray-500">${escapeHtml(d.owner || '—')}</td>
-      <td class="px-4 py-3 font-semibold text-blue-600">${d.value_monthly ? '$' + Number(d.value_monthly).toLocaleString() : '—'}</td>
+      <td class="px-4 py-3 text-gray-500 text-xs">${escapeHtml(d.owner || '—')}</td>
+      <td class="px-4 py-3">${formatActivity(d)}</td>
       <td class="px-4 py-3 text-gray-400 text-xs">${d.updated_at ? new Date(d.updated_at).toLocaleDateString() : '—'}</td>
+      <td class="px-4 py-3">
+        <button onclick="deleteDeal('${d.id}', '${escapeHtml(d.name).replace(/'/g, "\\'")}')"
+                class="text-gray-300 hover:text-red-500 transition" title="Delete deal">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </button>
+      </td>
     </tr>
-  `).join('');
+  `;}).join('');
+}
+
+async function deleteDeal(id, name) {
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  const res = await fetch(`/api/deals/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to delete deal' }));
+    alert(err.error);
+    return;
+  }
+  await fetchDeals();
+}
+
+// WHY: Handles dropdown change — updates the deal stage via API and refreshes, with color feedback
+async function handleStageChange(dealId, newStage, selectEl) {
+  const origColor = selectEl.style.color;
+  selectEl.style.opacity = '0.5';
+  try {
+    await updateDealStage(dealId, newStage);
+    // WHY: Celebrate closing a deal from table view too
+    if (newStage === 'won' && typeof fireConfetti === 'function') {
+      fireConfetti(document.getElementById('confettiCanvas'));
+    }
+  } catch {
+    selectEl.style.opacity = '1';
+    selectEl.style.color = origColor;
+  }
+}
+
+// ── Map view ──────────────────────────────────────────────────────
+// WHY: Hardcoded coordinates for known deal cities — avoids external geocoding
+// API calls. Covers all current deal locations plus common US hotel markets.
+const CITY_COORDS = {
+  'miami_fl': [25.7617, -80.1918],
+  'sarasota_fl': [27.3364, -82.5307],
+  'san ramon_ca': [37.7799, -121.9780],
+  'lafayette_ca': [37.8858, -122.1180],
+  'berkeley_ca': [37.8716, -122.2727],
+  'sacramento_ca': [38.5816, -121.4944],
+  'los angeles_ca': [34.0522, -118.2437],
+  'san francisco_ca': [37.7749, -122.4194],
+  'new york_ny': [40.7128, -74.0060],
+  'chicago_il': [41.8781, -87.6298],
+  'houston_tx': [29.7604, -95.3698],
+  'dallas_tx': [32.7767, -96.7970],
+  'atlanta_ga': [33.7490, -84.3880],
+  'orlando_fl': [28.5383, -81.3792],
+  'denver_co': [39.7392, -104.9903],
+  'seattle_wa': [47.6062, -122.3321],
+  'boston_ma': [42.3601, -71.0589],
+  'nashville_tn': [36.1627, -86.7816],
+  'las vegas_nv': [36.1699, -115.1398],
+  'phoenix_az': [33.4484, -112.0740],
+  'san diego_ca': [32.7157, -117.1611],
+  'tampa_fl': [27.9506, -82.4572],
+  'fort lauderdale_fl': [26.1224, -80.1373],
+  'charlotte_nc': [35.2271, -80.8431],
+  'minneapolis_mn': [44.9778, -93.2650],
+  'portland_or': [45.5152, -122.6784],
+  'austin_tx': [30.2672, -97.7431],
+  'san jose_ca': [37.3382, -121.8863],
+  'washington_dc': [38.9072, -77.0369],
+  'philadelphia_pa': [39.9526, -75.1652],
+};
+
+function getCityKey(city, state) {
+  return (city + '_' + state).toLowerCase().trim();
+}
+
+function createStageIcon(stage) {
+  const color = STAGE_COLORS[stage] || '#64748b';
+  // WHY: Custom SVG map pin with drop shadow — bold colors pop on the Voyager tiles.
+  return L.divIcon({
+    className: 'deal-marker',
+    html: `<svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="ds-${stage}" x="-20%" y="-10%" width="140%" height="130%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.25"/>
+        </filter>
+      </defs>
+      <path d="M16 1C7.72 1 1 7.72 1 16c0 12 15 25 15 25s15-13 15-25C31 7.72 24.28 1 16 1z"
+            fill="${color}" filter="url(#ds-${stage})" stroke="white" stroke-width="1.5"/>
+      <circle cx="16" cy="16" r="6" fill="white"/>
+    </svg>`,
+    iconSize: [32, 42],
+    iconAnchor: [16, 42],
+    popupAnchor: [0, -38],
+  });
+}
+
+function renderMap(filtered) {
+  const container = document.getElementById('deal-map');
+  if (!container) return;
+
+  // WHY: Leaflet is loaded from CDN — guard against it not being ready yet
+  if (typeof L === 'undefined') {
+    container.innerHTML = '<p style="padding:40px;text-align:center;color:#9ca3af">Loading map library…</p>';
+    return;
+  }
+
+  // WHY: Leaflet needs a visible container with real dimensions to render tiles.
+  // Use requestAnimationFrame to ensure the browser has reflowed after removing
+  // the 'hidden' class, THEN initialize. Without this, the container reports 0×0
+  // and tiles never load.
+  requestAnimationFrame(() => {
+    initMap(container, filtered);
+  });
+}
+
+function initMap(container, filtered) {
+  if (!dealMap) {
+    // WHY: Center on continental US with zoom level that shows all 48 states
+    dealMap = L.map('deal-map', { scrollWheelZoom: true }).setView([39.5, -98.5], 4);
+    // WHY: CartoDB Voyager tiles — clean, colorful, modern map style with vibrant colors.
+    // Free, no API key, no referer issues.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      subdomains: 'abcd',
+      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    }).addTo(dealMap);
+  }
+
+  // WHY: Force Leaflet to recalculate container size — critical after unhiding
+  dealMap.invalidateSize();
+
+  // Clear existing markers
+  dealMap.eachLayer(layer => {
+    if (layer instanceof L.Marker) dealMap.removeLayer(layer);
+  });
+
+  // WHY: Group deals at the same city so we can offset overlapping markers
+  const locationGroups = {};
+
+  for (const d of filtered) {
+    if (!d.city || !d.state) continue;
+    const key = getCityKey(d.city, d.state);
+    const coords = CITY_COORDS[key];
+    if (!coords) continue;
+    if (!locationGroups[key]) locationGroups[key] = { coords, deals: [] };
+    locationGroups[key].deals.push(d);
+  }
+
+  const allCoords = [];
+
+  for (const [, group] of Object.entries(locationGroups)) {
+    const { coords, deals: groupDeals } = group;
+    groupDeals.forEach((d, i) => {
+      // WHY: Offset multiple deals at same location so pins don't stack directly on top of each other
+      const offsetLat = i * 0.008;
+      const offsetLng = i * 0.012;
+      const pos = [coords[0] + offsetLat, coords[1] + offsetLng];
+      allCoords.push(pos);
+
+      const marker = L.marker(pos, { icon: createStageIcon(d.stage) }).addTo(dealMap);
+      const stageColor = STAGE_COLORS[d.stage] || '#64748b';
+      marker.bindPopup(`
+        <div class="map-popup">
+          <div class="popup-name">${escapeHtml(d.name)}</div>
+          <div class="popup-meta">${escapeHtml(d.facility_type || 'Hotel')} &middot; ${escapeHtml(d.city || '')}${d.state ? ', ' + escapeHtml(d.state) : ''}</div>
+          <span class="popup-stage" style="background:${stageColor}20;color:${stageColor}">${STAGE_LABELS[d.stage] || d.stage}</span>
+          ${d.value_monthly ? `<div class="popup-meta">$${Number(d.value_monthly).toLocaleString()}/mo</div>` : ''}
+          <div class="popup-meta">${escapeHtml(d.owner || 'Unassigned')}</div>
+          <a href="/admin/deals/${d.id}" class="popup-link">View Deal &rarr;</a>
+        </div>
+      `);
+    });
+  }
+
+  // WHY: Auto-fit map bounds to show all deal markers with padding
+  if (allCoords.length > 0) {
+    dealMap.fitBounds(allCoords, { padding: [50, 50], maxZoom: 12 });
+  }
+
+  // WHY: Second invalidateSize after markers/bounds are set — Leaflet
+  // sometimes miscalculates tile positions on first paint
+  setTimeout(() => dealMap.invalidateSize(), 250);
 }
 
 // ── Escape helper ───────────────────────────────────────────────
@@ -173,15 +452,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('dashboard').classList.remove('hidden');
   document.getElementById('adminEmail').textContent = user.email;
 
-  await fetchDeals();
-
+  // WHY: Register event listeners BEFORE async data loading so they're
+  // always wired up even if fetchDeals() fails
   document.getElementById('deal-search')?.addEventListener('input', render);
   document.getElementById('view-kanban')?.addEventListener('click', () => { view = 'kanban'; render(); });
   document.getElementById('view-table')?.addEventListener('click', () => { view = 'table'; render(); });
+  document.getElementById('view-map')?.addEventListener('click', () => { view = 'map'; render(); });
 
   document.getElementById('new-deal-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating…';
     const data = {
       name: form.name.value,
       source: form.source.value || null,
@@ -193,6 +476,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeNewDealModal();
     } catch (err) {
       alert(err.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Create Deal';
     }
   });
+
+  await fetchDeals();
 });
