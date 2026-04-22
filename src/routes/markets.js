@@ -46,15 +46,17 @@ router.patch('/:id', requireAuth, (req, res) => {
   const market = db.prepare('SELECT * FROM markets WHERE id = ?').get(req.params.id);
   if (!market) return res.status(404).json({ error: 'Market not found' });
 
-  const { name, cluster, color, notes } = req.body;
+  const { name, cluster, color, notes, lat, lng } = req.body;
   db.prepare(`
     UPDATE markets SET
       name = COALESCE(?, name),
       cluster = COALESCE(?, cluster),
       color = COALESCE(?, color),
-      notes = COALESCE(?, notes)
+      notes = COALESCE(?, notes),
+      lat = COALESCE(?, lat),
+      lng = COALESCE(?, lng)
     WHERE id = ?
-  `).run(name, cluster, color, notes, req.params.id);
+  `).run(name, cluster, color, notes, lat, lng, req.params.id);
 
   const updated = db.prepare('SELECT * FROM markets WHERE id = ?').get(req.params.id);
   res.json(updated);
