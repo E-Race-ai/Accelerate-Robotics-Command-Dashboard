@@ -27,7 +27,7 @@ router.post('/login', async (req, res) => {
   }
 
   const token = jwt.sign(
-    { id: user.id, email: user.email },
+    { id: user.id, email: user.email, role: user.role || 'admin' },
     JWT_SECRET,
     { expiresIn: '24h' }
   );
@@ -48,7 +48,7 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', requireAuth, (req, res) => {
-  res.json({ email: req.admin.email });
+  res.json({ email: req.admin.email, role: req.admin.role });
 });
 
 module.exports = router;

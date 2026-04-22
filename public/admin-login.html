@@ -6,6 +6,7 @@
   <title>Admin Login — Accelerate Robotics</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/brand.css">
   <style>
     * { font-family: 'Inter', system-ui, sans-serif; }
     h1, h2, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
@@ -15,7 +16,8 @@
 
   <div class="w-full max-w-md">
     <div class="text-center mb-8">
-      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/20 mb-4">
+      <div class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+           style="background:linear-gradient(135deg, var(--blue), var(--cyan));box-shadow:0 4px 14px rgba(0,85,255,0.25);">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white" stroke="white" stroke-width="1.5"/></svg>
       </div>
       <h1 class="text-2xl font-bold headline">Admin Login</h1>
@@ -34,7 +36,8 @@
                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition">
       </div>
       <button type="submit"
-              class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition shadow-md shadow-blue-600/20">
+              class="brand-btn-primary w-full py-3 font-semibold rounded-xl transition"
+              style="font-size:0.95rem;">
         Sign In
       </button>
       <p id="loginError" class="text-red-600 text-sm font-medium text-center hidden"></p>
@@ -47,8 +50,13 @@
 
   <script src="/js/admin-auth.js"></script>
   <script>
+    // WHY: Read ?return= param so login redirects back to the page that sent the user here
+    const returnUrl = new URLSearchParams(window.location.search).get('return') || '/admin';
+    // WHY: Only allow relative paths to prevent open redirect attacks
+    const safeReturn = returnUrl.startsWith('/') ? returnUrl : '/admin';
+
     // WHY: Redirect to dashboard if already logged in so admins don't see the login page unnecessarily
-    checkAuth().then(user => { if (user) window.location.href = '/admin'; });
+    checkAuth().then(user => { if (user) window.location.href = safeReturn; });
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -71,7 +79,7 @@
         });
         const data = await res.json();
         if (res.ok) {
-          window.location.href = '/admin';
+          window.location.href = safeReturn;
         } else {
           errEl.textContent = data.error || 'Login failed';
           errEl.classList.remove('hidden');

@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prospect Pipeline — Accelerate Robotics</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<!-- WHY: Leaflet CSS loaded unconditionally since it's tiny (4KB) and avoids FOUC when switching to map view -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9/dist/leaflet.css">
+<style>
+  * { font-family: 'Inter', system-ui, sans-serif; }
+  h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 100px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: all 0.15s; border: 1.5px solid transparent; user-select: none; }
+  .chip:hover { transform: translateY(-1px); }
+  .chip.active { border-color: currentColor; }
+
+  /* WHY: prospect-card styles removed — now using brand-deal-card from brand.css */
+
+  .monogram { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; color: white; flex-shrink: 0; }
+
+  /* WHY: stat-pill styles removed — now using brand-stat classes from brand.css */
+
+  .sort-btn { cursor: pointer; user-select: none; }
+  .sort-btn:hover { color: #2563eb; }
+  .sort-btn .sort-arrow { display: inline-block; width: 14px; text-align: center; }
+
+  /* Table styles */
+  .prospect-table { width: 100%; border-collapse: collapse; }
+  .prospect-table th { position: sticky; top: 0; background: #f9fafb; padding: 10px 14px; text-align: left; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; border-bottom: 2px solid #e5e7eb; z-index: 1; white-space: nowrap; }
+  .prospect-table td { padding: 10px 14px; font-size: 0.85rem; border-bottom: 1px solid #f3f4f6; }
+  .prospect-table tr:hover td { background: #f8fafc; }
+  .prospect-table .name-cell { font-weight: 600; color: #111827; }
+  .prospect-table .signal-cell { font-size: 0.78rem; color: #6b7280; max-width: 260px; }
+
+  /* Convert to deal modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+  .modal { background: white; border-radius: 20px; padding: 32px; width: 90%; max-width: 480px; box-shadow: 0 24px 48px rgba(0,0,0,0.15); }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .brand-nav, .no-print { display: none !important; }
+    .brand-deal-card { break-inside: avoid; box-shadow: none !important; transform: none !important; border: 1px solid #ddd !important; }
+    .brand-stat { break-inside: avoid; box-shadow: none !important; transform: none !important; }
+    .brand-stat-val, .gradient-text { -webkit-text-fill-color: var(--text) !important; background: none !important; }
+    .brand-reveal { opacity: 1 !important; transform: none !important; }
+    .monogram { -webkit-print-color-adjust: exact; print-color-adjust: exact; border-radius: 10px !important; -webkit-border-radius: 10px !important; }
+    /* WHY: Leaflet maps don't print well (tiles may not load, controls useless). Keep prospect list. */
+    #mapContainer { display: none !important; }
+    #mapView .leaflet-control-container { display: none !important; }
+    #mapProspectList { break-inside: avoid; }
+  }
+</style>
+</head>
+<body class="bg-[#f7f8fc] min-h-screen">
+
+  <!-- Branded Nav -->
+  <nav class="brand-nav">
+    <div class="brand-nav-logo">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white" stroke="white" stroke-width="1.5"/></svg>
+    </div>
+    <div class="brand-nav-identity">
+      <div class="brand-nav-name">Accelerate <span>Robotics</span></div>
+      <div class="brand-nav-tagline">One Brain. Many Bots.</div>
+    </div>
+    <div class="brand-nav-links">
+      <a href="/admin">Command Center</a>
+      <a href="/admin/deals">Deals</a>
+      <a href="/pages/pipeline-prospects.html" class="active">Prospects</a>
+      <a href="/pages/assessments.html">Assessments</a>
+      <a href="/pages/robot-catalog.html">Catalog</a>
+      <a href="/pages/fleet-designer.html">Fleet</a>
+        <a href="/admin/deals?stage=won&amp;stage=deploying&amp;stage=active">Deploy</a>
+    </div>
+    <div style="margin-left:16px;display:flex;align-items:center;gap:12px;">
+      <span id="adminEmail" style="font-size:0.78rem;color:var(--text-faint);"></span>
+      <a href="/" style="font-size:0.78rem;color:var(--text-dim);text-decoration:none;">View Site</a>
+      <button onclick="logout()" style="font-size:0.78rem;color:var(--text-dim);background:none;border:none;cursor:pointer;">Sign Out</button>
+    </div>
+  </nav>
+
+  <main class="max-w-[1400px] mx-auto px-6 py-8">
+    <!-- Title -->
+    <div class="flex items-center justify-between mb-6 brand-reveal" data-delay="0.05">
+      <div>
+        <h1 class="headline text-2xl font-bold text-gray-900 gradient-text">Prospect Pipeline</h1>
+        <p class="text-sm text-gray-400 mt-1" id="subtitleText">66 research-qualified targets across 14 markets</p>
+      </div>
+      <div class="no-print flex items-center gap-2">
+        <button onclick="openAddMarketForm()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style="background:linear-gradient(135deg,#eff6ff,#dbeafe);color:#2563eb;border:1px solid #bfdbfe;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+          Add Market
+        </button>
+        <button onclick="openAddProspectForm()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);color:#16a34a;border:1px solid #bbf7d0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M3 7l9-4 9 4M4 7v10M20 7v10M8 11v6M12 11v6M16 11v6"/></svg>
+          Add Prospect
+        </button>
+        <button onclick="window.print()" class="brand-btn-secondary px-4 py-2 text-sm">Print / PDF</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="flex gap-3 flex-wrap mb-6 brand-reveal" data-delay="0.15" id="statsRow"></div>
+
+    <!-- Staging area for AI research results (rendered dynamically when STAGED_PROSPECTS exist) -->
+    <div id="stagingArea"></div>
+
+    <!-- Controls -->
+    <div class="no-print bg-white rounded-2xl shadow-sm p-5 mb-6 brand-reveal" data-delay="0.25">
+      <div class="flex flex-wrap gap-4 items-center mb-4">
+        <!-- Search -->
+        <div class="flex-1 min-w-[200px]">
+          <input type="text" id="searchInput" placeholder="Search name, brand, city, operator..."
+                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                 oninput="renderAll()">
+        </div>
+        <!-- Sort -->
+        <div class="flex items-center gap-2 text-sm text-gray-500">
+          <span class="font-medium">Sort:</span>
+          <button onclick="setSort('keys')" class="sort-btn px-2 py-1 rounded-lg hover:bg-gray-50" data-sort="keys">Keys <span class="sort-arrow"></span></button>
+          <button onclick="setSort('floors')" class="sort-btn px-2 py-1 rounded-lg hover:bg-gray-50" data-sort="floors">Floors <span class="sort-arrow"></span></button>
+          <button onclick="setSort('name')" class="sort-btn px-2 py-1 rounded-lg hover:bg-gray-50" data-sort="name">Name <span class="sort-arrow"></span></button>
+          <button onclick="setSort('stars')" class="sort-btn px-2 py-1 rounded-lg hover:bg-gray-50" data-sort="stars">Stars <span class="sort-arrow"></span></button>
+        </div>
+        <!-- View toggle -->
+        <div class="flex rounded-xl border border-gray-200 overflow-hidden">
+          <button onclick="setView('card')" id="view-card" class="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white">Cards</button>
+          <button onclick="setView('table')" id="view-table" class="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50">Table</button>
+          <button onclick="setView('map')" id="view-map" class="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50">Map</button>
+        </div>
+      </div>
+
+      <!-- Cluster filters (rendered dynamically from API) -->
+      <div class="flex flex-wrap gap-2 mb-3">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide self-center mr-1">Market</span>
+        <div id="marketChips" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Brand class filters -->
+      <div class="flex flex-wrap gap-2">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide self-center mr-1">Brand</span>
+        <button class="chip active bg-gray-100 text-gray-600" onclick="toggleFilter('brand','all')" data-filter="brand" data-val="all">All</button>
+        <button class="chip bg-purple-50 text-purple-700" onclick="toggleFilter('brand','luxury')" data-filter="brand" data-val="luxury">Luxury</button>
+        <button class="chip bg-blue-50 text-blue-700" onclick="toggleFilter('brand','soft')" data-filter="brand" data-val="soft">Soft Brand</button>
+        <button class="chip bg-gray-50 text-gray-700" onclick="toggleFilter('brand','chain')" data-filter="brand" data-val="chain">Chain</button>
+        <button class="chip bg-green-50 text-green-700" onclick="toggleFilter('brand','independent')" data-filter="brand" data-val="independent">Independent</button>
+      </div>
+    </div>
+
+    <!-- Add Market form (collapsible) -->
+    <div id="addMarketForm" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+      <h3 class="headline text-sm font-bold text-gray-900 mb-4">Add New Market</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Market Name <span class="text-red-400">*</span></label>
+          <input type="text" id="mktName" placeholder="e.g. Austin" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Cluster</label>
+          <select id="mktCluster" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white">
+            <option value="">— Existing cluster or new —</option>
+          </select>
+          <input type="text" id="mktClusterNew" placeholder="New cluster name" class="hidden w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm mt-2">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Color</label>
+          <div class="flex gap-2" id="mktColorSwatches"></div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Strategic Notes</label>
+          <textarea id="mktNotes" rows="2" placeholder="Why this market? Hiring pool, operational footprint..." class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"></textarea>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 mt-4">
+        <label class="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" id="mktResearch" class="rounded"> Run AI Research
+        </label>
+        <select id="mktResearchCount" class="hidden px-3 py-1.5 rounded-lg border border-gray-200 text-sm">
+          <option value="5">5 hotels</option>
+          <option value="8" selected>8 hotels</option>
+          <option value="10">10 hotels</option>
+        </select>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button onclick="submitMarket()" class="brand-btn-primary px-5 py-2 text-sm">Add Market</button>
+        <button onclick="closeAddMarketForm()" class="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl transition text-sm">Cancel</button>
+      </div>
+      <div id="mktLoading" class="hidden mt-4 flex items-center gap-3 text-sm text-blue-600">
+        <div class="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+        <span id="mktLoadingText">Researching hotels...</span>
+      </div>
+      <p id="mktError" class="hidden text-red-600 text-xs font-medium mt-3"></p>
+    </div>
+
+    <!-- Add Prospect form (collapsible) -->
+    <div id="addProspectForm" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+      <h3 class="headline text-sm font-bold text-gray-900 mb-4">Add Prospect Manually</h3>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Market <span class="text-red-400">*</span></label>
+          <select id="prpMarket" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Hotel Name <span class="text-red-400">*</span></label>
+          <input type="text" id="prpName" placeholder="e.g. JW Marriott Austin" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Address</label>
+          <input type="text" id="prpAddress" placeholder="110 E 2nd St" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Brand</label>
+          <input type="text" id="prpBrand" placeholder="JW MARRIOTT / MARRIOTT" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Brand Class</label>
+          <select id="prpBrandClass" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white">
+            <option value="">— Select —</option>
+            <option value="luxury">Luxury</option>
+            <option value="soft">Soft Brand</option>
+            <option value="chain">Chain</option>
+            <option value="independent">Independent</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Keys</label>
+            <input type="number" id="prpKeys" placeholder="342" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Floors</label>
+            <input type="number" id="prpFloors" placeholder="12" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Stars</label>
+            <input type="number" id="prpStars" min="1" max="5" placeholder="4" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+          </div>
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Signal</label>
+          <input type="text" id="prpSignal" placeholder="Why is this a robotics opportunity?" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Operator</label>
+          <input type="text" id="prpOperator" placeholder="Marriott International" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button onclick="submitProspect()" class="brand-btn-primary px-5 py-2 text-sm">Add Prospect</button>
+        <button onclick="closeAddProspectForm()" class="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl transition text-sm">Cancel</button>
+      </div>
+      <p id="prpError" class="hidden text-red-600 text-xs font-medium mt-3"></p>
+    </div>
+
+    <!-- Results count -->
+    <div class="flex items-center justify-between mb-4">
+      <span id="resultCount" class="text-sm font-medium text-gray-400"></span>
+    </div>
+
+    <!-- Card view -->
+    <div id="cardView" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8"></div>
+
+    <!-- Table view -->
+    <div id="tableView" class="hidden bg-white rounded-2xl shadow-sm overflow-auto mb-8">
+      <table class="prospect-table" id="prospectTable">
+        <thead><tr>
+          <th>Name</th><th>Market</th><th>Brand</th><th>Keys</th><th>Floors</th><th>Stars</th><th>Operator</th><th>Signal</th><th class="no-print">Action</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Map view -->
+    <div id="mapView" class="hidden mb-8">
+      <div id="mapContainer" style="height:60vh;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);"></div>
+      <div id="mapProspectList" class="mt-4"></div>
+    </div>
+
+    <!-- Empty state -->
+    <p id="emptyState" class="hidden text-gray-400 text-center py-12 text-sm">No prospects match your filters.</p>
+  </main>
+
+  <!-- Convert to Deal modal -->
+  <div id="dealModal" class="modal-backdrop hidden" onclick="if(event.target===this)closeDealModal()">
+    <div class="modal">
+      <h3 class="headline text-lg font-bold text-gray-900 mb-2">Convert to Deal</h3>
+      <p class="text-sm text-gray-500 mb-5" id="modalSubtitle"></p>
+      <form id="dealForm" onsubmit="submitDeal(event)">
+        <input type="hidden" id="dealFacilityName">
+        <input type="hidden" id="dealCity">
+        <input type="hidden" id="dealState">
+        <input type="hidden" id="dealKeys">
+        <input type="hidden" id="dealFloors">
+        <input type="hidden" id="dealBrand">
+        <div class="space-y-3">
+          <input type="text" id="dealName" placeholder="Deal name" required
+                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+          <select id="dealStage" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+            <option value="lead">Lead</option>
+            <option value="qualified">Qualified</option>
+          </select>
+          <input type="text" id="dealOwner" placeholder="Owner (email)" value=""
+                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <div class="flex gap-3 mt-5">
+          <button type="submit" class="brand-btn-primary flex-1 px-5 py-2.5 text-sm">Create Deal</button>
+          <button type="button" onclick="closeDealModal()" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl transition text-sm">Cancel</button>
+        </div>
+        <p id="dealError" class="text-red-600 text-xs font-medium mt-3 hidden"></p>
+      </form>
+    </div>
+  </div>
+
+<script src="/js/admin-auth.js"></script>
+<script>
+// ── Data (loaded from API) ─────────────────────────────────────
+let PROSPECTS = [];
+let MARKETS = [];
+let STAGED_PROSPECTS = [];
+let STAGED_CONNECTIONS = {};
+let CLUSTER_LABELS = {};
+
+async function loadData() {
+  const [prospectsRes, marketsRes, stagedRes] = await Promise.all([
+    fetch('/api/prospects?status=confirmed'),
+    fetch('/api/markets'),
+    fetch('/api/prospects?status=staged'),
+  ]);
+
+  PROSPECTS = prospectsRes.ok ? await prospectsRes.json() : [];
+  MARKETS = marketsRes.ok ? await marketsRes.json() : [];
+  STAGED_PROSPECTS = stagedRes.ok ? await stagedRes.json() : [];
+
+  // WHY: Build cluster labels from market data (replaces hardcoded CLUSTER_LABELS)
+  buildClusterLabels();
+
+  // WHY: Read ?cluster= from URL so Command Center regional maps can deep-link
+  // into a pre-filtered view. Supports comma-separated for multi-cluster regions (e.g. sf-bay,sacramento).
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlCluster = urlParams.get('cluster');
+  if (urlCluster) {
+    clusterFilter = urlCluster;
+  }
+
+  // WHY: ?view=map opens directly in map view — used by Command Center regional cards.
+  // When coming from a deep link with a cluster filter, clear saved map state so the
+  // map auto-fits to the filtered region instead of restoring the last position.
+  const urlView = urlParams.get('view');
+  if (urlView === 'map' || urlView === 'table') {
+    currentView = urlView;
+    if (urlCluster && urlView === 'map') {
+      // WHY: Clear saved map position so fitToMarkets runs for the filtered region
+      try { sessionStorage.removeItem('prospectMapState'); } catch(e) {}
+    }
+    setView(urlView);
+  }
+
+  renderAll();
+  renderMarketChips();
+  renderStagingArea();
+}
+
+function buildClusterLabels() {
+  CLUSTER_LABELS = {};
+  for (const m of MARKETS) {
+    if (m.cluster && !CLUSTER_LABELS[m.cluster]) {
+      // WHY: Capitalize cluster slug for display (sf-bay -> SF Bay)
+      CLUSTER_LABELS[m.cluster] = m.cluster
+        .split('-')
+        .map(w => w.length <= 2 ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1))
+        .join(' ');
+    }
+  }
+}
+
+function renderMarketChips() {
+  const container = document.getElementById('marketChips');
+  if (!container) return;
+
+  const clusters = Object.entries(CLUSTER_LABELS);
+  // WHY: When a multi-cluster filter is active (e.g. sf-bay,sacramento from URL),
+  // highlight each matching chip and deactivate "All"
+  const activeClusters = clusterFilter !== 'all' ? clusterFilter.split(',') : null;
+  container.innerHTML =
+    `<span class="chip ${!activeClusters ? 'active' : ''}" data-filter="cluster" data-val="all" onclick="toggleFilter('cluster','all')" style="color:#111;border-color:#d1d5db">All</span>` +
+    clusters.map(([slug, label]) =>
+      `<span class="chip ${activeClusters && activeClusters.includes(slug) ? 'active' : ''}" data-filter="cluster" data-val="${slug}" onclick="toggleFilter('cluster','${slug}')" style="color:${getClusterColor(slug)}">${label}</span>`
+    ).join('');
+}
+
+function getClusterColor(cluster) {
+  const m = MARKETS.find(mk => mk.cluster === cluster);
+  return m?.color || '#64748b';
+}
+
+// WHY: 8 distinct swatch colors — covers the hue wheel so adjacent markets are visually separable
+const SWATCH_COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#d97706', '#16a34a', '#dc2626', '#f59e0b', '#64748b'];
+let selectedColor = SWATCH_COLORS[0];
+
+function openAddMarketForm() {
+  const form = document.getElementById('addMarketForm');
+  form.classList.remove('hidden');
+
+  // Populate cluster dropdown
+  const sel = document.getElementById('mktCluster');
+  const clusters = [...new Set(MARKETS.map(m => m.cluster).filter(Boolean))];
+  sel.innerHTML = `<option value="">— Select cluster —</option>` +
+    clusters.map(c => `<option value="${c}">${CLUSTER_LABELS[c] || c}</option>`).join('') +
+    `<option value="__new__">+ New cluster</option>`;
+
+  // Color swatches
+  document.getElementById('mktColorSwatches').innerHTML = SWATCH_COLORS.map(c =>
+    `<button onclick="selectColor('${c}')" class="w-7 h-7 rounded-full border-2 transition" style="background:${c};border-color:${c === selectedColor ? '#111' : 'transparent'}" data-color="${c}"></button>`
+  ).join('');
+
+  // WHY: Use onchange instead of addEventListener to prevent stacking
+  // when the form is opened/closed repeatedly
+  document.getElementById('mktResearch').onchange = e => {
+    document.getElementById('mktResearchCount').classList.toggle('hidden', !e.target.checked);
+  };
+  sel.onchange = () => {
+    document.getElementById('mktClusterNew').classList.toggle('hidden', sel.value !== '__new__');
+  };
+}
+
+function closeAddMarketForm() {
+  document.getElementById('addMarketForm').classList.add('hidden');
+  document.getElementById('mktError').classList.add('hidden');
+  document.getElementById('mktLoading').classList.add('hidden');
+}
+
+function selectColor(c) {
+  selectedColor = c;
+  document.querySelectorAll('#mktColorSwatches button').forEach(b => {
+    b.style.borderColor = b.dataset.color === c ? '#111' : 'transparent';
+  });
+}
+
+async function submitMarket() {
+  const name = document.getElementById('mktName').value.trim();
+  if (!name) {
+    showMktError('Market name is required');
+    return;
+  }
+
+  const clusterSel = document.getElementById('mktCluster').value;
+  const cluster = clusterSel === '__new__'
+    ? document.getElementById('mktClusterNew').value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    : clusterSel || null;
+
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+  const notes = document.getElementById('mktNotes').value.trim() || null;
+  const doResearch = document.getElementById('mktResearch').checked;
+  const count = parseInt(document.getElementById('mktResearchCount').value, 10);
+
+  const errEl = document.getElementById('mktError');
+  errEl.classList.add('hidden');
+
+  try {
+    // Create market
+    const res = await fetch('/api/markets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name, cluster, color: selectedColor, notes }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create market');
+    }
+
+    if (doResearch) {
+      // Show loading state
+      document.getElementById('mktLoading').classList.remove('hidden');
+      document.getElementById('mktLoadingText').textContent = `Researching ${name} hotels... this takes 15\u201330 seconds`;
+
+      const rRes = await fetch(`/api/markets/${id}/research`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count }),
+      });
+      document.getElementById('mktLoading').classList.add('hidden');
+
+      if (!rRes.ok) {
+        const err = await rRes.json();
+        // WHY: Market was created even if research fails — still show it
+        await loadData();
+        closeAddMarketForm();
+        showMktError(err.error || 'Research failed — market created but no prospects added');
+        return;
+      }
+
+      const result = await rRes.json();
+      // Store connections for this market's staging area
+      if (result.connections?.length) {
+        STAGED_CONNECTIONS[id] = result.connections;
+      }
+    }
+
+    await loadData();
+    closeAddMarketForm();
+  } catch (err) {
+    document.getElementById('mktLoading').classList.add('hidden');
+    showMktError(err.message);
+  }
+}
+
+function showMktError(msg) {
+  const el = document.getElementById('mktError');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function openAddProspectForm() {
+  document.getElementById('addProspectForm').classList.remove('hidden');
+  const sel = document.getElementById('prpMarket');
+  sel.innerHTML = `<option value="">— Select market —</option>` +
+    MARKETS.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+}
+
+function closeAddProspectForm() {
+  document.getElementById('addProspectForm').classList.add('hidden');
+  document.getElementById('prpError').classList.add('hidden');
+}
+
+async function submitProspect() {
+  const market_id = document.getElementById('prpMarket').value;
+  const name = document.getElementById('prpName').value.trim();
+  if (!market_id || !name) {
+    document.getElementById('prpError').textContent = 'Market and name are required';
+    document.getElementById('prpError').classList.remove('hidden');
+    return;
+  }
+
+  const body = {
+    market_id, name,
+    address: document.getElementById('prpAddress').value || null,
+    brand: document.getElementById('prpBrand').value || null,
+    brand_class: document.getElementById('prpBrandClass').value || null,
+    keys: document.getElementById('prpKeys').value ? parseInt(document.getElementById('prpKeys').value, 10) : null,
+    floors: document.getElementById('prpFloors').value ? parseInt(document.getElementById('prpFloors').value, 10) : null,
+    stars: document.getElementById('prpStars').value ? parseInt(document.getElementById('prpStars').value, 10) : null,
+    signal: document.getElementById('prpSignal').value || null,
+    operator: document.getElementById('prpOperator').value || null,
+    // WHY: Monogram generated from first two words — provides a visual avatar without requiring an image upload
+    monogram: name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase(),
+  };
+
+  try {
+    const res = await fetch('/api/prospects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to add prospect');
+    }
+    closeAddProspectForm();
+    await loadData();
+  } catch (err) {
+    document.getElementById('prpError').textContent = err.message;
+    document.getElementById('prpError').classList.remove('hidden');
+  }
+}
+
+const BRAND_CLASS_COLORS = {luxury:'#7c3aed',soft:'#2563eb',chain:'#6b7280',independent:'#16a34a'};
+const BRAND_CLASS_BG = {luxury:'bg-purple-50 text-purple-700',soft:'bg-blue-50 text-blue-700',chain:'bg-gray-100 text-gray-600',independent:'bg-green-50 text-green-700'};
+
+// ── State ─────────────────────────────────────────────────────────
+let currentView = 'card';
+let sortField = 'keys';
+let sortDir = -1; // -1 = descending
+let clusterFilter = 'all';
+let brandFilter = 'all';
+
+// ── Helpers ───────────────────────────────────────────────────────
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function getFiltered() {
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  // WHY: Split comma-separated clusters so NorCal (sf-bay,sacramento) works as a multi-cluster filter
+  const activeClusters = clusterFilter !== 'all' ? clusterFilter.split(',') : null;
+  return PROSPECTS.filter(p => {
+    if (activeClusters && !activeClusters.includes(p.cluster)) return false;
+    if (brandFilter !== 'all' && p.brand_class !== brandFilter) return false;
+    if (q) {
+      const hay = [p.name, p.market_name, p.brand, p.operator, p.signal, p.address].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a, b) => {
+    if (sortField === 'name') return sortDir * a.name.localeCompare(b.name);
+    return sortDir * ((a[sortField] || 0) - (b[sortField] || 0));
+  });
+}
+
+// ── Render ─────────────────────────────────────────────────────────
+function renderAll() {
+  const filtered = getFiltered();
+  renderStats(filtered);
+  renderCards(filtered);
+  renderTable(filtered);
+  document.getElementById('resultCount').textContent = `${filtered.length} of ${PROSPECTS.length} prospects`;
+  document.getElementById('emptyState').classList.toggle('hidden', filtered.length > 0 || currentView === 'map');
+  document.getElementById('cardView').classList.toggle('hidden', currentView !== 'card' || filtered.length === 0);
+  document.getElementById('tableView').classList.toggle('hidden', currentView !== 'table' || filtered.length === 0);
+  document.getElementById('mapView').classList.toggle('hidden', currentView !== 'map');
+
+  // WHY: Lazy-init map on first switch to map view — don't load tiles until the user wants them
+  if (currentView === 'map' && typeof initProspectMap === 'function') {
+    if (!window._prospectMapInitialized) {
+      initProspectMap('mapContainer', MARKETS, filtered);
+      window._prospectMapInitialized = true;
+    } else {
+      updateProspectMap(MARKETS, filtered);
+    }
+  }
+}
+
+function renderStats(filtered) {
+  const totalKeys = filtered.reduce((s, p) => s + (p.keys || 0), 0);
+  const markets = new Set(filtered.map(p => p.market_name)).size;
+  // WHY: Update subtitle with real counts from loaded data
+  const sub = document.getElementById('subtitleText');
+  if (sub) sub.textContent = `${PROSPECTS.length} research-qualified targets across ${new Set(PROSPECTS.map(p => p.market_name)).size} markets`;
+  const luxury = filtered.filter(p => p.brand_class === 'luxury').length;
+  const avgFloors = filtered.length ? Math.round(filtered.reduce((s, p) => s + (p.floors || 0), 0) / filtered.length) : 0;
+
+  const stats = [
+    {val: filtered.length, lbl: 'Prospects'},
+    {val: markets, lbl: 'Markets'},
+    {val: totalKeys, lbl: 'Total Keys'},
+    {val: luxury, lbl: 'Luxury'},
+    {val: avgFloors, lbl: 'Avg Floors'},
+  ];
+  document.getElementById('statsRow').innerHTML = stats.map(s =>
+    `<div class="brand-stat"><div class="brand-stat-val" data-counter="${s.val}">0</div><div class="brand-stat-lbl">${s.lbl}</div></div>`
+  ).join('');
+  /* WHY: Re-init counters after dynamic stat render so data-counter attributes animate.
+     Guard: brand.js may not have loaded yet on first render (it's a later script tag). */
+  if (typeof initCounters === 'function') initCounters();
+}
+
+/* WHY: Map brand class to stripe gradient so card tier is visible at a glance */
+const STRIPE_GRADIENTS = {
+  luxury: 'linear-gradient(180deg, #f59e0b, #fbbf24)',      /* amber — luxury tier */
+  soft: 'linear-gradient(180deg, var(--teal), #67e8f9)',      /* teal — soft brand */
+  chain: 'linear-gradient(180deg, var(--blue), var(--cyan))', /* blue — chain */
+  independent: 'linear-gradient(180deg, var(--purple), #a78bfa)', /* purple — independent */
+};
+
+function renderCards(filtered) {
+  const el = document.getElementById('cardView');
+  el.innerHTML = filtered.map((p, i) => {
+    const bcClass = BRAND_CLASS_BG[p.brand_class] || 'bg-gray-100 text-gray-600';
+    const stripe = STRIPE_GRADIENTS[p.brand_class] || STRIPE_GRADIENTS.chain;
+    /* WHY: Stagger card reveals by 30ms per card, capped at 600ms to avoid long waits on large sets */
+    const delay = Math.min(i * 0.03, 0.6);
+    return `
+    <div class="brand-deal-card brand-reveal" data-delay="${delay}">
+      <div class="brand-deal-stripe" style="background:${stripe}"></div>
+      <div class="flex items-start gap-3 mb-3" style="padding-left:8px;">
+        <div class="monogram" style="background:${p.mono_color}">${p.monogram}</div>
+        <div class="flex-1 min-w-0">
+          <div class="brand-deal-name text-[0.95rem] leading-tight">${esc(p.name)}</div>
+          <div class="brand-deal-meta mt-0.5">${esc(p.address)} &middot; ${esc(p.market_name)}</div>
+          <span class="inline-block text-[0.65rem] font-semibold px-2 py-0.5 rounded mt-1 ${bcClass}">${esc(p.brand)}</span>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 bg-gray-50 rounded-lg p-3 mb-3" style="margin-left:8px;">
+        <div class="text-center"><div class="font-bold text-gray-900">${p.keys || '—'}</div><div class="text-[0.6rem] text-gray-400 uppercase">Keys</div></div>
+        <div class="text-center"><div class="font-bold text-gray-900">${p.floors || '—'}</div><div class="text-[0.6rem] text-gray-400 uppercase">Floors</div></div>
+        <div class="text-center"><div class="font-bold text-gray-900">${p.stars ? '★'.repeat(p.stars) : '—'}</div><div class="text-[0.6rem] text-gray-400 uppercase">Stars</div></div>
+      </div>
+      <div class="text-xs text-gray-500 leading-relaxed mb-3" style="padding-left:8px;"><strong class="text-blue-600">Signal:</strong> ${esc(p.signal)}</div>
+      ${p.source === 'ai_research' ? `<div class="text-[0.6rem] text-purple-500 font-semibold mt-1" style="padding-left:8px;">&#128300; AI Researched${p.research_date ? ' — ' + new Date(p.research_date).toLocaleDateString() : ''}</div>` : ''}
+      <div class="flex items-center justify-between" style="padding-left:8px;">
+        <div class="text-xs text-gray-400">
+          <span class="font-medium text-gray-500">${esc(p.operator)}</span>
+          ${p.portfolio ? `<span class="ml-1 inline-block text-[0.6rem] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-600">${esc(p.portfolio)}</span>` : ''}
+        </div>
+        <button onclick="openDealModal(${p.id})" class="no-print text-[0.7rem] font-semibold text-blue-600 hover:text-blue-800 transition px-2 py-1 rounded-lg hover:bg-blue-50">+ Deal</button>
+      </div>
+    </div>`;
+  }).join('');
+  /* WHY: Re-init reveal animations after dynamic card render so staggered delays apply.
+     Guard: brand.js may not have loaded yet on first render (it's a later script tag). */
+  if (typeof initRevealAnimations === 'function') initRevealAnimations();
+}
+
+function renderTable(filtered) {
+  const el = document.getElementById('tableBody');
+  el.innerHTML = filtered.map(p => {
+    const bcClass = BRAND_CLASS_BG[p.brand_class] || 'bg-gray-100 text-gray-600';
+    return `<tr>
+      <td class="name-cell">${esc(p.name)}</td>
+      <td class="text-gray-500 text-xs">${esc(p.market_name)}</td>
+      <td><span class="inline-block text-[0.65rem] font-semibold px-2 py-0.5 rounded ${bcClass}">${esc(p.brand)}</span></td>
+      <td class="font-semibold">${p.keys || '—'}</td>
+      <td>${p.floors || '—'}</td>
+      <td>${p.stars || '—'}</td>
+      <td class="text-gray-500 text-xs">${esc(p.operator)}</td>
+      <td class="signal-cell">${esc(p.signal)}</td>
+      <td class="no-print"><button onclick="openDealModal(${p.id})" class="text-[0.7rem] font-semibold text-blue-600 hover:underline">+ Deal</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Staging Area ──────────────────────────────────────────────────
+function renderStagingArea() {
+  const container = document.getElementById('stagingArea');
+  if (!container) return;
+
+  if (!STAGED_PROSPECTS.length) {
+    container.innerHTML = '';
+    return;
+  }
+
+  // WHY: Group by market so each research batch is reviewable as a unit
+  const byMarket = {};
+  for (const p of STAGED_PROSPECTS) {
+    const key = p.market_id || 'unknown';
+    if (!byMarket[key]) byMarket[key] = { name: p.market_name || key, prospects: [] };
+    byMarket[key].prospects.push(p);
+  }
+
+  container.innerHTML = Object.entries(byMarket).map(([mktId, group]) => {
+    const connections = STAGED_CONNECTIONS[mktId] || [];
+    return `
+    <div class="bg-white rounded-2xl shadow-sm border border-blue-100 p-5 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="headline text-sm font-bold text-gray-900">&#128300; Research Results — ${esc(group.name)}</h3>
+          <p class="text-xs text-gray-400 mt-0.5">${group.prospects.length} hotels found · AI Researched — ${group.prospects[0]?.research_date ? new Date(group.prospects[0].research_date).toLocaleDateString() : new Date().toLocaleDateString()}</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="selectAllStaged('${esc(mktId)}')" class="text-xs font-semibold text-blue-600 hover:underline">Select All</button>
+          <button onclick="confirmStaged('${esc(mktId)}')" class="brand-btn-primary px-4 py-1.5 text-xs">Add Selected to Pipeline</button>
+          <button onclick="discardStaged('${esc(mktId)}')" class="px-4 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-xl transition text-xs">Discard All</button>
+        </div>
+      </div>
+      <div class="space-y-2">
+        ${group.prospects.map(p => `
+          <div class="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:border-blue-200 transition" data-staged-id="${p.id}">
+            <input type="checkbox" checked class="mt-1 rounded staged-check" data-id="${p.id}" data-market="${esc(mktId)}">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <strong class="text-sm text-gray-900">${esc(p.name)}</strong>
+                <span class="text-xs text-gray-400">${p.keys || '?'} keys · ${p.floors || '?'} fl</span>
+                <span class="inline-block text-[0.6rem] font-semibold px-2 py-0.5 rounded ${BRAND_CLASS_BG[p.brand_class] || 'bg-gray-100 text-gray-600'}">${esc(p.brand || '')}</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">${esc(p.signal || '')}</p>
+              <p class="text-[0.6rem] text-gray-400 mt-0.5">${esc(p.operator || '')}${p.portfolio ? ' · ' + esc(p.portfolio) : ''}</p>
+            </div>
+            <button onclick="editStagedProspect(${p.id})" class="text-xs text-blue-600 hover:underline flex-shrink-0">Edit</button>
+          </div>
+        `).join('')}
+      </div>
+      ${connections.length ? `
+        <div class="mt-4 pt-4 border-t border-gray-100">
+          <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Strategic Connections</h4>
+          ${connections.map(c => `
+            <div class="flex items-start gap-2 mb-2">
+              <span class="inline-block text-[0.6rem] font-semibold px-2 py-0.5 rounded bg-purple-50 text-purple-700">${esc(c.keyword)}</span>
+              <span class="text-xs text-gray-400">(${c.prospectCount} prospect${c.prospectCount > 1 ? 's' : ''})</span>
+              <span class="text-xs text-gray-600">—</span>
+              ${c.contacts.map(ct => `<span class="text-xs"><strong class="text-gray-700">${esc(ct.name)}</strong>: <span class="text-gray-500">${esc(ct.snippet)}</span></span>`).join(', ')}
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>`;
+  }).join('');
+}
+
+function selectAllStaged(marketId) {
+  document.querySelectorAll(`.staged-check[data-market="${marketId}"]`).forEach(cb => { cb.checked = true; });
+}
+
+async function confirmStaged(marketId) {
+  const ids = Array.from(document.querySelectorAll(`.staged-check[data-market="${marketId}"]:checked`))
+    .map(cb => parseInt(cb.dataset.id, 10));
+
+  if (!ids.length) return;
+
+  const res = await fetch('/api/prospects/bulk-confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (res.ok) {
+    delete STAGED_CONNECTIONS[marketId];
+    await loadData();
+  }
+}
+
+async function discardStaged(marketId) {
+  const ids = STAGED_PROSPECTS.filter(p => p.market_id === marketId).map(p => p.id);
+  if (!ids.length) return;
+
+  if (!confirm(`Discard all ${ids.length} research results for this market?`)) return;
+
+  const res = await fetch('/api/prospects/bulk-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (res.ok) {
+    delete STAGED_CONNECTIONS[marketId];
+    await loadData();
+  }
+}
+
+function editStagedProspect(id) {
+  const p = STAGED_PROSPECTS.find(pr => pr.id === id);
+  if (!p) return;
+
+  const name = prompt('Hotel name:', p.name);
+  if (name === null) return;
+  const keys = prompt('Keys (room count):', p.keys);
+  const signal = prompt('Signal (opportunity reason):', p.signal);
+
+  fetch(`/api/prospects/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: name || p.name,
+      keys: keys ? parseInt(keys, 10) : p.keys,
+      signal: signal || p.signal,
+    }),
+  }).then(() => loadData());
+}
+
+// ── Controls ──────────────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  document.getElementById('view-card').className = `px-3 py-1.5 text-xs font-semibold ${v==='card' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`;
+  document.getElementById('view-table').className = `px-3 py-1.5 text-xs font-semibold ${v==='table' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`;
+  document.getElementById('view-map').className = `px-3 py-1.5 text-xs font-semibold ${v==='map' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`;
+  renderAll();
+}
+
+function setSort(field) {
+  if (sortField === field) { sortDir *= -1; } else { sortField = field; sortDir = field === 'name' ? 1 : -1; }
+  // Update sort button arrows
+  document.querySelectorAll('.sort-btn').forEach(b => {
+    const arrow = b.querySelector('.sort-arrow');
+    if (b.dataset.sort === sortField) {
+      b.style.fontWeight = '700';
+      b.style.color = '#2563eb';
+      arrow.textContent = sortDir > 0 ? '↑' : '↓';
+    } else {
+      b.style.fontWeight = '';
+      b.style.color = '';
+      arrow.textContent = '';
+    }
+  });
+  renderAll();
+}
+
+function toggleFilter(type, val) {
+  if (type === 'cluster') {
+    clusterFilter = val;
+    // WHY: When clicking a chip, highlight just that chip (or All).
+    // Multi-cluster mode (from URL param) collapses to single on any chip click.
+    const activeClusters = val !== 'all' ? val.split(',') : null;
+    document.querySelectorAll('.chip[data-filter="cluster"]').forEach(c => {
+      c.classList.toggle('active', val === 'all' ? c.dataset.val === 'all' : activeClusters.includes(c.dataset.val));
+    });
+  }
+  if (type === 'brand') {
+    brandFilter = val;
+    document.querySelectorAll('.chip[data-filter="brand"]').forEach(c => {
+      c.classList.toggle('active', c.dataset.val === val);
+    });
+  }
+  renderAll();
+}
+
+// ── Deal modal ────────────────────────────────────────────────────
+function openDealModal(prospectId) {
+  const p = PROSPECTS.find(pr => pr.id === prospectId) || STAGED_PROSPECTS.find(pr => pr.id === prospectId);
+  if (!p) return;
+  document.getElementById('dealModal').classList.remove('hidden');
+  document.getElementById('modalSubtitle').textContent = `${p.name} — ${p.market_name || ''} (${p.keys} keys, ${p.floors} floors)`;
+  document.getElementById('dealName').value = p.name;
+  document.getElementById('dealFacilityName').value = p.name;
+  document.getElementById('dealCity').value = p.market_name || '';
+  document.getElementById('dealKeys').value = p.keys || '';
+  document.getElementById('dealFloors').value = p.floors || '';
+  document.getElementById('dealBrand').value = p.brand || '';
+  document.getElementById('dealError').classList.add('hidden');
+}
+
+function closeDealModal() {
+  document.getElementById('dealModal').classList.add('hidden');
+}
+
+async function submitDeal(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('dealError');
+  errEl.classList.add('hidden');
+
+  // WHY: Create both a facility and a deal in one flow — matches the deal creation API
+  const facilityName = document.getElementById('dealFacilityName').value;
+  const city = document.getElementById('dealCity').value;
+
+  try {
+    // Create deal via API
+    const res = await fetch('/api/deals', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        name: document.getElementById('dealName').value,
+        stage: document.getElementById('dealStage').value,
+        owner: document.getElementById('dealOwner').value || undefined,
+        facility_name: facilityName,
+        facility_type: 'hotel',
+        city: city,
+        state: '',
+        rooms_or_units: document.getElementById('dealKeys').value || undefined,
+        floors: document.getElementById('dealFloors').value || undefined,
+        brand: document.getElementById('dealBrand').value || undefined,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create deal');
+    }
+    const deal = await res.json();
+    closeDealModal();
+    // WHY: Navigate to the new deal so the user can add more details
+    window.location.href = `/admin/deals/${deal.id}`;
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+// ── Auth / Nav Utilities ─────────────────────────────────────────
+/* WHY: Matches the logout pattern from admin-command-center — clears JWT cookie and redirects */
+function logout() {
+  document.cookie = 'token=; Max-Age=0; path=/';
+  window.location.href = '/admin/login';
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+// WHY: Auth disabled for local dev — skip the checkAuth guard so data always loads
+(async () => {
+  try {
+    setSort('keys'); // Default sort by keys descending
+    await loadData();
+  } catch (err) {
+    console.error('[pipeline-prospects] Init failed:', err);
+    document.getElementById('emptyState').textContent = 'Error loading data: ' + err.message;
+    document.getElementById('emptyState').classList.remove('hidden');
+  }
+})();
+</script>
+<script src="https://unpkg.com/leaflet@1.9/dist/leaflet.js"></script>
+<script src="/js/prospect-map.js"></script>
+<script src="/js/brand.js"></script>
+</body>
+</html>

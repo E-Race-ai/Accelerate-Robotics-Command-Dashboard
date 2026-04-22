@@ -12,22 +12,43 @@ const authRoutes = require('./routes/auth');
 const inquiryRoutes = require('./routes/inquiries');
 const recipientRoutes = require('./routes/recipients');
 const stockRoutes = require('./routes/stocks');
+const dealRoutes = require('./routes/deals');
+const facilityRoutes = require('./routes/facilities');
+const assessmentRoutes = require('./routes/assessments');
+const assessmentPhotoRoutes = require('./routes/assessment-photos');
+const assessmentPdfRoutes = require('./routes/assessment-pdf');
+const narrateRoutes = require('./routes/narrate');
+const marketRoutes = require('./routes/markets');
+const prospectRoutes = require('./routes/prospects');
+const { seedProspects } = require('./db/seed-prospects');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ── Security ────────────────────────────────────────────────────
 app.use(helmet({
+  // WHY: Helmet defaults to 'no-referrer' which strips the Referer header entirely.
+  // OpenStreetMap tile servers require a Referer to serve tiles (anti-abuse policy).
+  // 'strict-origin-when-cross-origin' sends origin on cross-origin requests — enough for OSM.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      // WHY: Proposal pages use GSAP, Lenis, Tailwind, and inline scripts for interactivity
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
+      // WHY: unpkg.com added for Leaflet CSS (deal map view)
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https://img.youtube.com"],
+      // WHY: Proposal pages embed robot product images from manufacturer CDNs and Google favicons
+      // WHY: https: already covers OSM tiles, but explicit entry documents the dependency
+      imgSrc: ["'self'", "data:", "https://img.youtube.com", "https:", "http:", "https://tile.openstreetmap.org"],
       connectSrc: ["'self'"],
-      // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) require iframe permission
-      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
+      // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) + Creative Labs robot command embed
+      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com", "http://localhost:3100"],
+      // WHY: Helmet defaults script-src-attr to 'none', which blocks ALL inline event
+      // handlers (onclick, onchange, etc.) even when script-src allows 'unsafe-inline'.
+      // Our admin pages use onclick handlers extensively — allow them.
+      scriptSrcAttr: ["'unsafe-inline'"],
     },
   },
 }));
@@ -48,8 +69,51 @@ const inquiryLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// ── Static files ────────────────────────────────────────────────
+// WHY: 10 proposals per IP per hour — generous for iteration, prevents abuse
+const narrateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many narration requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ── Static files ───────────────��────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
+// WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
+// WHY: no-cache ensures dev changes are always picked up — browser still validates with the server
+app.use('/pages', express.static(path.join(__dirname, '..', 'pages'), {
+  setHeaders: (res) => { res.setHeader('Cache-Control', 'no-cache'); }
+}));
+
+// WHY: Serve only .json files from data/ — the directory also contains the SQLite
+// database, which must NEVER be exposed via HTTP. Reject non-JSON requests.
+app.use('/data', (req, res, next) => {
+  if (!req.path.endsWith('.json')) return res.status(404).send('Not found');
+  next();
+}, express.static(path.join(__dirname, '..', 'data')));
+
+// WHY: Serve each hotel repo so proposal pages (with relative asset paths) work correctly from the deals dashboard
+const HOTEL_REPOS_DIR = path.join(__dirname, '..', '..');
+const hotelRepos = [
+  'accelerate-thesis-hotel',
+  'accelerate-moore-miami',
+  'accelerate-art-ovation',
+  'accelerate-san-ramon-marriott',
+  'accelerate-lafayette-park',
+  'accelerate-claremont-resort',
+  'accelerate-kimpton-sawyer',
+  'accelerate-citizen-hotel',
+  'accelerate-westin-sacramento',
+  'accelerate-westin-sarasota',
+  'accelerate-hotel-template',
+  'accelerate-carts',
+  'accelerate-elevator',
+];
+for (const repo of hotelRepos) {
+  const repoPath = path.join(HOTEL_REPOS_DIR, repo);
+  app.use(`/repos/${repo}`, express.static(repoPath));
+}
 
 // ── API routes ──────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -60,17 +124,42 @@ app.use('/api/inquiries', (req, res, next) => {
 }, inquiryRoutes);
 app.use('/api/recipients', recipientRoutes);
 app.use('/api/stocks', stockRoutes);
+app.use('/api/deals', dealRoutes);
+app.use('/api/facilities', facilityRoutes);
+app.use('/api/assessments', assessmentRoutes);
+// WHY: Must be mounted AFTER assessmentRoutes so /meta/team and /:id routes in assessmentRoutes
+// are registered first. mergeParams on the photo router gives it access to :id.
+app.use('/api/assessments/:id/photos', assessmentPhotoRoutes);
+// WHY: Mounted separately from assessmentRoutes so PDFKit streaming doesn't block
+// the main assessment router. mergeParams gives it access to :id.
+app.use('/api/assessments/:id/pdf', assessmentPdfRoutes);
+app.use('/api/narrate', narrateLimiter, narrateRoutes);
+app.use('/api/markets', marketRoutes);
+app.use('/api/prospects', prospectRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
-// WHY: Direct navigation to /admin or /admin-login should serve the HTML files
+// WHY: /admin is the master command center — unified dashboard for all tools
 app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-command-center.html'));
+});
+// WHY: Old admin dashboard (inquiries + recipients) moved to /admin/inquiries
+app.get('/admin/inquiries', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 app.get('/admin-login', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-login.html'));
 });
+app.get('/admin/deals', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-deals.html'));
+});
+// WHY: Placeholder for deal detail page — route registered so links work even before the page file exists
+app.get('/admin/deals/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-deal-detail.html'));
+});
 
 // ── Start ───────────────────────────────────────────────────────
+// WHY: Seed prospect data on first boot — idempotent, skips if data exists
+seedProspects();
 app.listen(PORT, () => {
   console.log(`[server] Accelerate Robotics running at http://localhost:${PORT}`);
 });
