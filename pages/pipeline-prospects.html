@@ -877,7 +877,11 @@ function logout() {
 // ── Init ──────────────────────────────────────────────────────────
 (async () => {
   const ok = await checkAuth();
-  if (!ok) return;
+  if (!ok) {
+    // WHY: Redirect to login with return URL so user lands back here after auth
+    window.location.href = '/admin-login?return=' + encodeURIComponent(window.location.pathname);
+    return;
+  }
   setSort('keys'); // Default sort by keys descending
   loadData();
 })();

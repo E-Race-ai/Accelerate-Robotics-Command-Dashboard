@@ -50,8 +50,13 @@
 
   <script src="/js/admin-auth.js"></script>
   <script>
+    // WHY: Read ?return= param so login redirects back to the page that sent the user here
+    const returnUrl = new URLSearchParams(window.location.search).get('return') || '/admin';
+    // WHY: Only allow relative paths to prevent open redirect attacks
+    const safeReturn = returnUrl.startsWith('/') ? returnUrl : '/admin';
+
     // WHY: Redirect to dashboard if already logged in so admins don't see the login page unnecessarily
-    checkAuth().then(user => { if (user) window.location.href = '/admin'; });
+    checkAuth().then(user => { if (user) window.location.href = safeReturn; });
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -74,7 +79,7 @@
         });
         const data = await res.json();
         if (res.ok) {
-          window.location.href = '/admin';
+          window.location.href = safeReturn;
         } else {
           errEl.textContent = data.error || 'Login failed';
           errEl.classList.remove('hidden');
