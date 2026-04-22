@@ -1,8 +1,19 @@
 /* ═══════════════════════════════════════════════════════
    workspace.js — Deal Workspace tab switching + deal switcher
    Import via: <script src="/js/workspace.js"></script>
-   Requires: brand.js (for initCounters, initRevealAnimations)
+   Requires: brand.js, escapeHtml (from deal-detail.js or self-defined)
    ═══════════════════════════════════════════════════════ */
+
+/* WHY: escapeHtml is defined in deal-detail.js but workspace.js should be
+   self-contained. This guard provides a local definition if not already available. */
+if (typeof escapeHtml === 'undefined') {
+  function escapeHtml(str) {
+    if (str == null) return '';
+    var div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+  }
+}
 
 /* WHY: Default tabs define the workspace structure. Each tab has an id,
    label, and optional iframe src pattern. Tabs without iframeSrc render

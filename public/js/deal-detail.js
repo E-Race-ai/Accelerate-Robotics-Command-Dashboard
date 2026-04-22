@@ -67,6 +67,7 @@ let deal = null;
 let facility = null;
 let activities = [];
 let availableProposals = [];
+let wsInitialized = false;
 
 // ── Data loading ───────────────────────────────────────────────
 async function loadDeal() {
@@ -99,18 +100,20 @@ async function loadDeal() {
 
   renderAll();
 
-  /* WHY: Fetch all deals for the deal switcher dropdown */
-  let allDeals = [];
-  try {
-    const allRes = await fetch('/api/deals');
-    if (allRes.ok) allDeals = await allRes.json();
-  } catch (e) { /* Switcher will just be empty */ }
+  if (typeof initWorkspace === 'function' && !wsInitialized) {
+    /* WHY: Fetch all deals for the deal switcher dropdown — only on first load */
+    let allDeals = [];
+    try {
+      const allRes = await fetch('/api/deals');
+      if (allRes.ok) allDeals = await allRes.json();
+    } catch (e) { /* Switcher will just be empty */ }
 
-  /* Initialize workspace if workspace.js is loaded */
-  if (typeof initWorkspace === 'function') {
     initWorkspace(deal, allDeals);
+    wsInitialized = true;
+  }
 
-    /* Set tab status dots based on available data */
+  /* WHY: Update tab dots on every load — data changes after mutations */
+  if (typeof wsUpdateTabDots === 'function') {
     wsUpdateTabDots({
       assessment: deal._assessmentId ? 'in_progress' : 'not_started',
       fleet: 'not_started',
