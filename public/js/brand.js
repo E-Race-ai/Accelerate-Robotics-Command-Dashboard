@@ -126,7 +126,8 @@ function initActiveNavLink() {
   var path = window.location.pathname;
   document.querySelectorAll('.brand-nav-links a').forEach(function(a) {
     var href = a.getAttribute('href');
-    if (href && path.indexOf(href) !== -1) {
+    /* WHY: Exact match or leading-path check prevents /admin matching /admin/deals */
+    if (href && (href === path || (href !== '/' && path.startsWith(href + '/')))) {
       a.classList.add('active');
     }
   });
