@@ -11,7 +11,7 @@ const VALID_SOURCES = ['inbound', 'referral', 'outbound', 'event'];
 const CLOSING_STAGES = ['won', 'lost'];
 
 // ── List deals ─────────────────────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const { stage, owner } = req.query;
   // WHY: Subquery grabs the most recent activity per deal so the table view can show "who did what" inline
   let sql = `
@@ -44,25 +44,25 @@ router.get('/', requireAuth, (req, res) => {
   if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
   sql += ' ORDER BY d.updated_at DESC';
 
-  const deals = db.prepare(sql).all(...params);
+  const deals = await db.all(sql, params);
   res.json(deals);
 });
 
 // ── Get single deal ────────────────────────────────────────────
-router.get('/:id', requireAuth, (req, res) => {
-  const deal = db.prepare(`
+router.get('/:id', requireAuth, async (req, res) => {
+  const deal = await db.one(`
     SELECT d.*, f.name as facility_name, f.type as facility_type, f.city, f.state
     FROM deals d
     LEFT JOIN facilities f ON d.facility_id = f.id
     WHERE d.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
 
   if (!deal) return res.status(404).json({ error: 'Deal not found' });
   res.json(deal);
 });
 
 // ── Create deal ────────────────────────────────────────────────
-router.post('/', requireAuth, requireRole('admin', 'sales'), (req, res) => {
+router.post('/', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
   const { name, facility_id, source, owner, value_monthly, value_total, close_probability, notes } = req.body;
 
   if (!name) {
@@ -72,26 +72,26 @@ router.post('/', requireAuth, requireRole('admin', 'sales'), (req, res) => {
     return res.status(400).json({ error: `Source must be one of: ${VALID_SOURCES.join(', ')}` });
   }
 
-  const id = generateDealId(db);
+  const id = await generateDealId(db);
 
-  db.prepare(`
+  await db.run(`
     INSERT INTO deals (id, name, facility_id, stage, source, owner, value_monthly, value_total, close_probability, notes)
     VALUES (?, ?, ?, 'lead', ?, ?, ?, ?, ?, ?)
-  `).run(id, name, facility_id || null, source || null, owner || req.admin.email, value_monthly || null, value_total || null, close_probability || 0, notes || null);
+  `, [id, name, facility_id || null, source || null, owner || req.admin.email, value_monthly || null, value_total || null, close_probability || 0, notes || null]);
 
   // Log activity
-  db.prepare(`
+  await db.run(`
     INSERT INTO activities (id, deal_id, actor, action, detail)
     VALUES (?, ?, ?, 'deal_created', ?)
-  `).run(generateId(), id, req.admin.email, JSON.stringify({ name, source }));
+  `, [generateId(), id, req.admin.email, JSON.stringify({ name, source })]);
 
-  const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(id);
+  const deal = await db.one('SELECT * FROM deals WHERE id = ?', [id]);
   res.status(201).json(deal);
 });
 
 // ── Update deal ────────────────────────────────────────────────
-router.patch('/:id', requireAuth, requireRole('admin', 'sales'), (req, res) => {
-  const existing = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
+router.patch('/:id', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
+  const existing = await db.one('SELECT * FROM deals WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Deal not found' });
 
   const { name, stage, owner, source, value_monthly, value_total, close_probability, notes, facility_id } = req.body;
@@ -129,36 +129,37 @@ router.patch('/:id', requireAuth, requireRole('admin', 'sales'), (req, res) => {
   const values = Object.values(updates);
   values.push(req.params.id);
 
-  db.prepare(`UPDATE deals SET ${setClauses} WHERE id = ?`).run(...values);
+  await db.run(`UPDATE deals SET ${setClauses} WHERE id = ?`, values);
 
   // Log stage changes as activities
   if (stage && stage !== existing.stage) {
-    db.prepare(`
+    await db.run(`
       INSERT INTO activities (id, deal_id, actor, action, detail)
       VALUES (?, ?, ?, 'stage_changed', ?)
-    `).run(generateId(), req.params.id, req.admin.email, JSON.stringify({ from: existing.stage, to: stage }));
+    `, [generateId(), req.params.id, req.admin.email, JSON.stringify({ from: existing.stage, to: stage })]);
   }
 
-  const updated = db.prepare('SELECT * FROM deals WHERE id = ?').get(req.params.id);
+  const updated = await db.one('SELECT * FROM deals WHERE id = ?', [req.params.id]);
   res.json(updated);
 });
 
 // ── Delete deal ────────────────────────────────────────────────
-router.delete('/:id', requireAuth, requireRole('admin'), (req, res) => {
-  const existing = db.prepare('SELECT id FROM deals WHERE id = ?').get(req.params.id);
+router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+  const existing = await db.one('SELECT id FROM deals WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Deal not found' });
 
   // WHY: Activities have a FK to deals — delete them first to avoid constraint violation
-  db.prepare('DELETE FROM activities WHERE deal_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM deals WHERE id = ?').run(req.params.id);
+  await db.run('DELETE FROM activities WHERE deal_id = ?', [req.params.id]);
+  await db.run('DELETE FROM deals WHERE id = ?', [req.params.id]);
   res.json({ ok: true });
 });
 
 // ── Get activities for a deal ──────────────────────────────────
-router.get('/:id/activities', requireAuth, (req, res) => {
-  const activities = db.prepare(
-    'SELECT * FROM activities WHERE deal_id = ? ORDER BY created_at DESC'
-  ).all(req.params.id);
+router.get('/:id/activities', requireAuth, async (req, res) => {
+  const activities = await db.all(
+    'SELECT * FROM activities WHERE deal_id = ? ORDER BY created_at DESC',
+    [req.params.id]
+  );
   res.json(activities);
 });
 

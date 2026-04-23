@@ -1,6 +1,8 @@
 # Render.com deployment blueprint.
 # Apply via Render dashboard: New → Blueprint → point at this repo.
 # Secret env vars (marked sync: false) must be set manually in the Render dashboard.
+#
+# Database: Turso (libsql remote). No persistent disk needed — Turso is managed externally.
 
 services:
   - type: web
@@ -13,15 +15,13 @@ services:
     startCommand: npm start
     healthCheckPath: /
     autoDeploy: true
-    disk:
-      name: accelerate-data
-      mountPath: /app/data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DB_PATH
-        value: /app/data/accelerate.db
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_AUTH_TOKEN
+        sync: false
       - key: JWT_SECRET
         sync: false
       - key: ADMIN_EMAIL

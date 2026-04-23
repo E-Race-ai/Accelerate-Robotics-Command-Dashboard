@@ -20,7 +20,7 @@ const TEAM_MEMBERS = ['Cory', 'Tyler', 'David', 'Eric', 'Lydia', 'JB', 'Ben'];
 // ── Shared upsert logic (POST and PUT both call this) ──────────
 // WHY: Offline-first design — client generates a UUID and always sends full state.
 // INSERT OR REPLACE handles both "create" and "update" from the same sync payload.
-function upsertAssessment(id, body, res) {
+async function upsertAssessment(id, body, res) {
   const {
     deal_id, facility_type, property_name, property_address, property_type,
     rooms, floors, elevators, elevator_make, year_built, last_renovation,
@@ -39,114 +39,121 @@ function upsertAssessment(id, body, res) {
     return res.status(400).json({ error: `union_status must be one of: ${VALID_UNION_STATUSES.join(', ')}` });
   }
 
-  // WHY: INSERT OR REPLACE replaces all columns atomically — safe for offline sync
-  // where the client always sends the complete assessment state.
-  db.prepare(`
-    INSERT OR REPLACE INTO assessments (
-      id, deal_id, facility_type, property_name, property_address, property_type,
-      rooms, floors, elevators, elevator_make, year_built, last_renovation,
-      gm_name, gm_email, gm_phone, engineering_contact, engineering_email,
-      fb_director, fb_outlets, event_space_sqft, union_status, union_details,
-      assigned_to, status, operations_data, infrastructure_data, notes,
-      created_at, updated_at, synced_at
-    ) VALUES (
-      ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?,
-      COALESCE((SELECT created_at FROM assessments WHERE id = ?), datetime('now')),
-      datetime('now'),
-      ?
-    )
-  `).run(
-    id, deal_id || null, facility_type || 'hotel', property_name, property_address || null,
-    property_type || null, rooms || null, floors || null, elevators || null,
-    elevator_make || null, year_built || null, last_renovation || null,
-    gm_name || null, gm_email || null, gm_phone || null,
-    engineering_contact || null, engineering_email || null,
-    fb_director || null, fb_outlets || null, event_space_sqft || null,
-    union_status || null, union_details || null,
-    assigned_to, status || 'draft',
-    // WHY: Guard against double-stringify — value may arrive as object (from JSON body)
-    // or as string (from a client that pre-stringified). Either way, store as JSON string.
-    operations_data != null ? (typeof operations_data === 'string' ? operations_data : JSON.stringify(operations_data)) : null,
-    infrastructure_data != null ? (typeof infrastructure_data === 'string' ? infrastructure_data : JSON.stringify(infrastructure_data)) : null,
-    notes || null,
-    // created_at COALESCE back-reference needs the id again
-    id,
-    synced_at || null,
-  );
-
-  // ── Zone sync: delete-and-reinsert ─────────────────────────────
-  // WHY: Client sends the full canonical zone list on every sync; simpler than diffing
-  if (Array.isArray(zones)) {
-    db.prepare('DELETE FROM assessment_zones WHERE assessment_id = ?').run(id);
-
-    const insertZone = db.prepare(`
-      INSERT INTO assessment_zones (
-        id, assessment_id, zone_type, zone_name, floor_number, floor_surfaces,
-        corridor_width_ft, ceiling_height_ft, door_width_min_ft,
-        wifi_strength, wifi_network, lighting, foot_traffic,
-        current_cleaning_method, cleaning_frequency, cleaning_contractor, cleaning_shift,
-        delivery_method, staffing_notes, pain_points,
-        robot_readiness, readiness_notes, template_data, notes, sort_order
+  // WHY: Wrap the full upsert (assessment + zones + stakeholders) in one transaction so
+  // a partial failure doesn't leave orphaned zones/stakeholders or a half-synced record.
+  const assessment = await db.transaction(async (tx) => {
+    // WHY: INSERT OR REPLACE replaces all columns atomically — safe for offline sync
+    // where the client always sends the complete assessment state.
+    await tx.run(`
+      INSERT OR REPLACE INTO assessments (
+        id, deal_id, facility_type, property_name, property_address, property_type,
+        rooms, floors, elevators, elevator_make, year_built, last_renovation,
+        gm_name, gm_email, gm_phone, engineering_contact, engineering_email,
+        fb_director, fb_outlets, event_space_sqft, union_status, union_details,
+        assigned_to, status, operations_data, infrastructure_data, notes,
+        created_at, updated_at, synced_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?,
-        ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?,
-        ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        COALESCE((SELECT created_at FROM assessments WHERE id = ?), datetime('now')),
+        datetime('now'),
+        ?
       )
-    `);
+    `, [
+      id, deal_id || null, facility_type || 'hotel', property_name, property_address || null,
+      property_type || null, rooms || null, floors || null, elevators || null,
+      elevator_make || null, year_built || null, last_renovation || null,
+      gm_name || null, gm_email || null, gm_phone || null,
+      engineering_contact || null, engineering_email || null,
+      fb_director || null, fb_outlets || null, event_space_sqft || null,
+      union_status || null, union_details || null,
+      assigned_to, status || 'draft',
+      // WHY: Guard against double-stringify — value may arrive as object (from JSON body)
+      // or as string (from a client that pre-stringified). Either way, store as JSON string.
+      operations_data != null ? (typeof operations_data === 'string' ? operations_data : JSON.stringify(operations_data)) : null,
+      infrastructure_data != null ? (typeof infrastructure_data === 'string' ? infrastructure_data : JSON.stringify(infrastructure_data)) : null,
+      notes || null,
+      // created_at COALESCE back-reference needs the id again
+      id,
+      synced_at || null,
+    ]);
 
-    zones.forEach((z, idx) => {
-      insertZone.run(
-        z.id || generateId(), id,
-        z.zone_type || 'other', z.zone_name || 'Zone',
-        z.floor_number ?? null,
-        // WHY: Guard against double-stringify — may arrive as array or pre-stringified string
-        z.floor_surfaces != null ? (typeof z.floor_surfaces === 'string' ? z.floor_surfaces : JSON.stringify(z.floor_surfaces)) : null,
-        z.corridor_width_ft ?? null, z.ceiling_height_ft ?? null, z.door_width_min_ft ?? null,
-        z.wifi_strength || null, z.wifi_network || null,
-        z.lighting || null, z.foot_traffic || null,
-        z.current_cleaning_method || null, z.cleaning_frequency || null,
-        z.cleaning_contractor || null, z.cleaning_shift || null,
-        z.delivery_method || null, z.staffing_notes || null,
-        z.pain_points || null,
-        z.robot_readiness || null, z.readiness_notes || null,
-        z.template_data != null ? (typeof z.template_data === 'string' ? z.template_data : JSON.stringify(z.template_data)) : null,
-        z.notes || null,
-        z.sort_order ?? idx,
-      );
-    });
-  }
+    // ── Zone sync: delete-and-reinsert ─────────────────────────────
+    // WHY: Client sends the full canonical zone list on every sync; simpler than diffing
+    if (Array.isArray(zones)) {
+      await tx.run('DELETE FROM assessment_zones WHERE assessment_id = ?', [id]);
 
-  // ── Stakeholder sync: delete-and-reinsert ──────────────────────
-  if (Array.isArray(stakeholders)) {
-    db.prepare('DELETE FROM assessment_stakeholders WHERE assessment_id = ?').run(id);
+      const insertZoneSql = `
+        INSERT INTO assessment_zones (
+          id, assessment_id, zone_type, zone_name, floor_number, floor_surfaces,
+          corridor_width_ft, ceiling_height_ft, door_width_min_ft,
+          wifi_strength, wifi_network, lighting, foot_traffic,
+          current_cleaning_method, cleaning_frequency, cleaning_contractor, cleaning_shift,
+          delivery_method, staffing_notes, pain_points,
+          robot_readiness, readiness_notes, template_data, notes, sort_order
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, ?, ?,
+          ?, ?, ?, ?, ?
+        )
+      `;
 
-    const insertStakeholder = db.prepare(`
-      INSERT INTO assessment_stakeholders (
-        id, assessment_id, name, title, department, role,
-        email, phone, notes, sort_order
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+      for (let idx = 0; idx < zones.length; idx++) {
+        const z = zones[idx];
+        await tx.run(insertZoneSql, [
+          z.id || generateId(), id,
+          z.zone_type || 'other', z.zone_name || 'Zone',
+          z.floor_number ?? null,
+          // WHY: Guard against double-stringify — may arrive as array or pre-stringified string
+          z.floor_surfaces != null ? (typeof z.floor_surfaces === 'string' ? z.floor_surfaces : JSON.stringify(z.floor_surfaces)) : null,
+          z.corridor_width_ft ?? null, z.ceiling_height_ft ?? null, z.door_width_min_ft ?? null,
+          z.wifi_strength || null, z.wifi_network || null,
+          z.lighting || null, z.foot_traffic || null,
+          z.current_cleaning_method || null, z.cleaning_frequency || null,
+          z.cleaning_contractor || null, z.cleaning_shift || null,
+          z.delivery_method || null, z.staffing_notes || null,
+          z.pain_points || null,
+          z.robot_readiness || null, z.readiness_notes || null,
+          z.template_data != null ? (typeof z.template_data === 'string' ? z.template_data : JSON.stringify(z.template_data)) : null,
+          z.notes || null,
+          z.sort_order ?? idx,
+        ]);
+      }
+    }
 
-    stakeholders.forEach((s, idx) => {
-      // WHY: Skip incomplete stakeholder entries — partial records from autosave shouldn't persist
-      if (!s.name || !s.role) return;
-      insertStakeholder.run(
-        s.id || generateId(), id,
-        s.name, s.title || null, s.department || null, s.role,
-        s.email || null, s.phone || null, s.notes || null,
-        s.sort_order ?? idx,
-      );
-    });
-  }
+    // ── Stakeholder sync: delete-and-reinsert ──────────────────────
+    if (Array.isArray(stakeholders)) {
+      await tx.run('DELETE FROM assessment_stakeholders WHERE assessment_id = ?', [id]);
 
-  const assessment = db.prepare('SELECT * FROM assessments WHERE id = ?').get(id);
+      const insertStakeholderSql = `
+        INSERT INTO assessment_stakeholders (
+          id, assessment_id, name, title, department, role,
+          email, phone, notes, sort_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      for (let idx = 0; idx < stakeholders.length; idx++) {
+        const s = stakeholders[idx];
+        // WHY: Skip incomplete stakeholder entries — partial records from autosave shouldn't persist
+        if (!s.name || !s.role) continue;
+        await tx.run(insertStakeholderSql, [
+          s.id || generateId(), id,
+          s.name, s.title || null, s.department || null, s.role,
+          s.email || null, s.phone || null, s.notes || null,
+          s.sort_order ?? idx,
+        ]);
+      }
+    }
+
+    return await tx.one('SELECT * FROM assessments WHERE id = ?', [id]);
+  });
+
   return res.status(200).json(assessment);
 }
 
@@ -157,7 +164,7 @@ router.get('/meta/team', requireAuth, (req, res) => {
 });
 
 // ── GET / — List assessments ───────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const { assigned_to, status, deal_id } = req.query;
 
   let sql = `
@@ -185,36 +192,38 @@ router.get('/', requireAuth, (req, res) => {
   if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
   sql += ' ORDER BY a.updated_at DESC';
 
-  res.json(db.prepare(sql).all(...params));
+  res.json(await db.all(sql, params));
 });
 
 // ── GET /:id — Get single assessment ──────────────────────────
-router.get('/:id', requireAuth, (req, res) => {
-  const assessment = db.prepare('SELECT * FROM assessments WHERE id = ?').get(req.params.id);
+router.get('/:id', requireAuth, async (req, res) => {
+  const assessment = await db.one('SELECT * FROM assessments WHERE id = ?', [req.params.id]);
   if (!assessment) return res.status(404).json({ error: 'Assessment not found' });
 
-  assessment.zones = db.prepare(
-    'SELECT * FROM assessment_zones WHERE assessment_id = ? ORDER BY sort_order'
-  ).all(req.params.id);
+  assessment.zones = await db.all(
+    'SELECT * FROM assessment_zones WHERE assessment_id = ? ORDER BY sort_order',
+    [req.params.id]
+  );
 
-  assessment.stakeholders = db.prepare(
-    'SELECT * FROM assessment_stakeholders WHERE assessment_id = ? ORDER BY sort_order'
-  ).all(req.params.id);
+  assessment.stakeholders = await db.all(
+    'SELECT * FROM assessment_stakeholders WHERE assessment_id = ? ORDER BY sort_order',
+    [req.params.id]
+  );
 
   // WHY: Exclude photo_data BLOB from list response — blobs are large and only needed
   // when downloading a specific photo. Thumbnail column is kept for preview use.
-  assessment.photos = db.prepare(`
+  assessment.photos = await db.all(`
     SELECT id, assessment_id, zone_id, checklist_item, thumbnail, annotations, caption, taken_at
     FROM assessment_photos
     WHERE assessment_id = ?
     ORDER BY taken_at
-  `).all(req.params.id);
+  `, [req.params.id]);
 
   res.json(assessment);
 });
 
 // ── POST / — Create or upsert assessment ──────────────────────
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   // WHY: Client always provides the UUID for offline-first support.
   // Fall back to server-generated ID for clients that don't.
   const id = req.body.id || generateId();
@@ -222,28 +231,29 @@ router.post('/', requireAuth, (req, res) => {
 });
 
 // ── PUT /:id — Update assessment ──────────────────────────────
-router.put('/:id', requireAuth, (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   return upsertAssessment(req.params.id, req.body, res);
 });
 
 // ── DELETE /:id — Delete assessment ───────────────────────────
-router.delete('/:id', requireAuth, (req, res) => {
-  const existing = db.prepare('SELECT id FROM assessments WHERE id = ?').get(req.params.id);
+router.delete('/:id', requireAuth, async (req, res) => {
+  const existing = await db.one('SELECT id FROM assessments WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Assessment not found' });
 
   // WHY: ON DELETE CASCADE in schema handles zones, stakeholders, and photos automatically
-  db.prepare('DELETE FROM assessments WHERE id = ?').run(req.params.id);
+  await db.run('DELETE FROM assessments WHERE id = ?', [req.params.id]);
   res.json({ ok: true });
 });
 
 // ── GET /:id/fleet-input — Transform for Fleet Designer ────────
-router.get('/:id/fleet-input', requireAuth, (req, res) => {
-  const assessment = db.prepare('SELECT * FROM assessments WHERE id = ?').get(req.params.id);
+router.get('/:id/fleet-input', requireAuth, async (req, res) => {
+  const assessment = await db.one('SELECT * FROM assessments WHERE id = ?', [req.params.id]);
   if (!assessment) return res.status(404).json({ error: 'Assessment not found' });
 
-  const zones = db.prepare(
-    'SELECT * FROM assessment_zones WHERE assessment_id = ? ORDER BY sort_order'
-  ).all(req.params.id);
+  const zones = await db.all(
+    'SELECT * FROM assessment_zones WHERE assessment_id = ? ORDER BY sort_order',
+    [req.params.id]
+  );
 
   // Collect unique surfaces across all zones
   const surfaceSet = new Set();

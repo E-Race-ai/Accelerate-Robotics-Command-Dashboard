@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { createTestDb } = require('../helpers/setup');
+const { createTestDb, wrapAsLibsqlHelper } = require('../helpers/setup');
 
 // WHY: We test route handler logic directly against the DB, not through HTTP.
 // This avoids starting Express for every test while still testing real SQL.
@@ -16,9 +16,9 @@ describe('deals routes', () => {
   afterEach(() => cleanup());
 
   describe('create deal', () => {
-    it('creates a deal with OPP-001 id', () => {
+    it('creates a deal with OPP-001 id', async () => {
       const { generateDealId } = require('../../src/services/id-generator');
-      const id = generateDealId(db);
+      const id = await generateDealId(wrapAsLibsqlHelper(db));
       db.prepare('INSERT INTO deals (id, name, stage, source) VALUES (?, ?, ?, ?)').run(id, 'Thesis Hotel', 'lead', 'inbound');
       const deal = db.prepare('SELECT * FROM deals WHERE id = ?').get(id);
       expect(deal.id).toBe('OPP-001');
