@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate — Fixture Type Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root { --blue: #0055ff; --cyan: #00c8ff; --purple: #7c3aed; --teal: #06b6d4; --navy: #0f172a; --green: #22c55e; --amber: #f59e0b; --red: #ef4444; }
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+h1, h2, h3, h4, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+html { scroll-behavior: smooth; }
+body { background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+/* Nav */
+nav { position: fixed; top: 0; width: 100%; z-index: 50; background: rgba(15,23,42,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.05); }
+nav .inner { max-width: 1200px; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+nav .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: white; font-weight: 700; font-size: 14px; }
+nav .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #3b82f6, #7c3aed, #06b6d4); display: flex; align-items: center; justify-content: center; }
+nav .badge { font-size: 10px; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Sections */
+.section { max-width: 1200px; margin: 0 auto; padding: 80px 24px; }
+.section:first-of-type { padding-top: 120px; }
+
+/* Hero */
+.hero { text-align: center; padding-top: 140px; }
+.hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; line-height: 1.1; margin-bottom: 16px; }
+.hero .gradient-text { background: linear-gradient(135deg, var(--blue), var(--cyan), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero .sub { color: #94a3b8; font-size: 1.1rem; max-width: 700px; margin: 0 auto 40px; line-height: 1.7; }
+.hero .insight { display: inline-block; background: rgba(0,85,255,0.1); border: 1px solid rgba(0,85,255,0.2); border-radius: 12px; padding: 16px 28px; color: #93c5fd; font-size: 0.95rem; font-weight: 500; max-width: 800px; }
+
+/* Cards */
+.card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 40px; }
+@media (max-width: 768px) { .card-grid { grid-template-columns: 1fr; } }
+.type-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; overflow: hidden; }
+.type-card.type-a { border-color: rgba(0,85,255,0.25); }
+.type-card.type-b { border-color: rgba(124,58,237,0.25); }
+.card-header { padding: 24px 28px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.card-header .label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.type-a .card-header .label { color: var(--cyan); }
+.type-b .card-header .label { color: #a78bfa; }
+.card-header h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+.card-header .location { font-size: 0.8rem; color: #64748b; }
+.card-body { padding: 24px 28px; }
+
+/* Photo grid */
+.photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+.photo-grid img { width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); aspect-ratio: 4/3; object-fit: cover; cursor: pointer; transition: transform 0.2s; }
+.photo-grid img:hover { transform: scale(1.02); }
+
+/* Specs table */
+.specs { width: 100%; font-size: 0.8rem; border-collapse: collapse; margin: 16px 0; }
+.specs th { text-align: left; color: #64748b; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.specs td { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: top; }
+.specs td:first-child { color: #94a3b8; width: 40%; }
+
+/* Wiring diagram */
+.wiring-wrap { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 24px; margin: 24px 0; }
+.wiring-wrap h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 16px; color: #cbd5e1; }
+.wiring-svg { width: 100%; height: auto; }
+
+/* Comparison table */
+.compare-section { margin-top: 60px; }
+.compare-section h2 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; }
+.compare-section .sub { color: #94a3b8; margin-bottom: 28px; }
+.compare-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: rgba(255,255,255,0.02); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); }
+.compare-table th { text-align: left; padding: 14px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; font-weight: 700; background: rgba(255,255,255,0.03); }
+.compare-table th.col-a { color: var(--cyan); }
+.compare-table th.col-b { color: #a78bfa; }
+.compare-table td { padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.04); vertical-align: top; }
+.compare-table td:first-child { color: #94a3b8; font-weight: 500; width: 25%; }
+.compare-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* Universal section */
+.universal { margin-top: 60px; text-align: center; }
+.universal h2 { font-size: 1.8rem; font-weight: 800; margin-bottom: 12px; }
+.universal .sub { color: #94a3b8; max-width: 700px; margin: 0 auto 32px; }
+.pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 24px; }
+@media (max-width: 768px) { .pillars { grid-template-columns: 1fr; } }
+.pillar { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 24px; text-align: left; }
+.pillar .icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 12px; }
+.pillar h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; }
+.pillar p { font-size: 0.8rem; color: #94a3b8; line-height: 1.6; }
+
+/* BOM */
+.bom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+@media (max-width: 768px) { .bom-grid { grid-template-columns: 1fr; } }
+.bom-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 24px; }
+.bom-card h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; }
+.bom-card.bom-a { border-color: rgba(0,85,255,0.2); }
+.bom-card.bom-b { border-color: rgba(124,58,237,0.2); }
+.bom-card .total { font-size: 1.6rem; font-weight: 800; margin-top: 12px; }
+.bom-card.bom-a .total { color: var(--cyan); }
+.bom-card.bom-b .total { color: #a78bfa; }
+.bom-line { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.78rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.bom-line .part { color: #cbd5e1; }
+.bom-line .cost { color: #94a3b8; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; }
+
+/* Next steps */
+.next-steps { margin-top: 60px; padding: 32px; background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.15); border-radius: 16px; }
+.next-steps h3 { color: var(--amber); font-size: 1rem; margin-bottom: 16px; }
+.next-steps ul { list-style: none; }
+.next-steps li { padding: 8px 0; padding-left: 24px; position: relative; font-size: 0.85rem; color: #cbd5e1; }
+.next-steps li::before { content: ''; position: absolute; left: 0; top: 15px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--amber); }
+
+/* Lightbox */
+.lightbox { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.92); justify-content: center; align-items: center; cursor: zoom-out; }
+.lightbox.active { display: flex; }
+.lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <div class="inner">
+        <a href="integration-overview.html" class="logo">
+            <div class="logo-icon">
+                <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            Accelerate Robotics
+        </a>
+        <span class="badge">Fixture Type Comparison</span>
+    </div>
+</nav>
+
+<!-- HERO -->
+<div class="section hero">
+    <h1>One Emulator,<br><span class="gradient-text">Two Fixture Types</span></h1>
+    <p class="sub">We've torn open elevator fixtures at two different buildings and found two completely different architectures. Here's why the same $20 board handles both.</p>
+    <div class="insight">Every elevator button does the same thing electrically: <strong>closing a contact between two conductors</strong>. Our SSR closes that same contact from a second path. The controller can't tell the difference.</div>
+</div>
+
+<!-- TYPE CARDS -->
+<div class="section">
+    <div class="card-grid">
+
+        <!-- TYPE A -->
+        <div class="type-card type-a">
+            <div class="card-header">
+                <div class="label">Type A &mdash; PCB-Based</div>
+                <h3>ThyssenKrupp Signal Fixture</h3>
+                <div class="location">Thesis Hotel &bull; 480 NE 31st St, Miami, FL</div>
+            </div>
+            <div class="card-body">
+                <div class="photo-grid">
+                    <img src="../assets/elevator-photos/IMG_1586.jpg" alt="ThyssenKrupp faceplate" onclick="openLightbox(this)">
+                    <img src="../assets/elevator-photos/IMG_1590.jpg" alt="ThyssenKrupp PCB screw terminals" onclick="openLightbox(this)">
+                    <img src="../assets/elevator-photos/IMG_1580.jpg" alt="ThyssenKrupp SMC relays" onclick="openLightbox(this)">
+                    <img src="../assets/elevator-photos/IMG_1582.jpg" alt="ThyssenKrupp label" onclick="openLightbox(this)">
+                </div>
+                <table class="specs">
+                    <tr><th colspan="2">Key Findings</th></tr>
+                    <tr><td>Main PCB</td><td>6300WG1 REV.H, Made in Mexico</td></tr>
+                    <tr><td>Terminal Block</td><td>4-position green screw block:<br><code>I/O#2 (DN) | I/O#1 (UP) | G24 | P24</code></td></tr>
+                    <tr><td>Button Press =</td><td>Shorting I/O#1 or I/O#2 to G24</td></tr>
+                    <tr><td>Riser to Controller</td><td>RJ modular jack</td></tr>
+                    <tr><td>Relays</td><td>2x SMC relay modules, 24V, 50mA max</td></tr>
+                    <tr><td>Power Available</td><td>P24 rail (24V DC) on the PCB</td></tr>
+                </table>
+
+                <!-- WIRING DIAGRAM TYPE A -->
+                <div class="wiring-wrap">
+                    <h4>How the Emulator Wires In</h4>
+                    <svg class="wiring-svg" viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- PCB Box -->
+                        <rect x="20" y="20" width="360" height="130" rx="8" fill="rgba(0,85,255,0.06)" stroke="rgba(0,85,255,0.3)" stroke-width="1.5"/>
+                        <text x="40" y="44" fill="#64748b" font-size="10" font-weight="700" font-family="Space Grotesk">SIGNAL FIXTURE PCB</text>
+
+                        <!-- Screw terminals -->
+                        <rect x="220" y="55" width="140" height="40" rx="4" fill="rgba(34,197,94,0.1)" stroke="rgba(34,197,94,0.4)" stroke-width="1"/>
+                        <text x="230" y="70" fill="#22c55e" font-size="8" font-weight="700" font-family="JetBrains Mono">I/O#1</text>
+                        <text x="268" y="70" fill="#22c55e" font-size="8" font-weight="700" font-family="JetBrains Mono">I/O#2</text>
+                        <text x="308" y="70" fill="#22c55e" font-size="8" font-weight="700" font-family="JetBrains Mono">G24</text>
+                        <text x="340" y="70" fill="#22c55e" font-size="8" font-weight="700" font-family="JetBrains Mono">P24</text>
+                        <!-- Terminal dots -->
+                        <circle cx="240" cy="82" r="4" fill="#22c55e"/>
+                        <circle cx="280" cy="82" r="4" fill="#22c55e"/>
+                        <circle cx="320" cy="82" r="4" fill="#22c55e"/>
+                        <circle cx="352" cy="82" r="4" fill="#22c55e"/>
+
+                        <!-- UP/DN buttons -->
+                        <rect x="40" y="60" width="60" height="30" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)"/>
+                        <text x="52" y="79" fill="#94a3b8" font-size="9" font-weight="600" font-family="Inter">UP btn</text>
+                        <rect x="115" y="60" width="60" height="30" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)"/>
+                        <text x="125" y="79" fill="#94a3b8" font-size="9" font-weight="600" font-family="Inter">DN btn</text>
+
+                        <!-- Relays -->
+                        <rect x="50" y="105" width="40" height="20" rx="3" fill="rgba(0,200,255,0.1)" stroke="rgba(0,200,255,0.3)"/>
+                        <text x="54" y="118" fill="#00c8ff" font-size="7" font-weight="600" font-family="JetBrains Mono">relay</text>
+                        <rect x="125" y="105" width="40" height="20" rx="3" fill="rgba(0,200,255,0.1)" stroke="rgba(0,200,255,0.3)"/>
+                        <text x="129" y="118" fill="#00c8ff" font-size="7" font-weight="600" font-family="JetBrains Mono">relay</text>
+
+                        <!-- Lines from buttons to relays -->
+                        <line x1="70" y1="90" x2="70" y2="105" stroke="#64748b" stroke-width="1"/>
+                        <line x1="145" y1="90" x2="145" y2="105" stroke="#64748b" stroke-width="1"/>
+
+                        <!-- RJ jack -->
+                        <rect x="220" y="110" width="50" height="20" rx="3" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)"/>
+                        <text x="225" y="123" fill="#94a3b8" font-size="7" font-weight="600">RJ jack</text>
+                        <text x="225" y="143" fill="#475569" font-size="7" font-style="italic">→ to controller</text>
+
+                        <!-- EMULATOR BOARD -->
+                        <rect x="60" y="200" width="280" height="100" rx="10" fill="rgba(0,85,255,0.08)" stroke="var(--blue)" stroke-width="2" stroke-dasharray="6 3"/>
+                        <text x="80" y="224" fill="var(--cyan)" font-size="11" font-weight="800" font-family="Space Grotesk">EMULATOR BOARD</text>
+
+                        <!-- SSRs -->
+                        <rect x="80" y="238" width="80" height="22" rx="4" fill="rgba(0,200,255,0.12)" stroke="rgba(0,200,255,0.4)" stroke-width="1"/>
+                        <text x="88" y="253" fill="#00c8ff" font-size="8" font-weight="600" font-family="JetBrains Mono">SSR1 (UP)</text>
+                        <rect x="80" y="266" width="80" height="22" rx="4" fill="rgba(0,200,255,0.12)" stroke="rgba(0,200,255,0.4)" stroke-width="1"/>
+                        <text x="88" y="281" fill="#00c8ff" font-size="8" font-weight="600" font-family="JetBrains Mono">SSR2 (DN)</text>
+
+                        <!-- ESP32 -->
+                        <rect x="200" y="240" width="110" height="44" rx="6" fill="rgba(124,58,237,0.1)" stroke="rgba(124,58,237,0.3)" stroke-width="1"/>
+                        <text x="214" y="258" fill="#a78bfa" font-size="9" font-weight="700" font-family="Space Grotesk">ESP32-C3</text>
+                        <text x="218" y="272" fill="#7c3aed" font-size="7" font-weight="500">BLE + WiFi</text>
+
+                        <!-- Power label -->
+                        <text x="200" y="296" fill="#22c55e" font-size="7" font-weight="600" font-family="JetBrains Mono">Power: P24 → buck → 3.3V</text>
+
+                        <!-- Connection lines: SSR1 → I/O#1, SSR2 → I/O#2, ground → G24, power → P24 -->
+                        <line x1="120" y1="238" x2="240" y2="150" stroke="var(--cyan)" stroke-width="1.5" stroke-dasharray="4 2"/>
+                        <text x="155" y="187" fill="var(--cyan)" font-size="7" font-weight="600" transform="rotate(-30 155 187)">to I/O#1</text>
+
+                        <line x1="120" y1="266" x2="280" y2="150" stroke="var(--cyan)" stroke-width="1.5" stroke-dasharray="4 2"/>
+
+                        <line x1="310" y1="240" x2="320" y2="150" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 2"/>
+                        <text x="318" y="195" fill="#22c55e" font-size="7" font-weight="600">G24</text>
+
+                        <line x1="310" y1="270" x2="352" y2="150" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2"/>
+                        <text x="340" y="210" fill="#f59e0b" font-size="7" font-weight="600">P24</text>
+                    </svg>
+                    <p style="font-size: 0.75rem; color: #64748b; margin-top: 8px;">4 wires from emulator to the PCB screw terminal block. Power tapped from the fixture's own 24V rail.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TYPE B -->
+        <div class="type-card type-b">
+            <div class="card-header">
+                <div class="label">Type B &mdash; Discrete-Wired</div>
+                <h3>Standalone Contact Switch</h3>
+                <div class="location">San Ramon Marriott &bull; 210 Porter Dr, San Ramon, CA</div>
+            </div>
+            <div class="card-body">
+                <div class="photo-grid">
+                    <img src="../assets/elevator-photos/san-ramon-marriott/IMG_2691-front-plate.png" alt="San Ramon faceplate" onclick="openLightbox(this)">
+                    <img src="../assets/elevator-photos/san-ramon-marriott/IMG_2696-fixture-back.png" alt="San Ramon fixture back" onclick="openLightbox(this)">
+                    <img src="../assets/elevator-photos/san-ramon-marriott/IMG_2695-wiring-wide.png" alt="San Ramon wiring wide" onclick="openLightbox(this)">
+                    <img src="../assets/elevator-photos/san-ramon-marriott/IMG_2694-wiring-closeup.png" alt="San Ramon wiring closeup" onclick="openLightbox(this)">
+                </div>
+                <table class="specs">
+                    <tr><th colspan="2">Key Findings</th></tr>
+                    <tr><td>Main PCB</td><td style="color: var(--amber);">None &mdash; no circuit board</td></tr>
+                    <tr><td>Terminal Block</td><td style="color: var(--amber);">None &mdash; bare wire connections</td></tr>
+                    <tr><td>Button Press =</td><td>Contact closure between two discrete wires</td></tr>
+                    <tr><td>Riser to Controller</td><td>Individual conductors through junction box</td></tr>
+                    <tr><td>Relays</td><td>None &mdash; button is a simple mechanical switch</td></tr>
+                    <tr><td>Power Available</td><td style="color: var(--amber);">No accessible rail</td></tr>
+                </table>
+
+                <!-- WIRING DIAGRAM TYPE B -->
+                <div class="wiring-wrap">
+                    <h4>How the Emulator Wires In</h4>
+                    <svg class="wiring-svg" viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Button switch -->
+                        <rect x="120" y="20" width="160" height="90" rx="8" fill="rgba(124,58,237,0.06)" stroke="rgba(124,58,237,0.3)" stroke-width="1.5"/>
+                        <text x="140" y="44" fill="#64748b" font-size="10" font-weight="700" font-family="Space Grotesk">BUTTON SWITCH</text>
+
+                        <!-- Wire A and B -->
+                        <circle cx="170" cy="70" r="5" fill="#a78bfa"/>
+                        <text x="145" y="90" fill="#a78bfa" font-size="8" font-weight="600" font-family="JetBrains Mono">Wire A</text>
+                        <circle cx="230" cy="70" r="5" fill="#a78bfa"/>
+                        <text x="212" y="90" fill="#a78bfa" font-size="8" font-weight="600" font-family="JetBrains Mono">Wire B</text>
+
+                        <!-- Open gap (normally open) -->
+                        <line x1="175" y1="70" x2="195" y2="70" stroke="#a78bfa" stroke-width="2"/>
+                        <line x1="205" y1="70" x2="225" y2="70" stroke="#a78bfa" stroke-width="2"/>
+                        <text x="192" y="64" fill="#64748b" font-size="12" font-weight="700">)</text>
+                        <text x="188" y="100" fill="#475569" font-size="7" font-style="italic">press = close A↔B</text>
+
+                        <!-- Wires going up to controller -->
+                        <line x1="170" y1="20" x2="170" y2="0" stroke="#64748b" stroke-width="1.5"/>
+                        <line x1="230" y1="20" x2="230" y2="0" stroke="#64748b" stroke-width="1.5"/>
+                        <text x="175" y="8" fill="#475569" font-size="7" font-style="italic">→ to controller via junction box</text>
+
+                        <!-- EMULATOR BOARD -->
+                        <rect x="60" y="180" width="280" height="120" rx="10" fill="rgba(124,58,237,0.08)" stroke="var(--purple)" stroke-width="2" stroke-dasharray="6 3"/>
+                        <text x="80" y="206" fill="#a78bfa" font-size="11" font-weight="800" font-family="Space Grotesk">EMULATOR BOARD</text>
+
+                        <!-- Single SSR -->
+                        <rect x="80" y="220" width="100" height="28" rx="4" fill="rgba(124,58,237,0.12)" stroke="rgba(124,58,237,0.4)" stroke-width="1"/>
+                        <text x="90" y="238" fill="#a78bfa" font-size="9" font-weight="600" font-family="JetBrains Mono">SSR (1 only)</text>
+
+                        <!-- ESP32 -->
+                        <rect x="210" y="216" width="110" height="44" rx="6" fill="rgba(124,58,237,0.1)" stroke="rgba(124,58,237,0.3)" stroke-width="1"/>
+                        <text x="224" y="234" fill="#a78bfa" font-size="9" font-weight="700" font-family="Space Grotesk">ESP32-C3</text>
+                        <text x="228" y="248" fill="#7c3aed" font-size="7" font-weight="500">BLE + WiFi</text>
+
+                        <!-- Power: USB -->
+                        <rect x="210" y="268" width="110" height="22" rx="4" fill="rgba(245,158,11,0.1)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
+                        <text x="216" y="282" fill="#f59e0b" font-size="7" font-weight="600" font-family="JetBrains Mono">USB adapter → 5V</text>
+
+                        <!-- Connection lines: SSR → Wire A and Wire B -->
+                        <line x1="100" y1="220" x2="170" y2="115" stroke="#a78bfa" stroke-width="2" stroke-dasharray="4 2"/>
+                        <line x1="160" y1="220" x2="230" y2="115" stroke="#a78bfa" stroke-width="2" stroke-dasharray="4 2"/>
+                        <text x="96" y="165" fill="#a78bfa" font-size="8" font-weight="600" transform="rotate(-38 96 165)">to Wire A</text>
+                        <text x="185" y="155" fill="#a78bfa" font-size="8" font-weight="600" transform="rotate(-30 185 155)">to Wire B</text>
+
+                        <!-- Label -->
+                        <text x="80" y="296" fill="#64748b" font-size="7" font-style="italic">SSR closes Wire A ↔ Wire B = same as pressing button</text>
+                    </svg>
+                    <p style="font-size: 0.75rem; color: #64748b; margin-top: 8px;">2 wires from SSR output across the button terminals. Power from a small USB adapter in the wall cavity. <strong>Simpler wiring, just no labels.</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SIDE BY SIDE COMPARISON -->
+<div class="section compare-section">
+    <h2>Side-by-Side Comparison</h2>
+    <p class="sub">Different packaging, same electrical principle.</p>
+    <table class="compare-table">
+        <thead>
+            <tr>
+                <th></th>
+                <th class="col-a">Type A &mdash; PCB-Based</th>
+                <th class="col-b">Type B &mdash; Discrete-Wired</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Where we connect</td><td>Labeled screw terminal block on PCB</td><td>Directly across button switch terminals</td></tr>
+            <tr><td>Wire identification</td><td>Labeled: I/O#1, I/O#2, G24, P24</td><td>Unlabeled &mdash; elevator tech traces with multimeter</td></tr>
+            <tr><td>SSRs needed</td><td>2 (UP + DN buttons)</td><td>1 per button</td></tr>
+            <tr><td>Power source</td><td>Tap P24 rail from the PCB &rarr; buck &rarr; 3.3V</td><td>Separate USB adapter in wall cavity</td></tr>
+            <tr><td>Emulator placement</td><td>Inside fixture housing, behind PCB</td><td>In wall cavity behind fixture</td></tr>
+            <tr><td>Install complexity</td><td>Medium &mdash; open fixture, access PCB</td><td>Low &mdash; access switch terminals + run USB power</td></tr>
+            <tr><td>BOM per floor</td><td>~$24</td><td>~$19</td></tr>
+            <tr><td>Known example</td><td>Thesis Hotel, Miami (ThyssenKrupp TAC32T)</td><td>San Ramon Marriott, CA (OEM unknown)</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- WHY ONE BOARD -->
+<div class="section universal">
+    <h2>Why One Board Handles Both</h2>
+    <p class="sub">The ESP32-C3 + SSR architecture is universal. The SSR is just a switch &mdash; it doesn't know or care what's on the other side of the contact closure.</p>
+    <div class="pillars">
+        <div class="pillar">
+            <div class="icon" style="background: rgba(0,200,255,0.1); color: var(--cyan);">&#x26A1;</div>
+            <h4>Same Electrical Principle</h4>
+            <p>Whether it's shorting I/O#1 to G24 on a ThyssenKrupp PCB, or closing Wire A to Wire B on a discrete switch &mdash; it's just a contact closure. The controller sees a hall call.</p>
+        </div>
+        <div class="pillar">
+            <div class="icon" style="background: rgba(124,58,237,0.1); color: #a78bfa;">&#x1F4E1;</div>
+            <h4>Same Firmware &amp; Protocol</h4>
+            <p>The BLE GATT protocol is identical. The robot sends "call elevator to floor 3" &mdash; the ESP32 fires the SSR for 500ms. Same code, same pairing, same watchdog.</p>
+        </div>
+        <div class="pillar">
+            <div class="icon" style="background: rgba(34,197,94,0.1); color: var(--green);">&#x1F6E1;</div>
+            <h4>Same Safety Guarantees</h4>
+            <p>1500V galvanic isolation via optoisolated SSR. Hardware watchdog. Normally-open default. Power-loss-safe. No interference with fire recall or safety circuits.</p>
+        </div>
+    </div>
+</div>
+
+<!-- BOM COMPARISON -->
+<div class="section">
+    <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 24px;">Bill of Materials</h2>
+    <div class="bom-grid">
+        <div class="bom-card bom-a">
+            <h4 style="color: var(--cyan);">Type A &mdash; PCB-Based</h4>
+            <div class="bom-line"><span class="part">Seeed XIAO ESP32-C3</span><span class="cost">$4.99</span></div>
+            <div class="bom-line"><span class="part">OMRON G3VM-61GR2 SSR &times; 2</span><span class="cost">$9.80</span></div>
+            <div class="bom-line"><span class="part">Pololu D24V5F3 buck converter</span><span class="cost">$8.95</span></div>
+            <div class="bom-line"><span class="part">Passives &amp; connectors</span><span class="cost">$1.00</span></div>
+            <div class="total">~$24 / floor</div>
+        </div>
+        <div class="bom-card bom-b">
+            <h4 style="color: #a78bfa;">Type B &mdash; Discrete-Wired</h4>
+            <div class="bom-line"><span class="part">Seeed XIAO ESP32-C3</span><span class="cost">$4.99</span></div>
+            <div class="bom-line"><span class="part">OMRON G3VM-61GR2 SSR &times; 1</span><span class="cost">$4.90</span></div>
+            <div class="bom-line"><span class="part">5V USB-A adapter (compact)</span><span class="cost">$5.00</span></div>
+            <div class="bom-line"><span class="part">USB-A to USB-C cable (short)</span><span class="cost">$3.00</span></div>
+            <div class="bom-line"><span class="part">Passives &amp; connectors</span><span class="cost">$1.00</span></div>
+            <div class="total">~$19 / floor</div>
+        </div>
+    </div>
+    <p style="font-size: 0.75rem; color: #64748b; margin-top: 12px;">Mid-floors with both UP and DN buttons need 2 SSRs regardless of type (+$4.90 for Type B).</p>
+</div>
+
+<!-- NEXT STEPS -->
+<div class="section">
+    <div class="next-steps">
+        <h3>Next Steps &mdash; San Ramon Marriott</h3>
+        <ul>
+            <li>Ask building engineer: <strong>"Who services the elevators?"</strong> (OEM or third-party name)</li>
+            <li>Ask building engineer: <strong>"What model is the controller?"</strong> (lets us pull wiring diagrams)</li>
+            <li>With OEM + model, we can map the exact wire identification procedure without anyone metering on-site</li>
+            <li>Verify physical space in wall cavity for emulator board + USB adapter</li>
+        </ul>
+    </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="Enlarged photo">
+</div>
+
+<script>
+function openLightbox(img) {
+    const lb = document.getElementById('lightbox');
+    document.getElementById('lightbox-img').src = img.src;
+    lb.classList.add('active');
+}
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('active');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+</script>
+
+</body>
+</html>

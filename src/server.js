@@ -94,7 +94,11 @@ app.use('/data', (req, res, next) => {
 }, express.static(path.join(__dirname, '..', 'data')));
 
 // WHY: Serve each hotel repo so proposal pages (with relative asset paths) work correctly from the deals dashboard
-const HOTEL_REPOS_DIR = path.join(__dirname, '..', '..');
+// WHY: Local dev: serve from sibling directories (../../{repo}) for live edits.
+// Production: fall back to bundled repos/ directory committed to this repo.
+// This solves the 404 problem where proposal pages only existed on Eric's machine.
+const HOTEL_REPOS_SIBLING = path.join(__dirname, '..', '..');
+const HOTEL_REPOS_BUNDLED = path.join(__dirname, '..', 'repos');
 const hotelRepos = [
   'accelerate-thesis-hotel',
   'accelerate-moore-miami',
@@ -110,8 +114,12 @@ const hotelRepos = [
   'accelerate-carts',
   'accelerate-elevator',
 ];
+const fs = require('fs');
 for (const repo of hotelRepos) {
-  const repoPath = path.join(HOTEL_REPOS_DIR, repo);
+  const siblingPath = path.join(HOTEL_REPOS_SIBLING, repo);
+  const bundledPath = path.join(HOTEL_REPOS_BUNDLED, repo);
+  // WHY: Prefer sibling (local dev with live edits) over bundled (production fallback)
+  const repoPath = fs.existsSync(siblingPath) ? siblingPath : bundledPath;
   app.use(`/repos/${repo}`, express.static(repoPath));
 }
 

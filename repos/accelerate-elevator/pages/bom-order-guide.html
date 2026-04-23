@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elevator Emulator — Order Guide</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --card: #111827;
+    --border: #1e293b;
+    --gold: #d4a040;
+    --cyan: #22d3ee;
+    --green: #34d399;
+    --red: #f87171;
+    --orange: #fb923c;
+    --purple: #a78bfa;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --dim: #475569;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--gold), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.3rem;
+  }
+  .header .subtitle { color: var(--muted); font-size: 1rem; }
+  .header .date { color: var(--dim); font-size: 0.8rem; margin-top: 0.5rem; }
+
+  .summary-bar {
+    display: flex;
+    justify-content: space-around;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  .summary-item .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .summary-item .value { font-size: 1.5rem; font-weight: 700; color: var(--green); margin-top: 0.25rem; }
+
+  .priority-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+  }
+  .priority-1 { background: rgba(248, 113, 113, 0.2); color: var(--red); }
+  .priority-2 { background: rgba(251, 146, 60, 0.2); color: var(--orange); }
+  .priority-3 { background: rgba(34, 211, 238, 0.2); color: var(--cyan); }
+
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  th {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 2px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+  }
+  tr:last-child td { border-bottom: none; }
+  .total-row td {
+    font-weight: 700;
+    color: var(--gold);
+    border-top: 2px solid var(--border);
+    padding-top: 0.75rem;
+  }
+
+  .checkbox { margin-right: 0.5rem; transform: scale(1.2); vertical-align: middle; }
+
+  .note {
+    background: rgba(212, 160, 64, 0.06);
+    border-left: 3px solid var(--gold);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .note strong { color: var(--gold); }
+
+  a {
+    color: var(--cyan);
+    text-decoration: none;
+  }
+  a:hover { text-decoration: underline; }
+  .supplier-link {
+    color: var(--cyan);
+    text-decoration: none;
+  }
+  .supplier-link:hover { text-decoration: underline; }
+
+  .step-instructions {
+    padding-left: 1.25rem;
+  }
+  .step-instructions li {
+    margin-bottom: 0.5rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .check-first {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  .check-item {
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  .footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--dim);
+    font-size: 0.75rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Elevator Button Emulator</h1>
+  <div class="subtitle">Bill of Materials & Order Guide — Thesis Hotel Phase 2</div>
+  <div class="date">April 13, 2026 — 9 boards total (6 deploy + 2 spare + 1 bench/dev)</div>
+</div>
+
+<div class="summary-bar">
+  <div class="summary-item">
+    <div class="label">Total Boards</div>
+    <div class="value">9</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">Electronics</div>
+    <div class="value">$232</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">Wiring + Enclosures</div>
+    <div class="value">$97</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">Tools (one-time)</div>
+    <div class="value">$225</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">Grand Total</div>
+    <div class="value" style="color: var(--gold);">~$650</div>
+  </div>
+</div>
+
+<!-- STEP 1 -->
+<div class="section">
+  <span class="priority-badge priority-1">Step 1 — Order Today (long lead time)</span>
+  <h2>Core Electronics — Specialty Suppliers</h2>
+  <p style="color: var(--muted); font-size: 0.88rem; margin-bottom: 1rem;">These ship from specialty suppliers and take 3-10 business days. Order first.</p>
+  <table>
+    <tr>
+      <th></th>
+      <th>Part</th>
+      <th>Spec</th>
+      <th>Qty</th>
+      <th>Supplier</th>
+      <th>Part #</th>
+      <th>Unit</th>
+      <th>Total</th>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.seeedstudio.com/Seeed-XIAO-ESP32C3-p-5431.html" target="_blank">Seeed XIAO ESP32-C3</a></strong></td>
+      <td>MCU, WiFi + BLE, USB-C</td>
+      <td>9</td>
+      <td><a href="https://www.seeedstudio.com/Seeed-XIAO-ESP32C3-p-5431.html" target="_blank">Seeed Studio</a></td>
+      <td>113991054</td>
+      <td>$4.99</td>
+      <td>$44.91</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.digikey.com/en/products/result?keywords=G3VM-61GR2" target="_blank">OMRON G3VM-61GR2</a></strong></td>
+      <td>SSR, 60V/500mA, 1500V isolation, SOP-4</td>
+      <td>18</td>
+      <td><a href="https://www.digikey.com/en/products/result?keywords=G3VM-61GR2" target="_blank">Digi-Key</a></td>
+      <td>Z11164-ND</td>
+      <td>$4.90</td>
+      <td>$88.20</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.pololu.com/product/2842" target="_blank">Pololu D24V5F3</a></strong></td>
+      <td>3.3V 500mA buck, 4.5-38V input</td>
+      <td>9</td>
+      <td><a href="https://www.pololu.com/product/2842" target="_blank">Pololu</a></td>
+      <td>2842</td>
+      <td>$8.95</td>
+      <td>$80.55</td>
+    </tr>
+  </table>
+
+  <div class="note">
+    <strong>Where to order:</strong><br>
+    <a href="https://www.seeedstudio.com/Seeed-XIAO-ESP32C3-p-5431.html" target="_blank">Seeed Studio &rarr; XIAO ESP32-C3</a> — ships from Shenzhen, 5-10 days<br>
+    <a href="https://www.digikey.com/en/products/result?keywords=G3VM-61GR2" target="_blank">Digi-Key &rarr; G3VM-61GR2 SSR</a> — check stock, niche part<br>
+    <a href="https://www.pololu.com/product/2842" target="_blank">Pololu &rarr; D24V5F3 Buck Converter</a> — ships from Las Vegas, 3-5 days
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="section">
+  <span class="priority-badge priority-2">Step 2 — Order This Week (Amazon 1-2 day)</span>
+  <h2>Passive Components</h2>
+  <table>
+    <tr>
+      <th></th>
+      <th>Part</th>
+      <th>Spec</th>
+      <th>Qty</th>
+      <th>Est. Cost</th>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=10k+ohm+resistor+1%2F4W+through+hole" target="_blank">10k ohm resistor</a></strong></td>
+      <td>1/4W, through-hole, SSR gate pull-down</td>
+      <td>18</td>
+      <td>$0.90</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=100uF+electrolytic+capacitor+50V" target="_blank">100uF electrolytic cap</a></strong></td>
+      <td>50V, Pololu input smoothing</td>
+      <td>9</td>
+      <td>$2.25</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=0.1uF+ceramic+capacitor+50V" target="_blank">0.1uF ceramic cap</a></strong></td>
+      <td>50V, decoupling on ESP32-C3</td>
+      <td>9</td>
+      <td>$0.90</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=2+pin+screw+terminal+5.08mm+PCB" target="_blank">2-pin screw terminal</a></strong></td>
+      <td>5.08mm pitch, SSR output wires</td>
+      <td>18</td>
+      <td>$5.40</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=4+pin+screw+terminal+5.08mm+PCB" target="_blank">4-pin screw terminal</a></strong></td>
+      <td>5.08mm pitch, power input</td>
+      <td>9</td>
+      <td>$4.05</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=5x7cm+perfboard+protoboard+through+hole" target="_blank">Perfboard / protoboard</a></strong></td>
+      <td>5x7cm, through-hole</td>
+      <td>9</td>
+      <td>$4.50</td>
+    </tr>
+  </table>
+
+  <h2 style="margin-top: 1.5rem;">Wiring & Connectors</h2>
+  <table>
+    <tr>
+      <th></th>
+      <th>Part</th>
+      <th>Spec</th>
+      <th>Est. Cost</th>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=22+AWG+stranded+wire+red+25ft" target="_blank">22 AWG stranded wire (red)</a></strong></td>
+      <td>300V rated, 25 ft spool</td>
+      <td>$8.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=22+AWG+stranded+wire+black+25ft" target="_blank">22 AWG stranded wire (black)</a></strong></td>
+      <td>300V rated, 25 ft spool</td>
+      <td>$8.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=22+AWG+stranded+wire+blue+25ft" target="_blank">22 AWG stranded wire (blue)</a></strong></td>
+      <td>300V rated, 25 ft spool</td>
+      <td>$8.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=ratcheting+ferrule+crimper+kit+with+assorted+ferrules" target="_blank">Ferrule crimp kit</a></strong></td>
+      <td>Insulated, 22-10 AWG assortment</td>
+      <td>$12.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=heat+shrink+tubing+kit+assorted" target="_blank">Heat shrink tubing kit</a></strong></td>
+      <td>Assorted diameters, 2:1 ratio</td>
+      <td>$8.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=black+zip+ties+assorted+4+8+inch" target="_blank">Zip ties</a></strong></td>
+      <td>4" and 8", black, 100-pack each</td>
+      <td>$6.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=dupont+jumper+wires+male+to+female+20cm" target="_blank">Dupont jumper wires</a></strong></td>
+      <td>Male-to-female, 20cm, 40-pack</td>
+      <td>$5.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=USB+C+cable+1m+3+pack" target="_blank">USB-C cables</a></strong></td>
+      <td>1m, 3-pack</td>
+      <td>$8.00</td>
+    </tr>
+  </table>
+
+  <h2 style="margin-top: 1.5rem;">Enclosures & Mounting</h2>
+  <table>
+    <tr>
+      <th></th>
+      <th>Part</th>
+      <th>Spec</th>
+      <th>Est. Cost</th>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=ABS+project+box+80x50mm+electronics+enclosure" target="_blank">Small ABS project box</a></strong></td>
+      <td>~80x50x25mm, fits perfboard + Pololu (x9)</td>
+      <td>$18.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=3M+VHB+double+sided+tape" target="_blank">3M VHB double-sided tape</a></strong></td>
+      <td>Heavy duty, 1 roll</td>
+      <td>$10.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=adhesive+cable+clips+self+adhesive+50+pack" target="_blank">Adhesive cable clips</a></strong></td>
+      <td>Self-adhesive, 50-pack</td>
+      <td>$6.00</td>
+    </tr>
+  </table>
+
+  <h2 style="margin-top: 1.5rem;">Bench Test Equipment</h2>
+  <table>
+    <tr>
+      <th></th>
+      <th>Part</th>
+      <th>Spec</th>
+      <th>Est. Cost</th>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=24V+DC+bench+power+supply+adjustable" target="_blank">24V DC power supply</a></strong></td>
+      <td>Bench, 24V 2A, simulates elevator rail</td>
+      <td>$18.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=solderless+breadboard+830+point" target="_blank">Breadboard</a></strong></td>
+      <td>Full-size, x2</td>
+      <td>$8.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=LED+resistor+assortment+kit" target="_blank">LED + resistor kit</a></strong></td>
+      <td>Visual confirmation of SSR closure</td>
+      <td>$6.00</td>
+    </tr>
+    <tr>
+      <td><input type="checkbox" class="checkbox"></td>
+      <td><strong><a href="https://www.amazon.com/s?k=USB+logic+analyzer+24MHz+8+channel+saleae+compatible" target="_blank">Logic analyzer</a></strong></td>
+      <td>Saleae Logic 8 or clone</td>
+      <td>$12.00</td>
+    </tr>
+  </table>
+</div>
+
+<!-- STEP 3 -->
+<div class="section">
+  <span class="priority-badge priority-3">Step 3 — Check What We Already Have</span>
+  <h2>Tools — Only Buy What's Missing</h2>
+  <p style="color: var(--muted); font-size: 0.88rem; margin-bottom: 1rem;">Check the house/garage first. Only order what we don't already own. Full tool list = $225 if buying everything new.</p>
+  <div class="check-first">
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=Fluke+101+multimeter" target="_blank">Digital multimeter</a> ($45)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=self+adjusting+wire+stripper+10-24+AWG" target="_blank">Wire strippers</a> ($15)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://pine64.com/product/pinecil-smart-mini-portable-soldering-iron/" target="_blank">Soldering iron</a> + <a href="https://www.amazon.com/s?k=63%2F37+solder+rosin+core" target="_blank">solder</a></div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=precision+screwdriver+set+phillips+flathead" target="_blank">Screwdriver set</a> ($12)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=AC+DC+clamp+meter" target="_blank">Clamp meter</a> ($35)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=USB+C+cable+1m+3+pack" target="_blank">USB-C cables</a> ($8)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=ratcheting+ferrule+crimping+tool" target="_blank">Ferrule crimping tool</a> ($25)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=mini+heat+gun+heat+shrink" target="_blank">Heat gun</a> ($15)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=LED+headlamp+hands+free" target="_blank">Headlamp</a> ($12)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=nylon+pry+tool+set+non+marring" target="_blank">Panel removal tools</a> ($8)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=Brother+P-Touch+label+maker" target="_blank">Label maker</a> ($30)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=ESD+anti+static+wrist+strap" target="_blank">ESD wrist straps x2</a> ($8)</div>
+    <div class="check-item"><input type="checkbox" class="checkbox"><a href="https://www.amazon.com/s?k=electronics+tool+organizer+bag" target="_blank">Service kit bag</a> ($20)</div>
+  </div>
+</div>
+
+<div class="note">
+  <strong>Why 9 boards, not 6:</strong> 2 spares for field swap if a board fails during deployment. 1 bench unit stays in the lab for firmware dev and testing. Spares avoid a 2-week delay if something fails on install day.<br><br>
+  <strong>Why perfboard, not custom PCB:</strong> First deployment. Prove the design works, then order PCBs for subsequent buildings.
+</div>
+
+<div class="footer">
+  Accelerate Robotics — Elevator Button Emulator BOM — April 2026
+</div>
+
+</body>
+</html>
