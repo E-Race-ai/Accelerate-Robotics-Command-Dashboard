@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kimpton Sawyer Hotel — Executive Proposal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        /* Kimpton Sawyer palette — Sacramento golden warmth + arena energy */
+        --coral: #c96b3c;              /* warm amber/terra cotta — hero accent */
+        --coral-light: #d88a5a;
+        --coral-deep: #a85428;
+        --gold: #b8935a;               /* Sacramento gold */
+        --gold-light: #d4b27a;
+        --gold-soft: #e8d6ac;
+        --ink: #1a1610;                /* warm dark / arena night */
+        --ink-light: #2a2418;
+        --ink-deep: #0f0e0a;
+        --bone: #f7f2e8;               /* warm bone / lobby warmth */
+        --bone-warm: #faf5ea;
+        --bone-deep: #ede4d0;
+        --accel-blue: #0055ff;
+        --accel-cyan: #00c8ff;
+        --accel-purple: #7c3aed;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bone); color: #1f2937; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; font-feature-settings: 'tnum'; }
+    .coral-gradient { background: linear-gradient(135deg, var(--coral), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .accel-gradient { background: linear-gradient(135deg, var(--accel-blue), var(--accel-cyan), var(--accel-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ── Configurator panel (ink — arena-night background) ─────────── */
+    .config-panel {
+        background: linear-gradient(160deg, var(--ink) 0%, var(--ink-deep) 100%);
+        color: #fff;
+        border-radius: 1.5rem;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        position: relative;
+        overflow: hidden;
+    }
+    .config-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle at 20% 0%, rgba(201, 107, 60, 0.15), transparent 40%),
+                          radial-gradient(circle at 80% 100%, rgba(184, 147, 90, 0.10), transparent 40%);
+        pointer-events: none;
+    }
+    .config-panel > * { position: relative; }
+
+    /* Slider */
+    .slider-wrap { position: relative; padding: 1.5rem 0; }
+    .slider-track {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        position: relative;
+        margin: 0 12px;
+    }
+    .slider-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: linear-gradient(90deg, var(--coral) 0%, var(--gold-light) 100%);
+        border-radius: 999px;
+        box-shadow: 0 0 20px rgba(201, 107, 60, 0.5);
+        transition: width 0.25s ease;
+    }
+    .slider-ticks {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 12px;
+        pointer-events: none;
+    }
+    .tick { width: 2px; height: 12px; background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
+    .tick.tier-marker {
+        width: 3px;
+        height: 18px;
+        background: var(--coral-light);
+        box-shadow: 0 0 8px rgba(201, 107, 60, 0.7);
+    }
+    .slider-input {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        background: transparent;
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        transform: translateY(-50%);
+        height: 40px;
+        cursor: pointer;
+        padding: 0 12px;
+    }
+    .slider-input::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--coral-light), var(--coral));
+        border: 3px solid #fff;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px rgba(201, 107, 60, 0.6), 0 0 0 1px rgba(0,0,0,0.2);
+        transition: transform 0.15s ease;
+    }
+    .slider-input::-webkit-slider-thumb:active { transform: scale(1.15); cursor: grabbing; }
+    .slider-input::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--coral-light), var(--coral));
+        border: 3px solid #fff;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px rgba(201, 107, 60, 0.6);
+    }
+
+    /* Fleet slot grid */
+    .robot-slot {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.75rem;
+        padding: 0.875rem 0.75rem;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        opacity: 0.4;
+        filter: grayscale(0.6);
+    }
+    .robot-slot.active {
+        background: linear-gradient(140deg, rgba(201, 107, 60, 0.18), rgba(201, 107, 60, 0.06));
+        border-color: rgba(201, 107, 60, 0.5);
+        opacity: 1;
+        filter: none;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    .robot-slot.active::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 10px;
+        height: 10px;
+        margin: 8px;
+        background: var(--coral-light);
+        border-radius: 50%;
+        box-shadow: 0 0 12px var(--coral-light);
+    }
+    .robot-chip-mini {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.5rem;
+        background: rgba(201, 107, 60, 0.18);
+        color: var(--coral-light);
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
+    }
+    .robot-slot.active .robot-chip-mini { background: var(--coral); color: #fff; }
+    .robot-photo {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: contain;
+        object-position: center;
+        margin-bottom: 0.5rem;
+        background:
+            radial-gradient(circle at 50% 60%, rgba(201, 107, 60, 0.12), transparent 65%),
+            linear-gradient(140deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
+        border-radius: 0.5rem;
+        padding: 0.25rem;
+        filter: grayscale(0.85) brightness(0.7);
+        transition: filter 0.5s ease, transform 0.5s ease;
+    }
+    .robot-slot.active .robot-photo { filter: grayscale(0) brightness(1); transform: scale(1.02); }
+
+    /* Stat tiles */
+    .stat-tile {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        transition: all 0.3s ease;
+    }
+    .stat-tile.accent {
+        background: linear-gradient(135deg, rgba(201, 107, 60, 0.18), rgba(201, 107, 60, 0.05));
+        border-color: rgba(201, 107, 60, 0.4);
+    }
+    .stat-tile.accent-green {
+        background: linear-gradient(135deg, rgba(107, 125, 95, 0.22), rgba(107, 125, 95, 0.08));
+        border-color: rgba(140, 170, 115, 0.4);
+    }
+
+    /* Toggle */
+    .toggle {
+        display: inline-flex;
+        align-items: center;
+        width: 52px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        flex-shrink: 0;
+    }
+    .toggle::after {
+        content: '';
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        background: #fff;
+        border-radius: 50%;
+        top: 3px;
+        left: 3px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle.on { background: var(--coral); }
+    .toggle.on::after { left: 27px; }
+
+    /* Preset chips */
+    .preset-chip {
+        padding: 0.5rem 1rem;
+        border-radius: 0.6rem;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.85);
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+    .preset-chip:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(201, 107, 60, 0.4);
+    }
+    .preset-chip.active {
+        background: var(--coral);
+        color: #fff;
+        border-color: var(--coral);
+        box-shadow: 0 4px 16px rgba(201, 107, 60, 0.4);
+    }
+
+    /* Phase timeline */
+    .phase-timeline {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.5rem;
+    }
+    .phase-card {
+        background: var(--bone-warm);
+        border: 1px solid rgba(26, 22, 16, 0.15);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
+    .phase-card.included {
+        background: #fff;
+        border-color: var(--coral);
+    }
+    .phase-card.skipped { opacity: 0.35; filter: grayscale(0.8); }
+
+    /* Service LEDs (inside dark panel) */
+    .led-indicator {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 11px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: background 0.35s ease, border-color 0.35s ease;
+    }
+    .led-indicator.on {
+        background: rgba(201, 107, 60, 0.09);
+        border-color: rgba(201, 107, 60, 0.35);
+    }
+    .led-dot {
+        flex: 0 0 auto;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #3a3530;
+        box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+        transition: background 0.35s ease, box-shadow 0.35s ease;
+    }
+    .led-indicator.on .led-dot {
+        background: #5eff88;
+        box-shadow: 0 0 9px rgba(94, 255, 136, 0.75), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.6);
+        animation: ledPulse 2.4s ease-in-out infinite;
+    }
+    .led-indicator.on:nth-child(3n)   .led-dot { animation-delay: 0.3s; }
+    .led-indicator.on:nth-child(3n+1) .led-dot { animation-delay: 0.8s; }
+    .led-indicator.on:nth-child(3n+2) .led-dot { animation-delay: 1.4s; }
+    @keyframes ledPulse {
+        0%, 100% { box-shadow: 0 0 8px rgba(94, 255, 136, 0.65), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.5); }
+        50%      { box-shadow: 0 0 14px rgba(94, 255, 136, 0.95), 0 0 4px #5eff88, inset 0 0 2px rgba(255,255,255,0.7); }
+    }
+    .led-label {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.45);
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        transition: color 0.35s ease, font-weight 0.35s ease;
+        line-height: 1.25;
+    }
+    .led-indicator.on .led-label { color: #ffffff; font-weight: 600; }
+    .led-threshold {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.3);
+        margin-left: auto;
+        letter-spacing: 0.05em;
+    }
+    .led-indicator.on .led-threshold { color: var(--coral-light); }
+
+    /* Tables */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th { background: var(--ink); color: #fff; font-weight: 700; text-align: left; padding: 0.65rem 0.85rem; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .data-table th.right { text-align: right; }
+    .data-table td { padding: 0.6rem 0.85rem; border-bottom: 1px solid #e5e7eb; background: #fff; }
+    .data-table tr:nth-child(even) td { background: var(--bone-warm); }
+    .data-table td.num { text-align: right; font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
+    .data-table tr.total td { background: var(--bone-deep) !important; font-weight: 700; border-top: 2px solid var(--coral); }
+
+    @media print {
+        /* ================================================================
+           PRINT THEME — LIGHT MODE
+           Dark backgrounds waste ink and hide content on paper. Convert
+           the entire proposal to a light, ink-friendly theme while
+           preserving brand accent colors for visual hierarchy.
+           ================================================================ */
+        @page { size: Letter; margin: 0.5in; }
+        body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            background: #fff !important;
+            color: #1a1610 !important;
+        }
+        .no-print, .print-only-hide { display: none !important; }
+
+        /* Kill every glow/shadow/animation that prints badly */
+        *, *::before, *::after {
+            box-shadow: none !important;
+            text-shadow: none !important;
+            animation: none !important;
+            transition: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        /* ---- Dark-to-light conversion ----
+           WHY: The screen design uses dark panels (--ink backgrounds) with
+           white text. On paper this prints as giant black rectangles that
+           waste ink and obscure content. Force everything to light bg + dark text. */
+
+        /* Header — dark gradient → white with accent bottom border */
+        header {
+            background: #fff !important;
+            border-bottom: 3px solid #c96b3c !important;
+            padding-bottom: 1rem !important;
+        }
+        /* Hide the decorative SVG pattern overlay on the header */
+        header > .absolute { display: none !important; }
+        /* Header text: white → dark */
+        header, header * { color: #1a1610 !important; }
+        header .text-gray-400, header .text-gray-500 { color: #6b7280 !important; }
+        header .text-\[10px\] { color: #6b7280 !important; }
+        /* Keep accent color in header */
+        header .text-\[\#c96b3c\] { color: #c96b3c !important; }
+        header .border-\[\#c96b3c\] { border-color: #c96b3c !important; }
+
+        /* Config panel — dark ink → white with accent border */
+        .config-panel {
+            background: #fff !important;
+            color: #1a1610 !important;
+            border: 2px solid #c96b3c !important;
+            break-inside: auto;
+            padding: 0.5in 0.4in !important;
+        }
+        .config-panel::before { display: none !important; }
+        /* All white text inside config panel → dark */
+        .config-panel .text-white,
+        .config-panel [class*="text-white"] { color: #1a1610 !important; }
+        /* Gray text inside dark panel → medium gray (legible on white) */
+        .config-panel .text-gray-300 { color: #4b5563 !important; }
+        .config-panel .text-gray-400 { color: #6b7280 !important; }
+        .config-panel .text-gray-500 { color: #9ca3af !important; }
+        /* Gold label text stays gold (legible on white) */
+        .config-panel .text-\[\#d4b27a\] { color: #a0822e !important; }
+        /* Green online count stays green */
+        .config-panel .text-\[\#5eff88\] { color: #059669 !important; }
+
+        /* Fleet count + tier label */
+        #fleetCount { color: #1a1610 !important; }
+        #tierLabel { color: #6b7280 !important; }
+
+        /* Stat tiles — transparent-on-dark → solid light fills */
+        .stat-tile {
+            background: #f7f2e8 !important;
+            border: 1px solid #d1d5db !important;
+            break-inside: avoid;
+        }
+        .stat-tile.accent {
+            background: #fef3e8 !important;
+            border: 1px solid #c96b3c !important;
+        }
+        .stat-tile.accent-green {
+            background: #f0f7f2 !important;
+            border: 1px solid #6b8f5e !important;
+        }
+        .stat-tile .text-white { color: #1a1610 !important; }
+        .stat-tile .text-gray-300 { color: #6b7280 !important; }
+
+        /* Intelligence Platform toggle row — transparent → light */
+        .config-panel .bg-white\/5 {
+            background: #f7f2e8 !important;
+            border: 1px solid #d1d5db !important;
+        }
+        .config-panel .border-white\/10 { border-color: #d1d5db !important; }
+
+        /* Annual summary panel — inline dark gradient → accent tint */
+        [style*="rgba(201, 107, 60, 0.15)"] {
+            background: #fef3e8 !important;
+            border: 1px solid #c96b3c !important;
+        }
+        [style*="rgba(201, 107, 60, 0.15)"] .text-white { color: #1a1610 !important; }
+
+        /* vs. Hiring panel — transparent white on dark → light gray */
+        [style*="rgba(255, 255, 255, 0.04)"] {
+            background: #f9fafb !important;
+            border: 1px solid #d1d5db !important;
+        }
+        [style*="rgba(255, 255, 255, 0.04)"] .text-white { color: #1a1610 !important; }
+        [style*="rgba(255, 255, 255, 0.04)"] .text-gray-300 { color: #4b5563 !important; }
+        [style*="rgba(255, 255, 255, 0.04)"] .text-gray-400 { color: #6b7280 !important; }
+        [style*="rgba(255, 255, 255, 0.04)"] .text-gray-500 { color: #9ca3af !important; }
+        [style*="rgba(255, 255, 255, 0.04)"] .border-white\/10 { border-color: #e5e7eb !important; }
+
+        /* Service tier callout — inline dark gradient → accent-bordered light */
+        #serviceTierCallout {
+            background: #fef8f0 !important;
+            border: 2px solid #c96b3c !important;
+            color: #1a1610 !important;
+        }
+        #serviceTierCallout .text-white { color: #1a1610 !important; }
+        #serviceTierCallout .text-gray-300 { color: #4b5563 !important; }
+        #serviceTierCallout .text-gray-400 { color: #6b7280 !important; }
+
+        /* Preset chips — inactive: light bg; active: accent fill */
+        .preset-chip {
+            background: #f7f2e8 !important;
+            color: #1a1610 !important;
+            border: 1px solid #d1d5db !important;
+        }
+        .preset-chip.active {
+            background: #c96b3c !important;
+            color: #fff !important;
+            border: 2px solid #a85428 !important;
+        }
+
+        /* Force filters off so photos print at full fidelity; force all
+           slots visible — inactive slots are dimmed on screen but must be
+           legible on paper. */
+        .robot-slot, .robot-photo, .phase-card.skipped {
+            filter: none !important;
+            opacity: 1 !important;
+        }
+
+        /* Robot slots — dark card → light card */
+        .robot-slot {
+            background: #f7f2e8 !important;
+            border-color: #d1d5db !important;
+            padding: 0.5rem 0.45rem !important;
+            opacity: 1 !important;
+            overflow: visible !important;
+        }
+        .robot-slot.active { border-color: #c96b3c !important; }
+        .robot-slot .text-white { color: #1a1610 !important; }
+        .robot-slot .text-gray-400, .robot-slot .text-gray-500 { color: #6b7280 !important; }
+
+        /* WHY: Robot name + role use Tailwind's `truncate` which forces
+           nowrap + ellipsis. In print at 5-col, names get cut to "W3 · Re...".
+           Allow wrapping so the full name prints. */
+        .robot-slot .truncate {
+            overflow: visible !important;
+            text-overflow: clip !important;
+            white-space: normal !important;
+        }
+
+        /* Slider track + thumb — solid shapes, no halos.
+           WHY: vendor pseudo-elements like ::-webkit-slider-thumb aren't
+           reached by the universal * { box-shadow: none } rule above. */
+        .slider-track { background: #e5e7eb !important; }
+        .slider-fill { background: #c96b3c !important; box-shadow: none !important; }
+        .slider-input { outline: none !important; }
+        .slider-input::-webkit-slider-thumb {
+            background: #c96b3c !important;
+            border: 2px solid #1a1610 !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
+        .slider-input::-moz-range-thumb {
+            background: #c96b3c !important;
+            border: 2px solid #1a1610 !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
+        .tick.tier-marker { background: #c96b3c !important; box-shadow: none !important; }
+
+        /* Service LEDs — solid filled circles, not glow dots.
+           Off LEDs: hollow gray; On LEDs: solid green with a dark outline.
+           WHY: border-radius must be forced with !important + -webkit- prefix
+           on small pseudo-elements; browsers strip it when box-shadow is removed. */
+        .led-dot {
+            background: #d1d5db !important;
+            border: 1px solid #6b7280 !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+        .led-indicator.on .led-dot {
+            background: #10b981 !important;
+            border: 1px solid #065f46 !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+        }
+        /* LED indicator cards — dark → light with accent border when on */
+        .led-indicator {
+            background: #f7f2e8 !important;
+            border-color: #d1d5db !important;
+        }
+        .led-indicator.on {
+            background: #fef8f0 !important;
+            border-color: #c96b3c !important;
+        }
+        /* WHY: .led-label and .led-threshold are custom classes (not Tailwind).
+           On screen they're rgba white for dark backgrounds — invisible on paper.
+           Must target the actual class names, not .text-white/.text-gray-400. */
+        .led-label {
+            color: #1a1610 !important;
+            font-weight: 600 !important;
+        }
+        .led-threshold {
+            color: #6b7280 !important;
+        }
+        .led-indicator.on .led-threshold {
+            color: #c96b3c !important;
+        }
+
+        /* Robot-slot active accent dot — solid circle, no glow halo.
+           WHY: tiny ::after pseudo-elements lose border-radius during
+           print rendering without explicit enforcement. */
+        .robot-slot.active::after {
+            background: #c96b3c !important;
+            border: 1px solid #1a1610;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            overflow: hidden;
+        }
+
+        /* Phase cards — dark → light */
+        .phase-card {
+            background: #f7f2e8 !important;
+            border: 1px solid #d1d5db !important;
+            break-inside: avoid;
+        }
+        .phase-card .text-white { color: #1a1610 !important; }
+        .phase-card .text-gray-300, .phase-card .text-gray-400 { color: #6b7280 !important; }
+
+        /* Solution/unlock cards */
+        .solution-card {
+            background: #f7f2e8 !important;
+            border: 1px solid #d1d5db !important;
+            break-inside: avoid;
+        }
+        .solution-card .text-white { color: #1a1610 !important; }
+
+        /* Stat tiles + phase cards — avoid orphaned rows */
+        .stat-tile, .phase-card, .solution-card { break-inside: avoid; }
+
+        /* Tables — force light header (screen uses dark --ink background) */
+        .data-table { border-collapse: collapse; }
+        .data-table th {
+            background: #c96b3c !important;
+            color: #fff !important;
+            border: 1px solid #a85428 !important;
+            break-inside: avoid;
+        }
+        .data-table td {
+            break-inside: avoid;
+            border: 1px solid #d1d5db !important;
+        }
+        .data-table thead { display: table-header-group; }
+        .data-table tr { break-inside: avoid; }
+
+        /* Footer — light */
+        footer { border-top: 2px solid #c96b3c !important; }
+        footer .text-gray-400, footer .text-gray-500 { color: #6b7280 !important; }
+
+        /* Accelerate gradient text → solid accent (gradients clip badly in print) */
+        .accel-gradient {
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            -webkit-text-fill-color: #0055ff !important;
+            background-clip: unset !important;
+        }
+        .coral-gradient {
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            -webkit-text-fill-color: #c96b3c !important;
+            background-clip: unset !important;
+        }
+
+        /* ---- Atomic card units ----
+           WHY: mark inner card containers atomic so breaks happen
+           between cards, never through them. */
+        .print-keep {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+        }
+
+        /* ---- Logical "parts" of the proposal ----
+           WHY: The old approach forced every .print-part and every section
+           onto a new page, producing 9 pages with massive whitespace.
+           Now we let content flow naturally and only break before major
+           narrative shifts (Deployment, Guest Experience, Savings). */
+        .print-hero {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+        }
+        .print-part {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            /* No forced page break — let content flow naturally */
+        }
+
+        /* Tighten spacing so hero fits on one Letter page */
+        .print-hero > .mb-8 { margin-bottom: 0.75rem !important; }
+        .print-hero .mb-6 { margin-bottom: 0.5rem !important; }
+        .print-hero .mb-2 { margin-bottom: 0.25rem !important; }
+
+        /* Reduce top/bottom padding on all sections for denser pages */
+        section { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
+
+        /* Prevent orphaned headers */
+        section h2 { break-after: avoid; page-break-after: avoid; }
+        section h3 { break-after: avoid; page-break-after: avoid; }
+
+        /* Only break before major narrative beats — not every section.
+           The intro flows into the configurator; fleet composition and
+           service lines flow together. Deployment, Guest Experience,
+           and Savings each get their own page as standalone stories. */
+
+        /* Fleet Composition grid — 5 cols × 2 rows for 10 robots */
+        #robotGrid { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 0.5rem !important; }
+        .robot-photo { aspect-ratio: 4 / 3; margin-bottom: 0.25rem !important; }
+
+        /* Service-line LED grid — 5 cols for 10 lights */
+        #serviceLedGrid { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+    }
+    @media (max-width: 768px) {
+        .phase-timeline { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- HEADER -->
+<!-- ================================================================ -->
+<header class="bg-gradient-to-br from-[#1a1610] via-[#2a2418] to-[#1a1610] text-white px-6 md:px-8 py-10 md:py-12 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%221%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+    <div class="max-w-6xl mx-auto relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-xl border-2 border-[#c96b3c] flex items-center justify-center">
+                    <span class="text-[#c96b3c] font-bold text-2xl headline">S</span>
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">
+                        Kimpton S<span class="text-[#c96b3c]">a</span>wyer
+                    </h1>
+                    <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Executive Proposal &middot; Live Configurator</p>
+                </div>
+            </div>
+            <div class="flex flex-col md:items-end gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                    </div>
+                    <span class="text-sm font-bold tracking-tight accel-gradient tech-font">Accelerate Robotics</span>
+                </div>
+                <div class="text-[10px] text-gray-400 md:text-right tracking-wide">
+                    One Brain. Many Bots.<br>
+                    <span class="text-gray-500">OPP-007 · April 2026 · <a href="proposal.html" class="underline hover:text-[#c96b3c]">See full proposal</a></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ================================================================ -->
+<!-- INTRO -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 pt-10 pb-4">
+    <div class="max-w-3xl">
+        <p class="text-sm uppercase tracking-widest text-[#c96b3c] font-semibold mb-3">Executive Proposal</p>
+        <h2 class="headline text-3xl md:text-4xl font-bold text-[#1a1610] mb-4 leading-tight">
+            Sacramento&rsquo;s arena hotel deserves an arena-caliber service fleet.
+        </h2>
+        <p class="text-gray-700 leading-relaxed">
+            Sacramento's rate leader and lifestyle flagship, steps from Golden 1 Center. Drag the slider from one robot to ten and watch the guest experience scale: which service lines come online, monthly fleet cost, hard-dollar labor savings, and how the economics compare to hiring. Toggle the Facility Intelligence Platform to see how unit economics shift. For the full walkthrough &mdash; robot specs, elevator integration on 16 floors, residential delivery, arena-night surge protocols, and signature block &mdash; see the <a href="proposal.html" class="text-[#c96b3c] font-semibold underline">full proposal</a>.
+        </p>
+        <p class="text-xs text-gray-500 italic mt-4">
+            The Kimpton Sawyer is a 250-key lifestyle hotel by IHG on 16 floors in the Downtown Commons district, adjacent to Golden 1 Center. Owned by JMA Ventures + Mohari Hospitality. #1 rated hotel in Sacramento &mdash; the autonomous fleet that serves California's arena and state capital guests.
+        </p>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- CONFIGURATOR -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-8">
+    <div class="config-panel p-6 md:p-10">
+
+        <!-- ============ PART A — HERO: Fleet size, slider, stats, Intelligence Platform ============
+             This whole block is the high-impact moment. In print, it MUST stay on one page —
+             the slider means nothing without the stat tiles that respond to it. -->
+        <div class="print-hero">
+
+        <!-- Fleet size header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+            <div>
+                <p class="text-[11px] uppercase tracking-widest text-[#d4b27a] font-semibold mb-2">Fleet Size</p>
+                <div class="flex items-baseline gap-3">
+                    <div class="text-6xl md:text-7xl font-bold tech-font text-white" id="fleetCount">3</div>
+                    <div class="text-xl text-gray-400 font-light">/ 10 robots</div>
+                </div>
+                <p class="text-sm text-gray-400 mt-1" id="tierLabel">Signature Service</p>
+            </div>
+            <div class="flex flex-wrap gap-2" id="presetChips">
+                <button class="preset-chip" data-count="1">Pilot &middot; 1</button>
+                <button class="preset-chip active" data-count="3">Signature &middot; 3</button>
+                <button class="preset-chip" data-count="6">Full-Property &middot; 6</button>
+                <button class="preset-chip" data-count="10">Sawyer Autonomous &middot; 10</button>
+            </div>
+        </div>
+
+        <!-- Slider -->
+        <div class="slider-wrap mb-2">
+            <div class="slider-track">
+                <div class="slider-fill" id="sliderFill" style="width: 22.22%"></div>
+                <div class="slider-ticks" id="sliderTicks"></div>
+            </div>
+            <input type="range" min="1" max="10" value="3" step="1" class="slider-input" id="fleetSlider">
+        </div>
+        <div class="flex justify-between text-[10px] text-gray-500 uppercase tracking-wider px-3 mb-8">
+            <span>1 &middot; Pilot</span>
+            <span>&middot;</span>
+            <span>3 &middot; Signature</span>
+            <span>&middot;</span>
+            <span>6 &middot; Full-Property</span>
+            <span>&middot;</span>
+            <span>10 &middot; Autonomous</span>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Fleet Cost</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="monthlyCost">$7,800</span></p>
+                <p class="text-[11px] text-gray-500 mt-1" id="costBreakdownLine">3 robots &times; $2,600</p>
+            </div>
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Hard Savings</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-[#d4b27a]"><span id="monthlySavings">$11,200</span></p>
+                <p class="text-[11px] text-gray-500 mt-1">Labor &amp; vendor contracts terminated</p>
+            </div>
+            <div class="stat-tile accent-green">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Net Monthly Benefit</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="netMonthly">+$3,400</span></p>
+                <p class="text-[11px] text-gray-300 mt-1"><span id="annualNet">+$40,800</span> annualized</p>
+            </div>
+            <div class="stat-tile accent">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Staff Hours Returned</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="staffHours">23</span> <span class="text-base text-gray-300 font-normal">/ day</span></p>
+                <p class="text-[11px] text-gray-300 mt-1">Redirected to guest-facing moments</p>
+            </div>
+        </div>
+
+        <!-- Intelligence Platform toggle -->
+        <div class="mb-8">
+            <div class="print-keep flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="flex-1 pr-4">
+                    <p class="text-sm font-semibold text-white">Facility Intelligence Platform</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Asset sensing, BLE + UWB tags, smart-dispatch rules, ops dashboard &middot; <span class="text-[#d4b27a]">$42,000 Y1 install &middot; $10,000/yr license</span></p>
+                </div>
+                <div class="toggle" id="intelToggle"></div>
+            </div>
+        </div>
+
+        </div>
+        <!-- ============ END PART A — HERO ============ -->
+
+        <!-- ============ PART B — Fleet Composition (robot lineup) ============ -->
+        <div class="print-part">
+            <p class="text-[11px] uppercase tracking-widest text-[#d4b27a] font-semibold mb-3">Fleet Composition</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5" id="robotGrid"></div>
+        </div>
+
+        <!-- ============ PART C — Service Lines (LED system status) ============ -->
+        <div class="print-part mt-8">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[11px] uppercase tracking-widest text-[#d4b27a] font-semibold">Service Lines — System Status</p>
+                <p class="text-[10px] uppercase tracking-widest text-gray-400">
+                    <span class="tech-font text-[#5eff88] font-bold" id="serviceOnCount">3</span>
+                    <span class="text-gray-500"> / 10 online</span>
+                </p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2" id="serviceLedGrid"></div>
+        </div>
+
+        <!-- ============ PART D — Annual Summary + vs. Hiring (the ROI moment) ============ -->
+        <div class="print-part print-keep mt-8 p-5 rounded-xl" style="background: linear-gradient(135deg, rgba(201, 107, 60, 0.15), rgba(201, 107, 60, 0.04)); border: 1px solid rgba(201, 107, 60, 0.35);">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center md:text-left">
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#d4b27a] font-semibold mb-1">Year 1 All-In</p>
+                    <p class="text-2xl font-bold tech-font text-white" id="year1AllIn">$93,600</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#d4b27a] font-semibold mb-1">Year 2+ Steady-State</p>
+                    <p class="text-2xl font-bold tech-font text-white" id="year2SteadyState">$93,600</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#d4b27a] font-semibold mb-1">Annual Net Cash Benefit</p>
+                    <p class="text-2xl font-bold tech-font text-[#d4b27a]" id="annualBenefitBig">+$40,800</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- vs. Hiring -->
+        <div class="print-keep mt-6 p-6 rounded-xl" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12);">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-[11px] uppercase tracking-widest text-[#d4b27a] font-semibold">vs. Hiring — Fully Loaded Labor Comparison</p>
+                <span class="text-[10px] text-gray-400 italic">Sacramento hospitality, 2026</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Your Fleet</p>
+                    <p class="text-3xl font-bold tech-font text-white"><span id="fleetCostCompare">$7,800</span><span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1">Hardware, service, Sawyer wrap, installation &mdash; all-in</p>
+                </div>
+                <div class="text-center text-3xl text-gray-500 font-light hidden md:block">&rarr;</div>
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Equivalent FTE Coverage</p>
+                    <p class="text-3xl font-bold tech-font text-white"><span id="fteEquivCost">$14,880</span><span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1"><span id="fteEquivCount">3.1</span> FTEs &times; $4,800/mo fully-loaded</p>
+                </div>
+            </div>
+            <div class="mt-5 pt-5 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-3">
+                <p class="text-sm text-gray-300">The fleet delivers this coverage for</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-[#d4b27a]" id="fteSavings">$7,080/mo less</p>
+                <p class="text-sm text-gray-300"><span id="fteSavingsPct">48%</span> cheaper &middot; <span id="fteSavingsAnnual">$84,960/yr</span> delta</p>
+            </div>
+            <p class="text-[10px] text-gray-500 italic mt-4 leading-relaxed">
+                Not counted: recruiting, 70–90%/yr hospitality turnover, OT premiums on arena nights, overnight differentials, UNITE HERE Local 49 step increases, agency markup for surge coverage. Typical add-on: 25–45% on top of base FTE cost.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- PHASE TIMELINE -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="max-w-3xl mb-6">
+        <p class="text-sm uppercase tracking-widest text-[#c96b3c] font-semibold mb-3">Deployment Roadmap</p>
+        <h2 class="headline text-3xl font-bold text-[#1a1610] mb-3 leading-tight">Phases included at your fleet size</h2>
+        <p class="text-gray-700 leading-relaxed">
+            Each phase is success-gated &mdash; Kimpton operations and Accelerate agree on measurable criteria before moving forward. Rolling back a phase costs nothing more than de-installing the added robots.
+        </p>
+    </div>
+    <div class="phase-timeline" id="phaseTimeline"></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- WHAT GUESTS NOTICE -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="flex items-end justify-between mb-6 flex-wrap gap-4">
+        <div>
+            <p class="text-sm uppercase tracking-widest text-[#c96b3c] font-semibold mb-3">What Guests Notice</p>
+            <h2 class="headline text-3xl font-bold text-[#1a1610] mb-1">Guest experience at this fleet size</h2>
+            <p class="text-gray-700 text-sm">The Kimpton service floor scales with the robots deployed &mdash; each slot unlocks something guests, reviewers, and Kimpton ops can see.</p>
+        </div>
+    </div>
+
+    <div id="serviceTierCallout" class="print-keep p-6 md:p-8 rounded-2xl mb-6 text-white" style="background: linear-gradient(135deg, #1a1610 0%, #2a2418 100%); border: 1px solid rgba(201, 107, 60, 0.4);">
+        <div class="flex items-start justify-between flex-wrap gap-4 mb-3">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-[#d4b27a] font-semibold mb-2">At <span id="tierFleetCount">3</span> robots, the guest experience is:</p>
+                <h3 class="headline text-3xl md:text-4xl font-bold"><span id="tierName">Signature Service</span></h3>
+                <p class="text-[11px] uppercase tracking-widest text-[#d4b27a] mt-1" id="tierTag">Guest-facing automation</p>
+            </div>
+            <div class="tech-font text-5xl font-bold text-[#c96b3c]/30 tracking-tighter" id="tierBadge">II</div>
+        </div>
+        <p class="text-gray-300 leading-relaxed max-w-3xl" id="tierDescription">Three robots running in concert: Revival room service via W3, guest-floor corridor carpet care on floors 4–16, and pool deck + event service via S100. The arena-night experience that earns the TripAdvisor #1 ranking.</p>
+    </div>
+
+    <p class="text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-3">Active Capabilities</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8" id="unlockGrid"></div>
+
+    <div id="lockedPreview">
+        <p class="text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-3">Next To Unlock</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="lockedGrid"></div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- HARD SAVINGS BREAKDOWN -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <p class="text-sm uppercase tracking-widest text-[#c96b3c] font-semibold mb-3">Hard-Dollar Savings Breakdown</p>
+    <h2 class="headline text-3xl font-bold text-[#1a1610] mb-3 leading-tight">Labor &amp; vendor contracts actually eliminated</h2>
+    <p class="text-gray-700 mb-6 max-w-3xl text-sm leading-relaxed">
+        Hard-dollar savings are cash that stops leaving the P&amp;L once the fleet is running. &ldquo;Hours redirected to higher-value guest-facing work&rdquo; is shown separately &mdash; it&rsquo;s real value, but it isn&rsquo;t cash.
+    </p>
+
+    <div class="print-keep overflow-x-auto rounded-xl border border-gray-200">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Capability unlocked at this slot</th>
+                    <th>What the robot replaces</th>
+                    <th class="right">Monthly savings</th>
+                </tr>
+            </thead>
+            <tbody id="savingsTable"></tbody>
+            <tfoot>
+                <tr class="total">
+                    <td colspan="2">Monthly Hard Savings</td>
+                    <td class="num" id="savingsTotal">$11,200</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <p class="text-xs text-gray-500 italic mt-3">
+        Baselined jointly with the Sawyer hotel controller and Kimpton regional ops during Phase 1. Monthly operational reviews reconcile actual vs. committed; material misses are diagnosed and fixed together in good faith.
+    </p>
+</section>
+
+<!-- ================================================================ -->
+<!-- FOOTER -->
+<!-- ================================================================ -->
+<footer class="max-w-6xl mx-auto px-6 md:px-8 py-10 border-t border-gray-200 mt-12">
+    <div class="flex flex-col md:flex-row justify-between items-start gap-6">
+        <div>
+            <p class="text-sm text-gray-700 leading-relaxed max-w-2xl">
+                This is the <strong>Executive Proposal</strong> &mdash; a one-page read of the deal. The <strong>Full Proposal</strong> has every robot&rsquo;s spec sheet, the Revival room-service choreography, the 16-floor elevator integration plan, the Facility Intelligence Platform detail, union considerations, deployment roadmap, and signature block.
+            </p>
+            <p class="text-sm text-gray-700 mt-3">
+                <a href="proposal.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm tech-font" style="background: #c96b3c; color: #fff;">
+                    Open Full Proposal
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                </a>
+            </p>
+        </div>
+        <div class="text-xs text-gray-500 md:text-right">
+            <p><strong class="text-[#1a1610]">Eric Race</strong></p>
+            <p>Founder &amp; CEO, Accelerate Robotics</p>
+            <p class="mt-2 italic">OPP-007 &middot; Kimpton Sawyer Hotel, Sacramento &middot; April 2026</p>
+        </div>
+    </div>
+</footer>
+
+<!-- ================================================================ -->
+<!-- DATA + LOGIC -->
+<!-- ================================================================ -->
+<script>
+/* ──────────────────────────────────────────────────────────────────
+   ROBOT LADDER — order of addition by marginal ROI
+   Slots 1-3   → Signature Service  (room service + carpet + pool deck)
+   Slots 1-6   → Full-Property      (+ lobby reset + peak F&B + linens)
+   Slots 1-10  → Sawyer Autonomous  (+ ballroom + residential + conference + event strike)
+   Per-slot totals ordered by hard-dollar savings descending.
+   ────────────────────────────────────────────────────────────────── */
+const ROBOTS = [
+    // Signature Service (slots 1-3)
+    { code: 'W3',   label: 'W3 · Revival room service',
+      role: 'Custom-wrapped delivery from Revival/Echo &amp; Rig to guest floors',
+      photo: '../assets/robots/photos/keenon-w3.png',
+      savings: 3800, hours: 7, fte: 1.0,
+      captures: 'Room-service runner shifts + bellhop OT on arena nights',
+      unlock: 'A craft cocktail from Revival arrives at their door while the arena still glows through the window.',
+      category: 'Delivery' },
+
+    { code: 'C40',  label: 'C40 · Guest-floor carpet care',
+      role: 'Overnight corridor vacuum — floors 4-16',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 4200, hours: 9, fte: 1.2,
+      captures: 'Overnight housekeeping vacuum shifts across 13 guest floors',
+      unlock: 'Sixteen floors of corridor carpet reset between 2-5 AM — guests never hear a vacuum.',
+      category: 'Cleaning' },
+
+    { code: 'S100', label: 'S100 · Pool deck + event service',
+      role: 'Rooftop tray runner, cabana service, Magnolia Ballroom',
+      photo: '../assets/robots/photos/keenon-s100-luxury-cart-hero.png',
+      savings: 3200, hours: 7, fte: 0.9,
+      captures: 'Pool attendant runner shifts + event setup labor',
+      unlock: 'Cabana service on the rooftop moves at tempo while bartenders pour — arena view, robot delivery.',
+      category: 'Delivery' },
+
+    // Full-Property delta (slots 4-6)
+    { code: 'C30',  label: 'C30 · Lobby + DoCo entrance reset',
+      role: 'Hard-floor scrubber — lobby + conference level before 7 AM',
+      photo: '../assets/robots/photos/keenon-c30-white.png',
+      savings: 3000, hours: 6, fte: 0.8,
+      captures: 'Lobby nightly scrub vendor contract + AM porter',
+      unlock: 'The DoCo lobby greets guests polished before first coffee — zero visible crew.',
+      category: 'Cleaning' },
+
+    { code: 'W3',   label: 'W3 · Peak F&amp;B + amenity 24/7',
+      role: 'Second delivery for arena-night peaks + overnight amenity',
+      photo: '../assets/robots/photos/keenon-w3.png',
+      savings: 2800, hours: 6, fte: 0.8,
+      captures: 'Peak-night runner OT + overnight amenity coverage',
+      unlock: 'Extra pillows, a late-night snack after the game — fulfilled in minutes, any hour.',
+      category: 'Delivery' },
+
+    { code: 'S300', label: 'S300 · Linen logistics',
+      role: 'Heavy tray, linens to/from laundry across 16 floors',
+      photo: '../assets/robots/photos/keenon-s300-linen-bin.png',
+      savings: 3400, hours: 7, fte: 1.0,
+      captures: 'Linen-handler shifts + elevator wait time for housekeeping',
+      unlock: 'Linens flow continuously between laundry and 16 floors — housekeepers stay in rooms, not in elevators.',
+      category: 'Logistics' },
+
+    // Sawyer Autonomous delta (slots 7-10)
+    { code: 'C40',  label: 'C40 · Magnolia Ballroom depth',
+      role: 'Second vacuum for 22K sq ft event space',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 2600, hours: 6, fte: 0.8,
+      captures: 'Ballroom post-event cleaning shifts',
+      unlock: '22,000 sq ft of event space resets overnight — morning meetings walk into perfection.',
+      category: 'Cleaning' },
+
+    { code: 'W3',   label: 'W3 · Residential amenity',
+      role: 'Third delivery for 45 luxury residences',
+      photo: '../assets/robots/photos/keenon-w3.png',
+      savings: 2200, hours: 5, fte: 0.7,
+      captures: 'Residential concierge delivery labor',
+      unlock: 'The 45 residences get hotel-level delivery on demand — robot as permanent concierge.',
+      category: 'Delivery' },
+
+    { code: 'C40',  label: 'C40 · Conference level deep clean',
+      role: 'Third vacuum for meeting rooms + pre-function areas',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 2000, hours: 5, fte: 0.6,
+      captures: 'Meeting-room cleaning between events',
+      unlock: 'Back-to-back conferences see fresh floors — no gap-day cleaning needed.',
+      category: 'Depth' },
+
+    { code: 'S300', label: 'S300 · Event strike + supply chain',
+      role: 'Second heavy tray for event strike/reset + F&amp;B supply runs',
+      photo: '../assets/robots/photos/keenon-s300-linen-bin.png',
+      savings: 2400, hours: 5, fte: 0.7,
+      captures: 'Event-turnover agency temps + kitchen supply runners',
+      unlock: 'Events strike in under an hour — agency temp spend drops to zero on buyout nights.',
+      category: 'Logistics' },
+];
+
+// WHY: Sacramento market flat monthly rate — slightly lower than Bay Area
+// comps (Moore Miami at $2,600, Art Ovation at $2,600) but Sacramento
+// hospitality labor cost differential justifies identical per-robot rate.
+const RAAS_PER_ROBOT = 2600;
+
+// WHY: 250 rooms + 16 floors = more BLE/UWB anchor nodes than a 6-floor
+// property. 42K covers the denser sensor grid needed for floor-by-floor
+// elevator dispatch across 16 stories.
+const INTEL_Y1_INSTALL = 42000;
+
+// WHY: Annual license scales with anchor count and dashboard seat licenses.
+// 10K covers a larger fleet + residential wing monitoring.
+const INTEL_Y2_LICENSE = 10000;
+
+// WHY: Sacramento hospitality 2026 fully-loaded blended rate. Higher than
+// Sarasota FL ($4,200) but lower than Bay Area ($5,200). Reflects CA minimum
+// wage trajectory + UNITE HERE Local 49 step increases + benefits burden.
+const FTE_MONTHLY_COST = 4800;
+
+// Service tier narratives — what guests experience at each fleet size
+const SERVICE_TIERS = [
+    { min: 1,  max: 1,  name: 'Pilot Mode',            tag: 'Proof of concept',
+      description: 'One W3 running Revival room service. Thirty-day pilot, success criteria signed jointly with Kimpton regional ops. See how autonomous service lands with the Sawyer guest on an arena night before committing further.' },
+    { min: 2,  max: 2,  name: 'Essential Service',     tag: 'Two service lines',
+      description: 'Room service + overnight corridor carpet. Guests stop hearing vacuums. Guest-satisfaction scores on cleanliness and responsiveness shift first.' },
+    { min: 3,  max: 4,  name: 'Signature Service',     tag: 'Guest-facing automation',
+      description: 'Three robots running in concert: Revival room service via W3, 13-floor corridor carpet overnight, and pool deck/event service via S100. The tier that arena-night reviews on TripAdvisor reference.' },
+    { min: 5,  max: 7,  name: 'Full-Property Service', tag: 'Every guest surface covered',
+      description: 'Lobby + DoCo reset, peak F&B coverage on arena nights, linen logistics across 16 floors. Every guest-facing surface is running autonomous. Kimpton IHG sees the utilization data that justifies portfolio rollout.' },
+    { min: 8,  max: 10, name: 'Sawyer Autonomous',     tag: '24/7 autonomous + residences + events',
+      description: 'Ballroom depth, residential delivery to 45 units, conference-level cleaning, event strike and supply logistics. The Sawyer runs 24/7 with minimal manual intervention — the proof case for IHG lifestyle portfolio.' },
+];
+
+function currentServiceTier(n) {
+    return SERVICE_TIERS.find(t => n >= t.min && n <= t.max) || SERVICE_TIERS[0];
+}
+
+// Service lines — illuminate as the fleet crosses each threshold
+const SERVICE_LINES = [
+    { id: 'roomservice',   label: 'Revival Room Service',       activateAt: 1 },
+    { id: 'carpet',        label: 'Guest-Floor Carpet',         activateAt: 2 },
+    { id: 'pool',          label: 'Pool Deck + Events',         activateAt: 3 },
+    { id: 'lobby',         label: 'Lobby + DoCo Reset',         activateAt: 4 },
+    { id: 'peakdelivery',  label: 'Peak F&amp;B + 24/7 Amenity', activateAt: 5 },
+    { id: 'linens',        label: 'Linen Logistics',            activateAt: 6 },
+    { id: 'ballroom',      label: 'Ballroom Deep Clean',        activateAt: 7 },
+    { id: 'residential',   label: 'Residential Delivery',       activateAt: 8 },
+    { id: 'conference',    label: 'Conference Level',           activateAt: 9 },
+    { id: 'eventstrike',   label: 'Event Strike + Supply',      activateAt: 10 },
+];
+
+// Fleet phase mapping — how many phases get activated at each fleet size
+const TIERS = {
+    1:  { name: 'Pilot Mode',                phases: 1 },
+    2:  { name: 'Essential Service',         phases: 2 },
+    3:  { name: 'Signature Service',         phases: 2 },
+    4:  { name: 'Signature + Lobby',         phases: 3 },
+    5:  { name: 'Full-Property Service',     phases: 3 },
+    6:  { name: 'Full-Property + Linens',    phases: 3 },
+    7:  { name: 'Full-Property + Ballroom',  phases: 4 },
+    8:  { name: 'Sawyer Autonomous',         phases: 4 },
+    9:  { name: 'Sawyer Autonomous+',        phases: 4 },
+    10: { name: 'Sawyer Autonomous Full',    phases: 5 },
+};
+
+/* STATE ─────────────────────────────────────────────────────────── */
+let state = { count: 3, intel: false };
+
+const $ = (id) => document.getElementById(id);
+
+/* RENDER: Robot grid ──────────────────────────────────────────── */
+function renderRobotGrid() {
+    const grid = $('robotGrid');
+    grid.innerHTML = '';
+    ROBOTS.forEach((r, i) => {
+        const active = i < state.count;
+        const slot = document.createElement('div');
+        slot.className = 'robot-slot' + (active ? ' active' : '');
+        slot.innerHTML = `
+            <img class="robot-photo" src="${r.photo}" alt="${r.code}" loading="lazy" onerror="this.style.visibility='hidden'">
+            <div class="flex items-start gap-2.5">
+                <div class="robot-chip-mini">${r.code}</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[11px] font-semibold text-white leading-snug truncate">${r.label}</p>
+                    <p class="text-[10px] text-gray-400 leading-snug mt-0.5 truncate">${r.role}</p>
+                </div>
+            </div>
+        `;
+        grid.appendChild(slot);
+    });
+}
+
+/* RENDER: Savings table ───────────────────────────────────────── */
+function renderSavingsTable() {
+    const tbody = $('savingsTable');
+    tbody.innerHTML = '';
+    let total = 0;
+    for (let i = 0; i < state.count; i++) {
+        const r = ROBOTS[i];
+        total += r.savings;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${r.label}</strong></td>
+            <td>${r.captures}</td>
+            <td class="num">$${r.savings.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    }
+    $('savingsTotal').textContent = '$' + total.toLocaleString();
+}
+
+/* RENDER: Phase timeline ──────────────────────────────────────── */
+function renderPhases() {
+    const tier = TIERS[state.count];
+    const phaseCount = tier.phases;
+    const timeline = $('phaseTimeline');
+    timeline.innerHTML = '';
+
+    const phaseDefs = [
+        { n: 1, name: 'Pilot',                  time: 'Month 1',
+          detail: 'One W3 on Revival room service. Success criteria signed jointly with Kimpton regional. 30-day pilot on arena-night and weeknight mix.' },
+        { n: 2, name: 'Signature Service',       time: 'Months 2-3',
+          detail: 'C40 corridor vacuum deployed on floors 4-16. S100 working pool deck cabanas and Magnolia Ballroom event service. Arena-night stress test.' },
+        { n: 3, name: 'Full-Property',           time: 'Months 3-5',
+          detail: 'C30 on lobby + DoCo entrance. Second W3 extends peak F&B and 24/7 amenity. S300 linen logistics. Elevator integration on 16 floors validated.' },
+        { n: 4, name: 'Autonomous Expansion',    time: 'Months 5-7',
+          detail: 'Ballroom C40 depth, residential W3 for 45 units, conference-level vacuum. 22K sq ft event space fully covered.' },
+        { n: 5, name: 'Intelligence',            time: 'Months 7-9',
+          detail: 'Facility Intelligence Platform: BLE + UWB asset tags, smart-dispatch rules, Kimpton ops dashboard. Second S300 lights up event strike + supply chain.' },
+    ];
+
+    phaseDefs.forEach((p) => {
+        const included = p.n <= phaseCount;
+        const intel = (p.n === 5);
+        const card = document.createElement('div');
+        card.className = 'phase-card' + (included ? ' included' : ' skipped');
+        if (intel && !state.intel) card.classList.add('skipped');
+        card.innerHTML = `
+            <div class="flex items-center gap-2 mb-2">
+                <div class="w-7 h-7 rounded-full bg-[#c96b3c] text-white flex items-center justify-center text-xs font-bold tech-font">${p.n}</div>
+                <p class="text-[10px] uppercase tracking-widest text-[#1a1610] font-semibold">${p.time}</p>
+            </div>
+            <p class="font-bold text-[#1a1610] mb-1 text-sm">${p.name}</p>
+            <p class="text-xs text-gray-600 leading-snug">${p.detail}</p>
+            ${intel && !state.intel ? '<p class="text-[10px] mt-2 text-gray-500 italic">Requires Intelligence Platform add-on</p>' : ''}
+        `;
+        timeline.appendChild(card);
+    });
+}
+
+/* RENDER: Stats ─────────────────────────────────────────────── */
+function renderStats() {
+    const n = state.count;
+    const activeRobots = ROBOTS.slice(0, n);
+
+    const fleetCost = n * RAAS_PER_ROBOT;
+    const laborSavings = activeRobots.reduce((s, r) => s + r.savings, 0);
+    const staffHours = activeRobots.reduce((s, r) => s + r.hours, 0);
+
+    const monthlyCost = fleetCost;
+    const netMonthly = laborSavings - monthlyCost;
+    const annualNet = netMonthly * 12;
+
+    // Intelligence Platform add-ons
+    const intelY1 = state.intel ? INTEL_Y1_INSTALL : 0;
+    const intelY2 = state.intel ? INTEL_Y2_LICENSE : 0;
+    const year1AllIn = monthlyCost * 12 + intelY1;
+    const year2SteadyState = monthlyCost * 12 + intelY2;
+
+    // FTE equivalence
+    const fteCount = activeRobots.reduce((s, r) => s + r.fte, 0);
+    const fteEquivCost = Math.round(fteCount * FTE_MONTHLY_COST);
+    const fteSavings = fteEquivCost - monthlyCost;
+    const fteSavingsPct = fteEquivCost > 0 ? Math.round((fteSavings / fteEquivCost) * 100) : 0;
+
+    const tier = TIERS[n];
+
+    $('fleetCount').textContent = n;
+    $('tierLabel').textContent = tier.name;
+    $('monthlyCost').textContent = '$' + monthlyCost.toLocaleString();
+    $('fleetCostCompare').textContent = '$' + monthlyCost.toLocaleString();
+    $('fteEquivCost').textContent = '$' + fteEquivCost.toLocaleString();
+    $('fteEquivCount').textContent = fteCount.toFixed(1);
+    $('fteSavings').textContent = (fteSavings >= 0 ? '$' : '−$') + Math.abs(fteSavings).toLocaleString() + '/mo ' + (fteSavings >= 0 ? 'less' : 'more');
+    $('fteSavingsPct').textContent = Math.abs(fteSavingsPct) + '%';
+    $('fteSavingsAnnual').textContent = (fteSavings >= 0 ? '$' : '−$') + Math.abs(fteSavings * 12).toLocaleString() + '/yr';
+
+    const robotWord = n === 1 ? 'robot' : 'robots';
+    $('costBreakdownLine').textContent = `${n} ${robotWord} × $${RAAS_PER_ROBOT.toLocaleString()}`;
+
+    $('monthlySavings').textContent = '$' + laborSavings.toLocaleString();
+    $('netMonthly').textContent = (netMonthly >= 0 ? '+$' : '−$') + Math.abs(netMonthly).toLocaleString();
+    $('annualNet').textContent = (annualNet >= 0 ? '+$' : '−$') + Math.abs(annualNet).toLocaleString();
+    $('staffHours').textContent = staffHours;
+    $('year1AllIn').textContent = '$' + year1AllIn.toLocaleString();
+    $('year2SteadyState').textContent = '$' + year2SteadyState.toLocaleString();
+    $('annualBenefitBig').textContent = (annualNet >= 0 ? '+$' : '−$') + Math.abs(annualNet).toLocaleString();
+
+    // Slider fill — 9 steps between 1 and 10
+    const pct = ((n - 1) / 9) * 100;
+    $('sliderFill').style.width = pct + '%';
+    $('fleetSlider').value = n;
+
+    // Preset chips
+    document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+        chip.classList.toggle('active', parseInt(chip.dataset.count) === n);
+    });
+}
+
+/* RENDER: Slider ticks (markers at 1, 3, 6, 10) ───────────── */
+function renderTicks() {
+    const ticks = $('sliderTicks');
+    ticks.innerHTML = '';
+    // WHY: 10 ticks for positions 1-10; tier-marker highlights
+    // the four preset boundary values matching the preset chips above.
+    for (let i = 1; i <= 10; i++) {
+        const tick = document.createElement('div');
+        tick.className = 'tick' + ([1, 3, 6, 10].includes(i) ? ' tier-marker' : '');
+        ticks.appendChild(tick);
+    }
+}
+
+/* RENDER: Service LEDs ─────────────────────────────────────── */
+function renderServiceLines() {
+    const n = state.count;
+    const grid = $('serviceLedGrid');
+    grid.innerHTML = '';
+    let onCount = 0;
+    SERVICE_LINES.forEach((svc) => {
+        const on = n >= svc.activateAt;
+        if (on) onCount++;
+        const row = document.createElement('div');
+        row.className = 'led-indicator' + (on ? ' on' : '');
+        row.innerHTML = `
+            <span class="led-dot"></span>
+            <span class="led-label">${svc.label}</span>
+            <span class="led-threshold">${svc.activateAt}+</span>
+        `;
+        grid.appendChild(row);
+    });
+    $('serviceOnCount').textContent = onCount;
+}
+
+/* RENDER: Service unlock cards ─────────────────────────────── */
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+const CATEGORY_COLOR = {
+    Cleaning:   '#6b8e23',
+    Delivery:   '#c96b3c',
+    Logistics:  '#5a6b7a',
+    Luxury:     '#b8935a',
+    Depth:      '#4a3a2a',
+};
+
+function renderUnlocks() {
+    const n = state.count;
+    const tier = currentServiceTier(n);
+    const tierIdx = SERVICE_TIERS.indexOf(tier) + 1;
+
+    $('tierFleetCount').textContent = n;
+    $('tierName').textContent = tier.name;
+    $('tierTag').textContent = tier.tag;
+    $('tierDescription').textContent = tier.description;
+    $('tierBadge').textContent = ROMAN[tierIdx] || '';
+
+    const unlockGrid = $('unlockGrid');
+    unlockGrid.innerHTML = '';
+    ROBOTS.slice(0, n).forEach((r) => {
+        const color = CATEGORY_COLOR[r.category] || '#c96b3c';
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-lg';
+        card.style.cssText = `background: white; border: 1px solid rgba(26, 22, 16, 0.08); border-left: 3px solid ${color};`;
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-3 mb-2">
+                <span class="tech-font text-[10px] uppercase tracking-widest font-bold" style="color: ${color};">${r.category}</span>
+                <span class="tech-font text-[10px] text-gray-400">${r.code}</span>
+            </div>
+            <p class="text-sm text-[#1a1610] leading-snug">${r.unlock}</p>
+        `;
+        unlockGrid.appendChild(card);
+    });
+
+    const lockedPreview = $('lockedPreview');
+    const lockedGrid = $('lockedGrid');
+    const remaining = ROBOTS.slice(n, n + 3);
+    if (remaining.length === 0) {
+        lockedPreview.style.display = 'none';
+    } else {
+        lockedPreview.style.display = '';
+        lockedGrid.innerHTML = '';
+        remaining.forEach((r, i) => {
+            const card = document.createElement('div');
+            card.className = 'p-4 rounded-lg';
+            card.style.cssText = 'background: rgba(26, 22, 16, 0.03); border: 1px dashed rgba(26, 22, 16, 0.15); opacity: 0.75;';
+            card.innerHTML = `
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <span class="tech-font text-[10px] uppercase tracking-widest font-bold text-gray-400">+${n + i + 1}th robot</span>
+                    <span class="tech-font text-[10px] text-gray-400">${r.code}</span>
+                </div>
+                <p class="text-sm text-gray-500 leading-snug">${r.unlock}</p>
+            `;
+            lockedGrid.appendChild(card);
+        });
+    }
+}
+
+/* RENDER ALL ─────────────────────────────────────────────── */
+function render() {
+    renderStats();
+    renderRobotGrid();
+    renderSavingsTable();
+    renderPhases();
+    renderServiceLines();
+    renderUnlocks();
+}
+
+/* EVENTS ──────────────────────────────────────────────────── */
+$('fleetSlider').addEventListener('input', (e) => {
+    state.count = parseInt(e.target.value);
+    render();
+});
+
+document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        state.count = parseInt(chip.dataset.count);
+        render();
+    });
+});
+
+$('intelToggle').addEventListener('click', () => {
+    state.intel = !state.intel;
+    $('intelToggle').classList.toggle('on', state.intel);
+    render();
+});
+
+/* INIT ──────────────────────────────────────────────────── */
+renderTicks();
+render();
+</script>
+
+</body>
+</html>

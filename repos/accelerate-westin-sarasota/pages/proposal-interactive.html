@@ -1,0 +1,2539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Westin Sarasota — Executive Proposal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        /* Westin palette — nature-inspired, Gulf Coast warmth */
+        --bronze: #4a7c59;
+        --bronze-light: #5a9e6e;
+        --bronze-soft: #b8d4be;
+        --navy: #1a2520;              /* Deep forest */
+        --navy-light: #253530;
+        --navy-deep: #0a1510;
+        --cream: #f5f3ee;             /* Warm sand */
+        --cream-warm: #f9f7f2;
+        --cream-deep: #e8e4db;
+        --green: #3a6a3a;
+        --accel-blue: #0055ff;
+        --accel-cyan: #00c8ff;
+        --accel-purple: #7c3aed;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fff; color: #1f2937; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; font-feature-settings: 'tnum'; }
+    .bronze-gradient { background: linear-gradient(135deg, var(--bronze), var(--bronze-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .accel-gradient { background: linear-gradient(135deg, var(--accel-blue), var(--accel-cyan), var(--accel-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ── Configurator panel (blackened — Westin palette) ─────────── */
+    .config-panel {
+        background: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%);
+        color: #fff;
+        border-radius: 1.5rem;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        position: relative;
+        overflow: hidden;
+    }
+    .config-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle at 20% 0%, rgba(166, 138, 92, 0.18), transparent 40%),
+                          radial-gradient(circle at 80% 100%, rgba(138, 111, 71, 0.08), transparent 40%);
+        pointer-events: none;
+    }
+    .config-panel > * { position: relative; }
+
+    /* Slider */
+    .slider-wrap { position: relative; padding: 1.5rem 0; }
+    .slider-track {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        position: relative;
+        margin: 0 12px;
+    }
+    .slider-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: linear-gradient(90deg, var(--bronze) 0%, var(--bronze-light) 100%);
+        border-radius: 999px;
+        box-shadow: 0 0 20px rgba(166, 138, 92, 0.5);
+        transition: width 0.25s ease;
+    }
+    .slider-ticks {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 12px;
+        pointer-events: none;
+    }
+    .tick { width: 2px; height: 12px; background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
+    .tick.tier-marker {
+        width: 3px;
+        height: 18px;
+        background: var(--bronze-light);
+        box-shadow: 0 0 8px rgba(166, 138, 92, 0.7);
+    }
+    .slider-input {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        background: transparent;
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        transform: translateY(-50%);
+        height: 40px;
+        cursor: pointer;
+        padding: 0 12px;
+    }
+    .slider-input::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--bronze-light), var(--bronze));
+        border: 3px solid #fff;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px rgba(166, 138, 92, 0.6), 0 0 0 1px rgba(0,0,0,0.2);
+        transition: transform 0.15s ease;
+    }
+    .slider-input::-webkit-slider-thumb:active { transform: scale(1.15); cursor: grabbing; }
+    .slider-input::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--bronze-light), var(--bronze));
+        border: 3px solid #fff;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px rgba(166, 138, 92, 0.6);
+    }
+
+    /* Fleet slot grid */
+    .robot-slot {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.75rem;
+        padding: 0.875rem 0.75rem;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        opacity: 0.4;
+        filter: grayscale(0.6);
+    }
+    .robot-slot.active {
+        background: linear-gradient(140deg, rgba(166, 138, 92, 0.18), rgba(166, 138, 92, 0.06));
+        border-color: rgba(166, 138, 92, 0.5);
+        opacity: 1;
+        filter: none;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    .robot-slot.active::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 10px;
+        height: 10px;
+        margin: 8px;
+        background: var(--bronze-light);
+        border-radius: 50%;
+        box-shadow: 0 0 12px var(--bronze-light);
+    }
+    .robot-chip-mini {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.5rem;
+        background: rgba(166, 138, 92, 0.18);
+        color: var(--bronze-light);
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
+    }
+    .robot-slot.active .robot-chip-mini { background: var(--bronze); color: #fff; }
+    .robot-photo {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: contain;
+        object-position: center;
+        margin-bottom: 0.5rem;
+        background:
+            radial-gradient(circle at 50% 60%, rgba(166, 138, 92, 0.12), transparent 65%),
+            linear-gradient(140deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
+        border-radius: 0.5rem;
+        padding: 0.25rem;
+        filter: grayscale(0.85) brightness(0.7);
+        transition: filter 0.5s ease, transform 0.5s ease;
+    }
+    .robot-slot.active .robot-photo { filter: grayscale(0) brightness(1); transform: scale(1.02); }
+
+    /* Stat tiles */
+    .stat-tile {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        transition: all 0.3s ease;
+    }
+    .stat-tile.accent {
+        background: linear-gradient(135deg, rgba(166, 138, 92, 0.18), rgba(166, 138, 92, 0.05));
+        border-color: rgba(166, 138, 92, 0.4);
+    }
+    .stat-tile.accent-green {
+        background: linear-gradient(135deg, rgba(58, 106, 58, 0.22), rgba(58, 106, 58, 0.08));
+        border-color: rgba(90, 180, 100, 0.4);
+    }
+
+    /* The Fleet Value card — three pillars: Service, Luxury, Revenue.
+       Reframed from labor-shift (defensive) to value-created (generative). */
+    .hours-card {
+        background: linear-gradient(135deg, rgba(166, 138, 92, 0.14), rgba(166, 138, 92, 0.04));
+        border: 1px solid rgba(166, 138, 92, 0.35);
+        border-radius: 1.25rem;
+        padding: 2rem 2rem 1.75rem;
+    }
+    .hours-eyebrow {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.7rem; font-weight: 700;
+        letter-spacing: 0.22em; text-transform: uppercase;
+        color: #5a9e6e;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    .hours-anchor {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.45rem; font-weight: 500; color: #fff;
+        text-align: center; line-height: 1.35;
+        margin: 0 auto 2rem;
+        max-width: 46rem;
+    }
+    .hours-anchor em {
+        color: #e8c88c; font-style: normal; font-weight: 600;
+    }
+    .pillar-grid {
+        display: grid; grid-template-columns: repeat(2, 1fr);
+        gap: 1rem; margin-bottom: 1rem;
+    }
+    .pillar {
+        background: rgba(255,255,255,0.035);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 1rem;
+        padding: 1.4rem 1.25rem 1.35rem;
+        display: flex; flex-direction: column;
+        position: relative;
+    }
+    .pillar .p-eyebrow {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.62rem; font-weight: 700;
+        letter-spacing: 0.15em; text-transform: uppercase;
+        color: #5a9e6e;
+        margin-bottom: 0.5rem;
+    }
+    .pillar .p-num {
+        font-family: 'Space Grotesk', monospace;
+        font-size: 2.6rem; font-weight: 700; color: #fff;
+        line-height: 1; letter-spacing: -0.02em;
+    }
+    .pillar .p-num .plus { color: #e8c88c; font-weight: 600; }
+    .pillar .p-unit {
+        font-family: 'Playfair Display', serif;
+        font-size: 0.95rem; color: #cfc8b8;
+        font-style: italic; font-weight: 400;
+        margin-top: 0.25rem;
+    }
+    .pillar .p-body {
+        font-size: 0.82rem; color: #d8d0bd; line-height: 1.5;
+        margin-top: 0.9rem; flex: 1;
+    }
+    .pillar .p-body strong { color: #fff; }
+    .pillar .p-foot {
+        font-size: 0.7rem; color: #8a8578;
+        letter-spacing: 0.03em;
+        margin-top: 0.7rem; padding-top: 0.7rem;
+        border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    /* Distinct accent stripe per pillar */
+    .pillar.service { border-top: 2px solid #5a9e6e; }
+    .pillar.luxury  { border-top: 2px solid #c9a870; }
+    /* Revenue hero — full-width punchline below the two experience pillars */
+    .revenue-hero {
+        background: linear-gradient(135deg, rgba(139,194,161,0.12), rgba(166,138,92,0.08));
+        border: 1px solid rgba(139,194,161,0.35);
+        border-top: 3px solid #8bc2a1;
+        border-radius: 1rem;
+        padding: 2rem 2.5rem;
+        display: grid; grid-template-columns: auto 1fr;
+        gap: 0 2.5rem; align-items: center;
+        margin-bottom: 1.25rem;
+    }
+    .revenue-hero .rv-eyebrow {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.68rem; font-weight: 700;
+        letter-spacing: 0.18em; text-transform: uppercase;
+        color: #8bc2a1; grid-column: 1 / -1; margin-bottom: 0.6rem;
+    }
+    .revenue-hero .rv-num {
+        font-family: 'Space Grotesk', monospace;
+        font-size: 3.6rem; font-weight: 700;
+        color: #e8c88c; line-height: 1; letter-spacing: -0.02em;
+    }
+    .revenue-hero .rv-num .plus { color: #8bc2a1; }
+    .revenue-hero .rv-unit {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.05rem; color: #cfc8b8; font-style: italic;
+        margin-top: 0.15rem;
+    }
+    .revenue-hero .rv-body {
+        font-size: 0.88rem; color: #d8d0bd; line-height: 1.6;
+    }
+    .revenue-hero .rv-body strong { color: #fff; }
+    .revenue-hero .rv-annual {
+        grid-column: 1 / -1;
+        margin-top: 0.8rem; padding-top: 0.8rem;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.82rem; color: #8a8578; letter-spacing: 0.03em;
+    }
+    .revenue-hero .rv-annual .big {
+        color: #e8c88c; font-weight: 700; font-size: 1.15rem;
+    }
+
+    .hours-source {
+        font-size: 0.78rem; color: #a8a090; text-align: center;
+        line-height: 1.55; max-width: 46rem; margin: 0 auto;
+    }
+    .hours-source strong { color: #e4ddcf; font-weight: 600; }
+    .hours-source .src-num { color: #e8c88c; font-weight: 600; }
+    @media (max-width: 820px) {
+        .pillar-grid { grid-template-columns: 1fr; }
+        .revenue-hero { grid-template-columns: 1fr; gap: 0.5rem 0; padding: 1.5rem 1.25rem; }
+        .revenue-hero .rv-num { font-size: 2.8rem; }
+    }
+
+    /* Toggle */
+    .toggle {
+        display: inline-flex;
+        align-items: center;
+        width: 52px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        flex-shrink: 0;
+    }
+    .toggle::after {
+        content: '';
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        background: #fff;
+        border-radius: 50%;
+        top: 3px;
+        left: 3px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle.on { background: var(--bronze); }
+    .toggle.on::after { left: 27px; }
+
+    /* Preset chips */
+    .preset-chip {
+        padding: 0.5rem 1rem;
+        border-radius: 0.6rem;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.85);
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+    .preset-chip:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(166, 138, 92, 0.4);
+    }
+    .preset-chip.active {
+        background: var(--bronze);
+        color: #fff;
+        border-color: var(--bronze);
+        box-shadow: 0 4px 16px rgba(166, 138, 92, 0.4);
+    }
+
+    /* Phase timeline */
+    .phase-timeline {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.5rem;
+    }
+    .phase-card {
+        background: var(--cream);
+        border: 1px solid rgba(21, 21, 21, 0.15);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
+    .phase-card.included {
+        background: var(--cream-warm);
+        border-color: var(--bronze);
+    }
+    .phase-card.skipped { opacity: 0.35; filter: grayscale(0.8); }
+
+    /* Service LEDs (inside dark panel) */
+    .led-indicator {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 11px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: background 0.35s ease, border-color 0.35s ease;
+    }
+    .led-indicator.on {
+        background: rgba(166, 138, 92, 0.09);
+        border-color: rgba(166, 138, 92, 0.35);
+    }
+    .led-dot {
+        flex: 0 0 auto;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #3a3833;
+        box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+        transition: background 0.35s ease, box-shadow 0.35s ease;
+    }
+    .led-indicator.on .led-dot {
+        background: #5eff88;
+        box-shadow: 0 0 9px rgba(94, 255, 136, 0.75), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.6);
+        animation: ledPulse 2.4s ease-in-out infinite;
+    }
+    .led-indicator.on:nth-child(3n)   .led-dot { animation-delay: 0.3s; }
+    .led-indicator.on:nth-child(3n+1) .led-dot { animation-delay: 0.8s; }
+    .led-indicator.on:nth-child(3n+2) .led-dot { animation-delay: 1.4s; }
+    @keyframes ledPulse {
+        0%, 100% { box-shadow: 0 0 8px rgba(94, 255, 136, 0.65), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.5); }
+        50%      { box-shadow: 0 0 14px rgba(94, 255, 136, 0.95), 0 0 4px #5eff88, inset 0 0 2px rgba(255,255,255,0.7); }
+    }
+    .led-label {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.45);
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        transition: color 0.35s ease, font-weight 0.35s ease;
+        line-height: 1.25;
+    }
+    .led-indicator.on .led-label { color: #ffffff; font-weight: 600; }
+    .led-threshold {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.3);
+        margin-left: auto;
+        letter-spacing: 0.05em;
+    }
+    .led-indicator.on .led-threshold { color: var(--bronze-light); }
+
+    /* Tables */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th { background: var(--navy); color: #fff; font-weight: 700; text-align: left; padding: 0.65rem 0.85rem; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .data-table th.right { text-align: right; }
+    .data-table td { padding: 0.6rem 0.85rem; border-bottom: 1px solid #e5e7eb; }
+    .data-table tr:nth-child(even) td { background: #fafafa; }
+    .data-table td.num { text-align: right; font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
+    .data-table tr.total td { background: var(--cream-warm) !important; font-weight: 700; border-top: 2px solid var(--bronze); }
+
+    @media print {
+        /* ── Print Reset ────────────────────────────────── */
+        .no-print { display: none !important; }
+        body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            background: #fff !important;
+            color: #000 !important;
+            font-size: 11pt;
+        }
+
+        /* ── Page breaks ────────────────────────────────── */
+        section { break-inside: avoid; page-break-inside: avoid; }
+        h2, h3, .headline { break-after: avoid; page-break-after: avoid; }
+        .macbook-wrap, .device-showcase, .iphone-wrap { break-inside: avoid; page-break-inside: avoid; }
+        .phase-timeline { break-inside: avoid; page-break-inside: avoid; }
+
+        /* ── Remove interactive controls from print ──── */
+        .slider-wrap, .preset-chips, .toggle-row { display: none !important; }
+
+        /* ── Dark panels → print-friendly ────────────── */
+        .dark-panel, [style*="background"][style*="#1"] {
+            background: #1a1a1a !important;
+            box-shadow: none !important;
+        }
+
+        /* ── Robot cards: contain images, readable text ── */
+        .robot-slot {
+            opacity: 1 !important;
+            filter: none !important;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            border: 1px solid #ccc !important;
+        }
+        .robot-slot.active {
+            box-shadow: none !important;
+            transform: none !important;
+        }
+        /* WHY: The ::after pseudo is a 10px status dot that prints as a
+           green square because browsers drop border-radius on tiny pseudo-
+           elements during print. We force the radius + clip and remove
+           the glow box-shadow that compounds the problem. */
+        .robot-slot.active::after {
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            overflow: hidden !important;
+            box-shadow: none !important;
+            width: 8px !important;
+            height: 8px !important;
+            background: #2e7d32 !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+        .robot-photo {
+            filter: none !important;
+            transform: none !important;
+            max-height: 120px;
+            object-fit: contain;
+        }
+
+        /* ── LED indicators: static, no animation ────── */
+        .led-dot {
+            animation: none !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+        .led-indicator.on .led-dot {
+            background: #00c853 !important;
+            box-shadow: none !important;
+            animation: none !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+        }
+
+        /* ── Fleet Command dots: force circles ───────── */
+        .fc-topbar .status .dot,
+        .fc-robot .dot,
+        .fc-robot .dot.green,
+        .fc-robot .dot.amber,
+        .fc-robot .dot.grey,
+        .fc-floor-head .bots .bot-slot .bot-dot,
+        .dot {
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            overflow: hidden !important;
+            box-shadow: none !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+        .fc-robot .dot.green {
+            background: #2e7d32 !important;
+        }
+
+        /* ── Stat tiles: borders for clarity ─────────── */
+        .stat-tile {
+            border: 1px solid #ddd !important;
+            box-shadow: none !important;
+        }
+
+        /* ── Service lines grid: contain within page ─── */
+        .svc-grid, .led-grid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        /* ── Device mockups: simplify for print ──────── */
+        .device-macbook, .device-iphone {
+            box-shadow: none !important;
+            border: 1px solid #333 !important;
+        }
+        .macbook-base { display: none !important; }
+
+        /* ── Tables: force borders ───────────────────── */
+        .data-table td, .data-table th {
+            border: 1px solid #ccc !important;
+        }
+
+        /* ── Reduce excessive whitespace ─────────────── */
+        .section-pad { padding: 1.5rem 0 !important; }
+        .py-20 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+
+        /* ── Phase cards: contain properly ────────────── */
+        .phase-card {
+            break-inside: avoid;
+            page-break-inside: avoid;
+            box-shadow: none !important;
+        }
+
+        /* ── Fleet Command mockup: keep together ─────── */
+        .fc-wrap { break-inside: avoid; page-break-inside: avoid; }
+        .fc-building { break-inside: avoid; page-break-inside: avoid; }
+
+        /* ── Kill all animations & transitions ───────── */
+        *, *::before, *::after {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        /* ── Links: show URL after text ──────────────── */
+        a[href^="http"]::after {
+            content: " (" attr(href) ")";
+            font-size: 9pt;
+            color: #666;
+            word-break: break-all;
+        }
+
+        /* ── Fixed/sticky elements: make static ──────── */
+        .fixed, [style*="position: fixed"], [style*="position:fixed"],
+        .sticky, [style*="position: sticky"], [style*="position:sticky"] {
+            position: static !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .phase-timeline { grid-template-columns: 1fr; }
+    }
+
+    /* ── Device Mockups ─────────────────────────────────── */
+    .device-showcase {
+        display: flex; justify-content: center; align-items: center;
+        padding: 2.5rem 2rem; border-radius: 1.5rem;
+        background: linear-gradient(160deg, #f5f0e6 0%, #ece4d4 100%);
+    }
+    .device-showcase--dark {
+        background: linear-gradient(160deg, #151515 0%, #1e1c19 100%);
+    }
+    .device-showcase--split {
+        justify-content: space-around; flex-wrap: wrap; gap: 2rem;
+    }
+
+    /* iPhone 15 Pro */
+    .device-iphone {
+        width: 240px; aspect-ratio: 390/844;
+        background: #0a0a0c; border-radius: 40px; padding: 8px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.25), inset 0 0 0 1.5px #333;
+        position: relative; flex-shrink: 0;
+    }
+    .device-iphone::after {
+        content: ''; position: absolute; top: 16px; left: 50%;
+        transform: translateX(-50%); width: 88px; height: 24px;
+        background: #000; border-radius: 14px; z-index: 20;
+    }
+    .iphone-screen {
+        width: 100%; height: 100%; border-radius: 32px;
+        background: #fbefe2; overflow: hidden;
+        display: flex; flex-direction: column;
+        font-family: -apple-system, 'SF Pro Text', sans-serif; font-size: 10px;
+    }
+    .iphone-statusbar {
+        height: 50px; display: flex; justify-content: flex-end;
+        align-items: flex-end; padding: 0 18px 6px; font-size: 11px;
+        color: #333; gap: 4px; flex-shrink: 0;
+    }
+    .iphone-home-bar {
+        width: 110px; height: 4px; border-radius: 2px;
+        background: #333; opacity: 0.4; margin: auto auto 8px;
+    }
+
+    /* MacBook Pro */
+    .macbook-wrap { max-width: 680px; width: 100%; }
+    .device-macbook {
+        aspect-ratio: 16/10; background: #0a0a0c; border-radius: 12px;
+        padding: 14px 10px 10px; position: relative;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+    .device-macbook::before {
+        content: ''; position: absolute; top: 5px; left: 50%;
+        transform: translateX(-50%); width: 68px; height: 10px;
+        background: #111; border-radius: 0 0 6px 6px; z-index: 2;
+    }
+    .device-macbook::after {
+        content: ''; position: absolute; top: 7px; left: 50%;
+        transform: translateX(2px); width: 3px; height: 3px;
+        background: #2a2a2a; border-radius: 50%; z-index: 3;
+    }
+    .macbook-screen {
+        width: 100%; height: 100%; border-radius: 3px;
+        background: #fbefe2; overflow: hidden; font-size: 9px;
+        font-family: -apple-system, 'SF Pro Text', sans-serif;
+    }
+    .macbook-base {
+        width: 112%; margin-left: -6%; height: 10px;
+        background: linear-gradient(180deg, #c0c0c0, #a8a8a8);
+        border-radius: 0 0 18px 18px; position: relative;
+    }
+    .macbook-base::before {
+        content: ''; position: absolute; top: 0; left: 50%;
+        transform: translateX(-50%); width: 13%; height: 4px;
+        background: #999; border-radius: 0 0 4px 4px;
+    }
+
+    /* Chat mockup (Concierge AI) */
+    .chat-header {
+        background: #302e2f; color: #fff; padding: 6px 14px 8px;
+        text-align: center;
+    }
+    .chat-header .brand { font-family: 'Playfair Display', serif; font-size: 13px; font-weight: 600; }
+    .chat-header .sub { font-size: 9px; color: #5a9e6e; letter-spacing: 0.08em; text-transform: uppercase; }
+    .chat-body { flex: 1; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+    .bubble { padding: 7px 10px; border-radius: 14px; max-width: 82%; line-height: 1.35; font-size: 10px; }
+    .bubble-ai { background: #fff; align-self: flex-start; color: #333; }
+    .bubble-me { background: #5a9e6e; align-self: flex-end; color: #fff; }
+    .chat-input { padding: 6px 12px; border-top: 1px solid #e2ddd3; }
+    .chat-input-pill {
+        background: #fff; border-radius: 18px; padding: 7px 14px;
+        font-size: 10px; color: #999;
+    }
+    .chat-ai-footer {
+        text-align: center; font-size: 8px; color: #999;
+        padding: 4px 0 2px; letter-spacing: 0.02em;
+    }
+
+    /* Guest app home screen */
+    .me-header { padding: 0 14px 8px; }
+    .me-header .brand { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 600; color: #302e2f; }
+    .me-header .greet { font-size: 10px; color: #8a7e6d; }
+    .me-hero {
+        margin: 0 12px 8px; border-radius: 12px; overflow: hidden;
+        background: #302e2f; padding: 10px 12px; color: #fff;
+    }
+    .me-hero .ev-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.1em; color: #5a9e6e; }
+    .me-hero .ev-title { font-family: 'Playfair Display', serif; font-size: 12px; margin-top: 2px; }
+    .me-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+        padding: 0 12px 8px;
+    }
+    .me-card {
+        background: #fff; border-radius: 10px; padding: 8px 6px;
+        text-align: center; font-size: 8px; color: #333;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .me-card .icon { font-size: 16px; margin-bottom: 3px; }
+    .me-card .label { font-weight: 600; font-size: 8px; }
+    .me-active {
+        margin: 0 12px 6px; padding: 8px 10px; border-radius: 10px;
+        background: linear-gradient(135deg, #302e2f, #4a4543); color: #fff;
+        font-size: 9px;
+    }
+    .me-active .track-label { font-size: 7px; text-transform: uppercase; letter-spacing: 0.08em; color: #5a9e6e; }
+    .me-active .track-item { margin-top: 3px; }
+    .me-active .eta { color: #8bc2a1; font-weight: 600; }
+
+    /* Dashboard screen (management) */
+    .fd-sidebar {
+        width: 36px; background: #302e2f; display: flex;
+        flex-direction: column; align-items: center;
+        padding: 6px 0; gap: 3px; flex-shrink: 0;
+    }
+    .fd-sidebar .logo { font-family: 'Playfair Display', serif; font-size: 11px; font-weight: 700; color: #5a9e6e; margin-bottom: 4px; }
+    .fd-sidebar .nav-dot { width: 16px; height: 16px; border-radius: 3px; background: #444; }
+    .fd-sidebar .nav-dot.active { background: #5a9e6e; }
+    .fd-main { flex: 1; padding: 8px 10px; overflow: hidden; }
+    .fd-kpi-row { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+    .fd-kpi { background: #fff; border-radius: 6px; padding: 5px 7px; flex: 1; min-width: 52px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    .fd-kpi .val { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 11px; color: #302e2f; }
+    .fd-kpi .lbl { font-size: 6.5px; color: #8a7e6d; text-transform: uppercase; letter-spacing: 0.06em; }
+    .fd-alert {
+        background: #fef3cd; border: 1px solid #f5d87e; border-radius: 6px;
+        padding: 4px 8px; font-size: 7.5px; color: #856404; margin-bottom: 6px;
+    }
+    .fd-section-label { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #8a7e6d; margin: 6px 0 4px; }
+    .fd-bar-row { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; font-size: 7.5px; }
+    .fd-bar-row .name { width: 40px; text-align: right; color: #666; flex-shrink: 0; }
+    .fd-bar-row .bar { height: 8px; border-radius: 2px; background: #5a9e6e; }
+    .fd-bar-row .amt { color: #333; font-weight: 600; font-family: 'Space Grotesk', sans-serif; }
+
+    /* Fleet performance table */
+    .fd-robot-row {
+        display: grid; grid-template-columns: 1.4fr repeat(3, 1fr);
+        gap: 2px; font-size: 7px; padding: 2.5px 0;
+        border-bottom: 1px solid #eee;
+    }
+    .fd-robot-row.hdr { font-weight: 700; color: #8a7e6d; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1.5px solid #ccc; }
+    .fd-metric-card {
+        background: #fff; border-radius: 6px; padding: 5px 7px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .fd-metric-card .val { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 10px; color: #302e2f; }
+    .fd-metric-card .lbl { font-size: 6.5px; color: #8a7e6d; }
+
+    /* CSS Charts — pie, donut, sparkline, mini-bars */
+    .fd-chart-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 4px; }
+    .fd-pie {
+        width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+        position: relative;
+    }
+    .fd-pie .pie-center {
+        position: absolute; inset: 12px; border-radius: 50%; background: #fbefe2;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Space Grotesk', sans-serif; font-size: 8px; font-weight: 700; color: #302e2f;
+    }
+    .fd-pie-legend { font-size: 6.5px; display: flex; flex-wrap: wrap; gap: 1px 6px; }
+    .fd-pie-legend .item { display: flex; align-items: center; gap: 2px; }
+    .fd-pie-legend .swatch { width: 6px; height: 6px; border-radius: 1px; flex-shrink: 0; }
+
+    .fd-sparkline { display: flex; align-items: flex-end; gap: 1px; height: 28px; }
+    .fd-sparkline .sp-bar {
+        flex: 1; background: #5a9e6e; border-radius: 1px 1px 0 0; min-width: 3px;
+    }
+    .fd-sparkline .sp-bar.peak { background: #4a7c59; }
+    .fd-sparkline .sp-bar.fleet { background: #8bc2a1; }
+
+    .fd-gauge { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
+    .fd-gauge .gauge-track { flex: 1; height: 6px; background: #eee; border-radius: 3px; position: relative; overflow: hidden; }
+    .fd-gauge .gauge-fill { height: 100%; border-radius: 3px; }
+    .fd-gauge .gauge-label { font-size: 6.5px; color: #8a7e6d; width: 32px; }
+    .fd-gauge .gauge-val { font-size: 7px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; width: 28px; text-align: right; }
+
+    /* POS Compatibility logos */
+    .pos-logos {
+        display: flex; align-items: center; justify-content: center; gap: 2rem;
+        padding: 1.5rem 0; margin-bottom: 0.75rem;
+    }
+    .pos-logo {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.85rem 1.75rem; border-radius: 0.75rem;
+        background: #fff; border: 1px solid #e2d9c8;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        transition: box-shadow 0.2s;
+    }
+    .pos-logo:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .pos-logo .logo-mark { font-weight: 800; line-height: 1; font-size: 1.6rem; }
+    .pos-logo .logo-text { font-size: 0.95rem; color: #302e2f; font-weight: 700; letter-spacing: 0.01em; }
+    .pos-logo .check { color: #27ae60; font-size: 1rem; margin-left: 0.35rem; font-weight: 700; }
+    .pos-logo .api-tag { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.1em; color: #4a7c59; font-weight: 700; background: rgba(138,111,71,0.1); padding: 2px 6px; border-radius: 3px; margin-left: 0.25rem; }
+    @media (max-width: 640px) { .pos-logos { flex-direction: column; gap: 0.75rem; } }
+
+    /* Stacked MacBooks */
+    .device-showcase--stacked {
+        flex-direction: column; gap: 2rem; align-items: center;
+    }
+    .report-label {
+        font-family: 'Space Grotesk', sans-serif; font-size: 0.7rem;
+        font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+        color: #4a7c59; display: flex; align-items: center; gap: 0.6rem;
+        margin-bottom: 0.5rem;
+    }
+    .report-label .num {
+        width: 22px; height: 22px; border-radius: 50%;
+        background: #4a7c59; color: #fff; display: flex;
+        align-items: center; justify-content: center;
+        font-family: 'Playfair Display', serif; font-size: 11px; font-weight: 700;
+    }
+
+    /* Variance panel */
+    .fd-variance { display: flex; gap: 6px; margin-top: 4px; }
+    .fd-var-item { background: #fff; border-radius: 4px; padding: 3px 6px; font-size: 7px; flex: 1; }
+    .fd-var-item .v-val { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 9px; }
+    .fd-var-item .v-val.neg { color: #c0392b; }
+    .fd-var-item .v-val.pos { color: #27ae60; }
+    .fd-var-item .v-lbl { color: #8a7e6d; font-size: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* Two-column layout inside dashboard */
+    .fd-cols { display: flex; gap: 8px; }
+    .fd-col { flex: 1; min-width: 0; }
+
+    /* P&L rows */
+    .fd-pnl-row { display: flex; justify-content: space-between; font-size: 7.5px; padding: 2px 0; border-bottom: 1px solid #eee; }
+    .fd-pnl-row .center { color: #333; }
+    .fd-pnl-row .amt { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: #302e2f; }
+    .fd-pnl-row.total { border-top: 1.5px solid #5a9e6e; border-bottom: none; font-weight: 700; }
+    .fd-pnl-row.total .amt { color: #4a7c59; }
+
+    /* Audit trail / sign-off */
+    .fd-signoff {
+        background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 4px;
+        padding: 3px 6px; font-size: 7px; color: #2e7d32; margin-top: 4px;
+    }
+    .fd-audit-row { display: flex; justify-content: space-between; font-size: 6.5px; color: #8a7e6d; padding: 1.5px 0; }
+
+    /* Inventory rows */
+    .fd-inv-row { display: flex; align-items: center; gap: 4px; font-size: 7px; padding: 2px 0; border-bottom: 1px solid #f0f0f0; }
+    .fd-inv-row .cat { flex: 1; color: #333; }
+    .fd-inv-row .cost { font-family: 'Space Grotesk', sans-serif; font-weight: 600; width: 36px; text-align: right; }
+    .fd-inv-row .pct { font-family: 'Space Grotesk', sans-serif; width: 28px; text-align: right; color: #8a7e6d; }
+    .fd-inv-row .flag { font-size: 8px; }
+    .fd-inv-row.alert-row .cost { color: #c0392b; }
+
+    /* Fleet Command (dark / luxury theme — matches proposal.html) */
+    .fc-wrap {
+        background: #1a1a1e; color: #fbefe2; width: 100%; height: 100%;
+        display: flex; flex-direction: column;
+    }
+    .fc-topbar {
+        padding: 7px 12px; border-bottom: 1px solid rgba(255,255,255,0.08);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .fc-topbar .title {
+        font-family: 'Playfair Display', serif; font-size: 12px; color: #5a9e6e;
+    }
+    .fc-topbar .status {
+        font-size: 7px; color: #5a8a6e; font-weight: 700; letter-spacing: 0.1em;
+        text-transform: uppercase; display: flex; align-items: center; gap: 4px;
+    }
+    .fc-topbar .status .dot {
+        width: 6px; height: 6px; border-radius: 50%; background: #5a8a6e;
+        box-shadow: 0 0 6px #5a8a6e;
+    }
+    .fc-body { flex: 1; display: grid; grid-template-columns: 140px 1fr 150px; gap: 0; }
+    .fc-fleet {
+        background: rgba(255,255,255,0.02);
+        border-right: 1px solid rgba(255,255,255,0.06);
+        padding: 8px 0; overflow: hidden;
+    }
+    .fc-fleet .section {
+        font-size: 6.5px; letter-spacing: 0.15em; text-transform: uppercase;
+        color: rgba(251,239,226,0.4); padding: 4px 10px; font-weight: 700;
+    }
+    .fc-robot {
+        padding: 5px 10px; font-size: 8px; display: flex; align-items: center; gap: 8px;
+        border-left: 2px solid transparent;
+    }
+    .fc-robot .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .fc-robot .dot.green { background: #5a8a6e; box-shadow: 0 0 4px #5a8a6e; }
+    .fc-robot .dot.amber { background: #c49a3c; box-shadow: 0 0 4px #c49a3c; }
+    .fc-robot .dot.grey { background: #6b6563; }
+    .fc-robot .name { font-weight: 600; color: #fbefe2; font-family: 'Space Grotesk', monospace; font-size: 8px; }
+    .fc-robot .sub { font-size: 6.5px; color: rgba(251,239,226,0.45); margin-left: auto; }
+    .fc-robot.active { border-left-color: #5a9e6e; background: rgba(176,125,86,0.08); }
+    .fc-robot .icon { flex-shrink: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+    .fc-robot .icon svg { width: 36px; height: 36px; }
+    .fc-robot .dest { font-size: 5.5px; color: #5a9e6e; display: block; margin-top: 0px; font-weight: 600; letter-spacing: 0.03em; }
+    .fc-map { padding: 10px 12px; display: flex; flex-direction: column; }
+    .fc-map h4 {
+        font-size: 7px; letter-spacing: 0.12em; text-transform: uppercase;
+        color: rgba(251,239,226,0.55); font-weight: 700; margin-bottom: 6px;
+    }
+    .fc-building {
+        display: flex; flex-direction: column; gap: 0; position: relative;
+        border-left: 2px solid rgba(166,138,92,0.3);
+        margin-left: 4px;
+    }
+    .fc-floor {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06); border-bottom: 2px solid rgba(255,255,255,0.08);
+        padding: 4px 6px; position: relative;
+        font-size: 7px; color: rgba(251,239,226,0.7);
+        min-height: 36px;
+    }
+    .fc-floor:first-child { border-radius: 3px 3px 0 0; }
+    .fc-floor:last-child { border-radius: 0 0 3px 3px; border-bottom: 2px solid rgba(166,138,92,0.3); }
+    .fc-floor-head {
+        display: flex; align-items: center; gap: 4px; margin-bottom: 2px;
+    }
+    .fc-floor .num {
+        font-family: 'Playfair Display', serif; font-size: 10px; color: #5a9e6e; width: 12px; flex-shrink: 0;
+    }
+    .fc-floor .label { font-size: 6.5px; color: rgba(251,239,226,0.55); }
+    .fc-floor .bots {
+        display: flex; gap: 2px; margin-left: auto; align-items: flex-end;
+    }
+    .fc-floor .bots svg { width: 18px; height: 18px; }
+    .fc-floor .bots .bot-slot { position: relative; display: flex; flex-direction: column; align-items: center; }
+    .fc-floor .bots .bot-slot .bot-task { font-size: 4.5px; color: #5a9e6e; font-weight: 600; white-space: nowrap; max-width: 38px; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+    .fc-floor .bots .bot-slot .bot-id { font-size: 4px; color: rgba(251,239,226,0.35); font-family: 'Space Grotesk', monospace; text-align: center; }
+    /* Dispatch arrow — animated pulse */
+    .fc-floor .bots .bot-slot.dispatched svg { filter: drop-shadow(0 0 3px #5a9e6e); }
+    .fc-floor .bots .bot-slot.dispatched::before {
+        content: ''; position: absolute; top: -2px; right: -2px;
+        width: 4px; height: 4px; border-radius: 50%; background: #5a8a6e;
+        box-shadow: 0 0 4px #5a8a6e; animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
+    .fc-floor-stats {
+        display: flex; gap: 5px; padding-left: 16px; flex-wrap: wrap;
+    }
+    .fc-floor-stats .fs { display: flex; align-items: center; gap: 1px; font-size: 5px; color: rgba(251,239,226,0.35); }
+    .fc-floor-stats .fs .fv { color: rgba(251,239,226,0.6); font-weight: 600; font-family: 'Space Grotesk', monospace; }
+    .fc-floor-stats .fs .fv.warn { color: #c49a3c; }
+    .fc-floor-stats .fs .fv.good { color: #5a8a6e; }
+    /* Elevator shaft */
+    .fc-elevator {
+        position: absolute; left: -10px; top: 0; bottom: 0; width: 6px;
+        background: linear-gradient(to bottom, rgba(166,138,92,0.15), rgba(166,138,92,0.05));
+        border-radius: 2px;
+    }
+    .fc-elevator .shaft-car {
+        position: absolute; left: 0; width: 6px; height: 10px;
+        background: #5a9e6e; border-radius: 1px; top: 25%;
+        box-shadow: 0 0 4px rgba(166,138,92,0.4);
+        animation: elevator-move 6s ease-in-out infinite alternate;
+    }
+    @keyframes elevator-move { 0% { top: 10%; } 33% { top: 40%; } 66% { top: 70%; } 100% { top: 25%; } }
+    .fc-tasks {
+        border-left: 1px solid rgba(255,255,255,0.06);
+        padding: 8px 10px;
+    }
+    .fc-tasks h4 {
+        font-size: 7px; letter-spacing: 0.12em; text-transform: uppercase;
+        color: rgba(251,239,226,0.55); font-weight: 700; margin-bottom: 6px;
+    }
+    .fc-task {
+        padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .fc-task:last-child { border-bottom: none; }
+    .fc-task .head {
+        display: flex; justify-content: space-between;
+        font-size: 7.5px; font-weight: 700;
+        font-family: 'Space Grotesk', monospace; color: #fbefe2;
+    }
+    .fc-task .head .eta { color: #5a9e6e; }
+    .fc-task .sub { font-size: 7px; color: rgba(251,239,226,0.5); margin-top: 1px; }
+    .fc-alert {
+        margin-top: 8px; padding: 5px 7px;
+        background: rgba(196,92,92,0.15); border: 1px solid rgba(196,92,92,0.35);
+        border-radius: 3px; font-size: 7px; color: #f08080; font-weight: 600;
+    }
+
+    @media (max-width: 640px) {
+        .device-showcase--split { flex-direction: column; align-items: center; }
+        .device-iphone { width: 200px; }
+        .macbook-wrap { max-width: 100%; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- HEADER -->
+<!-- ================================================================ -->
+<header class="bg-gradient-to-br from-[#1a2520] via-[#253530] to-[#1a2520] text-white px-6 md:px-8 py-10 md:py-12 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%221%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+    <div class="max-w-6xl mx-auto relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-xl border-2 border-[#5a9e6e] flex items-center justify-center">
+                    <span class="text-[#5a9e6e] font-bold text-2xl headline">W</span>
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">
+                        The Westin <span class="text-[#5a9e6e]">Sarasota</span>
+                    </h1>
+                    <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Executive Proposal &middot; Live Configurator</p>
+                </div>
+            </div>
+            <div class="flex flex-col md:items-end gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                    </div>
+                    <span class="text-sm font-bold tracking-tight accel-gradient tech-font">Accelerate Robotics</span>
+                </div>
+                <div class="text-[10px] text-gray-400 md:text-right tracking-wide">
+                    One Brain. Many Bots.<br>
+                    <span class="text-gray-500">OPP-004 · April 2026</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ================================================================ -->
+<!-- INTRO -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 pt-10 pb-4">
+    <div class="max-w-3xl">
+        <p class="text-sm uppercase tracking-widest text-[#4a7c59] font-semibold mb-3">Executive Proposal</p>
+        <h2 class="headline text-3xl md:text-4xl font-bold text-[#1a2520] mb-4 leading-tight">
+            Drag the slider. Watch the guest experience scale with it.
+        </h2>
+        <p class="text-gray-600 leading-relaxed">
+            A one-page read of the entire proposal. Start at one robot, scale to ten, and see what changes at each step: the service coverage guests notice, monthly fleet cost, hard-dollar labor savings, and annual net cash benefit. Toggle Smart Facility and POS Intelligence to see how the full platform economics shift.
+        </p>
+        <p class="text-xs text-gray-500 italic mt-4">
+            The Westin Sarasota is a 255-room, 12-floor full-service Marriott property on Sarasota Bay. Three F&amp;B outlets, rooftop pool, 15,000 sq ft meeting space, marina views. Positioning: autonomous guest service as an <strong>operational upgrade</strong> that elevates experience while driving hard-dollar savings.
+        </p>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- CONFIGURATOR -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-8">
+    <div class="config-panel p-6 md:p-10">
+
+        <!-- Fleet size header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+            <div>
+                <p class="text-[11px] uppercase tracking-widest text-[#5a9e6e] font-semibold mb-2">Fleet Size</p>
+                <div class="flex items-baseline gap-3">
+                    <div class="text-6xl md:text-7xl font-bold tech-font text-white" id="fleetCount">3</div>
+                    <div class="text-xl text-gray-400 font-light">/ 10 robots</div>
+                </div>
+                <p class="text-sm text-gray-400 mt-1" id="tierLabel">Signature Service</p>
+            </div>
+            <div class="flex flex-wrap gap-2" id="presetChips">
+                <button class="preset-chip" data-count="1">Pilot · 1</button>
+                <button class="preset-chip active" data-count="3">Essential · 3</button>
+                <button class="preset-chip" data-count="6">Full-Property · 6</button>
+                <button class="preset-chip" data-count="10">Westin Autonomous · 10</button>
+            </div>
+        </div>
+
+        <!-- Slider -->
+        <div class="slider-wrap mb-2">
+            <div class="slider-track">
+                <div class="slider-fill" id="sliderFill" style="width: 22.22%"></div>
+                <div class="slider-ticks" id="sliderTicks"></div>
+            </div>
+            <input type="range" min="1" max="10" value="3" step="1" class="slider-input" id="fleetSlider">
+        </div>
+        <div class="flex justify-between text-[10px] text-gray-500 uppercase tracking-wider px-3 mb-8">
+            <span>1 · Pilot</span>
+            <span>·</span>
+            <span>3 · A</span>
+            <span>·</span>
+            <span>6 · B</span>
+            <span>·</span>
+            <span>10 · C</span>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- ZONE 1 · YOUR FLEET — watch it come alive as you slide -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+
+        <!-- Robot grid -->
+        <div>
+            <p class="text-[11px] uppercase tracking-widest text-[#5a9e6e] font-semibold mb-3">Fleet Composition</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5" id="robotGrid"></div>
+        </div>
+
+        <!-- Service-line indicator lights -->
+        <div class="mt-8">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[11px] uppercase tracking-widest text-[#5a9e6e] font-semibold">Service Lines — System Status</p>
+                <p class="text-[10px] uppercase tracking-widest text-gray-400">
+                    <span class="tech-font text-[#5eff88] font-bold" id="serviceOnCount">3</span>
+                    <span class="text-gray-500"> / 10 online</span>
+                </p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2" id="serviceLedGrid"></div>
+        </div>
+
+        <!-- Smart Facility toggle -->
+        <div class="mt-8">
+            <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4 mb-3">
+                <div class="flex-1 pr-4">
+                    <p class="text-sm font-semibold text-white">&#x1F3E2; Smart Facility Intelligence</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">IoT sensors, energy optimization, predictive maintenance, air quality, occupancy · <span class="text-[#5a9e6e]">$3,400/mo · 148 sensors</span></p>
+                </div>
+                <div class="toggle" id="facilityToggle"></div>
+            </div>
+            <!-- POS Intelligence toggle -->
+            <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4 mb-3">
+                <div class="flex-1 pr-4">
+                    <p class="text-sm font-semibold text-white">&#x1F4CA; POS Data Intelligence</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Real-time F&amp;B analytics, cash management, labor optimization, beverage tracking · <span class="text-[#5a9e6e]">$2,200/mo · 3 outlets</span></p>
+                </div>
+                <div class="toggle" id="posToggle"></div>
+            </div>
+            <!-- Legacy Intelligence Platform toggle (hidden, kept for JS compatibility) -->
+            <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="flex-1 pr-4">
+                    <p class="text-sm font-semibold text-white">&#x1F916; Facility Intelligence Platform</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">BLE + UWB asset tags, smart-dispatch rules, fleet ops dashboard · <span class="text-[#5a9e6e]">$38,500 Y1 install · $10K/yr license</span></p>
+                </div>
+                <div class="toggle" id="intelToggle"></div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- ZONE 2 · THE IMPACT — guest experience + bottom line  -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+
+        <div class="mt-12 mb-8 text-center">
+            <p class="text-[11px] uppercase tracking-widest text-[#5a9e6e] font-semibold mb-2">Now see what this fleet delivers</p>
+            <p class="headline text-2xl md:text-3xl font-bold text-white" style="line-height:1.3">Better guest experience. Stronger bottom line.<br><span style="color:#5a9e6e">You can't afford <em>not</em> to.</span></p>
+        </div>
+
+        <!-- Enhanced Guest Experience + Revenue Capture -->
+        <div class="hours-card mb-8">
+            <div class="hours-eyebrow">Enhanced Guest Experience</div>
+            <div class="hours-anchor">
+                Every robot in your fleet <em>creates moments guests couldn't get before</em> &mdash; and turns each one into revenue your current staffing leaves on the table.
+            </div>
+
+            <!-- Two guest-experience pillars side by side -->
+            <div class="pillar-grid">
+                <div class="pillar service">
+                    <div class="p-eyebrow">New Guest Touchpoints</div>
+                    <div class="p-num"><span class="plus">+</span><span id="serviceEvents">24</span></div>
+                    <div class="p-unit">guest touchpoints / day</div>
+                    <div class="p-body">In-room dining after kitchen close. Rooftop cocktail runs to private events. Spa amenity delivery to the rooftop suite. <strong>Every one a moment your team couldn't reach before.</strong></div>
+                    <div class="p-foot">&asymp; <span id="serviceMonthly">720</span> new guest interactions / month</div>
+                </div>
+                <div class="pillar luxury">
+                    <div class="p-eyebrow">Elevated Service Presence</div>
+                    <div class="p-num"><span class="plus">+</span><span id="luxuryFTE">2.3</span></div>
+                    <div class="p-unit">staff freed for bespoke service</div>
+                    <div class="p-body">Your sommelier stays tableside. Your concierge stays in the lobby. <strong>The fleet handles linen, busing, supply runs, event strike</strong> &mdash; invisible work that currently pulls your best people away from guests.</div>
+                    <div class="p-foot">Event turnover: 17 min (was 42 min manual)</div>
+                </div>
+            </div>
+
+            <!-- Revenue hero — full-width punchline -->
+            <div class="revenue-hero">
+                <div class="rv-eyebrow">Additional Revenue Captured</div>
+                <div>
+                    <div class="rv-num"><span class="plus">+</span>$<span id="revenueMonthly">10,500</span></div>
+                    <div class="rv-unit">new monthly revenue</div>
+                </div>
+                <div class="rv-body">
+                    Late-night F&amp;B covers after kitchen close. <strong>Robot-assisted room dining</strong> as a new revenue stream. Faster event turnover = <strong>more bookable windows per week</strong>. This is revenue that doesn't exist without the fleet &mdash; not shifted, <em>created</em>.
+                </div>
+                <div class="rv-annual">
+                    <span class="big">$<span id="revenueAnnual">126,000</span></span> / year in new revenue &mdash; generated from <span id="sourceHours">18</span> hours/day of fleet-unlocked service capacity
+                </div>
+            </div>
+
+            <div class="hours-source">
+                <strong>The math:</strong> every guest touchpoint the fleet enables is a <span class="src-num">revenue opportunity</span> your staffing alone can't reach &mdash; late-night, pre-open, event-turnover windows that currently go unserved.
+            </div>
+        </div>
+
+        <!-- Hard Savings -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Fleet Cost</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="monthlyCost">$8,550</span></p>
+                <p class="text-[11px] text-gray-500 mt-1" id="costBreakdownLine">3 robots × $2,850</p>
+            </div>
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Hard Savings</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-[#5a9e6e]"><span id="monthlySavings">$8,800</span></p>
+                <p class="text-[11px] text-gray-500 mt-1">Labor &amp; vendor contracts terminated</p>
+            </div>
+            <div class="stat-tile accent-green">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Net Monthly Benefit</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="netMonthly">+$250</span></p>
+                <p class="text-[11px] text-gray-300 mt-1"><span id="annualNet">+$3,000</span> annualized</p>
+            </div>
+        </div>
+
+        <!-- Annual summary -->
+        <div class="mt-4 p-5 rounded-xl" style="background: linear-gradient(135deg, rgba(166, 138, 92, 0.15), rgba(166, 138, 92, 0.04)); border: 1px solid rgba(166, 138, 92, 0.35);">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center md:text-left">
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#5a9e6e] font-semibold mb-1">Year 1 All-In</p>
+                    <p class="text-2xl font-bold tech-font text-white" id="year1AllIn">$102,600</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#5a9e6e] font-semibold mb-1">Year 2+ Steady-State</p>
+                    <p class="text-2xl font-bold tech-font text-white" id="year2SteadyState">$102,600</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#5a9e6e] font-semibold mb-1">Annual Net Cash Benefit</p>
+                    <p class="text-2xl font-bold tech-font text-[#5a9e6e]" id="annualBenefitBig">+$3,000</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- vs. Hiring -->
+        <div class="mt-6 p-6 rounded-xl" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12);">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-[11px] uppercase tracking-widest text-[#5a9e6e] font-semibold">vs. Hiring — Fully Loaded Labor Comparison</p>
+                <span class="text-[10px] text-gray-400 italic">Design District ultra-premium hospitality, 2026</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Your Fleet</p>
+                    <p class="text-3xl font-bold tech-font text-white"><span id="fleetCostCompare">$8,550</span><span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1">Hardware, service, hardware, service, elevator integration — all-in</p>
+                </div>
+                <div class="text-center text-3xl text-gray-500 font-light hidden md:block">&rarr;</div>
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Equivalent FTE Coverage</p>
+                    <p class="text-3xl font-bold tech-font text-white"><span id="fteEquivCost">$15,600</span><span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1"><span id="fteEquivCount">3.0</span> FTEs × $5,200/mo fully-loaded</p>
+                </div>
+            </div>
+            <div class="mt-5 pt-5 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-3">
+                <p class="text-sm text-gray-300">The fleet delivers this coverage for</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-[#5a9e6e]" id="fteSavings">$7,050/mo less</p>
+                <p class="text-sm text-gray-300"><span id="fteSavingsPct">45%</span> cheaper · <span id="fteSavingsAnnual">$84,600/yr</span> delta</p>
+            </div>
+            <p class="text-[10px] text-gray-500 italic mt-4 leading-relaxed">
+                Not counted: recruiting, turnover, OT premiums, overnight differentials, agency markup for event coverage. Miami hospitality turnover runs 70&ndash;100%/yr &mdash; typically adds 20&ndash;40% on top of base FTE cost.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SURFACES — Management Dashboard + Guest Experience App          -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="text-center mb-4">
+        <p class="text-sm uppercase tracking-widest text-[#4a7c59] font-semibold mb-3">Included Software Surfaces</p>
+        <h2 class="headline text-3xl font-bold text-[#151515] mb-3 leading-tight">Stop exporting CSVs. Start closing your books.</h2>
+        <p class="text-gray-600 leading-relaxed max-w-2xl mx-auto">Every night, your POS dumps a CSV that nobody reads until it's too late. Revenue leaks, pour-cost variances, unapproved comps, staffing gaps &mdash; buried in spreadsheet rows that don't get reviewed until month-end. Books close late. Problems compound.</p>
+    </div>
+    <div class="max-w-3xl mx-auto mb-10 p-5 rounded-xl" style="background: linear-gradient(135deg, #f9f5ec, #f3ece0); border: 1px solid #e2d9c8;">
+        <p class="text-sm text-[#151515] leading-relaxed" style="font-family:'Playfair Display'"><strong>The platform replaces that CSV with four live dashboards</strong> that parse every Toast and Oracle MICROS transaction the moment it posts &mdash; flagging exceptions in real time, auto-generating the manager's daily and CFO close-out, and connecting it all to a fleet that resolves issues before your team even sees them.</p>
+    </div>
+
+    <!-- POS Compatibility Badges -->
+    <div class="pos-logos">
+        <div class="pos-logo">
+            <span class="logo-mark" style="color:#c0392b; font-family:serif;">O</span>
+            <span class="logo-text">Oracle MICROS</span>
+            <span class="api-tag">Turnkey API</span>
+            <span class="check">&#10003;</span>
+        </div>
+        <div class="pos-logo">
+            <span class="logo-mark" style="color:#ff6600;">&#9632;</span>
+            <span class="logo-text">Toast POS</span>
+            <span class="api-tag">Turnkey API</span>
+            <span class="check">&#10003;</span>
+        </div>
+        <div class="pos-logo">
+            <span class="logo-mark" style="color:#151515;">&#9632;</span>
+            <span class="logo-text">Square</span>
+            <span class="api-tag">Turnkey API</span>
+            <span class="check">&#10003;</span>
+        </div>
+    </div>
+    <p class="text-center text-sm text-gray-500 mb-10 -mt-2 max-w-2xl mx-auto leading-relaxed">We meet your facility where you are. Turnkey data integrations that plug into your existing POS on day one &mdash; no system changes, no IT projects. We build the intelligence layer that makes your business data make sense.</p>
+
+    <!-- Surface A — Management Platform (3 stacked MacBooks) -->
+    <div class="mb-14">
+        <div class="device-showcase device-showcase--stacked" style="margin-bottom: 1.5rem;">
+
+            <!-- ① Oracle MICROS Manager's Report -->
+            <div class="macbook-wrap">
+                <div class="report-label"><span class="num">1</span> Oracle MICROS &mdash; Manager's Daily Report</div>
+                <div class="device-macbook">
+                    <div class="macbook-screen" style="display:flex;">
+                        <div class="fd-sidebar">
+                            <div class="logo">M</div>
+                            <div class="nav-dot active"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                        </div>
+                        <div class="fd-main">
+                            <div style="font-size:7px; color:#8a7e6d; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:3px; display:flex; justify-content:space-between;">
+                                <span>Oracle MICROS Simphony &mdash; Manager's Daily</span>
+                                <span style="color:#5a9e6e">Wed Apr 16, 2026 &middot; Close of Day</span>
+                            </div>
+                            <div class="fd-kpi-row">
+                                <div class="fd-kpi"><div class="val">$48,275</div><div class="lbl">Net Revenue</div></div>
+                                <div class="fd-kpi"><div class="val">187</div><div class="lbl">Covers</div></div>
+                                <div class="fd-kpi"><div class="val">$258</div><div class="lbl">Avg Check</div></div>
+                                <div class="fd-kpi"><div class="val">22.4%</div><div class="lbl">Tip %</div></div>
+                                <div class="fd-kpi"><div class="val">1.2%</div><div class="lbl">Comp %</div></div>
+                                <div class="fd-kpi"><div class="val">4</div><div class="lbl">Open Checks</div></div>
+                            </div>
+                            <div class="fd-alert">&#9888; 6 control issues &mdash; 2 voids &gt;$100, cash variance &minus;$247, 1 no-sale drawer open</div>
+                            <div class="fd-cols">
+                                <!-- LEFT: Donut chart + sparkline -->
+                                <div class="fd-col">
+                                    <div class="fd-section-label">Revenue by Profit Center</div>
+                                    <div style="display:flex; gap:10px; align-items:flex-start;">
+                                        <!-- Donut chart — conic-gradient slices -->
+                                        <div style="flex-shrink:0;">
+                                            <div class="fd-pie" style="background:conic-gradient(#5a9e6e 0% 48%, #c9a870 48% 68%, #8a7e6d 68% 79%, #d4a040 79% 89%, #9e9e9e 89% 95.5%, #8bc2a1 95.5% 100%);">
+                                                <div class="pie-center" style="display:flex; align-items:center; justify-content:center;">
+                                                    <div style="text-align:center; line-height:1.15;"><div style="font-size:8px; font-weight:700; color:#302e2f;">$48.3K</div><div style="font-size:5px; color:#8a7e6d;">TOTAL</div></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="fd-pie-legend" style="flex:1;">
+                                            <div class="item"><span class="swatch" style="background:#5a9e6e"></span>Restaurant $23.2K</div>
+                                            <div class="item"><span class="swatch" style="background:#c9a870"></span>Roof $9.7K</div>
+                                            <div class="item"><span class="swatch" style="background:#8a7e6d"></span>Bar $5.3K</div>
+                                            <div class="item"><span class="swatch" style="background:#d4a040"></span>Guest $4.9K</div>
+                                            <div class="item"><span class="swatch" style="background:#9e9e9e"></span>Events $3.0K</div>
+                                            <div class="item"><span class="swatch" style="background:#8bc2a1"></span>Fleet $1.2K</div>
+                                        </div>
+                                    </div>
+                                    <div class="fd-section-label" style="margin-top:6px;">Hourly Covers &mdash; Sparkline</div>
+                                    <div style="display:flex; align-items:flex-end; gap:1px; height:24px;">
+                                        <!-- 11am-1am covers by hour -->
+                                        <div class="fd-sparkline" style="flex:1; height:100%;">
+                                            <div class="sp-bar" style="height:8%;" title="11a: 2"></div>
+                                            <div class="sp-bar" style="height:28%;" title="12p: 14"></div>
+                                            <div class="sp-bar" style="height:34%;" title="1p: 18"></div>
+                                            <div class="sp-bar" style="height:18%;" title="2p: 8"></div>
+                                            <div class="sp-bar" style="height:6%;" title="3p: 2"></div>
+                                            <div class="sp-bar" style="height:4%;" title="4p: 1"></div>
+                                            <div class="sp-bar" style="height:12%;" title="5p: 5"></div>
+                                            <div class="sp-bar" style="height:52%;" title="6p: 22"></div>
+                                            <div class="sp-bar" style="height:85%;" title="7p: 31"></div>
+                                            <div class="sp-bar" style="height:100%;" title="8p: 38"></div>
+                                            <div class="sp-bar" style="height:72%;" title="9p: 26"></div>
+                                            <div class="sp-bar" style="height:38%;" title="10p: 14"></div>
+                                            <div class="sp-bar" style="height:18%;" title="11p: 6"></div>
+                                            <div class="sp-bar" style="height:8%; background:#8a7e6d;" title="12a: 2"></div>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; font-size:5px; color:#aaa; margin-top:1px;">
+                                        <span>11 AM</span><span>PEAK 8 PM</span><span>12 AM</span>
+                                    </div>
+                                    <div class="fd-section-label" style="margin-top:6px;">Daypart Mix</div>
+                                    <div class="fd-bar-row"><span class="name">Lunch</span><div class="bar" style="width:17%; background:#c9a870"></div><span class="amt">$8.2K</span></div>
+                                    <div class="fd-bar-row"><span class="name">Dinner</span><div class="bar" style="width:52%"></div><span class="amt">$24.9K</span></div>
+                                    <div class="fd-bar-row"><span class="name">Late</span><div class="bar" style="width:13%; background:#8a7e6d"></div><span class="amt">$6.1K</span></div>
+                                    <div class="fd-bar-row"><span class="name">Fleet</span><div class="bar" style="width:3%; background:#8bc2a1"></div><span class="amt">$1.2K</span></div>
+                                </div>
+                                <!-- RIGHT: Gauge bars + tables -->
+                                <div class="fd-col">
+                                    <div class="fd-section-label">Key Ratios</div>
+                                    <!-- Labor gauge -->
+                                    <div class="fd-gauge">
+                                        <span class="lbl" style="font-size:6px; width:34px;">Labor</span>
+                                        <div class="gauge-track"><div class="gauge-fill" style="width:33%; background:#5a9e6e;"></div></div>
+                                        <span class="val" style="font-size:6.5px; font-weight:600; width:28px; text-align:right; color:#27ae60;">33.0%</span>
+                                    </div>
+                                    <!-- COGS gauge -->
+                                    <div class="fd-gauge">
+                                        <span class="lbl" style="font-size:6px; width:34px;">COGS</span>
+                                        <div class="gauge-track"><div class="gauge-fill" style="width:25.1%; background:#c9a870;"></div></div>
+                                        <span class="val" style="font-size:6.5px; font-weight:600; width:28px; text-align:right;">25.1%</span>
+                                    </div>
+                                    <!-- Bev Cost gauge -->
+                                    <div class="fd-gauge">
+                                        <span class="lbl" style="font-size:6px; width:34px;">Bev Cost</span>
+                                        <div class="gauge-track"><div class="gauge-fill" style="width:18.7%; background:#8a7e6d;"></div></div>
+                                        <span class="val" style="font-size:6.5px; font-weight:600; width:28px; text-align:right; color:#27ae60;">18.7%</span>
+                                    </div>
+                                    <!-- Comp % gauge -->
+                                    <div class="fd-gauge">
+                                        <span class="lbl" style="font-size:6px; width:34px;">Comp %</span>
+                                        <div class="gauge-track"><div class="gauge-fill" style="width:12%; background:#d4a040;"></div></div>
+                                        <span class="val" style="font-size:6.5px; font-weight:600; width:28px; text-align:right;">1.2%</span>
+                                    </div>
+                                    <!-- Targets reference -->
+                                    <div style="font-size:5px; color:#aaa; margin-top:2px; display:flex; gap:6px;">
+                                        <span>Target: Labor &le;34%</span><span>COGS &le;26%</span><span>Bev &le;19%</span>
+                                    </div>
+                                    <div class="fd-section-label" style="margin-top:6px;">Cash &amp; Settlement</div>
+                                    <div class="fd-variance">
+                                        <div class="fd-var-item"><div class="v-val">$4,161</div><div class="v-lbl">Cash Due</div></div>
+                                        <div class="fd-var-item"><div class="v-val">$3,914</div><div class="v-lbl">Cash Count</div></div>
+                                        <div class="fd-var-item"><div class="v-val neg">&minus;$247</div><div class="v-lbl">Variance</div></div>
+                                    </div>
+                                    <div class="fd-section-label" style="margin-top:6px;">Server Performance (Top 5)</div>
+                                    <div class="fd-pnl-row"><span class="center">M. Torres</span><span class="amt">$8,420 &middot; 32 cvr</span></div>
+                                    <div class="fd-pnl-row"><span class="center">L. Chen</span><span class="amt">$7,810 &middot; 28 cvr</span></div>
+                                    <div class="fd-pnl-row"><span class="center">J. Ramirez</span><span class="amt">$6,290 &middot; 24 cvr</span></div>
+                                    <div class="fd-pnl-row"><span class="center">K. Williams</span><span class="amt">$5,105 &middot; 19 cvr</span></div>
+                                    <div class="fd-pnl-row"><span class="center">D. Okafor</span><span class="amt">$4,870 &middot; 18 cvr</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="macbook-base"></div>
+            </div>
+
+            <!-- ② CFO Close-Out — Inventory & P&L -->
+            <div class="macbook-wrap">
+                <div class="report-label"><span class="num">2</span> CFO Close-Out &mdash; Inventory &amp; P&amp;L</div>
+                <div class="device-macbook">
+                    <div class="macbook-screen" style="display:flex;">
+                        <div class="fd-sidebar">
+                            <div class="logo">M</div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot active"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                        </div>
+                        <div class="fd-main">
+                            <div style="font-size:7px; color:#8a7e6d; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:3px; display:flex; justify-content:space-between;">
+                                <span>Close-Out Report &mdash; Q1 2026 Period 3</span>
+                                <span style="color:#5a9e6e">Approved &middot; 2 of 3 sign-offs</span>
+                            </div>
+                            <div class="fd-kpi-row">
+                                <div class="fd-kpi"><div class="val">$1.35M</div><div class="lbl">Period Revenue</div></div>
+                                <div class="fd-kpi"><div class="val">25.1%</div><div class="lbl">COGS</div></div>
+                                <div class="fd-kpi"><div class="val">34.3%</div><div class="lbl">Labor</div></div>
+                                <div class="fd-kpi"><div class="val">18.7%</div><div class="lbl">Bev Cost</div></div>
+                                <div class="fd-kpi"><div class="val" style="color:#27ae60">21.7%</div><div class="lbl">EBITDA</div></div>
+                            </div>
+                            <div class="fd-cols">
+                                <div class="fd-col">
+                                    <div class="fd-section-label">P&amp;L Roll-Up by Center</div>
+                                    <div class="fd-pnl-row"><span class="center">Sarasota Kitchen</span><span class="amt">$648,000</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Rooftop Pool</span><span class="amt">$271,000</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Bar</span><span class="amt">$149,000</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Events &amp; Private</span><span class="amt">$112,000</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Guest Dining</span><span class="amt">$138,000</span></div>
+                                    <div class="fd-pnl-row" style="color:#8bc2a1"><span class="center">Fleet Savings (labor)</span><span class="amt">+$68,400</span></div>
+                                    <div class="fd-pnl-row total"><span class="center">Operating Income</span><span class="amt">$293,000</span></div>
+                                    <div class="fd-section-label" style="margin-top:5px;">Audit Trail</div>
+                                    <div class="fd-audit-row"><span>GM — R. Delgado</span><span style="color:#27ae60">&#10003; Signed Apr 14</span></div>
+                                    <div class="fd-audit-row"><span>Controller — S. Park</span><span style="color:#27ae60">&#10003; Signed Apr 15</span></div>
+                                    <div class="fd-audit-row"><span>CFO — M. Antonov</span><span style="color:#d29922">&#9679; Pending</span></div>
+                                    <div class="fd-signoff">&#10003; 2 of 3 approvals received &mdash; CFO review due by Apr 18</div>
+                                </div>
+                                <div class="fd-col">
+                                    <div class="fd-section-label">Beverage Inventory &mdash; Variance</div>
+                                    <div class="fd-inv-row"><span class="cat"><strong>Tequila / Mezcal</strong></span><span class="cost">$18,420</span><span class="pct" style="color:#c0392b">&minus;2.1%</span><span class="flag">&#9888;</span></div>
+                                    <div class="fd-inv-row"><span class="cat">Whiskey / Bourbon</span><span class="cost">$14,280</span><span class="pct">+0.3%</span><span class="flag"></span></div>
+                                    <div class="fd-inv-row"><span class="cat">Vodka / Gin</span><span class="cost">$9,610</span><span class="pct">+0.1%</span><span class="flag"></span></div>
+                                    <div class="fd-inv-row"><span class="cat">Wine (by glass)</span><span class="cost">$22,340</span><span class="pct">&minus;0.8%</span><span class="flag"></span></div>
+                                    <div class="fd-inv-row"><span class="cat">Wine (bottle)</span><span class="cost">$41,090</span><span class="pct">+0.2%</span><span class="flag"></span></div>
+                                    <div class="fd-inv-row"><span class="cat">Beer / Cider</span><span class="cost">$6,180</span><span class="pct">+0.4%</span><span class="flag"></span></div>
+                                    <div class="fd-inv-row alert-row"><span class="cat"><strong>Non-Alc / Mixers</strong></span><span class="cost">$3,870</span><span class="pct" style="color:#c0392b">&minus;3.4%</span><span class="flag">&#9888;</span></div>
+                                    <div class="fd-section-label" style="margin-top:5px;">Pour Cost Trend (4-Period)</div>
+                                    <div class="fd-pnl-row"><span class="center">P12</span><span class="amt">19.2%</span></div>
+                                    <div class="fd-pnl-row"><span class="center">P1</span><span class="amt">18.9%</span></div>
+                                    <div class="fd-pnl-row"><span class="center">P2</span><span class="amt">19.1%</span></div>
+                                    <div class="fd-pnl-row"><span class="center">P3 (current)</span><span class="amt" style="color:#27ae60">18.7%</span></div>
+                                    <div class="fd-pnl-row total"><span class="center">Target</span><span class="amt">19.0%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="macbook-base"></div>
+            </div>
+
+            <!-- ③ Manager's Exception Report -->
+            <div class="macbook-wrap">
+                <div class="report-label"><span class="num">3</span> Manager's Exception Report &mdash; Facility Operations</div>
+                <div class="device-macbook">
+                    <div class="macbook-screen" style="display:flex;">
+                        <div class="fd-sidebar">
+                            <div class="logo">M</div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot active"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                            <div class="nav-dot"></div>
+                        </div>
+                        <div class="fd-main">
+                            <div style="font-size:7px; color:#8a7e6d; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:3px; display:flex; justify-content:space-between;">
+                                <span>Exception Report &mdash; 90,000 sqft &middot; 2 Restaurants &middot; Events</span>
+                                <span style="color:#c0392b; font-weight:700;">7 OPEN EXCEPTIONS</span>
+                            </div>
+                            <div class="fd-kpi-row">
+                                <div class="fd-kpi"><div class="val" style="color:#c0392b">7</div><div class="lbl">Open Issues</div></div>
+                                <div class="fd-kpi"><div class="val">3</div><div class="lbl">Critical</div></div>
+                                <div class="fd-kpi"><div class="val" style="color:#27ae60">12</div><div class="lbl">Resolved Today</div></div>
+                                <div class="fd-kpi"><div class="val">94.2%</div><div class="lbl">SLA Compliance</div></div>
+                                <div class="fd-kpi"><div class="val">2.4 hr</div><div class="lbl">Avg Resolution</div></div>
+                            </div>
+                            <div class="fd-alert" style="background:#fdecea; border-color:#f5c6cb; color:#721c24;">&#9888; 3 critical exceptions require immediate attention &mdash; revenue impact est. $1,840/hr unresolved</div>
+                            <div class="fd-cols">
+                                <div class="fd-col">
+                                    <div class="fd-section-label">Active Exceptions by Zone</div>
+                                    <div class="fd-pnl-row" style="background:#fdecea; padding:2px 4px; border-radius:3px; border:none; margin-bottom:2px;"><span class="center" style="color:#721c24;">&#9679; Restaurant &mdash; Walk-in cooler temp 48&deg;F</span><span class="amt" style="color:#c0392b">CRITICAL</span></div>
+                                    <div class="fd-pnl-row" style="background:#fdecea; padding:2px 4px; border-radius:3px; border:none; margin-bottom:2px;"><span class="center" style="color:#721c24;">&#9679; Roof Bar &mdash; POS terminal 3 offline</span><span class="amt" style="color:#c0392b">CRITICAL</span></div>
+                                    <div class="fd-pnl-row" style="background:#fdecea; padding:2px 4px; border-radius:3px; border:none; margin-bottom:2px;"><span class="center" style="color:#721c24;">&#9679; Events &mdash; Ballroom A/C unit 2 fault</span><span class="amt" style="color:#c0392b">CRITICAL</span></div>
+                                    <div class="fd-pnl-row" style="background:#fef3cd; padding:2px 4px; border-radius:3px; border:none; margin-bottom:2px;"><span class="center" style="color:#856404;">&#9679; Lobby &mdash; Elevator 2 out-of-service</span><span class="amt" style="color:#856404">HIGH</span></div>
+                                    <div class="fd-pnl-row" style="background:#fef3cd; padding:2px 4px; border-radius:3px; border:none; margin-bottom:2px;"><span class="center" style="color:#856404;">&#9679; Restaurant &mdash; Server understaffed (peak)</span><span class="amt" style="color:#856404">HIGH</span></div>
+                                    <div class="fd-pnl-row" style="padding:2px 4px; margin-bottom:2px;"><span class="center">&#9679; Roof &mdash; Bar glassware low inventory</span><span class="amt" style="color:#8a7e6d">MEDIUM</span></div>
+                                    <div class="fd-pnl-row" style="padding:2px 4px; margin-bottom:2px;"><span class="center">&#9679; Fl 2 &mdash; Lounge sconce fixture out</span><span class="amt" style="color:#8a7e6d">LOW</span></div>
+                                    <div class="fd-section-label" style="margin-top:5px;">POS Exceptions (Last 24hr)</div>
+                                    <div class="fd-pnl-row"><span class="center">Voids &gt; $100</span><span class="amt" style="color:#c0392b">2 &middot; $340 total</span></div>
+                                    <div class="fd-pnl-row"><span class="center">No-sale drawer opens</span><span class="amt" style="color:#c0392b">3</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Comps without mgr approval</span><span class="amt" style="color:#856404">1 &middot; $85</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Checks open &gt; 3 hours</span><span class="amt" style="color:#856404">4</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Discount overrides</span><span class="amt">6 &middot; $412</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Split-tender anomalies</span><span class="amt">2</span></div>
+                                </div>
+                                <div class="fd-col">
+                                    <div class="fd-section-label">Event Operations &mdash; Next 48hr</div>
+                                    <div class="fd-pnl-row"><span class="center"><strong>Tonight 7p</strong> &mdash; Vinyl Hour (Roof)</span><span class="amt">120 pax</span></div>
+                                    <div class="fd-pnl-row"><span class="center"><strong>Thu 11a</strong> &mdash; Brunch buyout (Restaurant)</span><span class="amt">65 pax</span></div>
+                                    <div class="fd-pnl-row"><span class="center"><strong>Thu 6p</strong> &mdash; Private dining (Ballroom)</span><span class="amt">48 pax</span></div>
+                                    <div class="fd-pnl-row"><span class="center"><strong>Fri 9p</strong> &mdash; Guest cocktail (Roof)</span><span class="amt">200 pax</span></div>
+                                    <div class="fd-pnl-row" style="color:#c0392b"><span class="center">&#9888; Ballroom A/C must resolve before Thu 6p</span><span class="amt">BLOCKED</span></div>
+                                    <div class="fd-section-label" style="margin-top:5px;">Facility KPIs &mdash; 90,000 sqft</div>
+                                    <div class="fd-pnl-row"><span class="center">Revenue / sqft (MTD)</span><span class="amt">$45.80</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Labor / sqft</span><span class="amt">$15.72</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Energy / sqft</span><span class="amt">$3.41</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Maintenance tickets (MTD)</span><span class="amt">34 &middot; 28 closed</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Guest complaints (MTD)</span><span class="amt" style="color:#27ae60">6 &middot; all resolved</span></div>
+                                    <div class="fd-section-label" style="margin-top:5px;">Fleet Impact on Exceptions</div>
+                                    <div class="fd-pnl-row"><span class="center">Exceptions resolved by fleet</span><span class="amt" style="color:#27ae60">8 today</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Avg response time (fleet)</span><span class="amt" style="color:#27ae60">4 min</span></div>
+                                    <div class="fd-pnl-row"><span class="center">Avg response time (staff)</span><span class="amt">18 min</span></div>
+                                    <div class="fd-pnl-row total"><span class="center">Fleet resolution advantage</span><span class="amt" style="color:#27ae60">4.5x faster</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="macbook-base"></div>
+            </div>
+
+            <!-- ④ Fleet Command Center (dark theme — matches proposal.html) -->
+            <div class="macbook-wrap">
+                <div class="report-label"><span class="num">4</span> Fleet Command Center &mdash; Live Operations</div>
+                <div class="device-macbook">
+                    <div class="macbook-screen">
+                        <div class="fc-wrap">
+                            <div class="fc-topbar">
+                                <div class="title">Fleet Command &middot; The Westin</div>
+                                <div class="status"><span class="dot"></span>Live &middot; 10 robots operational</div>
+                            </div>
+                            <div class="fc-body">
+                                <div class="fc-fleet">
+                                    <div class="section">Delivery &amp; Butler</div>
+                                    <div class="fc-robot active"><span class="dot green"></span><span class="icon"><svg viewBox="0 0 64 64"><rect x="16" y="56" width="32" height="6" rx="3" fill="#374151"/><circle cx="20" cy="62" r="1.5" fill="#1e293b"/><circle cx="44" cy="62" r="1.5" fill="#1e293b"/><rect x="18" y="55" width="28" height="1.5" rx=".75" fill="#3b82f6" opacity=".8"/><rect x="18" y="38" width="28" height="18" rx="4" fill="#d0d8e0"/><rect x="19" y="16" width="26" height="23" rx="4" fill="#e0e8f0"/><rect x="18" y="36" width="28" height="3" rx="1" fill="#334155"/><path d="M22,16Q22,10 27,8L37,8Q42,10 42,16Z" fill="#1e293b"/><path d="M44,18Q50,18 50,24L50,34Q50,38 46,38" fill="none" stroke="#e0e8f0" stroke-width="2" stroke-linecap="round"/></svg></span><span class="name">W3-01</span><span class="sub">Fl 9 Rm 904<span class="dest">Room service delivery</span></span></div>
+                                    <div class="fc-robot active"><span class="dot green"></span><span class="icon"><svg viewBox="0 0 64 64"><rect x="16" y="56" width="32" height="6" rx="3" fill="#374151"/><circle cx="20" cy="62" r="1.5" fill="#1e293b"/><circle cx="44" cy="62" r="1.5" fill="#1e293b"/><rect x="18" y="55" width="28" height="1.5" rx=".75" fill="#3b82f6" opacity=".8"/><rect x="18" y="38" width="28" height="18" rx="4" fill="#d0d8e0"/><rect x="19" y="16" width="26" height="23" rx="4" fill="#e0e8f0"/><rect x="18" y="36" width="28" height="3" rx="1" fill="#334155"/><path d="M22,16Q22,10 27,8L37,8Q42,10 42,16Z" fill="#1e293b"/><path d="M44,18Q50,18 50,24L50,34Q50,38 46,38" fill="none" stroke="#e0e8f0" stroke-width="2" stroke-linecap="round"/></svg></span><span class="name">W3-02</span><span class="sub">Fl 5 Rm 512<span class="dest">Amenity to guest</span></span></div>
+                                    <div class="fc-robot"><span class="dot green"></span><span class="icon"><svg viewBox="0 0 64 64"><rect x="16" y="56" width="32" height="6" rx="3" fill="#374151"/><circle cx="20" cy="62" r="1.5" fill="#1e293b"/><circle cx="44" cy="62" r="1.5" fill="#1e293b"/><rect x="18" y="55" width="28" height="1.5" rx=".75" fill="#3b82f6" opacity=".8"/><rect x="18" y="38" width="28" height="18" rx="4" fill="#d0d8e0"/><rect x="19" y="16" width="26" height="23" rx="4" fill="#e0e8f0"/><rect x="18" y="36" width="28" height="3" rx="1" fill="#334155"/><path d="M22,16Q22,10 27,8L37,8Q42,10 42,16Z" fill="#1e293b"/><path d="M44,18Q50,18 50,24L50,34Q50,38 46,38" fill="none" stroke="#e0e8f0" stroke-width="2" stroke-linecap="round"/></svg></span><span class="name">W3-03</span><span class="sub">Lobby<span class="dest">Standby</span></span></div>
+                                    <div class="section">Linens &amp; Service</div>
+                                    <div class="fc-robot active"><span class="dot green"></span><span class="icon"><svg viewBox="0 0 64 64"><rect x="10" y="52" width="36" height="8" rx="4" fill="#e8ecf0"/><circle cx="40" cy="60" r="3" fill="#1e293b"/><circle cx="16" cy="60" r="2" fill="#1e293b"/><rect x="12" y="51" width="32" height="2" rx="1" fill="#22d3ee" opacity=".7"/><rect x="8" y="44" width="40" height="8" rx="3" fill="#c8d0d8"/><rect x="16" y="10" width="5" height="34" rx="2.5" fill="#64748b"/><circle cx="18.5" cy="36" r="2" fill="#ef4444"/><rect x="10" y="4" width="22" height="14" rx="3" fill="#e0e4e8"/><rect x="12" y="6" width="18" height="10" rx="2" fill="#1e293b"/><rect x="13" y="7" width="8" height="4" rx="1" fill="#3b82f6" opacity=".7"/><rect x="22" y="7" width="7" height="4" rx="1" fill="#22d3ee" opacity=".6"/></svg></span><span class="name">S100-01</span><span class="sub">Fl 12 Pool<span class="dest">Poolside service</span></span></div>
+                                    <div class="fc-robot"><span class="dot green"></span><span class="icon"><svg viewBox="0 0 64 64"><rect x="10" y="52" width="36" height="8" rx="4" fill="#e8ecf0"/><circle cx="40" cy="60" r="3" fill="#1e293b"/><circle cx="16" cy="60" r="2" fill="#1e293b"/><rect x="12" y="51" width="32" height="2" rx="1" fill="#22d3ee" opacity=".7"/><rect x="8" y="44" width="40" height="8" rx="3" fill="#c8d0d8"/><rect x="16" y="10" width="5" height="34" rx="2.5" fill="#64748b"/><circle cx="18.5" cy="36" r="2" fill="#ef4444"/><rect x="10" y="4" width="22" height="14" rx="3" fill="#e0e4e8"/><rect x="12" y="6" width="18" height="10" rx="2" fill="#1e293b"/><rect x="13" y="7" width="8" height="4" rx="1" fill="#3b82f6" opacity=".7"/><rect x="22" y="7" width="7" height="4" rx="1" fill="#22d3ee" opacity=".6"/></svg></span><span class="name">S100-02</span><span class="sub">Restaurant<span class="dest">Standby</span></span></div>
+                                    <div class="section">Floor Care</div>
+                                    <div class="fc-robot active"><span class="dot green"></span><span class="icon"><svg viewBox="0 0 64 64"><rect x="10" y="48" width="44" height="10" rx="5" fill="#374151"/><g transform="translate(12,56)"><line x1="-4" y1="0" x2="4" y2="0" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/><line x1="-2.8" y1="-2.8" x2="2.8" y2="2.8" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/><circle cx="0" cy="0" r="2" fill="#ea580c"/></g><g transform="translate(52,56)"><line x1="-4" y1="0" x2="4" y2="0" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/><line x1="-2.8" y1="-2.8" x2="2.8" y2="2.8" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/><circle cx="0" cy="0" r="2" fill="#ea580c"/></g><path d="M14,48L14,24Q14,14 22,10L42,10Q50,14 50,24L50,48Z" fill="#9ca3af"/><rect x="18" y="18" width="28" height="18" rx="9" fill="#1e293b"/><ellipse cx="27" cy="27" rx="5" ry="6" fill="#22d3ee" opacity=".9"/><path d="M37,22L43,27L37,32Z" fill="#22d3ee" opacity=".9"/></svg></span><span class="name">C40-01</span><span class="sub">Fl 1 Lobby<span class="dest">Squeegee floor</span></span></div>
+                                    <div class="fc-robot active"><span class="dot green"></span><span class="icon"><svg viewBox="0 0 64 64"><rect x="14" y="50" width="36" height="8" rx="4" fill="#e2e8f0"/><g transform="translate(16,58)"><line x1="-3.5" y1="0" x2="3.5" y2="0" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/><circle cx="0" cy="0" r="1.5" fill="#64748b"/></g><g transform="translate(48,58)"><line x1="-3.5" y1="0" x2="3.5" y2="0" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/><circle cx="0" cy="0" r="1.5" fill="#64748b"/></g><path d="M18,50L18,28Q18,14 32,10Q46,14 46,28L46,50Z" fill="#f1f5f9"/><ellipse cx="24" cy="12" rx="3" ry="5" fill="#f1f5f9" stroke="#e2e8f0" stroke-width=".5" transform="rotate(-15,24,12)"/><ellipse cx="40" cy="12" rx="3" ry="5" fill="#f1f5f9" stroke="#e2e8f0" stroke-width=".5" transform="rotate(15,40,12)"/><circle cx="32" cy="8" r="2" fill="#ef4444" opacity=".5"/><rect x="22" y="22" width="20" height="14" rx="7" fill="#1e293b"/><rect x="25" y="25" width="6" height="7" rx="2" fill="#22d3ee" opacity=".9"/><rect x="33" y="25" width="6" height="7" rx="2" fill="#22d3ee" opacity=".9"/></svg></span><span class="name">C30-01</span><span class="sub">Fl 8 corridor<span class="dest">Scheduled sweep</span></span></div>
+                                    <div class="fc-robot"><span class="dot grey"></span><span class="icon"><svg viewBox="0 0 64 64" style="opacity:0.4"><rect x="14" y="50" width="36" height="8" rx="4" fill="#e2e8f0"/><path d="M18,50L18,28Q18,14 32,10Q46,14 46,28L46,50Z" fill="#f1f5f9"/><ellipse cx="24" cy="12" rx="3" ry="5" fill="#f1f5f9" stroke="#e2e8f0" stroke-width=".5" transform="rotate(-15,24,12)"/><ellipse cx="40" cy="12" rx="3" ry="5" fill="#f1f5f9" stroke="#e2e8f0" stroke-width=".5" transform="rotate(15,40,12)"/><rect x="22" y="22" width="20" height="14" rx="7" fill="#1e293b"/><rect x="25" y="25" width="6" height="7" rx="2" fill="#22d3ee" opacity=".9"/><rect x="33" y="25" width="6" height="7" rx="2" fill="#22d3ee" opacity=".9"/></svg></span><span class="name">C30-02</span><span class="sub">Fl 1 BOH<span class="dest">Charging</span></span></div>
+                                </div>
+                                <div class="fc-map">
+                                    <h4>Live Floor Map</h4>
+                                    <div class="fc-building">
+                                        <div class="fc-elevator"><div class="shaft-car"></div></div>
+                                        <!-- Fl 12 — Rooftop Pool & Bar -->
+                                        <div class="fc-floor">
+                                            <div class="fc-floor-head">
+                                                <span class="num">12</span><span class="label">Rooftop Pool &middot; Bar</span>
+                                                <span class="bots">
+                                                    <span class="bot-slot dispatched"><svg viewBox="0 0 64 64"><rect x="10" y="52" width="36" height="8" rx="4" fill="#e8ecf0"/><rect x="12" y="51" width="32" height="2" rx="1" fill="#22d3ee" opacity=".7"/><rect x="8" y="44" width="40" height="8" rx="3" fill="#c8d0d8"/><rect x="16" y="10" width="5" height="34" rx="2.5" fill="#64748b"/><rect x="10" y="4" width="22" height="14" rx="3" fill="#e0e4e8"/><rect x="12" y="6" width="18" height="10" rx="2" fill="#1e293b"/></svg><span class="bot-task">Poolside</span><span class="bot-id">S100-01</span></span>
+                                                </span>
+                                            </div>
+                                            <div class="fc-floor-stats">
+                                                <span class="fs">82&deg;F</span>
+                                                <span class="fs">68% RH</span>
+                                                <span class="fs">Pool <span class="fv good">Open</span></span>
+                                                <span class="fs">Bar <span class="fv">$2.1K</span></span>
+                                                <span class="fs"><span class="fv">1 task</span></span>
+                                            </div>
+                                        </div>
+                                        <!-- Fl 7-11 — Upper Guest Rooms -->
+                                        <div class="fc-floor">
+                                            <div class="fc-floor-head">
+                                                <span class="num">7-11</span><span class="label">Upper Guest Rooms &middot; 130 keys</span>
+                                                <span class="bots">
+                                                    <span class="bot-slot dispatched"><svg viewBox="0 0 64 64"><rect x="16" y="56" width="32" height="6" rx="3" fill="#374151"/><rect x="18" y="55" width="28" height="1.5" rx=".75" fill="#3b82f6" opacity=".8"/><rect x="18" y="38" width="28" height="18" rx="4" fill="#d0d8e0"/><rect x="19" y="16" width="26" height="23" rx="4" fill="#e0e8f0"/><rect x="18" y="36" width="28" height="3" rx="1" fill="#334155"/><path d="M22,16Q22,10 27,8L37,8Q42,10 42,16Z" fill="#1e293b"/></svg><span class="bot-task">Rm svc</span><span class="bot-id">W3-01</span></span>
+                                                    <span class="bot-slot dispatched"><svg viewBox="0 0 64 64"><rect x="14" y="50" width="36" height="8" rx="4" fill="#e2e8f0"/><path d="M18,50L18,28Q18,14 32,10Q46,14 46,28L46,50Z" fill="#f1f5f9"/><rect x="22" y="22" width="20" height="14" rx="7" fill="#1e293b"/><rect x="25" y="25" width="6" height="7" rx="2" fill="#22d3ee" opacity=".9"/><rect x="33" y="25" width="6" height="7" rx="2" fill="#22d3ee" opacity=".9"/></svg><span class="bot-task">Sweep</span><span class="bot-id">C30-01</span></span>
+                                                </span>
+                                            </div>
+                                            <div class="fc-floor-stats">
+                                                <span class="fs">72&deg;F</span>
+                                                <span class="fs">52% RH</span>
+                                                <span class="fs">Occ <span class="fv">108/130</span></span>
+                                                <span class="fs">AQ <span class="fv good">Good</span></span>
+                                                <span class="fs"><span class="fv">2 tasks</span></span>
+                                            </div>
+                                        </div>
+                                        <!-- Fl 4-6 — Lower Guest Rooms -->
+                                        <div class="fc-floor">
+                                            <div class="fc-floor-head">
+                                                <span class="num">4-6</span><span class="label">Lower Guest Rooms &middot; 75 keys</span>
+                                                <span class="bots">
+                                                    <span class="bot-slot dispatched"><svg viewBox="0 0 64 64"><rect x="16" y="56" width="32" height="6" rx="3" fill="#374151"/><rect x="18" y="55" width="28" height="1.5" rx=".75" fill="#3b82f6" opacity=".8"/><rect x="18" y="38" width="28" height="18" rx="4" fill="#d0d8e0"/><rect x="19" y="16" width="26" height="23" rx="4" fill="#e0e8f0"/><rect x="18" y="36" width="28" height="3" rx="1" fill="#334155"/><path d="M22,16Q22,10 27,8L37,8Q42,10 42,16Z" fill="#1e293b"/></svg><span class="bot-task">Amenity</span><span class="bot-id">W3-02</span></span>
+                                                    <span class="bot-slot dispatched"><svg viewBox="0 0 64 64"><rect x="10" y="52" width="36" height="8" rx="4" fill="#e8ecf0"/><rect x="12" y="51" width="32" height="2" rx="1" fill="#22d3ee" opacity=".7"/><rect x="8" y="44" width="40" height="8" rx="3" fill="#c8d0d8"/><rect x="16" y="10" width="5" height="34" rx="2.5" fill="#64748b"/><rect x="10" y="4" width="22" height="14" rx="3" fill="#e0e4e8"/><rect x="12" y="6" width="18" height="10" rx="2" fill="#1e293b"/></svg><span class="bot-task">Linens</span><span class="bot-id">S300-01</span></span>
+                                                </span>
+                                            </div>
+                                            <div class="fc-floor-stats">
+                                                <span class="fs">71&deg;F</span>
+                                                <span class="fs">48% RH</span>
+                                                <span class="fs">Occ <span class="fv">62/75</span></span>
+                                                <span class="fs">HK <span class="fv">18 done</span></span>
+                                                <span class="fs"><span class="fv">2 tasks</span></span>
+                                            </div>
+                                        </div>
+                                        <!-- Fl 3 — Meeting & Banquet -->
+                                        <div class="fc-floor">
+                                            <div class="fc-floor-head">
+                                                <span class="num">3</span><span class="label">Meeting &middot; Banquet &middot; 15K sqft</span>
+                                                <span class="bots">
+                                                    <span class="bot-slot dispatched"><svg viewBox="0 0 64 64"><rect x="10" y="48" width="44" height="10" rx="5" fill="#374151"/><path d="M14,48L14,24Q14,14 22,10L42,10Q50,14 50,24L50,48Z" fill="#9ca3af"/><rect x="18" y="18" width="28" height="18" rx="9" fill="#1e293b"/><ellipse cx="27" cy="27" rx="5" ry="6" fill="#22d3ee" opacity=".9"/><path d="M37,22L43,27L37,32Z" fill="#22d3ee" opacity=".9"/></svg><span class="bot-task">Banquet</span><span class="bot-id">C40-02</span></span>
+                                                    <span class="bot-slot dispatched"><svg viewBox="0 0 64 64"><rect x="10" y="52" width="36" height="8" rx="4" fill="#e8ecf0"/><rect x="12" y="51" width="32" height="2" rx="1" fill="#22d3ee" opacity=".7"/><rect x="8" y="44" width="40" height="8" rx="3" fill="#c8d0d8"/><rect x="16" y="10" width="5" height="34" rx="2.5" fill="#64748b"/><rect x="10" y="4" width="22" height="14" rx="3" fill="#e0e4e8"/><rect x="12" y="6" width="18" height="10" rx="2" fill="#1e293b"/></svg><span class="bot-task">Turnover</span><span class="bot-id">S300-02</span></span>
+                                                </span>
+                                            </div>
+                                            <div class="fc-floor-stats">
+                                                <span class="fs">74&deg;F</span>
+                                                <span class="fs">55% RH</span>
+                                                <span class="fs">Event <span class="fv warn">Setup 6p</span></span>
+                                                <span class="fs">Cap <span class="fv">0/400</span></span>
+                                                <span class="fs"><span class="fv">2 tasks</span></span>
+                                            </div>
+                                        </div>
+                                        <!-- Fl 2 — Restaurant & Bar -->
+                                        <div class="fc-floor">
+                                            <div class="fc-floor-head">
+                                                <span class="num">2</span><span class="label">Restaurant &middot; Bar &middot; F&amp;B</span>
+                                                <span class="bots">
+                                                    <span class="bot-slot dispatched"><svg viewBox="0 0 64 64"><rect x="10" y="52" width="36" height="8" rx="4" fill="#e8ecf0"/><rect x="12" y="51" width="32" height="2" rx="1" fill="#22d3ee" opacity=".7"/><rect x="8" y="44" width="40" height="8" rx="3" fill="#c8d0d8"/><rect x="16" y="10" width="5" height="34" rx="2.5" fill="#64748b"/><rect x="10" y="4" width="22" height="14" rx="3" fill="#e0e4e8"/><rect x="12" y="6" width="18" height="10" rx="2" fill="#1e293b"/></svg><span class="bot-task">Dining cart</span><span class="bot-id">S100-02</span></span>
+                                                </span>
+                                            </div>
+                                            <div class="fc-floor-stats">
+                                                <span class="fs">72&deg;F</span>
+                                                <span class="fs">50% RH</span>
+                                                <span class="fs">Covers <span class="fv">86</span></span>
+                                                <span class="fs">Rev <span class="fv">$7.2K</span></span>
+                                                <span class="fs"><span class="fv">1 task</span></span>
+                                            </div>
+                                        </div>
+                                        <!-- Fl 1 — Lobby & Kitchen -->
+                                        <div class="fc-floor">
+                                            <div class="fc-floor-head">
+                                                <span class="num">1</span><span class="label">Lobby &middot; Kitchen &middot; BOH</span>
+                                                <span class="bots">
+                                                    <span class="bot-slot dispatched"><svg viewBox="0 0 64 64"><rect x="10" y="48" width="44" height="10" rx="5" fill="#374151"/><path d="M14,48L14,24Q14,14 22,10L42,10Q50,14 50,24L50,48Z" fill="#9ca3af"/><rect x="18" y="18" width="28" height="18" rx="9" fill="#1e293b"/><ellipse cx="27" cy="27" rx="5" ry="6" fill="#22d3ee" opacity=".9"/><path d="M37,22L43,27L37,32Z" fill="#22d3ee" opacity=".9"/></svg><span class="bot-task">Lobby floor</span><span class="bot-id">C40-01</span></span>
+                                                    <span class="bot-slot"><svg viewBox="0 0 64 64"><rect x="16" y="56" width="32" height="6" rx="3" fill="#374151"/><rect x="18" y="55" width="28" height="1.5" rx=".75" fill="#3b82f6" opacity=".8"/><rect x="18" y="38" width="28" height="18" rx="4" fill="#d0d8e0"/><rect x="19" y="16" width="26" height="23" rx="4" fill="#e0e8f0"/><rect x="18" y="36" width="28" height="3" rx="1" fill="#334155"/><path d="M22,16Q22,10 27,8L37,8Q42,10 42,16Z" fill="#1e293b"/></svg><span class="bot-task">Standby</span><span class="bot-id">W3-03</span></span>
+                                                    <span class="bot-slot"><svg viewBox="0 0 64 64" style="opacity:0.35"><rect x="14" y="50" width="36" height="8" rx="4" fill="#e2e8f0"/><path d="M18,50L18,28Q18,14 32,10Q46,14 46,28L46,50Z" fill="#f1f5f9"/><rect x="22" y="22" width="20" height="14" rx="7" fill="#1e293b"/><rect x="25" y="25" width="6" height="7" rx="2" fill="#22d3ee" opacity=".9"/><rect x="33" y="25" width="6" height="7" rx="2" fill="#22d3ee" opacity=".9"/></svg><span class="bot-task" style="color:#6b6563">Charging</span><span class="bot-id">C30-02</span></span>
+                                                </span>
+                                            </div>
+                                            <div class="fc-floor-stats">
+                                                <span class="fs">71&deg;F</span>
+                                                <span class="fs">45% RH</span>
+                                                <span class="fs">Check-in <span class="fv">12 today</span></span>
+                                                <span class="fs">BOH <span class="fv good">Clear</span></span>
+                                                <span class="fs"><span class="fv">1 task</span></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="fc-tasks">
+                                    <h4>Task Queue</h4>
+                                    <div class="fc-task">
+                                        <div class="head"><span>&#127869; Room service &rarr; Fl 9 Rm 904</span><span class="eta">4m</span></div>
+                                        <div class="sub">W3-01 &middot; from kitchen via elevator</div>
+                                    </div>
+                                    <div class="fc-task">
+                                        <div class="head"><span>&#128715; Amenity delivery &rarr; Fl 5 Rm 512</span><span class="eta">6m</span></div>
+                                        <div class="sub">W3-02 &middot; guest request &middot; toiletries</div>
+                                    </div>
+                                    <div class="fc-task">
+                                        <div class="head"><span>&#128092; Linen cart &rarr; Fl 6 housekeeping</span><span class="eta">3m</span></div>
+                                        <div class="sub">S300-01 &middot; fresh linens from laundry</div>
+                                    </div>
+                                    <div class="fc-task">
+                                        <div class="head"><span>&#128167; Lobby floor care &mdash; Fl 1</span><span class="eta">12m</span></div>
+                                        <div class="sub">C40-01 &middot; post-checkout squeegee cycle</div>
+                                    </div>
+                                    <div class="fc-task">
+                                        <div class="head"><span>&#129529; Corridor sweep &mdash; Fl 8</span><span class="eta">18m</span></div>
+                                        <div class="sub">C30-01 &middot; scheduled guest-floor route</div>
+                                    </div>
+                                    <div class="fc-alert">&#9888; C30-02 low battery &mdash; auto-docked at Fl 1 BOH, available in 12 min</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="macbook-base"></div>
+            </div>
+
+        </div>
+
+        <div class="max-w-4xl mx-auto">
+            <h3 class="headline text-xl font-bold text-[#151515] mb-2">From nightly CSV dumps to real-time operational intelligence</h3>
+            <p class="text-gray-600 leading-relaxed mb-4">Four dashboards, one login. The platform ingests every Toast and Oracle MICROS transaction the moment it posts &mdash; no more waiting for a CSV export, no more month-end surprises. Your books close on time, every time.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-[#f9f5ec] rounded-lg p-4">
+                    <p class="text-sm font-bold text-[#151515] mb-1" style="font-family:'Playfair Display'">&#9312; Manager's Daily</p>
+                    <p class="text-[11px] text-gray-500 leading-relaxed">No more deciphering CSV columns at 11 PM. Revenue by center, daypart breakdown, labor vs. target, cash settlement, server performance &mdash; parsed and visualized the moment the POS posts.</p>
+                </div>
+                <div class="bg-[#f9f5ec] rounded-lg p-4">
+                    <p class="text-sm font-bold text-[#151515] mb-1" style="font-family:'Playfair Display'">&#9313; CFO Close-Out</p>
+                    <p class="text-[11px] text-gray-500 leading-relaxed">Books that actually close on time. P&amp;L roll-up, beverage inventory variance, pour cost trending, three-signature audit trail. Tequila variance flags before they become losses &mdash; not three weeks later in a spreadsheet.</p>
+                </div>
+                <div class="bg-[#f9f5ec] rounded-lg p-4">
+                    <p class="text-sm font-bold text-[#151515] mb-1" style="font-family:'Playfair Display'">&#9314; Exception Report</p>
+                    <p class="text-[11px] text-gray-500 leading-relaxed">Operational leakage stops here. POS anomalies, unapproved comps, staffing gaps, equipment faults &mdash; severity-ranked with revenue-impact estimates, surfaced in real time instead of discovered at month-end.</p>
+                </div>
+                <div class="bg-[#f9f5ec] rounded-lg p-4">
+                    <p class="text-sm font-bold text-[#151515] mb-1" style="font-family:'Playfair Display'">&#9315; Fleet Command</p>
+                    <p class="text-[11px] text-gray-500 leading-relaxed">Live floor map, robot status &amp; battery, active task queue with ETAs, utilization metrics, charging alerts. Full fleet visibility in real time &mdash; 8 robots that never call in sick.</p>
+                </div>
+            </div>
+
+            <!-- Reliability callout -->
+            <div class="p-5 rounded-xl" style="background: linear-gradient(135deg, #151515, #2a2620); border: 1px solid rgba(166,138,92,0.4);">
+                <p class="text-[11px] uppercase tracking-widest font-semibold mb-3" style="color:#5a9e6e;">Why automation wins for a 90,000 sqft property</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-4">
+                    <div>
+                        <p class="text-2xl font-bold text-white" style="font-family:'Space Grotesk'">99.2%</p>
+                        <p class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Uptime</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">On-demand, every shift</p>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-white" style="font-family:'Space Grotesk'">0%</p>
+                        <p class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Turnover</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">No recruiting, no training</p>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-white" style="font-family:'Space Grotesk'">24/7</p>
+                        <p class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Availability</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Pre-open through late-night</p>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-white" style="font-family:'Space Grotesk'">4 min</p>
+                        <p class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Avg Response</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">vs. 18 min staffed</p>
+                    </div>
+                </div>
+                <p class="text-[12px] text-gray-300 leading-relaxed text-center max-w-2xl mx-auto">They show up on time. They're reliable. They don't complain. And when your team needs them most &mdash; late-night event turnover, pre-open setup, short-staffed Saturday &mdash; they're already there, already working.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Surface B — Guest Experience App (iPhone) -->
+    <div>
+        <div class="device-showcase device-showcase--split" style="margin-bottom: 1.5rem;">
+
+            <!-- Phone 1: Concierge AI chat -->
+            <div class="device-iphone">
+                <div class="iphone-screen">
+                    <div class="iphone-statusbar">
+                        <span>9:41</span>
+                        <span style="margin-left:auto">&#9679;&#9679;&#9679;&#9679;</span>
+                    </div>
+                    <div class="chat-header">
+                        <div class="brand">The Westin</div>
+                        <div class="sub">Concierge</div>
+                    </div>
+                    <div class="chat-body">
+                        <div class="bubble bubble-ai">Good evening. How can I make your night better?</div>
+                        <div class="bubble bubble-me">Can I get a nightcap sent to the guests&rsquo; lounge? Old Fashioned from Rooftop Pool.</div>
+                        <div class="bubble bubble-ai">Of course. One Old Fashioned from Rooftop Pool, on its way to the lounge. Your W3 courier will arrive in about 4 minutes. Anything else?</div>
+                        <div class="bubble bubble-me">That's perfect, thanks.</div>
+                        <div class="bubble bubble-ai">On its way. You'll get a tap when it arrives at your door. Enjoy your evening. &#127769;</div>
+                    </div>
+                    <div class="chat-input">
+                        <div class="chat-input-pill">Ask The Westin&hellip;</div>
+                    </div>
+                    <div class="chat-ai-footer">AI-assisted &middot; tap to reach a human concierge</div>
+                    <div class="iphone-home-bar"></div>
+                </div>
+            </div>
+
+            <!-- Phone 2: Guest app home -->
+            <div class="device-iphone">
+                <div class="iphone-screen">
+                    <div class="iphone-statusbar">
+                        <span>9:41</span>
+                        <span style="margin-left:auto">&#9679;&#9679;&#9679;&#9679;</span>
+                    </div>
+                    <div class="me-header">
+                        <div class="brand">The Westin</div>
+                        <div class="greet">Good evening, Mr. Chang</div>
+                    </div>
+                    <div class="me-hero">
+                        <div class="ev-label">Tonight at The Westin</div>
+                        <div class="ev-title">Vinyl Hour &mdash; Kirsten Chen</div>
+                    </div>
+                    <div class="me-grid">
+                        <div class="me-card"><div class="icon">&#127864;</div><div class="label">Nightcap</div></div>
+                        <div class="me-card"><div class="icon">&#128085;</div><div class="label">Laundry</div></div>
+                        <div class="me-card"><div class="icon">&#127860;</div><div class="label">Restaurant</div></div>
+                        <div class="me-card"><div class="icon">&#128134;</div><div class="label">Spa</div></div>
+                        <div class="me-card"><div class="icon">&#127747;</div><div class="label">Terrace</div></div>
+                        <div class="me-card"><div class="icon">&#127916;</div><div class="label">Events</div></div>
+                    </div>
+                    <div class="me-active">
+                        <div class="track-label">Active Order</div>
+                        <div class="track-item">Old Fashioned &rarr; Guests&rsquo; Lounge &middot; <span class="eta">3 min</span></div>
+                    </div>
+                    <div class="iphone-home-bar"></div>
+                </div>
+            </div>
+
+            <!-- Phone 3: Guest Services & Ordering -->
+            <div class="device-iphone">
+                <div class="iphone-screen">
+                    <div class="iphone-statusbar">
+                        <span>9:41</span>
+                        <span style="margin-left:auto">&#9679;&#9679;&#9679;&#9679;</span>
+                    </div>
+                    <div class="me-header">
+                        <div class="brand">The Westin</div>
+                        <div class="greet" style="font-size:9px; color:#8a7e6d;">Guest Services</div>
+                    </div>
+                    <!-- Location selector -->
+                    <div style="margin:0 14px 8px; padding:8px 12px; background:#fff; border-radius:10px; border:1px solid #e2d9c8; display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:12px;">&#128205;</span>
+                        <div>
+                            <div style="font-size:8px; color:#8a7e6d; font-weight:600;">Deliver to</div>
+                            <div style="font-size:11px; font-weight:700; color:#302e2f;">Guests&rsquo; Lounge &middot; Table 4</div>
+                        </div>
+                        <span style="margin-left:auto; font-size:10px; color:#5a9e6e;">Change</span>
+                    </div>
+                    <!-- Category tabs -->
+                    <div style="display:flex; gap:4px; margin:0 14px 8px; overflow:hidden;">
+                        <span style="font-size:8px; font-weight:700; color:#fff; background:#302e2f; padding:4px 10px; border-radius:12px;">Food</span>
+                        <span style="font-size:8px; font-weight:600; color:#8a7e6d; background:#fff; padding:4px 10px; border-radius:12px; border:1px solid #e2d9c8;">Drinks</span>
+                        <span style="font-size:8px; font-weight:600; color:#8a7e6d; background:#fff; padding:4px 10px; border-radius:12px; border:1px solid #e2d9c8;">Merch</span>
+                        <span style="font-size:8px; font-weight:600; color:#8a7e6d; background:#fff; padding:4px 10px; border-radius:12px; border:1px solid #e2d9c8;">Amenities</span>
+                    </div>
+                    <!-- Menu items -->
+                    <div style="flex:1; overflow:hidden; padding:0 14px;">
+                        <div style="display:flex; align-items:center; padding:7px 0; border-bottom:1px solid #f0e6d8; gap:8px;">
+                            <div style="width:36px; height:36px; background:#f3ece0; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">&#127837;</div>
+                            <div style="flex:1;">
+                                <div style="font-size:10px; font-weight:700; color:#302e2f;">Truffle Croquettes</div>
+                                <div style="font-size:7.5px; color:#8a7e6d;">Black truffle, manchego, saffron a&iuml;oli</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:10px; font-weight:700; color:#302e2f;">$24</div>
+                                <div style="font-size:7px; color:#5a8a6e; font-weight:600;">+ Add</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; padding:7px 0; border-bottom:1px solid #f0e6d8; gap:8px;">
+                            <div style="width:36px; height:36px; background:#f3ece0; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">&#129367;</div>
+                            <div style="flex:1;">
+                                <div style="font-size:10px; font-weight:700; color:#302e2f;">Wagyu Sliders</div>
+                                <div style="font-size:7.5px; color:#8a7e6d;">A5 wagyu, brioche, truffle mayo</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:10px; font-weight:700; color:#302e2f;">$38</div>
+                                <div style="font-size:7px; color:#5a8a6e; font-weight:600;">+ Add</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; padding:7px 0; border-bottom:1px solid #f0e6d8; gap:8px;">
+                            <div style="width:36px; height:36px; background:#f3ece0; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">&#127843;</div>
+                            <div style="flex:1;">
+                                <div style="font-size:10px; font-weight:700; color:#302e2f;">Hamachi Crudo</div>
+                                <div style="font-size:7.5px; color:#8a7e6d;">Yuzu, jalape&ntilde;o, micro cilantro</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:10px; font-weight:700; color:#302e2f;">$28</div>
+                                <div style="font-size:7px; color:#5a8a6e; font-weight:600;">+ Add</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; padding:7px 0; gap:8px;">
+                            <div style="width:36px; height:36px; background:#f3ece0; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">&#127864;</div>
+                            <div style="flex:1;">
+                                <div style="font-size:10px; font-weight:700; color:#302e2f;">Old Fashioned</div>
+                                <div style="font-size:7.5px; color:#8a7e6d;">Woodford Reserve, Demerara, Angostura</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:10px; font-weight:700; color:#302e2f;">$22</div>
+                                <div style="font-size:7px; color:#fff; font-weight:700; background:#302e2f; padding:2px 6px; border-radius:8px;">1 &#10003;</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cart bar -->
+                    <div style="margin:6px 14px 4px; padding:10px 14px; background:#302e2f; border-radius:12px; display:flex; align-items:center; justify-content:space-between;">
+                        <div>
+                            <div style="font-size:8px; color:rgba(251,239,226,0.6);">1 item &middot; Delivered by W3</div>
+                            <div style="font-size:12px; font-weight:700; color:#fbefe2;">$22.00</div>
+                        </div>
+                        <div style="background:#5a9e6e; color:#fff; font-size:9px; font-weight:700; padding:6px 14px; border-radius:8px;">Order Now</div>
+                    </div>
+                    <div style="text-align:center; font-size:6px; color:#8a7e6d; padding:2px 0;">Avg delivery &middot; 4 min anywhere in the building</div>
+                    <div class="iphone-home-bar"></div>
+                </div>
+            </div>
+
+        </div>
+        <div class="max-w-3xl mx-auto">
+            <h3 class="headline text-xl font-bold text-[#151515] mb-2">Guest Experience App</h3>
+            <p class="text-gray-600 leading-relaxed mb-3">Every service the fleet enables &mdash; food, cocktails, merchandise, amenities &mdash; delivered anywhere in the building in under 5 minutes. Guests order from the lounge, the terrace, an event, or their private dining room. Revenue that would otherwise walk out the door gets captured at the point of desire.</p>
+            <div class="grid grid-cols-3 gap-3 text-center">
+                <div class="bg-[#f9f5ec] rounded-lg p-3">
+                    <p class="text-lg font-bold text-[#151515]" style="font-family:'Space Grotesk'">AI</p>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Concierge Chat</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">Natural language &mdash; just ask</p>
+                </div>
+                <div class="bg-[#f9f5ec] rounded-lg p-3">
+                    <p class="text-lg font-bold text-[#151515]" style="font-family:'Space Grotesk'">&#127860;</p>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Order Anywhere</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">Food, drinks, merch, amenities</p>
+                </div>
+                <div class="bg-[#f9f5ec] rounded-lg p-3">
+                    <p class="text-lg font-bold text-[#151515]" style="font-family:'Space Grotesk'">4m</p>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Avg Delivery</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">Anywhere in the building</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- PHASE TIMELINE -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="max-w-3xl mb-6">
+        <p class="text-sm uppercase tracking-widest text-[#4a7c59] font-semibold mb-3">Deployment Roadmap</p>
+        <h2 class="headline text-3xl font-bold text-[#151515] mb-3 leading-tight">Phases included at your fleet size</h2>
+        <p class="text-gray-600 leading-relaxed">
+            Each phase is success-gated — the club and Accelerate agree on measurable criteria before moving forward. Rolling back a phase costs nothing more than de-installing the added robots.
+        </p>
+    </div>
+    <div class="phase-timeline" id="phaseTimeline"></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- WHAT MEMBERS NOTICE -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="flex items-end justify-between mb-6 flex-wrap gap-4">
+        <div>
+            <p class="text-sm uppercase tracking-widest text-[#4a7c59] font-semibold mb-3">What Guests Notice</p>
+            <h2 class="headline text-3xl font-bold text-[#151515] mb-1">Guest experience at this fleet size</h2>
+            <p class="text-gray-600 text-sm">The Michelin Key service floor scales with the robots deployed — each slot unlocks something new.</p>
+        </div>
+    </div>
+
+    <div id="serviceTierCallout" class="p-6 md:p-8 rounded-2xl mb-6 text-white" style="background: linear-gradient(135deg, #151515 0%, #2a2620 100%); border: 1px solid rgba(166, 138, 92, 0.4);">
+        <div class="flex items-start justify-between flex-wrap gap-4 mb-3">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-[#5a9e6e] font-semibold mb-2">At <span id="tierFleetCount">3</span> robots, the guest experience is:</p>
+                <h3 class="headline text-3xl md:text-4xl font-bold"><span id="tierName">Signature Service</span></h3>
+                <p class="text-[11px] uppercase tracking-widest text-[#5a9e6e] mt-1" id="tierTag">Guest-facing automation</p>
+            </div>
+            <div class="tech-font text-5xl font-bold text-[#5a9e6e]/30 tracking-tighter" id="tierBadge">II</div>
+        </div>
+        <p class="text-gray-300 leading-relaxed max-w-3xl" id="tierDescription">The entry point that proves the concept. Hardwood care during closed hours, custom-branded late-evening delivery, in-room dining via the premium S100 cart.</p>
+    </div>
+
+    <p class="text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-3">Active Capabilities</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8" id="unlockGrid"></div>
+
+    <div id="lockedPreview">
+        <p class="text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-3">Next To Unlock</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="lockedGrid"></div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- HARD SAVINGS BREAKDOWN -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <p class="text-sm uppercase tracking-widest text-[#4a7c59] font-semibold mb-3">Hard-Dollar Savings Breakdown</p>
+    <h2 class="headline text-3xl font-bold text-[#151515] mb-3 leading-tight">Labor &amp; vendor contracts actually eliminated</h2>
+    <p class="text-gray-600 mb-6 max-w-3xl text-sm leading-relaxed">
+        Hard-dollar savings are cash that stops leaving the P&amp;L once the fleet is running. "Hours redirected to higher-value guest-facing work" is shown separately — it's real value, but it isn't cash.
+    </p>
+
+    <div class="overflow-x-auto rounded-xl border border-gray-200">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Capability unlocked at this slot</th>
+                    <th>What the robot replaces</th>
+                    <th class="right">Monthly savings</th>
+                </tr>
+            </thead>
+            <tbody id="savingsTable"></tbody>
+            <tfoot>
+                <tr class="total">
+                    <td colspan="2">Monthly Hard Savings</td>
+                    <td class="num" id="savingsTotal">$8,800</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <p class="text-xs text-gray-500 italic mt-3">
+        Baselined jointly with Westin Sarasota operations and department heads during Phase 1. Monthly operational reviews reconcile actual vs. committed; material misses are diagnosed and fixed together in good faith.
+    </p>
+</section>
+
+<!-- ================================================================ -->
+<!-- FOOTER -->
+<!-- ================================================================ -->
+<footer class="max-w-6xl mx-auto px-6 md:px-8 py-10 border-t border-gray-200 mt-12">
+    <div class="flex flex-col md:flex-row justify-between items-start gap-6">
+        <div>
+            <p class="text-sm text-gray-700 leading-relaxed max-w-2xl">
+                This is the <strong>Executive Proposal</strong> &mdash; a one-page interactive configurator for the full Westin Sarasota deployment. Adjust fleet size, toggle Smart Facility and POS Intelligence, and see the economics update in real time.
+            </p>
+        </div>
+        <div class="text-xs text-gray-500 md:text-right">
+            <p><strong class="text-[#1a2520]">Eric Race</strong></p>
+            <p>Founder &amp; CEO, Accelerate Robotics</p>
+            <p class="mt-2 italic">OPP-004 · The Westin Sarasota · April 2026</p>
+        </div>
+    </div>
+</footer>
+
+<!-- ================================================================ -->
+<!-- DATA + LOGIC -->
+<!-- ================================================================ -->
+<script>
+/* ──────────────────────────────────────────────────────────────────
+   ROBOT LADDER — The Westin Sarasota
+   255 rooms, 12 floors, 3 F&B outlets, rooftop pool, 15K sqft meeting
+   Slots 1-3 → $8,400/mo hard savings (Option A — Essential)
+   Slots 1-6 → $17,600/mo hard savings (Option B — Full-Property)
+   Slots 1-10 → $30,800/mo hard savings (Option C — Westin Autonomous)
+   ────────────────────────────────────────────────────────────────── */
+const ROBOTS = [
+    // Option A (slots 1-3) — Essential Service
+    { code: 'C40',  label: 'C40 · Lobby &amp; restaurant hard-floor',  role: 'Overnight tile/stone scrubber — lobby, Sarasota Kitchen, pool deck',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 3200, hours: 6, fte: 1.0,
+      captures: 'Overnight hard-floor cleaning vendor contract terminated',
+      unlock: 'Guests never see a wet-floor sign during operating hours — lobby and restaurant reset before breakfast service.',
+      category: 'Cleaning' },
+
+    { code: 'W3',   label: 'W3 · Room service &amp; amenity delivery', role: 'Enclosed delivery — room service, amenities, front-desk items',
+      photo: '../assets/robots/photos/keenon-w3.png',
+      savings: 2200, hours: 5, fte: 0.7,
+      captures: 'Runner OT + late-evening room-service delivery coverage',
+      unlock: 'A guest orders extra towels at 11 PM — delivered in 4 minutes, no front-desk call needed.',
+      category: 'Delivery' },
+
+    { code: 'S100', label: 'S100 · In-room dining cart',               role: 'Premium dining cart — room service from Sarasota Kitchen',
+      photo: '../assets/robots/photos/keenon-s100-luxury-cart-hero.png',
+      savings: 3000, hours: 7, fte: 1.0,
+      captures: 'Room-service runner FTE + late-night kitchen delivery labor',
+      unlock: 'Sarasota Kitchen arrives at the guest\'s door on a curated three-tier cart — elevated, not transactional.',
+      category: 'Delivery' },
+
+    // Option B delta (slots 4-6) — Full-Property
+    { code: 'C30',  label: 'C30 · Guest-floor corridor carpet',        role: 'Autonomous corridor sweeping — floors 4 through 12',
+      photo: '../assets/robots/photos/keenon-c30-white.png',
+      savings: 2400, hours: 6, fte: 0.8,
+      captures: 'Housekeeping manual-vacuum corridor rounds eliminated',
+      unlock: 'Corridors stay photograph-ready between housekeeping rounds — no vacuum carts blocking hallways.',
+      category: 'Cleaning' },
+
+    { code: 'S100', label: 'S100 · Pool &amp; rooftop service',        role: 'Second cart — rooftop pool bar + banquet support',
+      photo: '../assets/robots/photos/keenon-s100-luxury-cart-hero.png',
+      savings: 3800, hours: 7, fte: 1.1,
+      captures: 'Pool-deck runner count + banquet setup/strike labor absorbed',
+      unlock: 'Poolside cocktail service and banquet resets handled without pulling staff from guest-facing roles.',
+      category: 'Delivery' },
+
+    { code: 'C40',  label: 'C40 · Meeting &amp; banquet floors',       role: 'Second hard-floor — 15K sqft meeting space + restaurant turnover',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 2400, hours: 5, fte: 0.8,
+      captures: 'Banquet turnover cleaning + day-porter meeting-room shift',
+      unlock: 'Meeting rooms reset between events with no visible labor — back-to-back bookings just work.',
+      category: 'Cleaning' },
+
+    // Option C delta (slots 7-10) — Westin Autonomous
+    { code: 'W3',   label: 'W3 · 24/7 guest delivery',                role: 'Second delivery — around-the-clock amenity and concierge runs',
+      photo: '../assets/robots/photos/keenon-w3.png',
+      savings: 3200, hours: 6, fte: 0.8,
+      captures: 'Overnight concierge runner coverage eliminated',
+      unlock: 'Guest requests fulfilled in minutes at any hour — the service floor doesn\'t drop off at midnight.',
+      category: 'Delivery' },
+
+    { code: 'S300', label: 'S300 · Linens &amp; housekeeping transport', role: 'Linen transport between guest floors, laundry, and staging',
+      photo: '../assets/robots/photos/keenon-s300-linen-bin.png',
+      savings: 3600, hours: 6, fte: 1.0,
+      captures: 'Linens-handler PT role + housekeeping cart elevator trips',
+      unlock: 'Housekeepers stay on their floors — no linen carts riding the guest elevator between floors.',
+      category: 'Logistics' },
+
+    { code: 'S300', label: 'S300 · Banquet &amp; event turnover',      role: 'Meeting room strike and reset between events',
+      photo: '../assets/robots/photos/keenon-s300-linen-bin.png',
+      savings: 3600, hours: 6, fte: 1.0,
+      captures: 'Agency temp markup on banquet turnover nights eliminated',
+      unlock: 'Events leave no trace — ballroom reset in under an hour between afternoon and evening functions.',
+      category: 'Logistics' },
+
+    { code: 'C40',  label: 'C40 · BOH &amp; depth cleaning',          role: 'Third hard-floor — BOH kitchen, fitness center, spa corridor',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 2800, hours: 5, fte: 0.9,
+      captures: 'BOH cleaning contract reduction + night-porter OT',
+      unlock: 'Kitchen tile, fitness center, and spa corridors reset overnight with zero porter labor.',
+      category: 'Depth' },
+];
+
+const RAAS_PER_ROBOT = 2850;     // flat monthly RaaS rate per robot — all-inclusive
+const INTEL_Y1_INSTALL = 38500;  // one-time capex — sensing + dashboard install
+const INTEL_Y2_LICENSE = 10000;  // annual software license after Y1
+
+/* WHY: Sarasota blended FTE cost is lower than Miami Design District ultra-premium.
+   Standard full-service hotel blend — housekeepers, runners, banquet staff, porters.
+   Wages + FICA + benefits + PTO + uniforms + training burden. */
+const FTE_MONTHLY_COST = 4600;
+
+/* WHY: Smart Facility and POS are independent add-on toggles that layer on top
+   of the core robotics fleet. Each has its own monthly cost and savings model. */
+const FACILITY_MONTHLY = 3400;   // IoT sensor mesh — 148 sensors across 12 floors
+const FACILITY_SAVINGS = 4800;   // energy reduction + predictive maintenance savings
+const POS_MONTHLY = 2200;        // POS analytics platform — 3 F&B outlets
+const POS_SAVINGS = 3200;        // cash recovery + labor optimization + pour cost reduction
+
+// Service tier narratives — what guests experience at each fleet size
+const SERVICE_TIERS = [
+    { min: 1,  max: 1,  name: 'Pilot Mode',         tag: 'Proof of concept',
+      description: 'One C40 on lobby and restaurant hard-floor overnight. Thirty-day pilot, success criteria agreed in writing. See how autonomous guest service works before committing further.' },
+    { min: 2,  max: 2,  name: 'Essential Service',  tag: 'First guest-facing robot',
+      description: 'Cleaning + first enclosed delivery. Room service and amenity requests handled autonomously after hours for the first time.' },
+    { min: 3,  max: 5,  name: 'Signature Service',  tag: 'Guest-facing automation',
+      description: 'Hard-floor care, enclosed delivery, and the premium dining cart bring in-room dining to a new level. The upgrade guests mention in reviews.' },
+    { min: 6,  max: 9,  name: 'Full-Property Service', tag: 'Every surface, every service line',
+      description: 'Every guest-facing and BOH surface automated. Corridor carpet, pool deck, meeting rooms, banquet turnover. The first Marriott in the Gulf Coast delivering this caliber of autonomous service.' },
+    { min: 10, max: 10, name: 'Westin Autonomous', tag: '24/7 autonomous property',
+      description: 'Any service, to any room, any hour. Around-the-clock delivery, linens logistics, banquet strike-and-reset, BOH depth cleaning — no amount of staffing can sustainably match this level of coverage across 255 rooms.' },
+];
+
+function currentServiceTier(n) {
+    return SERVICE_TIERS.find(t => n >= t.min && n <= t.max) || SERVICE_TIERS[0];
+}
+
+// Service lines — illuminate as the fleet crosses each threshold
+const SERVICE_LINES = [
+    { id: 'hardfloor',     label: 'Lobby &amp; Restaurant Floors',    activateAt: 1 },
+    { id: 'delivery',      label: 'Room Service Delivery',            activateAt: 2 },
+    { id: 'inroom',        label: 'In-Room Dining Cart',              activateAt: 3 },
+    { id: 'carpet',        label: 'Guest-Floor Corridors',            activateAt: 4 },
+    { id: 'pool',          label: 'Pool &amp; Rooftop Service',       activateAt: 5 },
+    { id: 'meeting',       label: 'Meeting Room Coverage',            activateAt: 6 },
+    { id: 'amenity247',    label: '24/7 Guest Delivery',              activateAt: 7 },
+    { id: 'linens',        label: 'Linens Transport',                 activateAt: 8 },
+    { id: 'events',        label: 'Banquet Strike &amp; Reset',       activateAt: 9 },
+    { id: 'depth',         label: 'BOH Depth Cleaning',               activateAt: 10 },
+];
+
+// Fleet phase mapping — how many phases get activated at each fleet size
+const TIERS = {
+    1:  { name: 'Pilot Mode',                phases: 1 },
+    2:  { name: 'Essential Service',         phases: 2 },
+    3:  { name: 'Signature Service',         phases: 2 },
+    4:  { name: 'Signature + Corridors',     phases: 3 },
+    5:  { name: 'Signature + Pool',          phases: 3 },
+    6:  { name: 'Full-Property Service',     phases: 3 },
+    7:  { name: '24/7 Delivery',             phases: 4 },
+    8:  { name: 'Full-Property + Linens',    phases: 4 },
+    9:  { name: 'Extended Autonomous',       phases: 4 },
+    10: { name: 'Westin Autonomous',         phases: 5 },
+};
+
+/* STATE ─────────────────────────────────────────────────────────── */
+let state = { count: 3, intel: false, facility: false, pos: false };
+
+const $ = (id) => document.getElementById(id);
+
+/* RENDER: Robot grid ──────────────────────────────────────────── */
+function renderRobotGrid() {
+    const grid = $('robotGrid');
+    grid.innerHTML = '';
+    ROBOTS.forEach((r, i) => {
+        const active = i < state.count;
+        const slot = document.createElement('div');
+        slot.className = 'robot-slot' + (active ? ' active' : '');
+        slot.innerHTML = `
+            <img class="robot-photo" src="${r.photo}" alt="${r.code}" loading="lazy">
+            <div class="flex items-start gap-2.5">
+                <div class="robot-chip-mini">${r.code}</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[11px] font-semibold text-white leading-snug truncate">${r.label}</p>
+                    <p class="text-[10px] text-gray-400 leading-snug mt-0.5 truncate">${r.role}</p>
+                </div>
+            </div>
+        `;
+        grid.appendChild(slot);
+    });
+}
+
+/* RENDER: Savings table ───────────────────────────────────────── */
+function renderSavingsTable() {
+    const tbody = $('savingsTable');
+    tbody.innerHTML = '';
+    let total = 0;
+    for (let i = 0; i < state.count; i++) {
+        const r = ROBOTS[i];
+        total += r.savings;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${r.label}</strong></td>
+            <td>${r.captures}</td>
+            <td class="num">$${r.savings.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    }
+    $('savingsTotal').textContent = '$' + total.toLocaleString();
+}
+
+/* RENDER: Phase timeline ──────────────────────────────────────── */
+function renderPhases() {
+    const tier = TIERS[state.count];
+    const phaseCount = tier.phases;
+    const timeline = $('phaseTimeline');
+    timeline.innerHTML = '';
+
+    const phaseDefs = [
+        { n: 1, name: 'Pilot',              time: 'Month 1',
+          detail: 'One C40 on lobby and restaurant hard-floor overnight. Success criteria signed jointly. If missed, both parties walk.' },
+        { n: 2, name: 'Essential Service',  time: 'Months 2–3',
+          detail: 'W3 enclosed delivery + S100 in-room dining cart deployed. Elevator integration commissioned across 12 floors.' },
+        { n: 3, name: 'Full-Property',      time: 'Months 3–5',
+          detail: 'C30 for guest-floor corridors, second S100 for pool/rooftop and banquets, second C40 for meeting rooms.' },
+        { n: 4, name: 'Autonomous Expansion', time: 'Months 5–7',
+          detail: 'Second W3 for 24/7 guest delivery. Two S300s for linens logistics and banquet strike/reset. Third C40 for BOH depth.' },
+        { n: 5, name: 'Intelligence',       time: 'Months 7–8',
+          detail: 'Smart Facility (148 IoT sensors) + POS Intelligence (3 outlets) + Facility Intelligence Platform live.' },
+    ];
+
+    phaseDefs.forEach((p) => {
+        const included = p.n <= phaseCount;
+        const intel = (p.n === 5);
+        const card = document.createElement('div');
+        card.className = 'phase-card' + (included ? ' included' : ' skipped');
+        if (intel && !state.intel) card.classList.add('skipped');
+        card.innerHTML = `
+            <div class="flex items-center gap-2 mb-2">
+                <div class="w-7 h-7 rounded-full bg-[#4a7c59] text-white flex items-center justify-center text-xs font-bold tech-font">${p.n}</div>
+                <p class="text-[10px] uppercase tracking-widest text-[#151515] font-semibold">${p.time}</p>
+            </div>
+            <p class="font-bold text-[#151515] mb-1 text-sm">${p.name}</p>
+            <p class="text-xs text-gray-600 leading-snug">${p.detail}</p>
+            ${intel && !state.intel ? '<p class="text-[10px] mt-2 text-gray-500 italic">Requires Intelligence Platform add-on</p>' : ''}
+        `;
+        timeline.appendChild(card);
+    });
+}
+
+/* RENDER: Stats ─────────────────────────────────────────────── */
+function renderStats() {
+    const n = state.count;
+    const activeRobots = ROBOTS.slice(0, n);
+
+    const fleetCost = n * RAAS_PER_ROBOT;
+    const laborSavings = activeRobots.reduce((s, r) => s + r.savings, 0);
+    const staffHours = activeRobots.reduce((s, r) => s + r.hours, 0);
+
+    /* WHY: Total monthly cost includes robotics fleet + any active add-ons
+       (Smart Facility, POS Intelligence, Intel Platform). Each toggle adds
+       independently so the prospect can see incremental economics. */
+    const facilityAddon = state.facility ? FACILITY_MONTHLY : 0;
+    const posAddon = state.pos ? POS_MONTHLY : 0;
+    const facilitySavings = state.facility ? FACILITY_SAVINGS : 0;
+    const posSavings = state.pos ? POS_SAVINGS : 0;
+
+    const monthlyCost = fleetCost + facilityAddon + posAddon;
+    const totalSavings = laborSavings + facilitySavings + posSavings;
+    const netMonthly = totalSavings - monthlyCost;
+    const annualNet = netMonthly * 12;
+
+    // Intelligence Platform add-ons
+    const intelY1 = state.intel ? INTEL_Y1_INSTALL : 0;
+    const intelY2 = state.intel ? INTEL_Y2_LICENSE : 0;
+    const year1AllIn = monthlyCost * 12 + intelY1;
+    const year2SteadyState = monthlyCost * 12 + intelY2;
+
+    // FTE equivalence
+    const fteCount = activeRobots.reduce((s, r) => s + r.fte, 0);
+    const fteEquivCost = Math.round(fteCount * FTE_MONTHLY_COST);
+    const fteSavings = fteEquivCost - monthlyCost;
+    const fteSavingsPct = fteEquivCost > 0 ? Math.round((fteSavings / fteEquivCost) * 100) : 0;
+
+    const tier = TIERS[n];
+
+    $('fleetCount').textContent = n;
+    $('tierLabel').textContent = tier.name;
+    $('monthlyCost').textContent = '$' + monthlyCost.toLocaleString();
+    $('fleetCostCompare').textContent = '$' + monthlyCost.toLocaleString();
+    $('fteEquivCost').textContent = '$' + fteEquivCost.toLocaleString();
+    $('fteEquivCount').textContent = fteCount.toFixed(1);
+    $('fteSavings').textContent = (fteSavings >= 0 ? '$' : '−$') + Math.abs(fteSavings).toLocaleString() + '/mo ' + (fteSavings >= 0 ? 'less' : 'more');
+    $('fteSavingsPct').textContent = Math.abs(fteSavingsPct) + '%';
+    $('fteSavingsAnnual').textContent = (fteSavings >= 0 ? '$' : '−$') + Math.abs(fteSavings * 12).toLocaleString() + '/yr';
+
+    const robotWord = n === 1 ? 'robot' : 'robots';
+    $('costBreakdownLine').textContent = `${n} ${robotWord} × $${RAAS_PER_ROBOT.toLocaleString()}`;
+
+    $('monthlySavings').textContent = '$' + totalSavings.toLocaleString();
+    $('netMonthly').textContent = (netMonthly >= 0 ? '+$' : '−$') + Math.abs(netMonthly).toLocaleString();
+    $('annualNet').textContent = (annualNet >= 0 ? '+$' : '−$') + Math.abs(annualNet).toLocaleString();
+    // Three value streams — service / luxury / revenue
+    // WHY: 8 events/robot/day matches Fleet Performance mockup (1,847 tasks at 8 robots = 7.7/robot/day, rounded).
+    // WHY: $3,500/robot/mo revenue-capture is derived from the "22% of Restaurant room dining = $84k at 8 robots"
+    //      benchmark already baked into the Surface 2 Fleet Performance Report. 8 FTE-hours = 1.0 FTE (8hr shift).
+    $('sourceHours').textContent = staffHours;
+    $('serviceEvents').textContent = (n * 8).toLocaleString();
+    $('serviceMonthly').textContent = (n * 8 * 30).toLocaleString();
+    $('luxuryFTE').textContent = (staffHours / 8).toFixed(1);
+    $('revenueMonthly').textContent = (n * 3500).toLocaleString();
+    $('revenueAnnual').textContent = (n * 3500 * 12).toLocaleString();
+    $('year1AllIn').textContent = '$' + year1AllIn.toLocaleString();
+    $('year2SteadyState').textContent = '$' + year2SteadyState.toLocaleString();
+    $('annualBenefitBig').textContent = (annualNet >= 0 ? '+$' : '−$') + Math.abs(annualNet).toLocaleString();
+
+    // Slider fill — 9 steps between 1 and 10
+    const pct = ((n - 1) / 9) * 100;
+    $('sliderFill').style.width = pct + '%';
+    $('fleetSlider').value = n;
+
+    // Preset chips
+    document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+        chip.classList.toggle('active', parseInt(chip.dataset.count) === n);
+    });
+}
+
+/* RENDER: Slider ticks (markers at 1, 3, 6, 10) ───────────── */
+function renderTicks() {
+    const ticks = $('sliderTicks');
+    ticks.innerHTML = '';
+    for (let i = 1; i <= 10; i++) {
+        const tick = document.createElement('div');
+        tick.className = 'tick' + ([1, 3, 6, 10].includes(i) ? ' tier-marker' : '');
+        ticks.appendChild(tick);
+    }
+}
+
+/* RENDER: Service LEDs ─────────────────────────────────────── */
+function renderServiceLines() {
+    const n = state.count;
+    const grid = $('serviceLedGrid');
+    grid.innerHTML = '';
+    let onCount = 0;
+    SERVICE_LINES.forEach((svc) => {
+        const on = n >= svc.activateAt;
+        if (on) onCount++;
+        const row = document.createElement('div');
+        row.className = 'led-indicator' + (on ? ' on' : '');
+        row.innerHTML = `
+            <span class="led-dot"></span>
+            <span class="led-label">${svc.label}</span>
+            <span class="led-threshold">${svc.activateAt}+</span>
+        `;
+        grid.appendChild(row);
+    });
+    $('serviceOnCount').textContent = onCount;
+}
+
+/* RENDER: Service unlock cards ─────────────────────────────── */
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+const CATEGORY_COLOR = {
+    Cleaning:   '#6b8e23',
+    Delivery:   '#3b7a9a',
+    Logistics:  '#5a6b7a',
+    Luxury:     '#4a7c59',
+    Depth:      '#4a3a2a',
+};
+
+function renderUnlocks() {
+    const n = state.count;
+    const tier = currentServiceTier(n);
+    const tierIdx = SERVICE_TIERS.indexOf(tier) + 1;
+
+    $('tierFleetCount').textContent = n;
+    $('tierName').textContent = tier.name;
+    $('tierTag').textContent = tier.tag;
+    $('tierDescription').textContent = tier.description;
+    $('tierBadge').textContent = ROMAN[tierIdx] || '';
+
+    const unlockGrid = $('unlockGrid');
+    unlockGrid.innerHTML = '';
+    ROBOTS.slice(0, n).forEach((r) => {
+        const color = CATEGORY_COLOR[r.category] || '#4a7c59';
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-lg';
+        card.style.cssText = `background: white; border: 1px solid rgba(21, 21, 21, 0.08); border-left: 3px solid ${color};`;
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-3 mb-2">
+                <span class="tech-font text-[10px] uppercase tracking-widest font-bold" style="color: ${color};">${r.category}</span>
+                <span class="tech-font text-[10px] text-gray-400">${r.code}</span>
+            </div>
+            <p class="text-sm text-[#151515] leading-snug">${r.unlock}</p>
+        `;
+        unlockGrid.appendChild(card);
+    });
+
+    const lockedPreview = $('lockedPreview');
+    const lockedGrid = $('lockedGrid');
+    const remaining = ROBOTS.slice(n, n + 3);
+    if (remaining.length === 0) {
+        lockedPreview.style.display = 'none';
+    } else {
+        lockedPreview.style.display = '';
+        lockedGrid.innerHTML = '';
+        remaining.forEach((r, i) => {
+            const card = document.createElement('div');
+            card.className = 'p-4 rounded-lg';
+            card.style.cssText = 'background: rgba(21, 21, 21, 0.03); border: 1px dashed rgba(21, 21, 21, 0.15); opacity: 0.75;';
+            card.innerHTML = `
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <span class="tech-font text-[10px] uppercase tracking-widest font-bold text-gray-400">+${n + i + 1}th robot</span>
+                    <span class="tech-font text-[10px] text-gray-400">${r.code}</span>
+                </div>
+                <p class="text-sm text-gray-500 leading-snug">${r.unlock}</p>
+            `;
+            lockedGrid.appendChild(card);
+        });
+    }
+}
+
+/* RENDER ALL ─────────────────────────────────────────────── */
+function render() {
+    renderStats();
+    renderRobotGrid();
+    renderSavingsTable();
+    renderPhases();
+    renderServiceLines();
+    renderUnlocks();
+}
+
+/* EVENTS ──────────────────────────────────────────────────── */
+$('fleetSlider').addEventListener('input', (e) => {
+    state.count = parseInt(e.target.value);
+    render();
+});
+
+document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        state.count = parseInt(chip.dataset.count);
+        render();
+    });
+});
+
+$('intelToggle').addEventListener('click', () => {
+    state.intel = !state.intel;
+    $('intelToggle').classList.toggle('on', state.intel);
+    render();
+});
+
+$('facilityToggle').addEventListener('click', () => {
+    state.facility = !state.facility;
+    $('facilityToggle').classList.toggle('on', state.facility);
+    render();
+});
+
+$('posToggle').addEventListener('click', () => {
+    state.pos = !state.pos;
+    $('posToggle').classList.toggle('on', state.pos);
+    render();
+});
+
+/* INIT ──────────────────────────────────────────────────── */
+renderTicks();
+render();
+</script>
+
+</body>
+</html>

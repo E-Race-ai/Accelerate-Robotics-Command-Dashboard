@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Thesis Hotel — Elevator Integration Installation Guide</title>
+    <meta name="description" content="Complete installation guide for robot-elevator integration at The Thesis Hotel, a 10-story property in Miami. E-Box RFID system from layperson overview to technical wiring reference.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --blue: #0055ff; --cyan: #00c8ff; --purple: #7c3aed; --teal: #06b6d4; --navy: #0f172a; --amber: #f59e0b; --green: #22c55e; --red: #ef4444; }
+        * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        h1, h2, h3, h4, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+        code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .gradient-text { background: linear-gradient(135deg, var(--blue), var(--cyan), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+
+        /* Step cards */
+        .step-card { border: 2px solid #e5e7eb; border-radius: 1rem; padding: 2rem; transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .step-card:hover { border-color: var(--blue); box-shadow: 0 8px 30px rgba(0,85,255,0.08); transform: translateY(-2px); }
+        .step-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+        .step-card.step-blue::before { background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+        .step-card.step-amber::before { background: linear-gradient(90deg, var(--amber), #fbbf24); }
+        .step-card.step-green::before { background: linear-gradient(90deg, var(--green), var(--teal)); }
+        .step-card.step-purple::before { background: linear-gradient(90deg, var(--purple), #a78bfa); }
+        .step-card.step-red::before { background: linear-gradient(90deg, var(--red), #f87171); }
+        .step-card.step-teal::before { background: linear-gradient(90deg, var(--teal), var(--cyan)); }
+
+        .step-num { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 800; flex-shrink: 0; }
+
+        /* Callout boxes */
+        .callout { border-left: 4px solid; border-radius: 0 0.75rem 0.75rem 0; padding: 1rem 1.25rem; }
+        .callout-blue { border-left-color: var(--blue); background: #eff6ff; }
+        .callout-amber { border-left-color: var(--amber); background: #fffbeb; }
+        .callout-red { border-left-color: var(--red); background: #fef2f2; }
+        .callout-green { border-left-color: var(--green); background: #f0fdf4; }
+
+        /* LoRa signal animation */
+        @keyframes lora-signal { 0% { r: 4; opacity: 0.8; } 100% { r: 20; opacity: 0; } }
+        .lora-wave { animation: lora-signal 2s ease-out infinite; }
+        .lora-wave-2 { animation: lora-signal 2s ease-out infinite 0.7s; }
+        .lora-wave-3 { animation: lora-signal 2s ease-out infinite 1.4s; }
+
+        /* Pulse for components */
+        @keyframes gentle-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .pulse-slow { animation: gentle-pulse 3s ease-in-out infinite; }
+
+        /* LED indicator */
+        @keyframes led-blink { 0%,85% { opacity: 1; } 90% { opacity: 0.3; } 100% { opacity: 1; } }
+        .led-active { animation: led-blink 2s ease-in-out infinite; }
+
+        /* Elevator cabin: JS-controlled, starts at lobby */
+        #elevator-cabin { transform: translateY(258px); }
+
+        /* Section divider */
+        .section-divider { position: relative; text-align: center; margin: 4rem 0; }
+        .section-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, #d1d5db, transparent); }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-white text-gray-900">
+
+<!-- ================================================================ -->
+<!-- FIXED NAV -->
+<!-- ================================================================ -->
+<nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/50">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+        <a href="index.html" class="flex items-center gap-3 group">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-400 flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <span class="font-bold text-gray-900 text-sm tracking-tight">Accelerate Robotics</span>
+        </a>
+        <div class="hidden md:flex items-center gap-6 text-xs font-medium text-gray-500">
+            <a href="#overview" class="hover:text-blue-600 transition">Overview</a>
+            <a href="#how-it-works" class="hover:text-blue-600 transition">How It Works</a>
+            <a href="#steps" class="hover:text-blue-600 transition">Installation Steps</a>
+            <a href="#technical" class="hover:text-blue-600 transition">Technical Reference</a>
+            <a href="#workflow" class="hover:text-blue-600 transition">Workflow</a>
+            <a href="#safety" class="hover:text-blue-600 transition">Safety</a>
+            <a href="elevator-integration.html" class="text-blue-600 font-semibold hover:text-blue-700 transition">Architecture &rarr;</a>
+        </div>
+    </div>
+</nav>
+
+<!-- ================================================================ -->
+<!-- HERO -->
+<!-- ================================================================ -->
+<section class="pt-28 pb-16 bg-gradient-to-b from-blue-50 via-white to-white">
+    <div class="max-w-5xl mx-auto px-6 text-center">
+        <div class="reveal">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-xs font-bold mb-6">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                The Thesis Hotel &mdash; Installation Guide
+            </div>
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6">
+                Robot-Elevator<br><span class="gradient-text">Integration Kit</span>
+            </h1>
+            <p class="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto mb-4">
+                A step-by-step guide to connecting the robot fleet to the elevators at <strong class="text-gray-700">The Thesis Hotel</strong> &mdash; a 10-story property with guest rooms on floors 4&ndash;10, service areas, and linen closets on every floor.
+            </p>
+            <p class="text-sm text-gray-400 max-w-xl mx-auto mb-8">
+                From unboxing to first autonomous linen delivery ride &mdash; in one shift.
+            </p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="reveal reveal-delay-1 grid grid-cols-2 md:grid-cols-5 gap-4 max-w-4xl mx-auto">
+            <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-blue-600">10</div>
+                <div class="text-xs text-gray-400 font-medium">Floors</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-amber-500">4&ndash;8</div>
+                <div class="text-xs text-gray-400 font-medium">Hours to Install</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-green-600">5</div>
+                <div class="text-xs text-gray-400 font-medium">Components</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-purple-600">10</div>
+                <div class="text-xs text-gray-400 font-medium">RFID Tags</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-red-500">1</div>
+                <div class="text-xs text-gray-400 font-medium">Elevator Tech</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 1: OVERVIEW — What Is This? -->
+<!-- ================================================================ -->
+<section id="overview" class="py-20">
+    <div class="max-w-5xl mx-auto px-6">
+        <div class="reveal text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">What Is This?</h2>
+            <p class="text-gray-500 max-w-2xl mx-auto text-lg">A small hardware kit that lets delivery robots call and ride the elevators at The Thesis Hotel autonomously &mdash; no modifications to the elevator's safety systems.</p>
+        </div>
+
+        <div class="reveal grid md:grid-cols-3 gap-6 mb-12">
+            <div class="bg-blue-50 rounded-2xl p-6 text-center">
+                <div class="text-4xl mb-3">&#x1F4E6;</div>
+                <h3 class="font-bold text-lg mb-2">The Kit</h3>
+                <p class="text-sm text-gray-500">Two small boxes (E-Box Master &amp; Slave), 10 passive RFID tags (one per floor), and an RFID reader. That's it.</p>
+            </div>
+            <div class="bg-amber-50 rounded-2xl p-6 text-center">
+                <div class="text-4xl mb-3">&#x1F6D7;</div>
+                <h3 class="font-bold text-lg mb-2">The Goal</h3>
+                <p class="text-sm text-gray-500">A robot on Floor 4 needs to deliver linens to Floor 9. It calls the elevator, rides up, exits, and delivers &mdash; no human involved.</p>
+            </div>
+            <div class="bg-green-50 rounded-2xl p-6 text-center">
+                <div class="text-4xl mb-3">&#x2705;</div>
+                <h3 class="font-bold text-lg mb-2">The Result</h3>
+                <p class="text-sm text-gray-500">Autonomous linen delivery, room service, and supply runs across all 10 floors of The Thesis. 24/7, no button pressing.</p>
+            </div>
+        </div>
+
+        <!-- Hotel context -->
+        <div class="reveal bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100 mb-8">
+            <h3 class="font-bold text-sm text-blue-700 uppercase tracking-wider mb-3">The Thesis Hotel &mdash; Building Profile</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                <div><strong class="text-gray-800">Floors:</strong> 10 stories (Lobby &ndash; Floor 10)</div>
+                <div><strong class="text-gray-800">Guest Rooms:</strong> Floors 4&ndash;10</div>
+                <div><strong class="text-gray-800">Room Types:</strong> QB, QE, KB, KD, KA, KF, KH, KJ</div>
+                <div><strong class="text-gray-800">Service Areas:</strong> Clean Linen, Soiled Linen, Telecom, Ice Machine on each floor</div>
+            </div>
+            <p class="text-xs text-gray-400 mt-3">Each guest floor has a central corridor with rooms on both sides, a Clean Linen closet, Soiled Linen closet, and Telecom room &mdash; all accessible to delivery robots via the elevator integration.</p>
+        </div>
+
+        <!-- Plain language explanation -->
+        <div class="reveal callout callout-blue">
+            <p class="text-sm leading-relaxed">
+                <strong>Think of it like this:</strong> The E-Box kit gives your robot a "finger" to press elevator buttons electronically, and "eyes" (RFID) to know which floor the elevator is on. The Master box at the top of the shaft talks to the Slave box on the elevator car via radio (LoRa). The Slave box is wired into the button panel, so it can call any floor the robot needs. A robot at the lobby can autonomously ride to Floor 7's Clean Linen closet and back without anyone touching a button.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 2: HOW IT WORKS — Visual Diagram -->
+<!-- ================================================================ -->
+<section id="how-it-works" class="py-20 bg-gradient-to-b from-gray-50 to-white">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="reveal text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
+            <p class="text-gray-500 max-w-xl mx-auto">Five components work together inside the elevator shaft to give robots autonomous floor-to-floor access.</p>
+        </div>
+
+        <!-- Large SVG Diagram — The Thesis Hotel, 10 Floors -->
+        <div class="reveal bg-white rounded-3xl border border-gray-200 shadow-lg p-4 md:p-8 mb-12">
+            <div class="text-center mb-4">
+                <div class="text-xs font-bold tracking-widest uppercase text-gray-400">The Thesis Hotel</div>
+                <div class="text-sm font-bold text-gray-600">10-Story Elevator Shaft Cross-Section</div>
+            </div>
+            <svg viewBox="0 0 920 960" class="w-full" style="max-height: 960px;">
+                <defs>
+                    <linearGradient id="shaftGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#cbd5e1"/><stop offset="50%" stop-color="#f1f5f9"/><stop offset="100%" stop-color="#cbd5e1"/>
+                    </linearGradient>
+                    <linearGradient id="masterGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1e40af"/>
+                    </linearGradient>
+                    <linearGradient id="slaveGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#22d3ee"/><stop offset="100%" stop-color="#0891b2"/>
+                    </linearGradient>
+                    <linearGradient id="cabinGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#f1f5f9"/><stop offset="100%" stop-color="#cbd5e1"/>
+                    </linearGradient>
+                    <linearGradient id="cabinDoor" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#94a3b8"/><stop offset="45%" stop-color="#cbd5e1"/><stop offset="55%" stop-color="#cbd5e1"/><stop offset="100%" stop-color="#94a3b8"/>
+                    </linearGradient>
+                    <linearGradient id="rfidGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#fde68a"/><stop offset="100%" stop-color="#f59e0b"/>
+                    </linearGradient>
+                    <linearGradient id="buildingGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#64748b"/><stop offset="100%" stop-color="#475569"/>
+                    </linearGradient>
+                    <filter id="boxShadow" x="-5%" y="-5%" width="115%" height="120%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.15"/>
+                    </filter>
+                    <filter id="ledGlow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="2" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <marker id="arrowGreen" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                        <path d="M0,0 L6,3 L0,6 Z" fill="#22c55e"/>
+                    </marker>
+                </defs>
+
+                <!-- Building exterior walls -->
+                <rect x="185" y="25" width="30" height="920" rx="2" fill="url(#buildingGrad)"/>
+                <rect x="505" y="25" width="30" height="920" rx="2" fill="url(#buildingGrad)"/>
+                <rect x="180" y="18" width="360" height="12" rx="3" fill="#334155"/>
+                <rect x="180" y="942" width="360" height="8" rx="2" fill="#334155"/>
+
+                <!-- Building windows - left wall -->
+                <rect x="190" y="165" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="190" y="245" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="190" y="325" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="190" y="405" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="190" y="485" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="190" y="565" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="190" y="645" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="190" y="725" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.5"/>
+                <rect x="190" y="785" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.5"/>
+                <rect x="190" y="845" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.4"/>
+                <!-- Building windows - right wall -->
+                <rect x="512" y="165" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="512" y="245" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="512" y="325" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="512" y="405" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="512" y="485" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="512" y="565" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="512" y="645" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.6"/>
+                <rect x="512" y="725" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.5"/>
+                <rect x="512" y="785" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.5"/>
+                <rect x="512" y="845" width="18" height="14" rx="2" fill="#bfdbfe" opacity="0.4"/>
+
+                <!-- Shaft interior -->
+                <rect x="220" y="30" width="280" height="910" rx="2" fill="url(#shaftGrad)" stroke="#94a3b8" stroke-width="1.5"/>
+                <text x="360" y="22" text-anchor="middle" fill="#64748b" font-size="12" font-weight="700" font-family="Space Grotesk, sans-serif">ELEVATOR SHAFT</text>
+
+                <!-- Floor lines and labels -->
+                <line x1="215" y1="80" x2="505" y2="80" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4"/>
+                <text x="170" y="84" text-anchor="end" fill="#94a3b8" font-size="9" font-weight="600">ROOF / MACHINE RM</text>
+
+                <line x1="215" y1="160" x2="505" y2="160" stroke="#e2e8f0" stroke-width="1"/>
+                <text x="170" y="164" text-anchor="end" fill="#64748b" font-size="9" font-weight="700">FLOOR 10</text>
+                <text x="170" y="174" text-anchor="end" fill="#94a3b8" font-size="7">Rooms 1001-1024</text>
+
+                <line x1="215" y1="240" x2="505" y2="240" stroke="#e2e8f0" stroke-width="1"/>
+                <text x="170" y="244" text-anchor="end" fill="#64748b" font-size="9" font-weight="700">FLOOR 9</text>
+                <text x="170" y="254" text-anchor="end" fill="#94a3b8" font-size="7">Rooms 901-924</text>
+
+                <line x1="215" y1="320" x2="505" y2="320" stroke="#e2e8f0" stroke-width="1"/>
+                <text x="170" y="324" text-anchor="end" fill="#64748b" font-size="9" font-weight="700">FLOOR 8</text>
+                <text x="170" y="334" text-anchor="end" fill="#94a3b8" font-size="7">Rooms 801-824</text>
+
+                <line x1="215" y1="400" x2="505" y2="400" stroke="#e2e8f0" stroke-width="1"/>
+                <text x="170" y="404" text-anchor="end" fill="#64748b" font-size="9" font-weight="700">FLOOR 7</text>
+
+                <line x1="215" y1="480" x2="505" y2="480" stroke="#e2e8f0" stroke-width="1"/>
+                <text x="170" y="484" text-anchor="end" fill="#64748b" font-size="9" font-weight="700">FLOOR 6</text>
+
+                <line x1="215" y1="560" x2="505" y2="560" stroke="#e2e8f0" stroke-width="1"/>
+                <text x="170" y="564" text-anchor="end" fill="#64748b" font-size="9" font-weight="700">FLOOR 5</text>
+
+                <line x1="215" y1="640" x2="505" y2="640" stroke="#e2e8f0" stroke-width="1"/>
+                <text x="170" y="644" text-anchor="end" fill="#64748b" font-size="9" font-weight="700">FLOOR 4</text>
+                <text x="170" y="654" text-anchor="end" fill="#94a3b8" font-size="7">Rooms 401-424</text>
+
+                <line x1="215" y1="720" x2="505" y2="720" stroke="#e2e8f0" stroke-width="1"/>
+                <text x="170" y="724" text-anchor="end" fill="#94a3b8" font-size="9" font-weight="600">FLOOR 3</text>
+
+                <line x1="215" y1="780" x2="505" y2="780" stroke="#e2e8f0" stroke-width="1"/>
+                <text x="170" y="784" text-anchor="end" fill="#94a3b8" font-size="9" font-weight="600">FLOOR 2</text>
+
+                <line x1="215" y1="840" x2="505" y2="840" stroke="#94a3b8" stroke-width="1.5"/>
+                <text x="170" y="844" text-anchor="end" fill="#64748b" font-size="9" font-weight="700">LOBBY</text>
+
+                <!-- Guest room bracket -->
+                <line x1="115" y1="155" x2="115" y2="650" stroke="#7c3aed" stroke-width="1.5"/>
+                <line x1="110" y1="155" x2="120" y2="155" stroke="#7c3aed" stroke-width="1.5"/>
+                <line x1="110" y1="650" x2="120" y2="650" stroke="#7c3aed" stroke-width="1.5"/>
+                <text x="110" y="405" text-anchor="middle" fill="#7c3aed" font-size="8" font-weight="700" transform="rotate(-90,110,405)">Guest Floors (4-10)</text>
+
+                <!-- 1: E-BOX MASTER at top of shaft -->
+                <rect x="305" y="40" width="110" height="32" rx="8" fill="url(#masterGrad)" filter="url(#boxShadow)"/>
+                <text x="360" y="60" text-anchor="middle" fill="white" font-size="9" font-weight="800">E-BOX MASTER</text>
+                <!-- LED indicator light -->
+                <circle cx="400" cy="48" r="3" fill="#22c55e" class="led-active" filter="url(#ledGlow)"/>
+                <!-- Antenna -->
+                <line x1="360" y1="40" x2="360" y2="28" stroke="#60a5fa" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="360" cy="26" r="3" fill="#3b82f6"/>
+                <!-- LoRa waves -->
+                <circle cx="360" cy="78" r="4" fill="none" stroke="#00c8ff" stroke-width="1.5" class="lora-wave"/>
+                <circle cx="360" cy="78" r="4" fill="none" stroke="#00c8ff" stroke-width="1.5" class="lora-wave-2"/>
+
+                <!-- Internet / Cloud connection -->
+                <line x1="415" y1="56" x2="540" y2="56" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6 3"/>
+                <rect x="545" y="42" width="80" height="28" rx="6" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5" filter="url(#boxShadow)"/>
+                <text x="585" y="60" text-anchor="middle" fill="#2563eb" font-size="8" font-weight="700">INTERNET</text>
+                <line x1="625" y1="56" x2="660" y2="56" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="6 3"/>
+                <ellipse cx="695" cy="56" rx="32" ry="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+                <text x="695" y="60" text-anchor="middle" fill="#2563eb" font-size="9" font-weight="700">Cloud</text>
+
+                <!-- Label 1 -->
+                <circle cx="260" cy="56" r="14" fill="#2563eb" filter="url(#boxShadow)"/>
+                <text x="260" y="61" text-anchor="middle" fill="white" font-size="12" font-weight="900">1</text>
+                <text x="550" y="92" fill="#2563eb" font-size="10" font-weight="700">Master at top of shaft</text>
+                <text x="550" y="104" fill="#64748b" font-size="9">220V power + internet cable</text>
+
+                <!-- LoRa signal path (dynamic endpoint tracked by JS) -->
+                <line id="lora-path" x1="360" y1="80" x2="360" y2="570" stroke="#00c8ff" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.35"/>
+                <text x="380" y="340" fill="#06b6d4" font-size="9" font-weight="700" transform="rotate(90,380,340)">LoRa Radio Signal</text>
+
+                <!-- 3: RFID Tags on shaft wall (gold gradient with chip detail) -->
+                <rect x="228" y="152" width="34" height="16" rx="4" fill="url(#rfidGrad)" stroke="#b45309" stroke-width="0.8"/><rect x="233" y="155" width="5" height="10" rx="1" fill="#d97706" opacity="0.5"/><text x="253" y="163" text-anchor="middle" fill="#78350f" font-size="6" font-weight="800">RFID</text>
+                <rect x="228" y="232" width="34" height="16" rx="4" fill="url(#rfidGrad)" stroke="#b45309" stroke-width="0.8"/><rect x="233" y="235" width="5" height="10" rx="1" fill="#d97706" opacity="0.5"/><text x="253" y="243" text-anchor="middle" fill="#78350f" font-size="6" font-weight="800">RFID</text>
+                <rect x="228" y="312" width="34" height="16" rx="4" fill="url(#rfidGrad)" stroke="#b45309" stroke-width="0.8"/><rect x="233" y="315" width="5" height="10" rx="1" fill="#d97706" opacity="0.5"/><text x="253" y="323" text-anchor="middle" fill="#78350f" font-size="6" font-weight="800">RFID</text>
+                <rect x="228" y="392" width="34" height="16" rx="4" fill="url(#rfidGrad)" stroke="#b45309" stroke-width="0.8"/><rect x="233" y="395" width="5" height="10" rx="1" fill="#d97706" opacity="0.5"/><text x="253" y="403" text-anchor="middle" fill="#78350f" font-size="6" font-weight="800">RFID</text>
+                <rect x="228" y="472" width="34" height="16" rx="4" fill="url(#rfidGrad)" stroke="#b45309" stroke-width="0.8"/><rect x="233" y="475" width="5" height="10" rx="1" fill="#d97706" opacity="0.5"/><text x="253" y="483" text-anchor="middle" fill="#78350f" font-size="6" font-weight="800">RFID</text>
+                <rect x="228" y="552" width="34" height="16" rx="4" fill="url(#rfidGrad)" stroke="#b45309" stroke-width="0.8"/><rect x="233" y="555" width="5" height="10" rx="1" fill="#d97706" opacity="0.5"/><text x="253" y="563" text-anchor="middle" fill="#78350f" font-size="6" font-weight="800">RFID</text>
+                <rect x="228" y="632" width="34" height="16" rx="4" fill="url(#rfidGrad)" stroke="#b45309" stroke-width="0.8"/><rect x="233" y="635" width="5" height="10" rx="1" fill="#d97706" opacity="0.5"/><text x="253" y="643" text-anchor="middle" fill="#78350f" font-size="6" font-weight="800">RFID</text>
+                <rect x="228" y="712" width="34" height="16" rx="4" fill="url(#rfidGrad)" stroke="#b45309" stroke-width="0.8"/><rect x="233" y="715" width="5" height="10" rx="1" fill="#d97706" opacity="0.5"/><text x="253" y="723" text-anchor="middle" fill="#78350f" font-size="6" font-weight="800">RFID</text>
+                <rect x="228" y="772" width="34" height="16" rx="4" fill="url(#rfidGrad)" stroke="#b45309" stroke-width="0.8"/><rect x="233" y="775" width="5" height="10" rx="1" fill="#d97706" opacity="0.5"/><text x="253" y="783" text-anchor="middle" fill="#78350f" font-size="6" font-weight="800">RFID</text>
+                <rect x="228" y="832" width="34" height="16" rx="4" fill="url(#rfidGrad)" stroke="#b45309" stroke-width="0.8"/><rect x="233" y="835" width="5" height="10" rx="1" fill="#d97706" opacity="0.5"/><text x="253" y="843" text-anchor="middle" fill="#78350f" font-size="6" font-weight="800">RFID</text>
+
+                <!-- Label 3 -->
+                <line x1="228" y1="480" x2="70" y2="480" stroke="#d97706" stroke-width="1" stroke-dasharray="4"/>
+                <rect x="10" y="462" width="65" height="36" rx="8" fill="#fffbeb" stroke="#fbbf24" stroke-width="1.5"/>
+                <text x="42" y="478" text-anchor="middle" fill="#92400e" font-size="8" font-weight="700">10 RFID Tags</text>
+                <text x="42" y="490" text-anchor="middle" fill="#92400e" font-size="7">one per floor</text>
+                <circle cx="42" cy="449" r="13" fill="#f59e0b" filter="url(#boxShadow)"/>
+                <text x="42" y="453" text-anchor="middle" fill="white" font-size="10" font-weight="900">3</text>
+
+                <!-- ELEVATOR CABIN GROUP (animated by JavaScript) -->
+                <g id="elevator-cabin">
+                    <!-- Cabin body with gradient and depth -->
+                    <rect x="272" y="598" width="176" height="84" rx="6" fill="url(#cabinGrad)" stroke="#475569" stroke-width="2" filter="url(#boxShadow)"/>
+                    <rect x="278" y="604" width="164" height="72" rx="3" fill="#f8fafc"/>
+                    <!-- Door panels with metallic gradient -->
+                    <rect x="310" y="608" width="38" height="64" rx="2" fill="url(#cabinDoor)" stroke="#94a3b8" stroke-width="0.5"/>
+                    <rect x="372" y="608" width="38" height="64" rx="2" fill="url(#cabinDoor)" stroke="#94a3b8" stroke-width="0.5"/>
+                    <!-- Door gap lines -->
+                    <line x1="349" y1="608" x2="349" y2="672" stroke="#64748b" stroke-width="1.5"/>
+                    <line x1="371" y1="608" x2="371" y2="672" stroke="#64748b" stroke-width="1.5"/>
+                    <!-- Door handles -->
+                    <circle cx="346" cy="640" r="2" fill="#94a3b8"/>
+                    <circle cx="374" cy="640" r="2" fill="#94a3b8"/>
+                    <text x="360" y="694" text-anchor="middle" fill="#64748b" font-size="9" font-weight="600">ELEVATOR CAR</text>
+
+                    <!-- 2: E-BOX SLAVE on top of cabin -->
+                    <rect x="313" y="568" width="94" height="28" rx="7" fill="url(#slaveGrad)" filter="url(#boxShadow)"/>
+                    <text x="360" y="586" text-anchor="middle" fill="white" font-size="8" font-weight="800">E-BOX SLAVE</text>
+                    <circle cx="393" cy="576" r="2.5" fill="#22c55e" class="led-active" filter="url(#ledGlow)"/>
+                    <!-- Slave antenna -->
+                    <line x1="360" y1="568" x2="360" y2="555" stroke="#22d3ee" stroke-width="2.5" stroke-linecap="round"/>
+                    <circle cx="360" cy="553" r="3" fill="#06b6d4"/>
+
+                    <!-- 4: RFID Reader on cabin top -->
+                    <rect x="265" y="573" width="44" height="18" rx="4" fill="#22c55e" stroke="#15803d" stroke-width="1.5" filter="url(#boxShadow)"/>
+                    <text x="287" y="585" text-anchor="middle" fill="white" font-size="6" font-weight="800">READER</text>
+                    <line x1="269" y1="582" x2="256" y2="582" stroke="#22c55e" stroke-width="2" stroke-dasharray="3 2" marker-end="url(#arrowGreen)"/>
+
+                    <!-- IO Cable from Slave to cabin panel -->
+                    <line x1="360" y1="596" x2="360" y2="610" stroke="#ef4444" stroke-width="2.5"/>
+                    <text x="415" y="605" fill="#ef4444" font-size="7" font-weight="700">IO Cable (red)</text>
+
+                    <!-- Component labels (travel with cabin) -->
+                    <circle cx="620" cy="580" r="13" fill="#0891b2" filter="url(#boxShadow)"/>
+                    <text x="620" y="584" text-anchor="middle" fill="white" font-size="10" font-weight="900">2</text>
+                    <text x="638" y="578" fill="#0891b2" font-size="10" font-weight="700">Slave on cabin top</text>
+                    <text x="638" y="590" fill="#64748b" font-size="9">220V power</text>
+
+                    <circle cx="620" cy="618" r="13" fill="#22c55e" filter="url(#boxShadow)"/>
+                    <text x="620" y="622" text-anchor="middle" fill="white" font-size="10" font-weight="900">4</text>
+                    <text x="638" y="616" fill="#22c55e" font-size="10" font-weight="700">RFID Reader on cabin</text>
+                    <text x="638" y="628" fill="#64748b" font-size="9">Reads tags as cabin moves</text>
+
+                    <circle cx="458" cy="646" r="13" fill="#ef4444" filter="url(#boxShadow)"/>
+                    <text x="458" y="650" text-anchor="middle" fill="white" font-size="10" font-weight="900">5</text>
+                </g>
+
+                <!-- Robot at Lobby -->
+                <rect x="550" y="808" width="65" height="55" rx="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5" filter="url(#boxShadow)"/>
+                <circle cx="582" cy="822" r="9" fill="#dbeafe" stroke="#60a5fa" stroke-width="1.5"/>
+                <rect x="570" y="834" width="24" height="14" rx="3" fill="#dbeafe" stroke="#60a5fa" stroke-width="1"/>
+                <text x="582" y="826" text-anchor="middle" fill="#2563eb" font-size="5" font-weight="800">CAM</text>
+                <text x="582" y="874" text-anchor="middle" fill="#3b82f6" font-size="8" font-weight="700">ROBOT</text>
+                <text x="582" y="885" text-anchor="middle" fill="#94a3b8" font-size="6">Linen Delivery</text>
+
+                <!-- WiFi signal from Robot -->
+                <path d="M615,818 Q650,808 670,793" fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4"/>
+                <text x="670" y="788" fill="#7c3aed" font-size="8" font-weight="700">WiFi</text>
+
+                <!-- Service area callouts -->
+                <rect x="740" y="148" width="130" height="54" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+                <text x="805" y="168" text-anchor="middle" fill="#166534" font-size="8" font-weight="700">Each Guest Floor Has:</text>
+                <text x="805" y="181" text-anchor="middle" fill="#16a34a" font-size="7">Clean Linen | Soiled Linen</text>
+                <text x="805" y="193" text-anchor="middle" fill="#16a34a" font-size="7">Telecom | Ice Machine</text>
+
+                <!-- Floor Indicator Display -->
+                <g id="floor-display" transform="translate(665, 240)">
+                    <rect width="130" height="90" rx="12" fill="#0f172a" stroke="#334155" stroke-width="1.5" filter="url(#boxShadow)"/>
+                    <rect x="4" y="4" width="122" height="82" rx="10" fill="#0f172a"/>
+                    <text x="65" y="24" text-anchor="middle" fill="#94a3b8" font-size="8" font-weight="600" font-family="Space Grotesk, sans-serif">CURRENT FLOOR</text>
+                    <text id="floor-number" x="65" y="62" text-anchor="middle" fill="#22c55e" font-size="32" font-weight="900" font-family="JetBrains Mono, monospace">L</text>
+                    <text id="floor-status" x="65" y="80" text-anchor="middle" fill="#64748b" font-size="8" font-family="JetBrains Mono, monospace">IDLE</text>
+                    <circle cx="15" cy="16" r="2" fill="#22c55e" opacity="0.5" class="led-active"/>
+                    <circle cx="115" cy="16" r="2" fill="#ef4444" opacity="0.3"/>
+                </g>
+            </svg>
+
+            <!-- Legend below diagram -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-6 text-center">
+                <div class="flex items-center justify-center gap-2 text-xs"><span class="w-3 h-3 rounded bg-blue-600"></span> <strong>E-Box Master</strong></div>
+                <div class="flex items-center justify-center gap-2 text-xs"><span class="w-3 h-3 rounded bg-cyan-500"></span> <strong>E-Box Slave</strong></div>
+                <div class="flex items-center justify-center gap-2 text-xs"><span class="w-3 h-3 rounded bg-amber-400"></span> <strong>RFID Tags</strong></div>
+                <div class="flex items-center justify-center gap-2 text-xs"><span class="w-3 h-3 rounded bg-green-500"></span> <strong>RFID Reader</strong></div>
+                <div class="flex items-center justify-center gap-2 text-xs"><span class="w-3 h-3 rounded bg-red-500"></span> <strong>IO Wiring</strong></div>
+            </div>
+        </div>
+
+        <!-- Communication Flow -->
+        <div class="reveal grid md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <div class="text-xs font-bold text-cyan-600 uppercase tracking-wider mb-2">Path A: Direct (LoRa)</div>
+                <div class="space-y-2 text-sm text-gray-600">
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Robot sends floor request</div>
+                    <div class="text-gray-300 pl-3">&darr;</div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-cyan-500"></span> E-Box Slave receives via LoRa</div>
+                    <div class="text-gray-300 pl-3">&darr;</div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-500"></span> Slave activates IO relay &rarr; floor button pressed</div>
+                </div>
+                <div class="mt-3 text-xs font-bold text-cyan-600">Fastest path &mdash; direct radio</div>
+            </div>
+            <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <div class="text-xs font-bold text-purple-600 uppercase tracking-wider mb-2">Path B: Cloud + LoRa</div>
+                <div class="space-y-2 text-sm text-gray-600">
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Robot sends via WiFi &rarr; Cloud</div>
+                    <div class="text-gray-300 pl-3">&darr;</div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-600"></span> Cloud &rarr; E-Box Master (internet)</div>
+                    <div class="text-gray-300 pl-3">&darr;</div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-cyan-500"></span> Master &rarr; Slave (LoRa) &rarr; panel</div>
+                </div>
+                <div class="mt-3 text-xs font-bold text-purple-600">Redundant path &mdash; cloud-routed</div>
+            </div>
+            <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <div class="text-xs font-bold text-amber-600 uppercase tracking-wider mb-2">Floor Detection: RFID</div>
+                <div class="space-y-2 text-sm text-gray-600">
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Passive RFID tag on each floor&rsquo;s shaft wall</div>
+                    <div class="text-gray-300 pl-3">&darr;</div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span> RFID Reader on cabin top reads tags</div>
+                    <div class="text-gray-300 pl-3">&darr;</div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-cyan-500"></span> Slave knows cabin&rsquo;s exact floor</div>
+                </div>
+                <div class="mt-3 text-xs font-bold text-amber-600">Passive tags &mdash; no power needed</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 3: WHAT YOU'LL NEED -->
+<!-- ================================================================ -->
+<section class="py-16">
+    <div class="max-w-5xl mx-auto px-6">
+        <div class="reveal text-center mb-10">
+            <h2 class="text-3xl font-bold mb-3">What You'll Need</h2>
+            <p class="text-gray-500">Everything required for a complete installation, start to finish.</p>
+        </div>
+
+        <div class="reveal grid md:grid-cols-2 gap-8">
+            <!-- Kit Contents -->
+            <div class="bg-blue-50 rounded-2xl p-6">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><span class="text-blue-600">&#x1F4E6;</span> In the Kit</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">1</span> <div><strong>E-Box Master</strong> &mdash; Mounts at top of elevator shaft. Gateway to cloud.</div></li>
+                    <li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">1</span> <div><strong>E-Box Slave</strong> &mdash; Mounts on top of elevator cabin. Controls the panel.</div></li>
+                    <li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-amber-400 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">10</span> <div><strong>RFID Tags</strong> (one per floor) &mdash; Passive. Stick to shaft wall at each floor level. 10 tags for The Thesis.</div></li>
+                    <li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">1</span> <div><strong>RFID Reader</strong> &mdash; Mounts on cabin top. Reads tags as cabin moves.</div></li>
+                    <li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-gray-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">1</span> <div><strong>T-BOX</strong> &mdash; Configuration terminal for setup &amp; diagnostics.</div></li>
+                    <li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-red-400 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">3</span> <div><strong>12V 2A Power Adaptors</strong> &mdash; One per E-Box + one spare.</div></li>
+                    <li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">8</span> <div><strong>IO Cable Harnesses</strong> &mdash; 4 channels each. Connect Slave to elevator buttons.</div></li>
+                </ul>
+            </div>
+
+            <!-- Tools & Personnel -->
+            <div>
+                <div class="bg-amber-50 rounded-2xl p-6 mb-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><span class="text-amber-600">&#x1F527;</span> Tools Required</h3>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="flex items-center gap-2"><span class="text-amber-500">&#9679;</span> Zip ties / cable ties</div>
+                        <div class="flex items-center gap-2"><span class="text-amber-500">&#9679;</span> Wire strippers / splicing tools</div>
+                        <div class="flex items-center gap-2"><span class="text-amber-500">&#9679;</span> 3M adhesive strips or screws</div>
+                        <div class="flex items-center gap-2"><span class="text-amber-500">&#9679;</span> Multimeter</div>
+                        <div class="flex items-center gap-2"><span class="text-amber-500">&#9679;</span> RJ45 ethernet cable (1m)</div>
+                        <div class="flex items-center gap-2"><span class="text-amber-500">&#9679;</span> RJ11 telephone cable (1m)</div>
+                        <div class="flex items-center gap-2"><span class="text-amber-500">&#9679;</span> Micro USB cable</div>
+                        <div class="flex items-center gap-2"><span class="text-amber-500">&#9679;</span> Windows 10 laptop + USB drive</div>
+                    </div>
+                </div>
+                <div class="bg-red-50 rounded-2xl p-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><span class="text-red-600">&#x1F6A8;</span> Personnel Required</h3>
+                    <p class="text-sm text-gray-600 mb-3">An <strong>elevator technician</strong> is required for this installation. They will:</p>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>&#8226; Provide safe access to the shaft and cabin top</li>
+                        <li>&#8226; Identify the correct wiring connections on the control panel</li>
+                        <li>&#8226; Power off the elevator during wiring steps</li>
+                        <li>&#8226; Verify the installation does not affect safety systems</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 4: STEP-BY-STEP INSTALLATION (Layperson) -->
+<!-- ================================================================ -->
+<section id="steps" class="py-20 bg-gradient-to-b from-gray-50 to-white">
+    <div class="max-w-5xl mx-auto px-6">
+        <div class="reveal text-center mb-14">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">Step-by-Step Installation</h2>
+            <p class="text-gray-500 max-w-xl mx-auto">Six steps from unboxing to operational. Each step includes what to do, where to do it, and what to check.</p>
+        </div>
+
+        <div class="space-y-8">
+            <!-- STEP 1: E-Box Master -->
+            <div class="reveal step-card step-blue">
+                <div class="flex items-start gap-5">
+                    <div class="step-num bg-blue-600 text-white">1</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold mb-2">Install the E-Box Master at the Top of the Shaft</h3>
+                        <p class="text-gray-500 mb-4">The Master unit is the brain of the system. It sits at the very top of the elevator shaft (in the machine room if there is one) and connects to the building's internet.</p>
+
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-700 mb-2">What to do:</h4>
+                                <ol class="text-sm text-gray-600 space-y-2 list-decimal pl-5">
+                                    <li>Secure the E-Box Master to the shaft structure using screws or 3M adhesive, above the steel cable port</li>
+                                    <li>Connect the 220V power adaptor</li>
+                                    <li>Run an RJ45 ethernet cable from the Master to the building network</li>
+                                    <li>Ensure the LoRa antenna points straight down into the shaft</li>
+                                    <li>Confirm the blue indicator light turns on</li>
+                                </ol>
+                            </div>
+                            <div class="bg-blue-50 rounded-xl p-4">
+                                <!-- Simple SVG of Master placement -->
+                                <svg viewBox="0 0 250 180" class="w-full">
+                                    <rect x="50" y="10" width="150" height="160" rx="3" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <text x="125" y="7" text-anchor="middle" fill="#64748b" font-size="9" font-weight="600">SHAFT TOP</text>
+                                    <!-- Mounting beam -->
+                                    <rect x="60" y="30" width="130" height="6" rx="2" fill="#94a3b8"/>
+                                    <!-- E-Box Master -->
+                                    <rect x="85" y="45" width="80" height="35" rx="6" fill="#0055ff"/>
+                                    <text x="125" y="65" text-anchor="middle" fill="white" font-size="9" font-weight="800">MASTER</text>
+                                    <!-- Power cable -->
+                                    <line x1="85" y1="60" x2="55" y2="60" stroke="#ef4444" stroke-width="2"/>
+                                    <text x="40" y="63" text-anchor="end" fill="#ef4444" font-size="7" font-weight="700">220V</text>
+                                    <!-- Internet cable -->
+                                    <line x1="165" y1="55" x2="200" y2="55" stroke="#2563eb" stroke-width="2"/>
+                                    <text x="210" y="58" fill="#2563eb" font-size="7" font-weight="700">RJ45</text>
+                                    <!-- Antenna down -->
+                                    <line x1="125" y1="80" x2="125" y2="110" stroke="#00c8ff" stroke-width="2" stroke-dasharray="4 3"/>
+                                    <text x="145" y="100" fill="#06b6d4" font-size="7" font-weight="700">LoRa &darr;</text>
+                                    <!-- Shaft cables -->
+                                    <line x1="125" y1="36" x2="125" y2="10" stroke="#334155" stroke-width="3"/>
+                                    <text x="125" y="135" text-anchor="middle" fill="#94a3b8" font-size="8">Shaft continues below...</text>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="callout callout-blue text-xs">
+                            <strong>For elevators with a machine room:</strong> Place the E-Box Master above the steel cable port with no shelter below it. For MRL (machine-room-less) elevators, mount it at the top of the well, away from the control cabinet.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: E-Box Slave -->
+            <div class="reveal step-card step-teal">
+                <div class="flex items-start gap-5">
+                    <div class="step-num bg-cyan-500 text-white">2</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold mb-2">Install the E-Box Slave on Top of the Elevator Cabin</h3>
+                        <p class="text-gray-500 mb-4">The Slave unit rides on top of the elevator car. It receives commands from the Master and controls the cabin's floor buttons through IO cables.</p>
+
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-700 mb-2">What to do:</h4>
+                                <ol class="text-sm text-gray-600 space-y-2 list-decimal pl-5">
+                                    <li>Access the top of the elevator cabin (elevator tech puts car in inspection mode)</li>
+                                    <li>Secure the Slave unit with screws or cable ties to the cabin frame</li>
+                                    <li>Connect 220V power (from cabin top power outlet)</li>
+                                    <li>Orient the LoRa antenna straight up toward the Master</li>
+                                    <li>Keep wires clean and tidy &mdash; use zip ties to bundle excess cable</li>
+                                </ol>
+                            </div>
+                            <div class="bg-cyan-50 rounded-xl p-4">
+                                <svg viewBox="0 0 250 180" class="w-full">
+                                    <!-- Cabin outline -->
+                                    <rect x="40" y="50" width="170" height="120" rx="3" fill="white" stroke="#334155" stroke-width="2"/>
+                                    <text x="125" y="125" text-anchor="middle" fill="#94a3b8" font-size="10">ELEVATOR CAR</text>
+                                    <!-- Cabin top surface -->
+                                    <rect x="40" y="44" width="170" height="8" rx="2" fill="#e2e8f0"/>
+                                    <!-- Slave unit -->
+                                    <rect x="85" y="15" width="70" height="28" rx="5" fill="#06b6d4"/>
+                                    <text x="120" y="33" text-anchor="middle" fill="white" font-size="8" font-weight="800">SLAVE</text>
+                                    <!-- Antenna up -->
+                                    <line x1="120" y1="15" x2="120" y2="3" stroke="#06b6d4" stroke-width="2.5"/>
+                                    <circle cx="120" cy="2" r="2" fill="#06b6d4"/>
+                                    <text x="138" y="10" fill="#06b6d4" font-size="7" font-weight="700">LoRa &uarr;</text>
+                                    <!-- IO Cable down into cabin -->
+                                    <line x1="120" y1="43" x2="120" y2="60" stroke="#ef4444" stroke-width="2"/>
+                                    <text x="145" y="55" fill="#ef4444" font-size="7" font-weight="700">IO Cables</text>
+                                    <!-- Cable ties -->
+                                    <rect x="55" y="38" width="8" height="14" rx="2" fill="#94a3b8" opacity="0.5"/>
+                                    <rect x="185" y="38" width="8" height="14" rx="2" fill="#94a3b8" opacity="0.5"/>
+                                    <text x="200" y="48" fill="#64748b" font-size="6">zip ties</text>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="callout callout-amber text-xs">
+                            <strong>Precautions:</strong> Do NOT install the Slave near an air outlet or in a position where it could be stepped on. The auxiliary machine adapter should be secured with cable ties. Keep all wiring neat and bundled.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: RFID Tags -->
+            <div class="reveal step-card step-amber">
+                <div class="flex items-start gap-5">
+                    <div class="step-num bg-amber-500 text-white">3</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold mb-2">Install 10 RFID Tags on the Shaft Wall &mdash; Every Floor</h3>
+                        <p class="text-gray-500 mb-4">One passive RFID tag per floor (Lobby through Floor 10 = 10 tags total). They require no power &mdash; the RFID reader on the cabin detects them as it passes.</p>
+
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-700 mb-2">What to do:</h4>
+                                <ol class="text-sm text-gray-600 space-y-2 list-decimal pl-5">
+                                    <li>Raise the elevator to each floor's level sensor position</li>
+                                    <li>On the shaft wall, mark the position aligned with where the RFID Reader will pass</li>
+                                    <li>Drill holes and mount the RFID tag bracket, or use 3M adhesive on concrete walls</li>
+                                    <li>Ensure the tag is <strong>horizontal and vertical</strong> &mdash; level and plumb</li>
+                                    <li>Repeat for every floor</li>
+                                </ol>
+                            </div>
+                            <div class="bg-amber-50 rounded-xl p-4">
+                                <svg viewBox="0 0 250 200" class="w-full">
+                                    <!-- Shaft wall -->
+                                    <rect x="20" y="0" width="30" height="200" fill="#d1d5db"/>
+                                    <text x="35" y="195" text-anchor="middle" fill="#6b7280" font-size="7" transform="rotate(-90,35,195)">SHAFT WALL</text>
+                                    <!-- RFID tags at different levels -->
+                                    <rect x="50" y="25" width="30" height="15" rx="3" fill="#fbbf24" stroke="#d97706" stroke-width="1"/>
+                                    <text x="65" y="36" text-anchor="middle" fill="#78350f" font-size="6" font-weight="700">RFID</text>
+                                    <text x="95" y="36" fill="#6b7280" font-size="8">Floor 3</text>
+
+                                    <rect x="50" y="80" width="30" height="15" rx="3" fill="#fbbf24" stroke="#d97706" stroke-width="1"/>
+                                    <text x="65" y="91" text-anchor="middle" fill="#78350f" font-size="6" font-weight="700">RFID</text>
+                                    <text x="95" y="91" fill="#6b7280" font-size="8">Floor 2</text>
+
+                                    <rect x="50" y="135" width="30" height="15" rx="3" fill="#fbbf24" stroke="#d97706" stroke-width="1"/>
+                                    <text x="65" y="146" text-anchor="middle" fill="#78350f" font-size="6" font-weight="700">RFID</text>
+                                    <text x="95" y="146" fill="#6b7280" font-size="8">Floor 1</text>
+
+                                    <!-- Distance measurement -->
+                                    <line x1="80" y1="30" x2="140" y2="30" stroke="#d97706" stroke-width="1"/>
+                                    <line x1="140" y1="25" x2="140" y2="50" stroke="#d97706" stroke-width="1"/>
+                                    <line x1="80" y1="50" x2="140" y2="50" stroke="#d97706" stroke-width="1" stroke-dasharray="2"/>
+                                    <text x="150" y="42" fill="#d97706" font-size="7" font-weight="700">200&ndash;300mm</text>
+                                    <text x="150" y="52" fill="#92400e" font-size="6">gap to reader</text>
+
+                                    <!-- RFID Reader passing by -->
+                                    <rect x="135" y="76" width="35" height="14" rx="3" fill="#22c55e" stroke="#16a34a" stroke-width="1"/>
+                                    <text x="152" y="86" text-anchor="middle" fill="white" font-size="6" font-weight="800">READER</text>
+                                    <line x1="135" y1="83" x2="80" y2="83" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="3 2"/>
+                                    <text x="105" y="78" fill="#22c55e" font-size="6" font-weight="700">reads &rarr;</text>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="callout callout-red text-xs">
+                            <strong>Critical rules:</strong> Keep RFID tags at least 200mm from any metal surface and 150mm from wires. The best gap between tag and reader is 200&ndash;300mm (acceptable range: 180&ndash;400mm). Alignment deviation must be less than 50mm. For buildings with multiple elevator shafts, do NOT install tags on the same wall. Never use foam glue.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: RFID Reader -->
+            <div class="reveal step-card step-green">
+                <div class="flex items-start gap-5">
+                    <div class="step-num bg-green-500 text-white">4</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold mb-2">Mount the RFID Reader on Top of the Cabin</h3>
+                        <p class="text-gray-500 mb-4">The reader rides on the cabin and scans the RFID tags as the elevator moves between floors. It tells the Slave exactly what floor the car is on.</p>
+
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-700 mb-2">What to do:</h4>
+                                <ol class="text-sm text-gray-600 space-y-2 list-decimal pl-5">
+                                    <li>Find mounting holes on the front side of the elevator car's door machine</li>
+                                    <li>If no holes exist, drill mounting holes on the spot</li>
+                                    <li>Fix the RFID Reader's mounting bracket to the car door machine</li>
+                                    <li>Position it so that when the cabin is level with a floor, the reader faces the RFID tag on the shaft wall</li>
+                                    <li>Connect the Reader's data cable to the E-Box Slave</li>
+                                    <li>Verify alignment: check that reader and tag face each other squarely when the car is at each floor</li>
+                                </ol>
+                            </div>
+                            <div class="bg-green-50 rounded-xl p-4 flex items-center justify-center">
+                                <svg viewBox="0 0 250 150" class="w-full">
+                                    <!-- Cabin top simplified -->
+                                    <rect x="60" y="60" width="140" height="80" rx="3" fill="white" stroke="#334155" stroke-width="1.5"/>
+                                    <rect x="60" y="55" width="140" height="8" rx="2" fill="#e2e8f0"/>
+                                    <text x="130" y="105" text-anchor="middle" fill="#94a3b8" font-size="9">CABIN</text>
+                                    <!-- Door machine area -->
+                                    <rect x="65" y="25" width="60" height="28" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+                                    <text x="95" y="43" text-anchor="middle" fill="#6b7280" font-size="7">Door Machine</text>
+                                    <!-- RFID Reader mounted -->
+                                    <rect x="70" y="10" width="50" height="16" rx="3" fill="#22c55e" stroke="#16a34a" stroke-width="1.5"/>
+                                    <text x="95" y="21" text-anchor="middle" fill="white" font-size="7" font-weight="800">READER</text>
+                                    <!-- Arrow to shaft wall -->
+                                    <line x1="70" y1="18" x2="30" y2="18" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowG2)"/>
+                                    <rect x="10" y="0" width="15" height="55" fill="#d1d5db"/>
+                                    <rect x="15" y="11" width="15" height="14" rx="2" fill="#fbbf24"/>
+                                    <text x="22" y="21" text-anchor="middle" fill="#78350f" font-size="5" font-weight="700">TAG</text>
+                                    <!-- Data cable to Slave -->
+                                    <line x1="120" y1="18" x2="165" y2="18" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="4"/>
+                                    <rect x="165" y="8" width="40" height="20" rx="4" fill="#06b6d4"/>
+                                    <text x="185" y="21" text-anchor="middle" fill="white" font-size="6" font-weight="800">SLAVE</text>
+                                </svg>
+                                <defs>
+                                    <marker id="arrowG2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                                        <path d="M0,0 L6,3 L0,6 Z" fill="#22c55e"/>
+                                    </marker>
+                                </defs>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 5: LoRa Antenna Alignment -->
+            <div class="reveal step-card step-purple">
+                <div class="flex items-start gap-5">
+                    <div class="step-num bg-purple-600 text-white">5</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold mb-2">Align LoRa Antennas (Master &amp; Slave)</h3>
+                        <p class="text-gray-500 mb-4">The Master and Slave communicate by LoRa radio through the elevator shaft. Antenna orientation is critical for reliable signal.</p>
+
+                        <div class="grid md:grid-cols-3 gap-4 mb-4">
+                            <!-- Best -->
+                            <div class="bg-green-50 border-2 border-green-200 rounded-xl p-4 text-center">
+                                <svg viewBox="0 0 120 160" class="w-full max-w-[120px] mx-auto mb-2">
+                                    <rect x="20" y="5" width="80" height="150" rx="2" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
+                                    <!-- Master at top -->
+                                    <rect x="40" y="12" width="40" height="18" rx="4" fill="#0055ff"/>
+                                    <text x="60" y="24" text-anchor="middle" fill="white" font-size="6" font-weight="800">MASTER</text>
+                                    <line x1="60" y1="30" x2="60" y2="38" stroke="#0055ff" stroke-width="2"/>
+                                    <!-- Signal straight down -->
+                                    <line x1="60" y1="40" x2="60" y2="110" stroke="#00c8ff" stroke-width="1.5" stroke-dasharray="4 3"/>
+                                    <!-- Slave on cabin -->
+                                    <rect x="30" y="115" width="60" height="30" rx="2" fill="white" stroke="#334155" stroke-width="1"/>
+                                    <line x1="60" y1="108" x2="60" y2="115" stroke="#06b6d4" stroke-width="2"/>
+                                    <rect x="42" y="103" width="36" height="12" rx="3" fill="#06b6d4"/>
+                                    <text x="60" y="112" text-anchor="middle" fill="white" font-size="5" font-weight="800">SLAVE</text>
+                                </svg>
+                                <div class="text-xs font-bold text-green-700">BEST</div>
+                                <div class="text-[10px] text-gray-500">Antennas parallel, clear path</div>
+                            </div>
+                            <!-- Weak -->
+                            <div class="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 text-center">
+                                <svg viewBox="0 0 120 160" class="w-full max-w-[120px] mx-auto mb-2">
+                                    <rect x="20" y="5" width="80" height="150" rx="2" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
+                                    <rect x="40" y="12" width="40" height="18" rx="4" fill="#0055ff"/>
+                                    <text x="60" y="24" text-anchor="middle" fill="white" font-size="6" font-weight="800">MASTER</text>
+                                    <line x1="60" y1="30" x2="55" y2="40" stroke="#0055ff" stroke-width="2"/>
+                                    <line x1="60" y1="42" x2="55" y2="108" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="4 3"/>
+                                    <rect x="30" y="115" width="60" height="30" rx="2" fill="white" stroke="#334155" stroke-width="1"/>
+                                    <line x1="55" y1="108" x2="60" y2="115" stroke="#06b6d4" stroke-width="2"/>
+                                    <rect x="42" y="103" width="36" height="12" rx="3" fill="#06b6d4"/>
+                                    <text x="60" y="112" text-anchor="middle" fill="white" font-size="5" font-weight="800">SLAVE</text>
+                                </svg>
+                                <div class="text-xs font-bold text-amber-700">WEAK</div>
+                                <div class="text-[10px] text-gray-500">Angled antenna, degraded signal</div>
+                            </div>
+                            <!-- Poor -->
+                            <div class="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-center">
+                                <svg viewBox="0 0 120 160" class="w-full max-w-[120px] mx-auto mb-2">
+                                    <rect x="20" y="5" width="80" height="150" rx="2" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
+                                    <rect x="40" y="12" width="40" height="18" rx="4" fill="#0055ff"/>
+                                    <text x="60" y="24" text-anchor="middle" fill="white" font-size="6" font-weight="800">MASTER</text>
+                                    <line x1="60" y1="30" x2="75" y2="38" stroke="#0055ff" stroke-width="2"/>
+                                    <line x1="68" y1="42" x2="90" y2="70" stroke="#ef4444" stroke-width="1" stroke-dasharray="3"/>
+                                    <line x1="90" y1="70" x2="40" y2="90" stroke="#ef4444" stroke-width="1" stroke-dasharray="3"/>
+                                    <line x1="40" y1="90" x2="55" y2="108" stroke="#ef4444" stroke-width="1" stroke-dasharray="3"/>
+                                    <rect x="30" y="115" width="60" height="30" rx="2" fill="white" stroke="#334155" stroke-width="1"/>
+                                    <line x1="55" y1="115" x2="40" y2="108" stroke="#06b6d4" stroke-width="2"/>
+                                    <rect x="42" y="103" width="36" height="12" rx="3" fill="#06b6d4"/>
+                                    <text x="60" y="112" text-anchor="middle" fill="white" font-size="5" font-weight="800">SLAVE</text>
+                                    <text x="85" y="82" fill="#ef4444" font-size="5" font-weight="700">bounce</text>
+                                </svg>
+                                <div class="text-xs font-bold text-red-700">POOR</div>
+                                <div class="text-[10px] text-gray-500">Signal bouncing off walls</div>
+                            </div>
+                        </div>
+
+                        <div class="callout callout-green text-xs">
+                            <strong>Verification:</strong> Test communication stability by running the background pressure test from the T-BOX (2&ndash;3 iterations). If the indicator light is normal but LoRa can't communicate, open the box and check the antenna feeder and LoRa module contact.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 6: Wiring -->
+            <div class="reveal step-card step-red">
+                <div class="flex items-start gap-5">
+                    <div class="step-num bg-red-500 text-white">6</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold mb-2">Wire the E-Box Slave to the Elevator Panel</h3>
+                        <p class="text-gray-500 mb-4">This is the final and most critical step. The Slave's IO cables connect to the elevator's button panel, giving it the ability to "press" floor buttons electronically. <strong>Power off the elevator before wiring.</strong></p>
+
+                        <div class="grid md:grid-cols-2 gap-6 mb-4">
+                            <!-- Option A -->
+                            <div class="border-2 border-green-200 rounded-xl p-5 bg-green-50/30">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700">Option A</span>
+                                </div>
+                                <h4 class="font-bold mb-2">Wire to Button Terminals</h4>
+                                <p class="text-sm text-gray-500 mb-2">Connect IO cables to the back of the cabin panel buttons. Each IO wire parallels one button. Like wiring a second "finger" to each button.</p>
+                                <ol class="text-xs text-gray-600 list-decimal pl-4 space-y-1">
+                                    <li>Open the cabin panel (elevator tech)</li>
+                                    <li>Unplug the button connector</li>
+                                    <li>Use multimeter to identify signal lines per button</li>
+                                    <li>Splice IO cable to each button's signal line</li>
+                                    <li>Reconnect and test each floor</li>
+                                </ol>
+                            </div>
+                            <!-- Option B -->
+                            <div class="border-2 border-blue-200 rounded-xl p-5 bg-blue-50/30">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-700">Option B</span>
+                                </div>
+                                <h4 class="font-bold mb-2">Wire to Control Board</h4>
+                                <p class="text-sm text-gray-500 mb-2">Connect IO cables directly to the lift control board's terminal strip. Bypasses buttons entirely and goes straight to the elevator's brain.</p>
+                                <ol class="text-xs text-gray-600 list-decimal pl-4 space-y-1">
+                                    <li>Access the control board (usually behind panel or in machine room)</li>
+                                    <li>Locate Terminal Strip G (car call terminals)</li>
+                                    <li>Weld or connect IO cable signal points to corresponding floor terminals</li>
+                                    <li>Test each floor call individually</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <div class="callout callout-red text-xs">
+                            <strong>Safety:</strong> The E-Box uses Normally Open (NO) relay logic. Always power off the elevator when connecting wires. The signal cable connects to the signal line of the button &mdash; never connect to high-voltage power lines. An elevator technician must supervise this step.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Post-Install Verification -->
+        <div class="reveal mt-12 bg-green-50 rounded-2xl p-8 border border-green-200">
+            <h3 class="text-xl font-bold text-center mb-6">Post-Installation Verification Checklist</h3>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+                <label class="flex items-start gap-3"><input type="checkbox" class="mt-1 accent-green-600"> <span>E-Box Master blue indicator light is ON</span></label>
+                <label class="flex items-start gap-3"><input type="checkbox" class="mt-1 accent-green-600"> <span>E-Box Slave blue indicator light is ON</span></label>
+                <label class="flex items-start gap-3"><input type="checkbox" class="mt-1 accent-green-600"> <span>LoRa communication test passes (Master &harr; Slave)</span></label>
+                <label class="flex items-start gap-3"><input type="checkbox" class="mt-1 accent-green-600"> <span>RFID reader correctly identifies each floor</span></label>
+                <label class="flex items-start gap-3"><input type="checkbox" class="mt-1 accent-green-600"> <span>IO wiring activates correct floor for each channel</span></label>
+                <label class="flex items-start gap-3"><input type="checkbox" class="mt-1 accent-green-600"> <span>Door open command works (IO port 1)</span></label>
+                <label class="flex items-start gap-3"><input type="checkbox" class="mt-1 accent-green-600"> <span>All cables are zip-tied and tidy</span></label>
+                <label class="flex items-start gap-3"><input type="checkbox" class="mt-1 accent-green-600"> <span>Robot successfully calls elevator and rides to target floor</span></label>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- DIVIDER: Technical Reference Below -->
+<!-- ================================================================ -->
+<section class="py-12 bg-gray-900 text-white text-center">
+    <div class="max-w-3xl mx-auto px-6">
+        <div class="text-xs font-bold tracking-widest uppercase text-gray-400 mb-3">Below this line</div>
+        <h2 id="technical" class="text-2xl md:text-3xl font-bold mb-3">Technical Reference</h2>
+        <p class="text-gray-400 text-sm">Detailed wiring tables, construction standards, antenna specifications, and panel wiring scenarios for elevator technicians.</p>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- TECH: IO Wiring Table -->
+<!-- ================================================================ -->
+<section class="py-16 bg-gray-950 text-white">
+    <div class="max-w-5xl mx-auto px-6">
+        <h3 class="text-xl font-bold mb-2">IO Port &rarr; Floor Mapping</h3>
+        <p class="text-sm text-gray-400 mb-6">The E-Box Slave has 32 IO channels across 8 cable harnesses (4 channels per cable). Box logic: <strong class="text-amber-400">Normally Open (NO)</strong>.</p>
+
+        <div class="overflow-x-auto rounded-xl border border-gray-700">
+            <table class="w-full text-xs">
+                <thead>
+                    <tr class="bg-gray-800">
+                        <th class="px-3 py-2 text-left text-gray-300">Cable</th>
+                        <th class="px-3 py-2 text-center text-red-400 font-bold">IO</th>
+                        <th class="px-3 py-2 text-left text-gray-300">Function</th>
+                        <th class="px-3 py-2 text-center text-amber-400 font-bold">IO</th>
+                        <th class="px-3 py-2 text-left text-gray-300">Function</th>
+                        <th class="px-3 py-2 text-center text-gray-400 font-bold">IO</th>
+                        <th class="px-3 py-2 text-left text-gray-300">Function</th>
+                        <th class="px-3 py-2 text-center text-gray-400 font-bold">IO</th>
+                        <th class="px-3 py-2 text-left text-gray-300">Function</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    <tr class="bg-gray-900">
+                        <td class="px-3 py-2 font-bold text-white">1</td>
+                        <td class="px-3 py-2 text-center text-red-400 font-bold">1</td>
+                        <td class="px-3 py-2 text-amber-300 font-bold">Door Open</td>
+                        <td class="px-3 py-2 text-center text-amber-400 font-bold">2</td>
+                        <td class="px-3 py-2 text-gray-500">0 (reserved)</td>
+                        <td class="px-3 py-2 text-center">3</td>
+                        <td class="px-3 py-2 text-gray-400">Normally Open</td>
+                        <td class="px-3 py-2 text-center">4</td>
+                        <td class="px-3 py-2 text-gray-400">Normally Closed</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 font-bold text-white">2</td>
+                        <td class="px-3 py-2 text-center text-red-400 font-bold">5</td>
+                        <td class="px-3 py-2">Floor 1</td>
+                        <td class="px-3 py-2 text-center text-amber-400 font-bold">6</td>
+                        <td class="px-3 py-2">Floor 2</td>
+                        <td class="px-3 py-2 text-center">7</td>
+                        <td class="px-3 py-2">Floor 3</td>
+                        <td class="px-3 py-2 text-center">8</td>
+                        <td class="px-3 py-2">Floor 4</td>
+                    </tr>
+                    <tr class="bg-gray-900">
+                        <td class="px-3 py-2 font-bold text-white">3</td>
+                        <td class="px-3 py-2 text-center text-red-400 font-bold">9</td>
+                        <td class="px-3 py-2">Floor 5</td>
+                        <td class="px-3 py-2 text-center text-amber-400 font-bold">10</td>
+                        <td class="px-3 py-2">Floor 6</td>
+                        <td class="px-3 py-2 text-center">11</td>
+                        <td class="px-3 py-2">Floor 7</td>
+                        <td class="px-3 py-2 text-center">12</td>
+                        <td class="px-3 py-2">Floor 8</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 font-bold text-white">4</td>
+                        <td class="px-3 py-2 text-center text-red-400 font-bold">13</td>
+                        <td class="px-3 py-2">Floor 9</td>
+                        <td class="px-3 py-2 text-center text-amber-400 font-bold">14</td>
+                        <td class="px-3 py-2">Floor 10</td>
+                        <td class="px-3 py-2 text-center">15</td>
+                        <td class="px-3 py-2">Floor 11</td>
+                        <td class="px-3 py-2 text-center">16</td>
+                        <td class="px-3 py-2">Floor 12</td>
+                    </tr>
+                    <tr class="bg-gray-900">
+                        <td class="px-3 py-2 font-bold text-white">5</td>
+                        <td class="px-3 py-2 text-center text-red-400 font-bold">17</td>
+                        <td class="px-3 py-2">Floor 13</td>
+                        <td class="px-3 py-2 text-center text-amber-400 font-bold">18</td>
+                        <td class="px-3 py-2">Floor 14</td>
+                        <td class="px-3 py-2 text-center">19</td>
+                        <td class="px-3 py-2">Floor 15</td>
+                        <td class="px-3 py-2 text-center">20</td>
+                        <td class="px-3 py-2">Floor 16</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 font-bold text-white">6</td>
+                        <td class="px-3 py-2 text-center text-red-400 font-bold">21</td>
+                        <td class="px-3 py-2">Floor 17</td>
+                        <td class="px-3 py-2 text-center text-amber-400 font-bold">22</td>
+                        <td class="px-3 py-2">Floor 18</td>
+                        <td class="px-3 py-2 text-center">23</td>
+                        <td class="px-3 py-2">Floor 19</td>
+                        <td class="px-3 py-2 text-center">24</td>
+                        <td class="px-3 py-2">Floor 20</td>
+                    </tr>
+                    <tr class="bg-gray-900">
+                        <td class="px-3 py-2 font-bold text-white">7</td>
+                        <td class="px-3 py-2 text-center text-red-400 font-bold">25</td>
+                        <td class="px-3 py-2">Floor 21</td>
+                        <td class="px-3 py-2 text-center text-amber-400 font-bold">26</td>
+                        <td class="px-3 py-2">Floor 22</td>
+                        <td class="px-3 py-2 text-center">27</td>
+                        <td class="px-3 py-2">Floor 23</td>
+                        <td class="px-3 py-2 text-center">28</td>
+                        <td class="px-3 py-2">Floor 24</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 font-bold text-white">8</td>
+                        <td class="px-3 py-2 text-center text-red-400 font-bold">29</td>
+                        <td class="px-3 py-2">Floor 25</td>
+                        <td class="px-3 py-2 text-center text-amber-400 font-bold">30</td>
+                        <td class="px-3 py-2">Floor 26</td>
+                        <td class="px-3 py-2 text-center">31</td>
+                        <td class="px-3 py-2">Floor 27</td>
+                        <td class="px-3 py-2 text-center">32</td>
+                        <td class="px-3 py-2">Floor 28</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-xs text-gray-500 mt-3">E-BOX physical ports: RJ45 (network), RS-485 (serial), FLOOR (indicator), USB (config), DC power. Maximum supported floors: <strong class="text-white">28</strong> + door open. <strong class="text-amber-400">The Thesis Hotel uses IO ports 1 (door), 5&ndash;14 (Lobby through Floor 10).</strong></p>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- TECH: RFID Construction Standards -->
+<!-- ================================================================ -->
+<section class="py-16 bg-gray-900 text-white">
+    <div class="max-w-5xl mx-auto px-6">
+        <h3 class="text-xl font-bold mb-6">RFID Tag &amp; Reader Construction Standards</h3>
+
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="space-y-4">
+                <div class="bg-gray-800 rounded-xl p-5">
+                    <h4 class="text-sm font-bold text-amber-400 mb-3">Spacing Requirements</h4>
+                    <ul class="text-sm text-gray-300 space-y-2">
+                        <li class="flex items-start gap-2"><span class="text-amber-400 font-bold mt-0.5">&#9679;</span> Reader-to-tag gap: <strong>180&ndash;400mm</strong> (optimal: 200&ndash;300mm)</li>
+                        <li class="flex items-start gap-2"><span class="text-amber-400 font-bold mt-0.5">&#9679;</span> Vertical/horizontal alignment deviation: <strong>&lt;50mm</strong></li>
+                        <li class="flex items-start gap-2"><span class="text-amber-400 font-bold mt-0.5">&#9679;</span> Minimum distance from metal surfaces: <strong>200mm</strong></li>
+                        <li class="flex items-start gap-2"><span class="text-amber-400 font-bold mt-0.5">&#9679;</span> Minimum distance from wires/guardrails: <strong>150mm</strong></li>
+                    </ul>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-5">
+                    <h4 class="text-sm font-bold text-red-400 mb-3">Prohibited Practices</h4>
+                    <ul class="text-sm text-gray-300 space-y-2">
+                        <li class="flex items-start gap-2"><span class="text-red-400 font-bold mt-0.5">&#10007;</span> Do NOT use foam glue to secure tags</li>
+                        <li class="flex items-start gap-2"><span class="text-red-400 font-bold mt-0.5">&#10007;</span> Do NOT install tags on the same wall for multiple elevator shafts</li>
+                        <li class="flex items-start gap-2"><span class="text-red-400 font-bold mt-0.5">&#10007;</span> Do NOT place tags near steel slots without 200mm clearance</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div class="bg-gray-800 rounded-xl p-5">
+                    <h4 class="text-sm font-bold text-green-400 mb-3">Installation Procedure (Per Floor)</h4>
+                    <ol class="text-sm text-gray-300 space-y-2 list-decimal pl-5">
+                        <li>Raise elevator to floor level sensor position</li>
+                        <li>Find mounting holes on car door machine front for the reader bracket (drill if needed)</li>
+                        <li>On shaft wall, locate position corresponding to reader, mark with crosshairs</li>
+                        <li>Drill holes and install the fixed RFID tag bracket</li>
+                        <li>Verify that tag and reader face each other when car is level</li>
+                        <li>Check alignment accuracy, then secure all hardware</li>
+                    </ol>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-5">
+                    <h4 class="text-sm font-bold text-cyan-400 mb-3">Mounting Methods</h4>
+                    <ul class="text-sm text-gray-300 space-y-2">
+                        <li class="flex items-start gap-2"><span class="text-cyan-400 font-bold mt-0.5">&#9679;</span> <strong>Concrete walls:</strong> 3M adhesive or screw-in brackets</li>
+                        <li class="flex items-start gap-2"><span class="text-cyan-400 font-bold mt-0.5">&#9679;</span> <strong>Metal surfaces:</strong> Screw-in brackets with 200mm standoff</li>
+                        <li class="flex items-start gap-2"><span class="text-cyan-400 font-bold mt-0.5">&#9679;</span> <strong>Reader:</strong> Bolt to car door machine frame</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- TECH: Panel Wiring Scenarios -->
+<!-- ================================================================ -->
+<section class="py-16 bg-gray-950 text-white">
+    <div class="max-w-5xl mx-auto px-6">
+        <h3 class="text-xl font-bold mb-2">Cabin Panel Wiring Scenarios</h3>
+        <p class="text-sm text-gray-400 mb-8">The wiring method depends on what type of elevator button panel you have. There are four common scenarios.</p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- Scene 1 -->
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-xs font-bold px-2 py-1 rounded bg-blue-500/20 text-blue-300">Scene 1</span>
+                </div>
+                <h4 class="font-bold text-sm mb-2">Physical Circuit Board (No Card Reader)</h4>
+                <ol class="text-xs text-gray-300 space-y-2 list-decimal pl-4">
+                    <li>Unplug the button connector from the operation panel</li>
+                    <li>Press each button and use a multimeter to measure the on-off signal of each key</li>
+                    <li>Connect the E-Box IO cable to the signal line of each button</li>
+                    <li><strong class="text-red-400">Power must be OFF during wiring</strong></li>
+                </ol>
+            </div>
+
+            <!-- Scene 2 -->
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-xs font-bold px-2 py-1 rounded bg-purple-500/20 text-purple-300">Scene 2</span>
+                </div>
+                <h4 class="font-bold text-sm mb-2">Physical Circuit Board (With Card Reader)</h4>
+                <ol class="text-xs text-gray-300 space-y-2 list-decimal pl-4">
+                    <li>Same as Scene 1, but signal line connects to the <strong>front end</strong> of the card reader's signal line (near the end of the motherboard)</li>
+                    <li>E-Box signal line must be upstream of the card reader</li>
+                </ol>
+            </div>
+
+            <!-- Scene 3 -->
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-xs font-bold px-2 py-1 rounded bg-teal-500/20 text-teal-300">Scene 3</span>
+                </div>
+                <h4 class="font-bold text-sm mb-2">Scanning Circuit Board (No Card Reader)</h4>
+                <ol class="text-xs text-gray-300 space-y-2 list-decimal pl-4">
+                    <li>Press each button, use multimeter to identify the two on-state signal points</li>
+                    <li><strong>Weld</strong> (solder) the E-Box IO cable to the two signal points of each button</li>
+                </ol>
+            </div>
+
+            <!-- Scene 4 -->
+            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-xs font-bold px-2 py-1 rounded bg-amber-500/20 text-amber-300">Scene 4</span>
+                </div>
+                <h4 class="font-bold text-sm mb-2">Scanning Circuit Board (With Card Reader)</h4>
+                <ol class="text-xs text-gray-300 space-y-2 list-decimal pl-4">
+                    <li>Combine Scene 3 wiring with Scene 2 card reader positioning</li>
+                    <li>Solder signal wires upstream of card reader to the scanning board</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- TECH: System Topology (ASCII) -->
+<!-- ================================================================ -->
+<section class="py-16 bg-gray-900 text-white">
+    <div class="max-w-5xl mx-auto px-6">
+        <h3 class="text-xl font-bold mb-6">Complete System Topology</h3>
+        <div class="bg-gray-950 rounded-xl p-6 font-mono text-xs overflow-x-auto border border-gray-800">
+            <pre class="text-gray-300 leading-relaxed"><span class="text-gray-600">// Keenon E-Box Elevator Integration &mdash; Physical Layout</span>
+
+<span class="text-cyan-400 font-bold">TOP OF SHAFT (Machine Room)</span>
+  ┌─────────────────┐    ┌───────────┐
+  │  <span class="text-cyan-400 font-bold">E-BOX MASTER</span>  │───&gt;│  Internet  │───&gt; <span class="text-purple-400">Cloud</span>
+  │  220V + RJ45    │    │  Cable     │
+  └────────┬────────┘    └───────────┘
+           │ <span class="text-green-400">LoRa</span> (antennas parallel, straight line)
+<span class="text-gray-600">  ─ ─ ─ ─ ─│─ ─ ─ ─ ─ ─ ─ ─ ─ ─ SHAFT WALL ─ ─ ─</span>
+           │
+  <span class="text-amber-400">[RFID]</span>   │    Floor N
+  <span class="text-amber-400">[RFID]</span>   │    Floor N-1
+  <span class="text-amber-400">[RFID]</span>   │    Floor N-2
+           │
+<span class="text-cyan-400 font-bold">TOP OF CABIN</span>
+  ┌─────────┴────────┐    ┌─────────────┐
+  │  <span class="text-cyan-400 font-bold">E-BOX SLAVE</span>    │&lt;──&gt;│ <span class="text-amber-400">RFID READER</span> │
+  │  220V power      │    │ (reads tags) │
+  └────────┬─────────┘    └─────────────┘
+           │ <span class="text-green-400">IO Cables</span> (8 harnesses, 32 channels)
+           │
+  ┌────────┴─────────┐
+  │  <span class="text-red-400 font-bold">CABIN PANEL</span>     │    <span class="text-gray-500">Option A: wire to buttons</span>
+  │  (or Control     │    <span class="text-gray-500">Option B: wire to controller PCB</span>
+  │   Board)         │
+  └──────────────────┘
+
+<span class="text-gray-600">  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ LOBBY FLOOR ─ ─ ─ ─</span>
+
+  ┌─────────────────┐    <span class="text-green-400">LoRa</span> (direct) or
+  │     <span class="text-cyan-400 font-bold">ROBOT</span>       │&lt;──&gt; <span class="text-purple-400">WiFi</span> &rarr; Cloud &rarr; Master (cloud path)
+  │  4G/WiFi        │
+  └─────────────────┘</pre>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- TECH: E-Box Slave Precautions -->
+<!-- ================================================================ -->
+<section class="py-16 bg-gray-950 text-white">
+    <div class="max-w-5xl mx-auto px-6">
+        <h3 class="text-xl font-bold mb-6">E-Box Slave Installation Precautions</h3>
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+                <div class="text-red-400 text-lg mb-2 font-bold">&#x26A0; Placement</div>
+                <ul class="text-xs text-gray-300 space-y-2">
+                    <li>&#8226; Do NOT install near air outlets</li>
+                    <li>&#8226; Do NOT place where it could be stepped on</li>
+                    <li>&#8226; Secure with cable ties, not adhesive alone</li>
+                    <li>&#8226; The auxiliary machine adapter must be secured with cable ties</li>
+                </ul>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+                <div class="text-amber-400 text-lg mb-2 font-bold">&#x1F50C; Power</div>
+                <ul class="text-xs text-gray-300 space-y-2">
+                    <li>&#8226; 100&ndash;240V power adapter (included in kit)</li>
+                    <li>&#8226; Connect to cabin top power outlet</li>
+                    <li>&#8226; Ensure power cable is zip-tied and clear of moving parts</li>
+                    <li>&#8226; 3x 12V 2A adaptors total (Master + Slave + spare)</li>
+                </ul>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+                <div class="text-green-400 text-lg mb-2 font-bold">&#x2705; Best Practices</div>
+                <ul class="text-xs text-gray-300 space-y-2">
+                    <li>&#8226; Keep all wiring clean and tidy</li>
+                    <li>&#8226; Use zip ties to fix excess wire</li>
+                    <li>&#8226; Route cables away from elevator machinery</li>
+                    <li>&#8226; Label each IO cable with its floor number</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ================================================================ -->
+<!-- TECH: End-to-End Ride Workflow -->
+<!-- ================================================================ -->
+<section id="workflow" class="py-16 bg-gray-900 text-white">
+    <div class="max-w-5xl mx-auto px-6">
+        <h3 class="text-xl font-bold mb-2">End-to-End Robot Ride Workflow</h3>
+        <p class="text-sm text-gray-400 mb-6">What happens from the moment a robot needs to change floors to the moment it resumes navigation. Seven steps, fully autonomous.</p>
+
+        <div class="grid md:grid-cols-7 gap-3">
+            <div class="bg-gray-800 rounded-xl p-4 text-center border border-gray-700">
+                <div class="w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mx-auto mb-2">1</div>
+                <div class="text-xs font-bold text-blue-400 mb-1">REQUEST</div>
+                <div class="text-[10px] text-gray-400">Robot sends floor + direction to middleware</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center border border-gray-700">
+                <div class="w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mx-auto mb-2">2</div>
+                <div class="text-xs font-bold text-blue-400 mb-1">CALL</div>
+                <div class="text-[10px] text-gray-400">Middleware triggers elevator via relay or API</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center border border-gray-700">
+                <div class="w-8 h-8 rounded-full bg-cyan-500 text-white text-xs font-bold flex items-center justify-center mx-auto mb-2">3</div>
+                <div class="text-xs font-bold text-cyan-400 mb-1">DETECT</div>
+                <div class="text-[10px] text-gray-400">System detects elevator arrival (sensor or RFID)</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center border border-gray-700">
+                <div class="w-8 h-8 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center mx-auto mb-2">4</div>
+                <div class="text-xs font-bold text-green-400 mb-1">ENTER</div>
+                <div class="text-[10px] text-gray-400">Robot confirms door open, enters via LIDAR/SLAM</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center border border-gray-700">
+                <div class="w-8 h-8 rounded-full bg-purple-500 text-white text-xs font-bold flex items-center justify-center mx-auto mb-2">5</div>
+                <div class="text-xs font-bold text-purple-400 mb-1">SELECT</div>
+                <div class="text-[10px] text-gray-400">Middleware selects destination floor via relay</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center border border-gray-700">
+                <div class="w-8 h-8 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center mx-auto mb-2">6</div>
+                <div class="text-xs font-bold text-amber-400 mb-1">RIDE</div>
+                <div class="text-[10px] text-gray-400">System monitors ride (RFID sensor feedback)</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center border border-gray-700">
+                <div class="w-8 h-8 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center mx-auto mb-2">7</div>
+                <div class="text-xs font-bold text-green-400 mb-1">EXIT</div>
+                <div class="text-[10px] text-gray-400">Robot exits on arrival, resumes navigation</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- TECH: Middleware State Machine -->
+<!-- ================================================================ -->
+<section class="py-16 bg-gray-950 text-white">
+    <div class="max-w-5xl mx-auto px-6">
+        <h3 class="text-xl font-bold mb-2">Middleware State Machine</h3>
+        <p class="text-sm text-gray-400 mb-6">Every ride follows a deterministic 11-state lifecycle. The middleware orchestrates hardware, sensors, and robot commands through each transition.</p>
+
+        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6">
+            <div class="flex flex-wrap gap-2 justify-center">
+                <span class="px-2 py-1 rounded bg-gray-800 text-gray-300 text-xs font-bold">IDLE</span>
+                <span class="text-gray-600">&rarr;</span>
+                <span class="px-2 py-1 rounded bg-blue-900/50 text-blue-300 text-xs font-bold">CALL_REQUESTED</span>
+                <span class="text-gray-600">&rarr;</span>
+                <span class="px-2 py-1 rounded bg-blue-900/50 text-blue-300 text-xs font-bold">WAITING_FOR_ELEVATOR</span>
+                <span class="text-gray-600">&rarr;</span>
+                <span class="px-2 py-1 rounded bg-cyan-900/50 text-cyan-300 text-xs font-bold">DOOR_OPEN</span>
+                <span class="text-gray-600">&rarr;</span>
+                <span class="px-2 py-1 rounded bg-green-900/50 text-green-300 text-xs font-bold">ENTERING</span>
+                <span class="text-gray-600">&rarr;</span>
+                <span class="px-2 py-1 rounded bg-green-900/50 text-green-300 text-xs font-bold">INSIDE</span>
+                <span class="text-gray-600">&rarr;</span>
+                <span class="px-2 py-1 rounded bg-purple-900/50 text-purple-300 text-xs font-bold">SELECTING_FLOOR</span>
+                <span class="text-gray-600">&rarr;</span>
+                <span class="px-2 py-1 rounded bg-purple-900/50 text-purple-300 text-xs font-bold">MOVING</span>
+                <span class="text-gray-600">&rarr;</span>
+                <span class="px-2 py-1 rounded bg-amber-900/50 text-amber-300 text-xs font-bold">ARRIVED</span>
+                <span class="text-gray-600">&rarr;</span>
+                <span class="px-2 py-1 rounded bg-amber-900/50 text-amber-300 text-xs font-bold">EXITING</span>
+                <span class="text-gray-600">&rarr;</span>
+                <span class="px-2 py-1 rounded bg-green-900/50 text-green-300 text-xs font-bold">COMPLETE</span>
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+                <h4 class="text-sm font-bold text-cyan-400 mb-3">Elevator Call API</h4>
+                <div class="bg-gray-950 rounded-lg p-4 font-mono text-xs">
+                    <div><span class="text-purple-400">POST</span> <span class="text-cyan-300">/elevator/call</span></div>
+                    <div class="mt-1 text-gray-500">{</div>
+                    <div class="pl-3"><span class="text-amber-400">"floor"</span>: <span class="text-green-400">3</span>,</div>
+                    <div class="pl-3"><span class="text-amber-400">"direction"</span>: <span class="text-green-400">"up"</span></div>
+                    <div class="text-gray-500">}</div>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+                <h4 class="text-sm font-bold text-green-400 mb-3">Sensor Suite</h4>
+                <ul class="text-xs text-gray-300 space-y-2">
+                    <li class="flex items-start gap-2"><span class="text-green-400 font-bold mt-0.5">1</span> <span><strong>Door detection</strong> &mdash; magnetic reed switch or camera confirms open/close</span></li>
+                    <li class="flex items-start gap-2"><span class="text-green-400 font-bold mt-0.5">2</span> <span><strong>Arrival confirmation</strong> &mdash; RFID tag + door sensor verifies correct car at floor</span></li>
+                    <li class="flex items-start gap-2"><span class="text-green-400 font-bold mt-0.5">3</span> <span><strong>Obstacle detection</strong> &mdash; robot&rsquo;s onboard LIDAR/camera for safe entry/exit</span></li>
+                    <li class="flex items-start gap-2"><span class="text-green-400 font-bold mt-0.5">4</span> <span><strong>Load sensors</strong> (optional) &mdash; detect if elevator is at capacity</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- TECH: Safety, Compliance & Failure Handling -->
+<!-- ================================================================ -->
+<section id="safety" class="py-16 bg-gray-900 text-white">
+    <div class="max-w-5xl mx-auto px-6">
+        <h3 class="text-xl font-bold mb-6">Safety, Compliance &amp; Failure Handling</h3>
+
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+                <h4 class="text-sm font-bold text-red-400 mb-3">Safety &amp; Compliance</h4>
+                <ul class="text-xs text-gray-300 space-y-3">
+                    <li class="flex items-start gap-2"><span class="text-red-400 font-bold mt-0.5">&#x26A0;</span> <span><strong>ASME A17.1</strong> &mdash; must comply with elevator safety standards; cannot modify or bypass any safety circuit</span></li>
+                    <li class="flex items-start gap-2"><span class="text-amber-400 font-bold mt-0.5">&#x26A0;</span> <span><strong>Fail-safe</strong> &mdash; system fails without interfering with elevator operation; NO relay logic means power loss = normal elevator</span></li>
+                    <li class="flex items-start gap-2"><span class="text-blue-400 font-bold mt-0.5">&#x26A0;</span> <span><strong>Human priority</strong> &mdash; physical button presses always override relay commands; robots yield to occupied elevators</span></li>
+                    <li class="flex items-start gap-2"><span class="text-purple-400 font-bold mt-0.5">&#x26A0;</span> <span><strong>Emergency override</strong> &mdash; fire service, maintenance mode, and emergency recalls always override robot control</span></li>
+                </ul>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+                <h4 class="text-sm font-bold text-amber-400 mb-3">Failure Modes &amp; Recovery</h4>
+                <ul class="text-xs text-gray-300 space-y-3">
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">&#8226;</span> <span><strong>Elevator doesn&rsquo;t arrive</strong> &rarr; retry after timeout; 3 fails = try alternate car</span></li>
+                    <li class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">&#8226;</span> <span><strong>Doors close mid-entry</strong> &rarr; LIDAR detects, robot aborts and reverses</span></li>
+                    <li class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">&#8226;</span> <span><strong>Elevator full</strong> &rarr; load/camera sensor detects, robot waits for next car</span></li>
+                    <li class="flex items-start gap-2"><span class="text-purple-400 mt-0.5">&#8226;</span> <span><strong>Wrong elevator arrives</strong> &rarr; RFID verification before entering</span></li>
+                    <li class="flex items-start gap-2"><span class="text-gray-400 mt-0.5">&#8226;</span> <span><strong>Network failure</strong> &rarr; cloud fails = fall back to LoRa; LoRa fails = safe shutdown</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+            <h4 class="text-sm font-bold text-blue-400 mb-3">Control Logic Principles</h4>
+            <div class="grid md:grid-cols-4 gap-4 text-xs text-gray-300">
+                <div class="p-3 bg-gray-900 rounded-lg text-center">
+                    <div class="text-lg mb-1">&#x1F4E1;</div>
+                    <div class="font-bold text-white mb-1">Sensors &gt; Timers</div>
+                    <div class="text-gray-400">Use real sensor feedback over timing assumptions for reliability</div>
+                </div>
+                <div class="p-3 bg-gray-900 rounded-lg text-center">
+                    <div class="text-lg mb-1">&#x1F504;</div>
+                    <div class="font-bold text-white mb-1">Retry Logic</div>
+                    <div class="text-gray-400">Implement automatic retries for missed elevator calls with escalation</div>
+                </div>
+                <div class="p-3 bg-gray-900 rounded-lg text-center">
+                    <div class="text-lg mb-1">&#x1F3E2;</div>
+                    <div class="font-bold text-white mb-1">Multi-Elevator</div>
+                    <div class="text-gray-400">Selection logic picks optimal car from a bank of elevators</div>
+                </div>
+                <div class="p-3 bg-gray-900 rounded-lg text-center">
+                    <div class="text-lg mb-1">&#x1F6AA;</div>
+                    <div class="font-bold text-white mb-1">Door Confirm</div>
+                    <div class="text-gray-400">Robot always confirms door state before entering or exiting</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- FOOTER -->
+<!-- ================================================================ -->
+<footer class="py-10 bg-gray-900 border-t border-gray-800">
+    <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-400 flex items-center justify-center">
+                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <span class="text-sm text-gray-500">&copy; 2026 Accelerate Robotics</span>
+        </div>
+        <div class="flex items-center gap-6 text-xs text-gray-500">
+            <a href="index.html" class="hover:text-white transition">Home</a>
+            <a href="architecture.html" class="hover:text-white transition">Architecture</a>
+            <a href="elevator-integration.html" class="hover:text-white transition">Elevator Deep Dive</a>
+            <a href="elevator-install-guide.html" class="text-white">Install Guide</a>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // Scroll reveal observer
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Elevator cabin full-motion animation
+    (function() {
+        var cabin = document.getElementById('elevator-cabin');
+        var floorNum = document.getElementById('floor-number');
+        var floorStat = document.getElementById('floor-status');
+        var loraPath = document.getElementById('lora-path');
+        if (!cabin) return;
+
+        /* WHY: RFID reader center is at y=582 in cabin local SVG coords (rect y=573, h=18).
+           Each floor's RFID tag center aligns with the floor line Y position.
+           translateY = floorTagY - readerLocalY moves the reader to align with the tag. */
+        var READER_Y = 582;
+        var floors = [
+            { name: 'L',  y: 840 },
+            { name: '2',  y: 780 },
+            { name: '3',  y: 720 },
+            { name: '4',  y: 640 },
+            { name: '5',  y: 560 },
+            { name: '6',  y: 480 },
+            { name: '7',  y: 400 },
+            { name: '8',  y: 320 },
+            { name: '9',  y: 240 },
+            { name: '10', y: 160 }
+        ];
+
+        var currentY = floors[0].y - READER_Y; // Start at lobby (translateY = 258)
+        cabin.style.transform = 'translateY(' + currentY + 'px)';
+
+        function updateLora() {
+            if (!loraPath) return;
+            /* WHY: Slave antenna tip is at y=555 in cabin local coords.
+               LoRa path y2 should track the antenna so the dashed line connects Master to Slave. */
+            var antennaY = 555 + currentY;
+            loraPath.setAttribute('y2', Math.max(82, antennaY));
+        }
+        updateLora();
+
+        // Smooth easing: cubic ease-in-out
+        function ease(t) {
+            return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+        }
+
+        function animateTo(target, duration, cb) {
+            var targetY = target.y - READER_Y;
+            var startY = currentY;
+            var delta = targetY - startY;
+            if (Math.abs(delta) < 1) { if (cb) cb(); return; }
+
+            // Show direction arrow in status
+            if (floorStat) floorStat.textContent = delta < 0 ? '\u25B2 MOVING' : '\u25BC MOVING';
+
+            var startTime = performance.now();
+            function step(ts) {
+                var p = Math.min((ts - startTime) / duration, 1);
+                currentY = startY + delta * ease(p);
+                cabin.style.transform = 'translateY(' + currentY + 'px)';
+                updateLora();
+
+                // Update floor number as cabin passes each floor
+                var readerY = currentY + READER_Y;
+                var closest = floors[0];
+                var closestDist = Math.abs(readerY - floors[0].y);
+                for (var i = 1; i < floors.length; i++) {
+                    var d = Math.abs(readerY - floors[i].y);
+                    if (d < closestDist) { closest = floors[i]; closestDist = d; }
+                }
+                if (floorNum && closestDist < 30) floorNum.textContent = closest.name;
+
+                if (p < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    currentY = targetY;
+                    cabin.style.transform = 'translateY(' + currentY + 'px)';
+                    updateLora();
+                    if (floorNum) floorNum.textContent = target.name;
+                    if (floorStat) floorStat.textContent = 'STOPPED';
+                    if (cb) cb();
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        function pickRandom(arr, n) {
+            var shuffled = arr.slice().sort(function() { return Math.random() - 0.5; });
+            return shuffled.slice(0, Math.min(n, shuffled.length));
+        }
+
+        function generateTrip() {
+            var mid = floors.slice(1, -1); // Exclude lobby (index 0) and F10 (last)
+            // 2-4 random stops going up
+            var upCount = 2 + Math.floor(Math.random() * 3);
+            var upStops = pickRandom(mid, upCount);
+            // Sort by Y descending: lower floors first when going up (higher Y = lower floor)
+            upStops.sort(function(a, b) { return b.y - a.y; });
+
+            // 2-4 different random stops going down
+            var downCount = 2 + Math.floor(Math.random() * 3);
+            var downStops = pickRandom(mid, downCount);
+            // Sort by Y ascending: higher floors first when going down (lower Y = higher floor)
+            downStops.sort(function(a, b) { return a.y - b.y; });
+
+            // Full sequence: up stops -> F10 -> down stops -> Lobby
+            var seq = [];
+            for (var i = 0; i < upStops.length; i++) seq.push(upStops[i]);
+            seq.push(floors[floors.length - 1]); // Floor 10
+            for (var j = 0; j < downStops.length; j++) seq.push(downStops[j]);
+            seq.push(floors[0]); // Lobby
+            return seq;
+        }
+
+        function runTrip() {
+            var stops = generateTrip();
+            var i = 0;
+            function next() {
+                if (i >= stops.length) {
+                    // Trip complete — pause at lobby then start a new random trip
+                    /* WHY: 3.5s pause gives visual breathing room between trips */
+                    setTimeout(runTrip, 3500);
+                    return;
+                }
+                var stop = stops[i];
+                var curFloorY = currentY + READER_Y;
+                var dist = Math.abs(stop.y - curFloorY);
+                /* WHY: 5ms per pixel of distance gives natural elevator speed:
+                   ~400ms for 1 floor hop, ~3400ms for full lobby-to-F10 traverse */
+                var dur = Math.max(800, dist * 5);
+                var isTerminal = (stop.name === 'L' || stop.name === '10');
+                /* WHY: Terminal floors get longer pause (3s) since elevator doors
+                   stay open longer at endpoints. Mid-floor stops are 1.5-3s random. */
+                var pause = isTerminal ? 3000 : (1500 + Math.random() * 1500);
+
+                animateTo(stop, dur, function() {
+                    i++;
+                    setTimeout(next, pause);
+                });
+            }
+            next();
+        }
+
+        // Initialize display
+        if (floorNum) floorNum.textContent = 'L';
+        if (floorStat) floorStat.textContent = 'IDLE';
+
+        /* WHY: 2s delay lets the page render and user notice the static diagram
+           before the elevator starts moving */
+        setTimeout(runTrip, 2000);
+    })();
+</script>
+
+</body>
+</html>

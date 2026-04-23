@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Cart Platform — Universal Cart Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #0a0a0f;
+        --surface: #13131a;
+        --surface-2: #1c1c25;
+        --border: #26262f;
+        --border-bright: #3a3a48;
+        --text: #e8e8ef;
+        --text-dim: #7a7a88;
+        --text-faint: #50505c;
+        --accent: #00d4ff;
+        --green: #00e676;
+        --red: #ff5566;
+        --warn: #ffd166;
+        --purple: #b78bff;
+        --amber: #ffa94a;
+        --extrusion: #8ca0b4;
+        --steel: #6b7d8e;
+        --hdpe: #2a2a32;
+        --pad: #c0a870;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; font-size: 15px; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .tech { font-family: 'Space Grotesk', sans-serif; }
+
+    /* ---- Top bar ---- */
+    .topbar { position: sticky; top: 0; z-index: 50; background: rgba(10,10,15,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 12px 0; }
+    .topbar-inner { max-width: 1200px; margin: 0 auto; padding: 0 32px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .topbar-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; }
+    .topbar-title .accent { color: var(--accent); }
+    .topbar-nav { display: flex; gap: 18px; margin-left: auto; }
+    .topbar-nav a { font-size: 12px; color: var(--text-dim); letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; font-family: 'Space Grotesk', sans-serif; text-decoration: none; }
+    .topbar-nav a:hover { color: var(--accent); }
+
+    /* ---- Hero ---- */
+    .hero { border-bottom: 1px solid var(--border); padding: 48px 0 40px; background: linear-gradient(180deg, #13131a 0%, #0a0a0f 100%); }
+    .hero-inner { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+    .eyebrow { font-family: 'Space Grotesk', sans-serif; font-size: 11px; color: var(--accent); letter-spacing: 0.24em; text-transform: uppercase; font-weight: 700; }
+    h1 { font-size: 44px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin: 12px 0 0; }
+    .hero-sub { margin-top: 14px; font-size: 16px; color: var(--text-dim); max-width: 680px; line-height: 1.6; }
+
+    /* ---- Layout ---- */
+    main { max-width: 1200px; margin: 0 auto; padding: 48px 32px 100px; }
+    section { margin-bottom: 56px; }
+    h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 20px; }
+    h3 { font-size: 18px; font-weight: 700; margin: 24px 0 10px; }
+    p { margin: 8px 0; }
+    p.dim { color: var(--text-dim); font-size: 14px; }
+
+    /* ---- Cart selector ---- */
+    .cart-tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+    .cart-tab {
+        font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600;
+        letter-spacing: 0.06em; text-transform: uppercase;
+        padding: 10px 20px; border-radius: 8px; cursor: pointer;
+        border: 1px solid var(--border); background: var(--surface);
+        color: var(--text-dim); transition: all 0.25s;
+    }
+    .cart-tab:hover { border-color: var(--border-bright); color: var(--text); }
+    .cart-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.06); }
+    .cart-tab .emoji { font-size: 16px; margin-right: 6px; }
+
+    /* ---- Model viewport ---- */
+    .viewport {
+        background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+        padding: 40px; display: flex; justify-content: center; align-items: center;
+        min-height: 520px; position: relative; overflow: hidden;
+    }
+    .viewport::before {
+        content: ''; position: absolute; inset: 0;
+        background: radial-gradient(ellipse at center 60%, rgba(0,212,255,0.03) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    /* ---- Isometric cart SVG ---- */
+    .cart-model { width: 100%; max-width: 600px; height: auto; }
+
+    /* ---- Labels ---- */
+    .label-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; justify-content: center; }
+    .label-chip {
+        font-family: 'JetBrains Mono', monospace; font-size: 11px;
+        padding: 5px 10px; border-radius: 6px;
+        border: 1px solid var(--border); background: var(--surface);
+    }
+    .label-chip .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+
+    /* ---- Spec grid ---- */
+    .spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 20px; }
+    .spec-card {
+        background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+        padding: 16px 18px;
+    }
+    .spec-card .lbl { font-family: 'Space Grotesk', sans-serif; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+    .spec-card .val { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: var(--text); margin-top: 4px; }
+    .spec-card .val .unit { font-size: 13px; color: var(--text-dim); font-weight: 400; }
+    .spec-card .val.accent { color: var(--accent); }
+    .spec-card .val.green { color: var(--green); }
+
+    /* ---- Cross-section ---- */
+    .cross-section-wrap {
+        background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+        padding: 40px; margin-top: 24px;
+    }
+    .cross-section { width: 100%; max-width: 700px; margin: 0 auto; display: block; }
+
+    /* ---- BOM table ---- */
+    .bom { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 13px; }
+    .bom th, .bom td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+    .bom thead th { background: var(--surface-2); font-family: 'Space Grotesk', sans-serif; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+    .bom tbody tr:last-child td { border-bottom: none; }
+    .bom .qty { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-weight: 600; text-align: center; }
+    .bom .cost { font-family: 'JetBrains Mono', monospace; color: var(--green); text-align: right; }
+    .bom .total-row td { border-top: 2px solid var(--accent); font-weight: 700; font-size: 14px; }
+
+    /* ---- Drive-under animation ---- */
+    .anim-wrap {
+        background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+        padding: 32px 40px; position: relative; overflow: hidden;
+    }
+    .anim-viewport { width: 100%; max-width: 700px; margin: 0 auto; }
+    .anim-controls { text-align: center; margin-top: 16px; }
+    .anim-btn {
+        font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600;
+        padding: 10px 28px; border-radius: 8px; cursor: pointer;
+        background: var(--accent); color: var(--bg); border: none;
+        letter-spacing: 0.04em; text-transform: uppercase;
+        transition: opacity 0.2s;
+    }
+    .anim-btn:hover { opacity: 0.85; }
+
+    /* ---- Compatibility matrix ---- */
+    .compat { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 14px; }
+    .compat th, .compat td { padding: 12px 16px; text-align: center; border-bottom: 1px solid var(--border); }
+    .compat thead th { background: var(--surface-2); font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+    .compat tbody tr:last-child td { border-bottom: none; }
+    .compat .robot-name { text-align: left; font-weight: 600; }
+    .compat .yes { color: var(--green); font-weight: 700; }
+    .compat .no { color: var(--red); font-weight: 700; }
+    .compat .maybe { color: var(--warn); font-weight: 700; }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 640px) {
+        h1 { font-size: 28px; }
+        .viewport { padding: 20px; min-height: 300px; }
+        main { padding: 32px 16px 60px; }
+    }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+    <div class="topbar-inner">
+        <div class="topbar-title"><span class="accent">Accelerate</span> Cart Platform</div>
+        <nav class="topbar-nav">
+            <a href="engineering-package.html">Engineering Pkg</a>
+            <a href="standard.html">Dock Standard</a>
+            <a href="cart-catalog.html">Cart Catalog</a>
+            <a href="robots-dossier.html">Robots</a>
+        </nav>
+    </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-inner">
+        <div class="eyebrow">T-Slot Aluminum Build Reference</div>
+        <h1>Universal Cart Model</h1>
+        <p class="hero-sub">Interactive model of the Dock Standard v1 universal cart platform. Built from E40-series t-slot aluminum extrusion. One dock plate, three cart families, three robots.</p>
+    </div>
+</div>
+
+<main>
+
+<!-- CART SELECTOR + MODEL -->
+<section>
+    <h2>Select Cart Type</h2>
+    <div class="cart-tabs">
+        <div class="cart-tab active" data-cart="food" onclick="selectCart('food')"><span class="emoji">&#127869;</span> C1 Food Cart</div>
+        <div class="cart-tab" data-cart="linen" onclick="selectCart('linen')"><span class="emoji">&#128092;</span> L1 Linen Cart</div>
+        <div class="cart-tab" data-cart="housekeeping" onclick="selectCart('housekeeping')"><span class="emoji">&#128230;</span> H1 Housekeeping</div>
+    </div>
+
+    <div class="viewport" id="modelViewport">
+        <!-- Isometric cart SVG rendered here by JS -->
+    </div>
+
+    <div class="label-row">
+        <div class="label-chip"><span class="swatch" style="background: var(--extrusion)"></span> E40 Extrusion</div>
+        <div class="label-chip"><span class="swatch" style="background: var(--hdpe)"></span> HDPE Shelf</div>
+        <div class="label-chip"><span class="swatch" style="background: var(--pad)"></span> Lift Pads</div>
+        <div class="label-chip"><span class="swatch" style="background: var(--steel)"></span> Steel Caster Plate</div>
+        <div class="label-chip"><span class="swatch" style="background: var(--accent)"></span> AprilTag</div>
+    </div>
+</section>
+
+<!-- SPEC CARDS -->
+<section id="specs">
+    <h2>Specifications</h2>
+    <div class="spec-grid" id="specGrid">
+        <!-- Populated by JS -->
+    </div>
+</section>
+
+<!-- CROSS-SECTION -->
+<section id="cross-section">
+    <h2>Side Cross-Section &mdash; Clearance Diagram</h2>
+    <p class="dim">Shows the 260 mm minimum clearance under the dock plate, the riser legs, castor mounting, and how the robot drives under.</p>
+    <div class="cross-section-wrap">
+        <svg class="cross-section" viewBox="0 0 700 380" xmlns="http://www.w3.org/2000/svg">
+            <!-- Floor -->
+            <rect x="0" y="340" width="700" height="40" fill="#1a1a22" rx="0"/>
+            <line x1="0" y1="340" x2="700" y2="340" stroke="#3a3a48" stroke-width="1.5"/>
+            <text x="350" y="365" text-anchor="middle" fill="#50505c" font-size="11" font-family="Space Grotesk, sans-serif" font-weight="600" letter-spacing="0.1em">FLOOR</text>
+
+            <!-- Left castor -->
+            <circle cx="140" cy="330" r="18" fill="none" stroke="#6b7d8e" stroke-width="2"/>
+            <circle cx="140" cy="330" r="8" fill="#3a3a48"/>
+            <rect x="122" y="300" width="36" height="12" rx="3" fill="#6b7d8e"/>
+            <text x="140" y="308" text-anchor="middle" fill="#0a0a0f" font-size="7" font-weight="700" font-family="JetBrains Mono, monospace">PLATE</text>
+
+            <!-- Left riser leg -->
+            <rect x="133" y="180" width="14" height="120" rx="2" fill="#8ca0b4"/>
+            <text x="115" y="245" text-anchor="end" fill="#7a7a88" font-size="10" font-family="JetBrains Mono, monospace">120mm</text>
+            <!-- dimension line left -->
+            <line x1="120" y1="180" x2="120" y2="300" stroke="#50505c" stroke-width="0.8"/>
+            <line x1="116" y1="180" x2="124" y2="180" stroke="#50505c" stroke-width="0.8"/>
+            <line x1="116" y1="300" x2="124" y2="300" stroke="#50505c" stroke-width="0.8"/>
+
+            <!-- Right castor -->
+            <circle cx="560" cy="330" r="18" fill="none" stroke="#6b7d8e" stroke-width="2"/>
+            <circle cx="560" cy="330" r="8" fill="#3a3a48"/>
+            <rect x="542" y="300" width="36" height="12" rx="3" fill="#6b7d8e"/>
+
+            <!-- Right riser leg -->
+            <rect x="553" y="180" width="14" height="120" rx="2" fill="#8ca0b4"/>
+
+            <!-- DOCK PLATE (main frame) -->
+            <rect x="100" y="165" width="500" height="18" rx="3" fill="#8ca0b4" stroke="#a0b4c8" stroke-width="0.5"/>
+            <text x="350" y="177" text-anchor="middle" fill="#0a0a0f" font-size="9" font-weight="700" font-family="Space Grotesk, sans-serif" letter-spacing="0.1em">DOCK PLATE &mdash; E40 FRAME</text>
+
+            <!-- Lift pads (hanging down) -->
+            <rect x="190" y="183" width="20" height="8" rx="1" fill="#c0a870"/>
+            <rect x="490" y="183" width="20" height="8" rx="1" fill="#c0a870"/>
+            <text x="200" y="202" text-anchor="middle" fill="#c0a870" font-size="8" font-family="JetBrains Mono, monospace">PAD</text>
+            <text x="500" y="202" text-anchor="middle" fill="#c0a870" font-size="8" font-family="JetBrains Mono, monospace">PAD</text>
+
+            <!-- AprilTag -->
+            <rect x="280" y="183" width="16" height="16" rx="1" fill="#fff" stroke="#00d4ff" stroke-width="1.5"/>
+            <rect x="283" y="186" width="4" height="4" fill="#000"/>
+            <rect x="289" y="186" width="4" height="4" fill="#000"/>
+            <rect x="283" y="192" width="4" height="4" fill="#000"/>
+            <text x="288" y="212" text-anchor="middle" fill="#00d4ff" font-size="8" font-family="JetBrains Mono, monospace">APRILTAG</text>
+
+            <!-- Upper structure (cart body) -->
+            <rect x="130" y="60" width="14" height="105" rx="2" fill="#8ca0b4" opacity="0.6"/>
+            <rect x="556" y="60" width="14" height="105" rx="2" fill="#8ca0b4" opacity="0.6"/>
+            <!-- Shelves -->
+            <rect x="130" y="115" width="440" height="8" rx="2" fill="#2a2a32" opacity="0.8"/>
+            <text x="350" y="122" text-anchor="middle" fill="#50505c" font-size="7" font-family="Space Grotesk, sans-serif">HDPE SHELF</text>
+            <rect x="130" y="55" width="440" height="8" rx="2" fill="#2a2a32" opacity="0.8"/>
+            <text x="350" y="62" text-anchor="middle" fill="#50505c" font-size="7" font-family="Space Grotesk, sans-serif">TOP SHELF / TRIM KIT</text>
+
+            <!-- 260mm clearance dimension -->
+            <line x1="620" y1="183" x2="620" y2="340" stroke="#00d4ff" stroke-width="1" stroke-dasharray="4 3"/>
+            <line x1="614" y1="183" x2="626" y2="183" stroke="#00d4ff" stroke-width="1"/>
+            <line x1="614" y1="340" x2="626" y2="340" stroke="#00d4ff" stroke-width="1"/>
+            <text x="640" y="265" text-anchor="start" fill="#00d4ff" font-size="11" font-weight="700" font-family="JetBrains Mono, monospace" transform="rotate(-90 640 265)">260mm MIN</text>
+
+            <!-- Robot silhouette (centered under cart) -->
+            <g opacity="0.35">
+                <rect x="240" y="270" width="220" height="60" rx="12" fill="#22d3ee"/>
+                <rect x="250" y="260" width="200" height="12" rx="4" fill="#8ca0b4"/>
+                <circle cx="280" cy="335" r="10" fill="#374151"/>
+                <circle cx="420" cy="335" r="10" fill="#374151"/>
+                <text x="350" y="306" text-anchor="middle" fill="#0a0a0f" font-size="11" font-weight="700" font-family="Space Grotesk, sans-serif">ROBOT (S300)</text>
+            </g>
+
+            <!-- Total height callout -->
+            <line x1="80" y1="55" x2="80" y2="340" stroke="#ffd166" stroke-width="0.8" stroke-dasharray="3 3"/>
+            <line x1="74" y1="55" x2="86" y2="55" stroke="#ffd166" stroke-width="0.8"/>
+            <line x1="74" y1="340" x2="86" y2="340" stroke="#ffd166" stroke-width="0.8"/>
+            <text x="70" y="200" text-anchor="end" fill="#ffd166" font-size="10" font-weight="600" font-family="JetBrains Mono, monospace" id="totalHeightLabel">900mm</text>
+        </svg>
+    </div>
+</section>
+
+<!-- DRIVE-UNDER ANIMATION -->
+<section id="animation">
+    <h2>Drive-Under Sequence</h2>
+    <p class="dim">Watch the robot approach, align with the AprilTag, drive under the dock plate, engage the lift pads, and transport the cart.</p>
+    <div class="anim-wrap">
+        <svg class="anim-viewport" viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+            <!-- Floor -->
+            <rect x="0" y="220" width="700" height="40" fill="#1a1a22"/>
+            <line x1="0" y1="220" x2="700" y2="220" stroke="#3a3a48" stroke-width="1"/>
+
+            <!-- Cart (stationary) -->
+            <g id="animCart">
+                <!-- Castors -->
+                <circle cx="340" cy="212" r="10" fill="none" stroke="#6b7d8e" stroke-width="1.5"/>
+                <circle cx="500" cy="212" r="10" fill="none" stroke="#6b7d8e" stroke-width="1.5"/>
+                <!-- Riser legs -->
+                <rect x="334" y="130" width="10" height="72" rx="2" fill="#8ca0b4"/>
+                <rect x="496" y="130" width="10" height="72" rx="2" fill="#8ca0b4"/>
+                <!-- Dock plate -->
+                <rect x="310" y="120" width="220" height="12" rx="2" fill="#8ca0b4" stroke="#a0b4c8" stroke-width="0.5"/>
+                <!-- Lift pads -->
+                <rect x="345" y="132" width="12" height="5" rx="1" fill="#c0a870"/>
+                <rect x="483" y="132" width="12" height="5" rx="1" fill="#c0a870"/>
+                <!-- AprilTag -->
+                <rect x="395" y="132" width="10" height="10" fill="#fff" stroke="#00d4ff" stroke-width="1"/>
+                <rect x="397" y="134" width="3" height="3" fill="#000"/>
+                <rect x="400" y="137" width="3" height="3" fill="#000"/>
+                <!-- Upper structure -->
+                <rect x="330" y="40" width="10" height="80" rx="2" fill="#8ca0b4" opacity="0.5"/>
+                <rect x="500" y="40" width="10" height="80" rx="2" fill="#8ca0b4" opacity="0.5"/>
+                <rect x="330" y="36" width="180" height="8" rx="2" fill="#2a2a32" opacity="0.6"/>
+                <rect x="330" y="78" width="180" height="6" rx="2" fill="#2a2a32" opacity="0.5"/>
+            </g>
+
+            <!-- Robot (animated) -->
+            <g id="animRobot">
+                <rect x="0" y="162" width="120" height="48" rx="10" fill="#22d3ee" opacity="0.9"/>
+                <rect x="10" y="154" width="100" height="10" rx="3" fill="#8ca0b4"/>
+                <circle cx="30" cy="215" r="8" fill="#374151"/>
+                <circle cx="90" cy="215" r="8" fill="#374151"/>
+                <!-- Eye (camera) -->
+                <circle cx="115" cy="180" r="4" fill="#00e676"/>
+                <text x="60" y="192" text-anchor="middle" fill="#0a0a0f" font-size="9" font-weight="700" font-family="Space Grotesk, sans-serif">S100</text>
+            </g>
+
+            <!-- Phase label -->
+            <text id="animLabel" x="350" y="18" text-anchor="middle" fill="#7a7a88" font-size="12" font-weight="600" font-family="Space Grotesk, sans-serif" letter-spacing="0.1em">PRESS PLAY TO START</text>
+
+            <!-- AprilTag detection beam -->
+            <line id="animBeam" x1="0" y1="0" x2="0" y2="0" stroke="#00e676" stroke-width="1.5" stroke-dasharray="4 3" opacity="0"/>
+        </svg>
+        <div class="anim-controls">
+            <button class="anim-btn" id="playBtn" onclick="playAnimation()">&#9654; Play Sequence</button>
+        </div>
+    </div>
+</section>
+
+<!-- COMPATIBILITY MATRIX -->
+<section id="compatibility">
+    <h2>Robot Compatibility Matrix</h2>
+    <table class="compat">
+        <thead>
+            <tr>
+                <th style="text-align:left">Robot</th>
+                <th>Base (L&times;W)</th>
+                <th>Height</th>
+                <th>Payload</th>
+                <th>C1 Food<br><span style="font-size:9px;color:var(--text-faint)">100 kg</span></th>
+                <th>L1 Linen<br><span style="font-size:9px;color:var(--text-faint)">300 kg</span></th>
+                <th>H1 Caddy<br><span style="font-size:9px;color:var(--text-faint)">110 kg</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="robot-name">Keenon S100</td>
+                <td class="mono" style="font-size:12px">550&times;700 mm</td>
+                <td class="mono" style="font-size:12px">200 mm</td>
+                <td class="mono" style="font-size:12px">100 kg</td>
+                <td class="yes">&#10003;</td>
+                <td class="no">&#10007; over limit</td>
+                <td class="maybe">~ borderline</td>
+            </tr>
+            <tr>
+                <td class="robot-name">Keenon S300</td>
+                <td class="mono" style="font-size:12px">700&times;900 mm</td>
+                <td class="mono" style="font-size:12px">240 mm</td>
+                <td class="mono" style="font-size:12px">300 kg</td>
+                <td class="yes">&#10003;</td>
+                <td class="yes">&#10003;</td>
+                <td class="yes">&#10003;</td>
+            </tr>
+            <tr>
+                <td class="robot-name">Pudu T300</td>
+                <td class="mono" style="font-size:12px">835&times;500 mm</td>
+                <td class="mono" style="font-size:12px">~200 mm</td>
+                <td class="mono" style="font-size:12px">300 kg</td>
+                <td class="yes">&#10003;</td>
+                <td class="yes">&#10003;</td>
+                <td class="yes">&#10003;</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- BOM -->
+<section id="bom">
+    <h2>Bill of Materials &mdash; <span id="bomCartName">C1 Food Cart</span></h2>
+    <table class="bom" id="bomTable">
+        <!-- Populated by JS -->
+    </table>
+</section>
+
+</main>
+
+<script>
+/* ── Cart data ───────────────────────────────────────────────── */
+const CARTS = {
+    food: {
+        name: 'C1 Food Cart',
+        emoji: '&#127869;',
+        dims: { w: 600, l: 1100, h: 900 },
+        dock: { w: 550, l: 900 },
+        payload: 60, tare: 40, gross: 100,
+        castorSize: '100 mm (4")',
+        shelves: 2,
+        desc: 'In-residence dining. Quartered oak shelves, insulated cavity for plate service.',
+        color: '#c0a870',
+        bom: [
+            { qty: 2, part: 'E40-4040 @ 900 mm', desc: 'Dock plate long rails', cost: 18 },
+            { qty: 3, part: 'E40-4040 @ 550 mm', desc: 'Dock plate cross members', cost: 11 },
+            { qty: 4, part: 'E40-4040 @ 120 mm', desc: 'Riser legs (corner verticals)', cost: 5 },
+            { qty: 4, part: 'E40-4040 @ 550 mm', desc: 'Upper frame uprights', cost: 11 },
+            { qty: 4, part: 'E40-4040 @ 1100 mm', desc: 'Shelf rails (front-to-back)', cost: 22 },
+            { qty: 4, part: 'E40-4040 @ 550 mm', desc: 'Shelf cross braces', cost: 11 },
+            { qty: 24, part: 'M8 corner bracket', desc: '40-series right-angle brackets', cost: 3 },
+            { qty: 48, part: 'M8 T-nut + bolt', desc: 'Anchor fasteners', cost: 1 },
+            { qty: 4, part: '30x30 mm steel pad', desc: 'Lift pads, hardened, M8-tapped', cost: 8 },
+            { qty: 1, part: 'AprilTag plate', desc: '80x80 mm tag on aluminum plate', cost: 5 },
+            { qty: 4, part: '100 mm caster plate', desc: 'Steel mounting plates, pre-drilled', cost: 12 },
+            { qty: 4, part: '100 mm swivel castor', desc: 'Precision rubber-tired', cost: 18 },
+            { qty: 2, part: '550x1100 mm HDPE panel', desc: 'Food-safe black shelf surfaces', cost: 20 },
+            { qty: 1, part: 'BLE asset tag', desc: 'Stick-on coin-cell beacon', cost: 15 },
+        ]
+    },
+    linen: {
+        name: 'L1 Linen Cart',
+        emoji: '&#128092;',
+        dims: { w: 700, l: 1000, h: 1100 },
+        dock: { w: 550, l: 900 },
+        payload: 250, tare: 50, gross: 300,
+        castorSize: '125 mm (5")',
+        shelves: 0,
+        desc: 'Heavy transport. Collapsible vinyl hamper, waterproof drain liner, 250 kg payload.',
+        color: '#6b9dff',
+        bom: [
+            { qty: 2, part: 'E40-4040 @ 900 mm', desc: 'Dock plate long rails', cost: 18 },
+            { qty: 3, part: 'E40-4040 @ 550 mm', desc: 'Dock plate cross members', cost: 11 },
+            { qty: 4, part: 'E40-4040 @ 120 mm', desc: 'Riser legs', cost: 5 },
+            { qty: 4, part: 'E40-4040 @ 800 mm', desc: 'Upper frame uprights', cost: 16 },
+            { qty: 6, part: 'E40-4040 @ 700 mm', desc: 'Cross rails', cost: 14 },
+            { qty: 4, part: 'E40-4040 @ 1000 mm', desc: 'Longitudinal rails', cost: 20 },
+            { qty: 4, part: 'E40-4040 gusset bracket', desc: 'Heavy-load diagonal bracing', cost: 8 },
+            { qty: 28, part: 'M8 corner bracket', desc: '40-series right-angle brackets', cost: 3 },
+            { qty: 56, part: 'M8 T-nut + bolt', desc: 'Anchor fasteners', cost: 1 },
+            { qty: 4, part: '30x30 mm steel pad', desc: 'Lift pads, hardened, reinforced', cost: 10 },
+            { qty: 1, part: 'AprilTag plate', desc: '80x80 mm tag on aluminum plate', cost: 5 },
+            { qty: 4, part: '125 mm caster plate', desc: 'Heavy-duty steel plates', cost: 15 },
+            { qty: 4, part: '125 mm HD castor', desc: 'Polyurethane, dual-locking', cost: 38 },
+            { qty: 1, part: 'Vinyl hamper assembly', desc: 'Collapsible frame + bag + drain liner', cost: 65 },
+            { qty: 1, part: 'BLE asset tag', desc: 'Stick-on coin-cell beacon', cost: 15 },
+        ]
+    },
+    housekeeping: {
+        name: 'H1 Housekeeping Caddy',
+        emoji: '&#128230;',
+        dims: { w: 550, l: 800, h: 950 },
+        dock: { w: 550, l: 800 },
+        payload: 80, tare: 30, gross: 110,
+        castorSize: '100 mm (4")',
+        shelves: 3,
+        desc: 'Open shelving, supply bins, soft-sided trash sleeve. Light and maneuverable.',
+        color: '#b78bff',
+        bom: [
+            { qty: 2, part: 'E40-4040 @ 800 mm', desc: 'Dock plate long rails', cost: 16 },
+            { qty: 3, part: 'E40-4040 @ 550 mm', desc: 'Dock plate cross members', cost: 11 },
+            { qty: 4, part: 'E40-4040 @ 120 mm', desc: 'Riser legs', cost: 5 },
+            { qty: 4, part: 'E40-4040 @ 650 mm', desc: 'Upper frame uprights', cost: 13 },
+            { qty: 6, part: 'E40-4040 @ 550 mm', desc: 'Shelf rails', cost: 11 },
+            { qty: 4, part: 'E40-4040 @ 800 mm', desc: 'Longitudinal rails', cost: 16 },
+            { qty: 20, part: 'M8 corner bracket', desc: '40-series right-angle brackets', cost: 3 },
+            { qty: 40, part: 'M8 T-nut + bolt', desc: 'Anchor fasteners', cost: 1 },
+            { qty: 4, part: '30x30 mm steel pad', desc: 'Lift pads, hardened', cost: 8 },
+            { qty: 1, part: 'AprilTag plate', desc: '80x80 mm tag on aluminum plate', cost: 5 },
+            { qty: 4, part: '100 mm caster plate', desc: 'Steel mounting plates', cost: 12 },
+            { qty: 4, part: '100 mm swivel castor', desc: 'Rubber-tired', cost: 15 },
+            { qty: 3, part: '550x800 mm HDPE panel', desc: 'Open shelf surfaces', cost: 18 },
+            { qty: 6, part: 'Organizer bin (small)', desc: 'Drop-in supply bins', cost: 6 },
+            { qty: 1, part: 'Nylon trash sleeve', desc: 'Spring-loaded frame + bag', cost: 22 },
+            { qty: 1, part: 'BLE asset tag', desc: 'Stick-on coin-cell beacon', cost: 15 },
+        ]
+    }
+};
+
+let currentCart = 'food';
+
+/* ── Isometric cart SVG generator ──────────────────────────── */
+function renderCartSVG(type) {
+    const c = CARTS[type];
+    /* WHY: Isometric projection uses 30-degree angles. We scale
+       real mm to SVG units at ~0.35px/mm so carts fit in viewport. */
+    const s = 0.35;
+    const W = c.dims.w * s;
+    const L = c.dims.l * s;
+    const H = c.dims.h * s;
+    const ox = 300, oy = 340; /* origin: front-bottom-left corner */
+    const cos30 = 0.866, sin30 = 0.5;
+
+    /* Isometric transform helpers */
+    function iso(x, y, z) {
+        return {
+            x: ox + (x - y) * cos30,
+            y: oy - z - (x + y) * sin30
+        };
+    }
+    function face(pts, fill, opacity = 1, stroke = 'none') {
+        const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ' Z';
+        return `<path d="${d}" fill="${fill}" opacity="${opacity}" stroke="${stroke}" stroke-width="${stroke === 'none' ? 0 : 0.8}"/>`;
+    }
+
+    const eCol = '#8ca0b4';
+    const eLight = '#a4bcd0';
+    const eDark = '#6b8a9e';
+    const hdpeCol = '#3a3a48';
+    const padCol = '#c0a870';
+    const tagCol = '#00d4ff';
+
+    /* Extrusion bar (3D rectangle between two isometric points) */
+    const BAR_W = 14; /* visual thickness in SVG units — 40mm scaled */
+    function bar(x1, y1, z1, x2, y2, z2) {
+        /* Draw as a simple colored line for clarity at this scale */
+        const a = iso(x1, y1, z1);
+        const b = iso(x2, y2, z2);
+        return `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke="${eCol}" stroke-width="5" stroke-linecap="round"/>`;
+    }
+
+    /* Shelf (filled parallelogram) */
+    function shelf(y1, y2, z, w, l) {
+        const pts = [iso(0, 0, z), iso(w, 0, z), iso(w, l, z), iso(0, l, z)];
+        return face(pts, hdpeCol, 0.85, '#50505c');
+    }
+
+    let svg = '';
+
+    /* ── Dock plate frame ── */
+    const dz = 95; /* dock plate Z position (clearance 260mm * 0.35 ≈ 91, round up) */
+    const dw = c.dock.w * s;
+    const dl = c.dock.l * s;
+    const dox = (W - dw) / 2; /* center dock within cart width */
+    const doy = (L - dl) / 2;
+
+    /* Dock plate rails (2 long + 3 cross) */
+    svg += bar(dox, doy, dz, dox, doy + dl, dz);
+    svg += bar(dox + dw, doy, dz, dox + dw, doy + dl, dz);
+    svg += bar(dox, doy, dz, dox + dw, doy, dz);
+    svg += bar(dox, doy + dl / 2, dz, dox + dw, doy + dl / 2, dz);
+    svg += bar(dox, doy + dl, dz, dox + dw, doy + dl, dz);
+
+    /* Dock plate surface (translucent) */
+    const dpPts = [iso(dox, doy, dz + 2), iso(dox + dw, doy, dz + 2), iso(dox + dw, doy + dl, dz + 2), iso(dox, doy + dl, dz + 2)];
+    svg += face(dpPts, '#8ca0b4', 0.15);
+
+    /* ── Riser legs (4 corners) ── */
+    const rh = 42; /* 120mm * 0.35 */
+    svg += bar(dox, doy, 10, dox, doy, dz);
+    svg += bar(dox + dw, doy, 10, dox + dw, doy, dz);
+    svg += bar(dox, doy + dl, 10, dox, doy + dl, dz);
+    svg += bar(dox + dw, doy + dl, 10, dox + dw, doy + dl, dz);
+
+    /* ── Castors (circles at leg bottoms) ── */
+    function castor(x, y) {
+        const p = iso(x, y, 6);
+        return `<ellipse cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" rx="8" ry="5" fill="#4a4a58" stroke="#6b7d8e" stroke-width="1"/>`;
+    }
+    svg += castor(dox, doy);
+    svg += castor(dox + dw, doy);
+    svg += castor(dox, doy + dl);
+    svg += castor(dox + dw, doy + dl);
+
+    /* ── Lift pads (4 golden squares on dock underside) ── */
+    const padSpacingW = 750 * s / 2;
+    const padSpacingL = 400 * s / 2;
+    const pcx = dox + dw / 2;
+    const pcy = doy + dl / 2;
+    function liftPad(x, y) {
+        const p = iso(x, y, dz - 2);
+        return `<rect x="${(p.x - 4).toFixed(1)}" y="${(p.y - 2).toFixed(1)}" width="8" height="5" rx="1" fill="${padCol}" stroke="#a08850" stroke-width="0.5"/>`;
+    }
+    svg += liftPad(pcx - padSpacingW, pcy - padSpacingL);
+    svg += liftPad(pcx + padSpacingW, pcy - padSpacingL);
+    svg += liftPad(pcx - padSpacingW, pcy + padSpacingL);
+    svg += liftPad(pcx + padSpacingW, pcy + padSpacingL);
+
+    /* ── AprilTag ── */
+    const tagP = iso(pcx, pcy - padSpacingL + 15, dz - 2);
+    svg += `<rect x="${(tagP.x - 5).toFixed(1)}" y="${(tagP.y - 3).toFixed(1)}" width="10" height="7" rx="1" fill="#fff" stroke="${tagCol}" stroke-width="1"/>`;
+    svg += `<rect x="${(tagP.x - 3).toFixed(1)}" y="${(tagP.y - 1).toFixed(1)}" width="3" height="2" fill="#000"/>`;
+    svg += `<rect x="${(tagP.x + 1).toFixed(1)}" y="${(tagP.y - 1).toFixed(1)}" width="3" height="2" fill="#000"/>`;
+
+    /* ── Upper structure ── */
+    const uz = dz + 3;
+    /* 4 corner uprights */
+    svg += bar(0, 0, uz, 0, 0, H);
+    svg += bar(W, 0, uz, W, 0, H);
+    svg += bar(0, L, uz, 0, L, H);
+    svg += bar(W, L, uz, W, L, H);
+
+    /* Shelves */
+    if (type === 'food') {
+        svg += shelf(0, 0, uz + (H - uz) * 0.45, W, L);
+        svg += shelf(0, 0, H - 3, W, L);
+    } else if (type === 'linen') {
+        /* Hamper: translucent fill instead of shelves */
+        const hamperPts = [iso(4, 4, uz + 10), iso(W - 4, 4, uz + 10), iso(W - 4, L - 4, uz + 10), iso(4, L - 4, uz + 10)];
+        svg += face(hamperPts, '#6b9dff', 0.12, '#6b9dff');
+        const hamperTopPts = [iso(0, 0, H), iso(W, 0, H), iso(W, L, H), iso(0, L, H)];
+        svg += face(hamperTopPts, '#6b9dff', 0.08, '#6b9dff');
+        /* Rim */
+        svg += bar(0, 0, H, W, 0, H);
+        svg += bar(0, L, H, W, L, H);
+        svg += bar(0, 0, H, 0, L, H);
+        svg += bar(W, 0, H, W, L, H);
+    } else {
+        /* 3 shelves for housekeeping */
+        svg += shelf(0, 0, uz + (H - uz) * 0.28, W, L);
+        svg += shelf(0, 0, uz + (H - uz) * 0.56, W, L);
+        svg += shelf(0, 0, H - 3, W, L);
+    }
+
+    /* Top rails */
+    svg += bar(0, 0, H, W, 0, H);
+    svg += bar(0, L, H, W, L, H);
+
+    /* ── Dimension callouts ── */
+    /* Width */
+    const wStart = iso(-15, 0, 0);
+    const wEnd = iso(-15 + W + 30, 0, 0);
+    svg += `<text x="${((wStart.x + wEnd.x) / 2).toFixed(1)}" y="${(oy + 20).toFixed(1)}" text-anchor="middle" fill="#7a7a88" font-size="11" font-weight="600" font-family="JetBrains Mono, monospace">${c.dims.w}mm W</text>`;
+
+    /* Height callout */
+    const hP = iso(-10, 0, H);
+    svg += `<text x="${(hP.x - 10).toFixed(1)}" y="${(hP.y + 5).toFixed(1)}" text-anchor="end" fill="#ffd166" font-size="11" font-weight="600" font-family="JetBrains Mono, monospace">${c.dims.h}mm H</text>`;
+
+    /* Length */
+    const lP = iso(W + 10, L, 0);
+    svg += `<text x="${(lP.x + 5).toFixed(1)}" y="${(lP.y + 5).toFixed(1)}" text-anchor="start" fill="#7a7a88" font-size="11" font-weight="600" font-family="JetBrains Mono, monospace">${c.dims.l}mm L</text>`;
+
+    /* Cart name */
+    svg += `<text x="300" y="25" text-anchor="middle" fill="${c.color}" font-size="16" font-weight="700" font-family="Space Grotesk, sans-serif" letter-spacing="0.06em">${c.name.toUpperCase()}</text>`;
+    svg += `<text x="300" y="42" text-anchor="middle" fill="#7a7a88" font-size="11" font-family="Inter, sans-serif">${c.desc}</text>`;
+
+    return `<svg class="cart-model" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">${svg}</svg>`;
+}
+
+/* ── Spec cards ─────────────────────────────────────────────── */
+function renderSpecs(type) {
+    const c = CARTS[type];
+    return `
+        <div class="spec-card"><div class="lbl">Overall Dimensions</div><div class="val">${c.dims.w} <span class="unit">&times;</span> ${c.dims.l} <span class="unit">&times;</span> ${c.dims.h} <span class="unit">mm</span></div></div>
+        <div class="spec-card"><div class="lbl">Dock Zone</div><div class="val accent">${c.dock.w} <span class="unit">&times;</span> ${c.dock.l} <span class="unit">mm</span></div></div>
+        <div class="spec-card"><div class="lbl">Payload</div><div class="val">${c.payload} <span class="unit">kg</span></div></div>
+        <div class="spec-card"><div class="lbl">Cart Tare</div><div class="val">${c.tare} <span class="unit">kg</span></div></div>
+        <div class="spec-card"><div class="lbl">Gross Weight</div><div class="val green">${c.gross} <span class="unit">kg</span></div></div>
+        <div class="spec-card"><div class="lbl">Castors</div><div class="val">${c.castorSize}</div></div>
+        <div class="spec-card"><div class="lbl">Clearance</div><div class="val accent">285 <span class="unit">mm</span></div></div>
+        <div class="spec-card"><div class="lbl">Lift Pads</div><div class="val">4 <span class="unit">&times; 30&times;30 mm</span></div></div>
+    `;
+}
+
+/* ── BOM table ──────────────────────────────────────────────── */
+function renderBOM(type) {
+    const c = CARTS[type];
+    let total = 0;
+    let rows = `<thead><tr><th style="text-align:center">Qty</th><th>Part</th><th>Description</th><th style="text-align:right">Unit</th><th style="text-align:right">Line</th></tr></thead><tbody>`;
+    for (const item of c.bom) {
+        const line = item.qty * item.cost;
+        total += line;
+        rows += `<tr><td class="qty">${item.qty}</td><td>${item.part}</td><td style="color:var(--text-dim)">${item.desc}</td><td class="cost">$${item.cost}</td><td class="cost">$${line}</td></tr>`;
+    }
+    rows += `<tr class="total-row"><td></td><td colspan="3" style="text-align:right">Chassis Total</td><td class="cost" style="color:var(--accent);font-size:16px">$${total}</td></tr>`;
+    rows += `</tbody>`;
+    return rows;
+}
+
+/* ── Select cart ────────────────────────────────────────────── */
+function selectCart(type) {
+    currentCart = type;
+    document.querySelectorAll('.cart-tab').forEach(t => t.classList.toggle('active', t.dataset.cart === type));
+    document.getElementById('modelViewport').innerHTML = renderCartSVG(type);
+    document.getElementById('specGrid').innerHTML = renderSpecs(type);
+    document.getElementById('bomTable').innerHTML = renderBOM(type);
+    document.getElementById('bomCartName').textContent = CARTS[type].name;
+    document.getElementById('totalHeightLabel').textContent = CARTS[type].dims.h + 'mm';
+}
+
+/* ── Drive-under animation ──────────────────────────────────── */
+let animRunning = false;
+function playAnimation() {
+    if (animRunning) return;
+    animRunning = true;
+    const robot = document.getElementById('animRobot');
+    const label = document.getElementById('animLabel');
+    const beam = document.getElementById('animBeam');
+    const btn = document.getElementById('playBtn');
+    btn.textContent = 'Running...';
+    btn.style.opacity = '0.5';
+
+    /* Reset */
+    robot.setAttribute('transform', 'translate(0, 0)');
+    beam.setAttribute('opacity', '0');
+
+    const phases = [
+        { dx: 100, t: 800, label: 'APPROACHING &mdash; SCANNING FOR APRILTAG' },
+        { dx: 180, t: 600, label: 'APRILTAG DETECTED &mdash; COMPUTING POSE', beam: true },
+        { dx: 260, t: 700, label: 'ALIGNING &mdash; &pm;15mm / &pm;3&deg; TOLERANCE' },
+        { dx: 340, t: 900, label: 'DRIVING UNDER DOCK ZONE' },
+        { dx: 370, t: 500, label: 'ENGAGING LIFT PADS &mdash; 8mm RAISE', lift: true },
+        { dx: 370, t: 800, label: 'CART LIFTED &mdash; CASTORS CLEAR' },
+        { dx: 500, t: 1000, label: 'TRANSPORTING TO DESTINATION' },
+    ];
+
+    let step = 0;
+    function nextStep() {
+        if (step >= phases.length) {
+            label.innerHTML = 'SEQUENCE COMPLETE';
+            beam.setAttribute('opacity', '0');
+            animRunning = false;
+            btn.textContent = '\u25B6 Replay';
+            btn.style.opacity = '1';
+            setTimeout(() => {
+                robot.setAttribute('transform', 'translate(0, 0)');
+                label.innerHTML = 'PRESS PLAY TO START';
+            }, 2500);
+            return;
+        }
+        const p = phases[step];
+        label.innerHTML = p.label;
+        robot.style.transition = `transform ${p.t}ms ease-in-out`;
+        robot.style.transform = `translateX(${p.dx}px)`;
+        if (p.beam) {
+            beam.setAttribute('x1', (p.dx + 115).toString());
+            beam.setAttribute('y1', '180');
+            beam.setAttribute('x2', '400');
+            beam.setAttribute('y2', '140');
+            beam.setAttribute('opacity', '0.7');
+        } else {
+            beam.setAttribute('opacity', '0');
+        }
+        if (p.lift) {
+            document.getElementById('animCart').style.transition = 'transform 500ms ease-out';
+            document.getElementById('animCart').style.transform = 'translateY(-3px)';
+        }
+        step++;
+        setTimeout(nextStep, p.t + 200);
+    }
+
+    /* Reset cart position */
+    document.getElementById('animCart').style.transition = 'none';
+    document.getElementById('animCart').style.transform = 'translateY(0)';
+    setTimeout(nextStep, 300);
+}
+
+/* ── Init ──────────────────────────────────────────────────── */
+selectCart('food');
+</script>
+
+</body>
+</html>
