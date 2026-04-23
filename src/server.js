@@ -5,8 +5,9 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 
-// WHY: Import db first so schema + seed run before routes try to query
-require('./db/database');
+// WHY: Import db first so schema + seed run before routes try to query.
+// The libsql-based db module exports a `ready` promise that server.js awaits before listen().
+const db = require('./db/database');
 
 const authRoutes = require('./routes/auth');
 const inquiryRoutes = require('./routes/inquiries');
@@ -20,7 +21,6 @@ const assessmentPdfRoutes = require('./routes/assessment-pdf');
 const narrateRoutes = require('./routes/narrate');
 const marketRoutes = require('./routes/markets');
 const prospectRoutes = require('./routes/prospects');
-const { seedProspects } = require('./db/seed-prospects');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -166,8 +166,14 @@ app.get('/admin/deals/:id', (req, res) => {
 });
 
 // ── Start ───────────────────────────────────────────────────────
-// WHY: Seed prospect data on first boot — idempotent, skips if data exists
-seedProspects();
-app.listen(PORT, () => {
-  console.log(`[server] Accelerate Robotics running at http://localhost:${PORT}`);
-});
+// WHY: Await schema init + seeds before binding the port so routes never race against an unready DB.
+db.ready
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`[server] Accelerate Robotics running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('[server] Failed to initialize database:', err);
+    process.exit(1);
+  });

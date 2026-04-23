@@ -2,31 +2,31 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { createTestDb } = require('../helpers/setup');
+const { createTestDb, wrapAsLibsqlHelper } = require('../helpers/setup');
 
 describe('id-generator', () => {
   let db, cleanup;
 
   afterEach(() => { if (cleanup) cleanup(); });
 
-  it('generates OPP-001 for first deal', () => {
+  it('generates OPP-001 for first deal', async () => {
     ({ db, cleanup } = createTestDb());
     const { generateDealId } = require('../../src/services/id-generator');
-    expect(generateDealId(db)).toBe('OPP-001');
+    expect(await generateDealId(wrapAsLibsqlHelper(db))).toBe('OPP-001');
   });
 
-  it('increments sequentially', () => {
+  it('increments sequentially', async () => {
     ({ db, cleanup } = createTestDb());
     const { generateDealId } = require('../../src/services/id-generator');
     db.prepare("INSERT INTO deals (id, name, stage) VALUES ('OPP-001', 'First', 'lead')").run();
-    expect(generateDealId(db)).toBe('OPP-002');
+    expect(await generateDealId(wrapAsLibsqlHelper(db))).toBe('OPP-002');
   });
 
-  it('handles gaps in sequence', () => {
+  it('handles gaps in sequence', async () => {
     ({ db, cleanup } = createTestDb());
     const { generateDealId } = require('../../src/services/id-generator');
     db.prepare("INSERT INTO deals (id, name, stage) VALUES ('OPP-005', 'Fifth', 'lead')").run();
-    expect(generateDealId(db)).toBe('OPP-006');
+    expect(await generateDealId(wrapAsLibsqlHelper(db))).toBe('OPP-006');
   });
 
   it('generates UUIDs for other entities', () => {
