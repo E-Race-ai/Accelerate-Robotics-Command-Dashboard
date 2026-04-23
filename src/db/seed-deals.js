@@ -4,15 +4,13 @@ const { generateId } = require('../services/id-generator');
  * Seeds the database with existing hotel deals if they don't already exist.
  * Idempotent — safe to run on every boot.
  *
- * WHY: db is passed in rather than required here to avoid a circular dependency —
- * database.js calls seedDeals(), and if seed-deals.js required database.js at
- * module load time, Node would return the partially-constructed module (before
- * module.exports = db runs), making db undefined.
+ * Accepts the db helper object ({ one, all, run }) passed in from database.js
+ * to avoid a circular require at module load time.
  */
-function seedDeals(db) {
-  const existingCount = db.prepare('SELECT COUNT(*) as c FROM deals').get().c;
-  if (existingCount > 0) {
-    console.log(`[seed] ${existingCount} deals already exist, skipping seed`);
+async function seedDeals(db) {
+  const existing = await db.one('SELECT COUNT(*)::int AS c FROM deals');
+  if (existing && existing.c > 0) {
+    console.log(`[seed] ${existing.c} deals already exist, skipping seed`);
     return;
   }
 
@@ -64,39 +62,42 @@ function seedDeals(db) {
     },
   ];
 
-  const insertFacility = db.prepare(`
-    INSERT INTO facilities (id, name, type, address, city, state, country, floors, rooms_or_units,
-      elevator_count, elevator_brand, elevator_type, surfaces, operator, brand, gm_name)
-    VALUES (?, ?, ?, ?, ?, ?, 'United States', ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const insertDeal = db.prepare(`
-    INSERT INTO deals (id, name, facility_id, stage, source, owner)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-
-  const insertActivity = db.prepare(`
-    INSERT INTO activities (id, deal_id, actor, action, detail)
-    VALUES (?, ?, 'system', 'deal_created', '{"source":"seed"}')
-  `);
-
-  const seedAll = db.transaction(() => {
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
     for (const d of deals) {
       const fid = generateId();
       const f = d.facility;
-      insertFacility.run(
-        fid, f.name, f.type, f.address || null, f.city || null, f.state || null,
-        f.floors || null, f.rooms_or_units || null, f.elevator_count || null,
-        f.elevator_brand || null, f.elevator_type || null,
-        f.surfaces ? JSON.stringify(f.surfaces) : null,
-        f.operator || null, f.brand || null, f.gm_name || null
+      await client.query(
+        `INSERT INTO facilities (id, name, type, address, city, state, country, floors, rooms_or_units,
+          elevator_count, elevator_brand, elevator_type, surfaces, operator, brand, gm_name)
+         VALUES ($1, $2, $3, $4, $5, $6, 'United States', $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        [
+          fid, f.name, f.type, f.address || null, f.city || null, f.state || null,
+          f.floors || null, f.rooms_or_units || null, f.elevator_count || null,
+          f.elevator_brand || null, f.elevator_type || null,
+          f.surfaces ? JSON.stringify(f.surfaces) : null,
+          f.operator || null, f.brand || null, f.gm_name || null,
+        ],
       );
-      insertDeal.run(d.id, d.name, fid, d.stage, d.source, d.owner);
-      insertActivity.run(generateId(), d.id);
+      await client.query(
+        'INSERT INTO deals (id, name, facility_id, stage, source, owner) VALUES ($1, $2, $3, $4, $5, $6)',
+        [d.id, d.name, fid, d.stage, d.source, d.owner],
+      );
+      await client.query(
+        `INSERT INTO activities (id, deal_id, actor, action, detail)
+         VALUES ($1, $2, 'system', 'deal_created', '{"source":"seed"}')`,
+        [generateId(), d.id],
+      );
     }
-  });
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 
-  seedAll();
   console.log(`[seed] Created ${deals.length} deals with facilities`);
 }
 
