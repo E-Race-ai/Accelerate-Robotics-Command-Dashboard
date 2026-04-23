@@ -9,9 +9,7 @@ const EMAIL_FROM = process.env.EMAIL_FROM || 'notifications@acceleraterobotics.a
  * Fails silently (logs error) so the inquiry POST still succeeds even if email is misconfigured.
  */
 async function notifyNewInquiry(inquiry) {
-  const recipients = db.prepare(
-    'SELECT email FROM notification_recipients WHERE active = 1'
-  ).all();
+  const recipients = await db.all('SELECT email FROM notification_recipients WHERE active = 1');
 
   if (recipients.length === 0) {
     console.log('[email] No active recipients — skipping notification');
@@ -59,4 +57,43 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-module.exports = { notifyNewInquiry };
+/**
+ * Sends an invite email to a newly-invited team member.
+ * Fails silently (logs) so the invite POST succeeds even if Resend is misconfigured.
+ */
+async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[email] RESEND_API_KEY not set — skipping invite email');
+    return;
+  }
+  const roleLabel = {
+    admin: 'Admin',
+    module_owner: 'Module Owner',
+    viewer: 'Viewer',
+  }[role] || role;
+
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: [to],
+      subject: `You're invited to Accelerate Robotics`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <h2 style="color: #0055ff; margin: 0 0 16px;">Welcome to Accelerate Robotics</h2>
+          <p>${escapeHtml(inviterEmail)} has invited you to the Command Center as a <strong>${escapeHtml(roleLabel)}</strong>.</p>
+          <p style="margin: 24px 0;">
+            <a href="${inviteUrl}" style="display: inline-block; padding: 12px 24px; background: #0055ff; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">Accept Invite &rarr;</a>
+          </p>
+          <p style="color: #666; font-size: 13px;">This link expires in 24 hours. If it expires, ask ${escapeHtml(inviterEmail)} to re-send.</p>
+          <p style="color: #999; font-size: 12px; margin-top: 32px;">If you weren't expecting this invite, you can safely ignore it.</p>
+        </div>
+      `,
+    });
+    console.log(`[email] Invite sent to ${to}`);
+  } catch (err) {
+    console.error('[email] Invite email failed:', err.message);
+    throw err;
+  }
+}
+
+module.exports = { notifyNewInquiry, sendInviteEmail };

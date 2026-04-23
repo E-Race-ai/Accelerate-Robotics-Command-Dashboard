@@ -301,6 +301,24 @@ async function initSchema() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_prospects_market ON prospects(market_id)`,
     `CREATE INDEX IF NOT EXISTS idx_prospects_status ON prospects(status)`,
+
+    // WHY: Default permission matrix per role. Editable by Super Admin / Admin via Settings UI.
+    `CREATE TABLE IF NOT EXISTS role_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      role TEXT NOT NULL,
+      module TEXT NOT NULL,
+      permission TEXT NOT NULL DEFAULT 'none' CHECK(permission IN ('edit', 'view', 'none')),
+      UNIQUE(role, module)
+    )`,
+    // WHY: Per-user overrides that take precedence over role defaults.
+    `CREATE TABLE IF NOT EXISTS user_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+      module TEXT NOT NULL,
+      permission TEXT NOT NULL CHECK(permission IN ('edit', 'view', 'none')),
+      UNIQUE(user_id, module)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_user_permissions_user ON user_permissions(user_id)`,
   ];
 
   for (const sql of statements) {
@@ -315,7 +333,8 @@ async function initSchema() {
       if (!/duplicate column/i.test(e.message)) throw e;
     }
   };
-  await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin' CHECK(role IN ('admin', 'sales', 'ops', 'viewer'))");
+  // WHY: super_admin / admin / module_owner / viewer. Old 'sales'/'ops' kept for existing rows' tolerance.
+  await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin' CHECK(role IN ('super_admin', 'admin', 'module_owner', 'viewer', 'sales', 'ops'))");
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN name TEXT DEFAULT ''");
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN invited_by INTEGER");
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN invite_token TEXT");
@@ -350,14 +369,41 @@ async function seedAdmin() {
 async function bootstrapAdminRoles() {
   const raw = process.env.BOOTSTRAP_ADMIN_EMAILS;
   if (!raw) return;
+  // WHY: Listed emails become super_admin — the one protected role with full access that can invite others.
   const emails = raw.split(',').map(e => e.trim()).filter(Boolean);
   for (const email of emails) {
     const result = await run(
-      "UPDATE admin_users SET role = 'admin' WHERE email = ? AND (role IS NULL OR role != 'admin')",
+      "UPDATE admin_users SET role = 'super_admin' WHERE email = ? AND (role IS NULL OR role != 'super_admin')",
       [email],
     );
-    if (result.changes > 0) console.log(`[db] Promoted ${email} to admin role`);
+    if (result.changes > 0) console.log(`[db] Promoted ${email} to super_admin role`);
   }
+}
+
+async function seedRolePermissions() {
+  // WHY: Default permission matrix per role — only seeds when empty, so manual edits to the matrix survive boots.
+  const existing = await one('SELECT COUNT(*) as c FROM role_permissions');
+  if (existing && Number(existing.c) > 0) return;
+
+  const modules = require('../services/permissions').ALL_MODULES;
+  // Defaults per design spec: admin edits everything; viewer sees everything read-only; module_owner gets per-assignment overrides.
+  const matrix = {
+    admin:        modules.reduce((acc, m) => ({ ...acc, [m]: 'edit' }), {}),
+    viewer:       modules.reduce((acc, m) => ({ ...acc, [m]: m === 'settings' ? 'none' : 'view' }), {}),
+    module_owner: modules.reduce((acc, m) => ({ ...acc, [m]: m === 'settings' ? 'none' : 'view' }), {}),
+  };
+
+  await transaction(async (tx) => {
+    for (const [role, perms] of Object.entries(matrix)) {
+      for (const [mod, perm] of Object.entries(perms)) {
+        await tx.run(
+          'INSERT OR IGNORE INTO role_permissions (role, module, permission) VALUES (?, ?, ?)',
+          [role, mod, perm],
+        );
+      }
+    }
+  });
+  console.log('[db] Seeded default role_permissions matrix');
 }
 
 // ── Bootstrap on import ─────────────────────────────────────────
@@ -367,6 +413,7 @@ const ready = (async () => {
   await initSchema();
   await seedAdmin();
   await bootstrapAdminRoles();
+  await seedRolePermissions();
 
   try {
     const { seedDeals } = require('./seed-deals');

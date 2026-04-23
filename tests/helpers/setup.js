@@ -248,6 +248,22 @@ function createTestDb() {
     CREATE INDEX IF NOT EXISTS idx_assessment_stakeholders_assessment ON assessment_stakeholders(assessment_id);
     CREATE INDEX IF NOT EXISTS idx_assessment_photos_assessment ON assessment_photos(assessment_id);
     CREATE INDEX IF NOT EXISTS idx_assessment_photos_zone ON assessment_photos(zone_id);
+
+    CREATE TABLE IF NOT EXISTS role_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      role TEXT NOT NULL,
+      module TEXT NOT NULL,
+      permission TEXT NOT NULL DEFAULT 'none' CHECK(permission IN ('edit', 'view', 'none')),
+      UNIQUE(role, module)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+      module TEXT NOT NULL,
+      permission TEXT NOT NULL CHECK(permission IN ('edit', 'view', 'none')),
+      UNIQUE(user_id, module)
+    );
   `);
 
   return {
