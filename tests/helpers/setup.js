@@ -30,6 +30,8 @@ function createTestDb() {
       invite_expires_at TEXT,
       status TEXT DEFAULT 'active',
       last_login_at TEXT,
+      reset_token TEXT,
+      reset_expires_at TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
 

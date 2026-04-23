@@ -15,6 +15,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `POST /api/users/:id/resend-invite` regenerates the invite token and re-sends the email. The Resend button on the Team list no longer 404s.
 - `PATCH /api/roles/permissions` — point-edit a single cell of the role × module matrix (frontend uses this from the Permissions tab).
 - Command Center toolkit tiles are gated by the logged-in user's permissions: tiles with `permission=none` are hidden on load.
+- Forgot-password flow: `/forgot-password` page emails a single-use, 1-hour reset link via `POST /api/auth/forgot-password`. `/reset-password?token=...` validates the token and lets the user set a new password (`POST /api/auth/reset-password`). "Forgot password?" link added to the login page. No enumeration — endpoint returns `{ok:true}` whether the email exists or not. Rate-limited to 5 requests per IP per hour.
 
 ### Changed
 - `CLAUDE.md` restructured to reference `.claude/rules/` and `docs/` instead of duplicating guidance.

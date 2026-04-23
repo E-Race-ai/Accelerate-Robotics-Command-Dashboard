@@ -341,6 +341,10 @@ async function initSchema() {
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN invite_expires_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN status TEXT DEFAULT 'active'");
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN last_login_at TEXT");
+  // WHY: Forgot-password flow. Separate from invite_token so an active user can
+  // reset their password without their status flipping back to 'invited'.
+  await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN reset_token TEXT");
+  await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN reset_expires_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE markets ADD COLUMN lat REAL");
   await additiveAlterIfMissing("ALTER TABLE markets ADD COLUMN lng REAL");
 }
