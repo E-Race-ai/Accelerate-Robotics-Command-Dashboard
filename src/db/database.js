@@ -302,10 +302,21 @@ function seedAdmin() {
 
   if (!email || !password) return;
 
-  const existing = db.prepare('SELECT id FROM admin_users WHERE email = ?').get(email);
-  if (existing) return;
-
   const BCRYPT_ROUNDS = 12; // Balances security vs. login latency (~250ms on modern hardware)
+
+  const existing = db.prepare('SELECT id, password_hash FROM admin_users WHERE email = ?').get(email);
+  if (existing) {
+    // WHY: Sync password on every boot — if ADMIN_PASSWORD env var changed, update the hash.
+    // bcrypt.compareSync is ~250ms but only runs once at boot, acceptable cost.
+    const matches = bcrypt.compareSync(password, existing.password_hash);
+    if (!matches) {
+      const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
+      db.prepare('UPDATE admin_users SET password_hash = ? WHERE id = ?').run(hash, existing.id);
+      console.log(`[db] Updated admin password for: ${email}`);
+    }
+    return;
+  }
+
   const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
   db.prepare('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)').run(email, hash);
   console.log(`[db] Seeded admin user: ${email}`);
