@@ -113,4 +113,41 @@ async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
   }
 }
 
-module.exports = { notifyNewInquiry, sendInviteEmail };
+/**
+ * Sends a password reset email. Fire-and-forget from the caller's perspective:
+ * if the send fails, we throw so the route can log but still respond with a
+ * generic "if this email exists, we sent a link" message (prevents enumeration).
+ */
+async function sendPasswordResetEmail({ to, name, resetUrl }) {
+  const resend = getResend();
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set — skipping password reset email');
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: [to],
+      subject: `Reset your Accelerate Robotics password`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <h2 style="color: #0055ff; margin: 0 0 16px;">Password reset</h2>
+          <p>Hi${name ? ' ' + escapeHtml(name) : ''},</p>
+          <p>We received a request to reset the password on your Accelerate Robotics account. Click the button below to choose a new password.</p>
+          <p style="margin: 24px 0;">
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #0055ff; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">Reset Password &rarr;</a>
+          </p>
+          <p style="color: #666; font-size: 13px;">This link expires in 1 hour. If you didn't request a reset, you can safely ignore this email — your password won't change.</p>
+          <p style="color: #999; font-size: 12px; margin-top: 32px;">Tip: paranoid sysadmins sometimes kick off resets just to check the system works. No action needed on your end in that case.</p>
+        </div>
+      `,
+    });
+    console.log(`[email] Password reset email sent to ${to}`);
+  } catch (err) {
+    console.error('[email] Password reset email failed:', err.message);
+    throw err;
+  }
+}
+
+module.exports = { notifyNewInquiry, sendInviteEmail, sendPasswordResetEmail };

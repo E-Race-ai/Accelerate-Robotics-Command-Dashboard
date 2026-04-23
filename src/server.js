@@ -80,6 +80,17 @@ const narrateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// WHY: 5 forgot-password attempts per IP per hour. Tight enough to stop
+// enumeration attempts and email-spam, generous enough for a user who
+// mistypes their email once or twice.
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many reset requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ── Static files ───────────────��────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
 // WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
@@ -126,6 +137,9 @@ for (const repo of hotelRepos) {
 }
 
 // ── API routes ──────────────────────────────────────────────────
+// WHY: Rate-limit the public forgot-password endpoint before mounting the
+// broader auth routes, so it's impossible to route around the limiter.
+app.use('/api/auth/forgot-password', forgotPasswordLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/inquiries', (req, res, next) => {
   // WHY: Only rate-limit the public POST, not admin GET/PATCH
@@ -173,6 +187,12 @@ app.get('/admin/settings', (req, res) => {
 });
 app.get('/accept-invite', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'accept-invite.html'));
+});
+app.get('/forgot-password', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'forgot-password.html'));
+});
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html'));
 });
 
 // ── Start ───────────────────────────────────────────────────────
