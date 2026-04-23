@@ -320,6 +320,22 @@ function seedAdmin() {
 
 seedAdmin();
 
+// ── Bootstrap admin role for trusted emails ─────────────────────
+// WHY: Promotes listed emails to role='admin' on every boot. Covers users created
+// via invite flow or legacy seeds that didn't set role. Env var is comma-separated.
+// Idempotent: only UPDATEs rows that don't already have role='admin'.
+function bootstrapAdminRoles() {
+  const raw = process.env.BOOTSTRAP_ADMIN_EMAILS;
+  if (!raw) return;
+  const emails = raw.split(',').map(e => e.trim()).filter(Boolean);
+  const stmt = db.prepare("UPDATE admin_users SET role = 'admin' WHERE email = ? AND (role IS NULL OR role != 'admin')");
+  for (const email of emails) {
+    const result = stmt.run(email);
+    if (result.changes > 0) console.log(`[db] Promoted ${email} to admin role`);
+  }
+}
+bootstrapAdminRoles();
+
 // ── Seed deals ──────────────────────────────────────────────────
 // WHY: Pre-populate with existing hotel pipeline. Idempotent — skips if deals exist.
 try {
