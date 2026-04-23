@@ -1,0 +1,38 @@
+# Render.com deployment blueprint.
+# Apply via Render dashboard: New → Blueprint → point at this repo.
+# Secret env vars (marked sync: false) must be set manually in the Render dashboard.
+
+services:
+  - type: web
+    name: accelerate-robotics
+    runtime: node
+    region: oregon
+    plan: starter
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    disk:
+      name: accelerate-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /app/data/accelerate.db
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: BOOTSTRAP_ADMIN_EMAILS
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
