@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 const { generateId } = require('../services/id-generator');
 
 const router = express.Router();
@@ -152,12 +152,12 @@ function upsertAssessment(id, body, res) {
 
 // ── GET /meta/team ─────────────────────────────────────────────
 // WHY: Registered BEFORE /:id so Express doesn't match 'meta' as an :id param
-router.get('/meta/team', requireAuth, (req, res) => {
+router.get('/meta/team', requireAuth, requirePermission('assessments', 'view'), (req, res) => {
   res.json(TEAM_MEMBERS);
 });
 
 // ── GET / — List assessments ───────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, requirePermission('assessments', 'view'), (req, res) => {
   const { assigned_to, status, deal_id } = req.query;
 
   let sql = `
@@ -189,7 +189,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // ── GET /:id — Get single assessment ──────────────────────────
-router.get('/:id', requireAuth, (req, res) => {
+router.get('/:id', requireAuth, requirePermission('assessments', 'view'), (req, res) => {
   const assessment = db.prepare('SELECT * FROM assessments WHERE id = ?').get(req.params.id);
   if (!assessment) return res.status(404).json({ error: 'Assessment not found' });
 
@@ -214,7 +214,7 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // ── POST / — Create or upsert assessment ──────────────────────
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('assessments', 'edit'), (req, res) => {
   // WHY: Client always provides the UUID for offline-first support.
   // Fall back to server-generated ID for clients that don't.
   const id = req.body.id || generateId();
@@ -222,12 +222,12 @@ router.post('/', requireAuth, (req, res) => {
 });
 
 // ── PUT /:id — Update assessment ──────────────────────────────
-router.put('/:id', requireAuth, (req, res) => {
+router.put('/:id', requireAuth, requirePermission('assessments', 'edit'), (req, res) => {
   return upsertAssessment(req.params.id, req.body, res);
 });
 
 // ── DELETE /:id — Delete assessment ───────────────────────────
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAuth, requirePermission('assessments', 'edit'), (req, res) => {
   const existing = db.prepare('SELECT id FROM assessments WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Assessment not found' });
 
@@ -237,7 +237,7 @@ router.delete('/:id', requireAuth, (req, res) => {
 });
 
 // ── GET /:id/fleet-input — Transform for Fleet Designer ────────
-router.get('/:id/fleet-input', requireAuth, (req, res) => {
+router.get('/:id/fleet-input', requireAuth, requirePermission('assessments', 'view'), (req, res) => {
   const assessment = db.prepare('SELECT * FROM assessments WHERE id = ?').get(req.params.id);
   if (!assessment) return res.status(404).json({ error: 'Assessment not found' });
 

@@ -10,7 +10,7 @@ const VALID_CHALLENGE_CATEGORIES = ['cleaning', 'delivery', 'transport', 'securi
 const VALID_CONTACT_ROLES = ['decision_maker', 'champion', 'influencer', 'end_user', 'blocker'];
 
 // ── List facilities ────────────────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, requirePermission('deals', 'view'), (req, res) => {
   const { type } = req.query;
   let sql = 'SELECT * FROM facilities';
   const params = [];
@@ -23,7 +23,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // ── Get single facility with challenges and contacts ───────────
-router.get('/:id', requireAuth, (req, res) => {
+router.get('/:id', requireAuth, requirePermission('deals', 'view'), (req, res) => {
   const facility = db.prepare('SELECT * FROM facilities WHERE id = ?').get(req.params.id);
   if (!facility) return res.status(404).json({ error: 'Facility not found' });
 
@@ -104,7 +104,7 @@ router.patch('/:id', requireAuth, requirePermission('deals', 'edit'), (req, res)
 });
 
 // ── Challenges CRUD (nested under facility) ────────────────────
-router.get('/:id/challenges', requireAuth, (req, res) => {
+router.get('/:id/challenges', requireAuth, requirePermission('deals', 'view'), (req, res) => {
   res.json(db.prepare('SELECT * FROM operational_challenges WHERE facility_id = ? ORDER BY priority DESC').all(req.params.id));
 });
 
@@ -136,7 +136,7 @@ router.delete('/:facilityId/challenges/:challengeId', requireAuth, requirePermis
 });
 
 // ── Contacts CRUD (nested under facility) ──────────────────────
-router.get('/:id/contacts', requireAuth, (req, res) => {
+router.get('/:id/contacts', requireAuth, requirePermission('deals', 'view'), (req, res) => {
   res.json(db.prepare('SELECT * FROM contacts WHERE facility_id = ? ORDER BY created_at').all(req.params.id));
 });
 

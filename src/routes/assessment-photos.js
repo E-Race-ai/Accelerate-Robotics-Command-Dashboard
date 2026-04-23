@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 const { generateId } = require('../services/id-generator');
 
 const router = express.Router({ mergeParams: true });
@@ -15,7 +15,7 @@ const upload = multer({
 const MAX_BATCH = 5; // WHY: Avoid request timeout on slow connections; also keeps memory pressure bounded
 
 // ── POST / — Upload photos in batch ──────────────────────────
-router.post('/', requireAuth, upload.array('photos', MAX_BATCH), (req, res) => {
+router.post('/', requireAuth, requirePermission('assessments', 'edit'), upload.array('photos', MAX_BATCH), (req, res) => {
   const assessmentId = req.params.id;
 
   const assessment = db.prepare('SELECT id FROM assessments WHERE id = ?').get(assessmentId);
@@ -69,7 +69,7 @@ router.post('/', requireAuth, upload.array('photos', MAX_BATCH), (req, res) => {
 });
 
 // ── GET / — List photo metadata for an assessment (no blobs) ──
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, requirePermission('assessments', 'view'), (req, res) => {
   const assessmentId = req.params.id;
 
   const assessment = db.prepare('SELECT id FROM assessments WHERE id = ?').get(assessmentId);
@@ -88,7 +88,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // ── GET /:photoId — Get single photo with full data ───────────
-router.get('/:photoId', requireAuth, (req, res) => {
+router.get('/:photoId', requireAuth, requirePermission('assessments', 'view'), (req, res) => {
   const { id: assessmentId, photoId } = req.params;
 
   // WHY: Verify both photoId AND assessmentId match to prevent cross-assessment data leaks
@@ -108,7 +108,7 @@ router.get('/:photoId', requireAuth, (req, res) => {
 });
 
 // ── DELETE /:photoId — Delete a photo ─────────────────────────
-router.delete('/:photoId', requireAuth, (req, res) => {
+router.delete('/:photoId', requireAuth, requirePermission('assessments', 'edit'), (req, res) => {
   const { id: assessmentId, photoId } = req.params;
 
   // WHY: Verify both photoId AND assessmentId match before deleting to prevent cross-assessment mutations

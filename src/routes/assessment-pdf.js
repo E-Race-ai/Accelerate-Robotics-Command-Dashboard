@@ -1,7 +1,7 @@
 const express = require('express');
 const PDFDocument = require('pdfkit');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 
 const router = express.Router({ mergeParams: true });
 
@@ -108,7 +108,7 @@ function drawTableRow(doc, x, y, label, value, colWidth, rowHeight, isAlternate)
  * Generate and stream a PDF report for an assessment.
  * WHY: Mounted separately with mergeParams so :id comes from the parent router.
  */
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, requirePermission('assessments', 'view'), (req, res) => {
   const { id } = req.params;
 
   // ── Load data ──────────────────────────────────────────────

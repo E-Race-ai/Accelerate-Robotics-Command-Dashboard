@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 const { notifyNewInquiry } = require('../services/email');
 
 const router = express.Router();
@@ -59,7 +59,7 @@ router.post('/', async (req, res) => {
 });
 
 // ── ADMIN: List inquiries ───────────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, requirePermission('inquiries', 'view'), (req, res) => {
   const { status } = req.query;
   let sql = 'SELECT * FROM inquiries';
   const params = [];
@@ -76,14 +76,14 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // ── ADMIN: Get single inquiry ───────────────────────────────────
-router.get('/:id', requireAuth, (req, res) => {
+router.get('/:id', requireAuth, requirePermission('inquiries', 'view'), (req, res) => {
   const row = db.prepare('SELECT * FROM inquiries WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Inquiry not found' });
   res.json(row);
 });
 
 // ── ADMIN: Update inquiry status ────────────────────────────────
-router.patch('/:id', requireAuth, (req, res) => {
+router.patch('/:id', requireAuth, requirePermission('inquiries', 'edit'), (req, res) => {
   const { status } = req.body;
   const VALID_STATUSES = ['new', 'reviewed', 'contacted', 'archived'];
 

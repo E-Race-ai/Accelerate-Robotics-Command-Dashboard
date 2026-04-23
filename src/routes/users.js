@@ -69,12 +69,15 @@ router.post('/invite', async (req, res) => {
 });
 
 // ── Update a user ──────────────────────────────────────────────
-router.patch('/:id', (req, res) => {
+router.patch('/:id', async (req, res) => {
   const user = db.prepare('SELECT * FROM admin_users WHERE id = ?').get(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  if (user.role === 'super_admin') return res.status(403).json({ error: 'Cannot modify the Super Admin account' });
+  // WHY: Super admin can only be modified by the super admin themselves (for email/password changes)
+  if (user.role === 'super_admin' && req.admin.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Cannot modify the Super Admin account' });
+  }
 
-  const { name, role, status } = req.body;
+  const { name, role, status, email, password } = req.body;
   const updates = [];
   const params = [];
 
@@ -82,14 +85,35 @@ router.patch('/:id', (req, res) => {
     updates.push('name = ?');
     params.push(name);
   }
-  if (role !== undefined) {
+  if (email !== undefined) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+    // WHY: Prevent duplicate emails — each admin account must have a unique email
+    const emailTaken = db.prepare('SELECT id FROM admin_users WHERE email = ? AND id != ?').get(email, req.params.id);
+    if (emailTaken) {
+      return res.status(409).json({ error: 'A user with this email already exists' });
+    }
+    updates.push('email = ?');
+    params.push(email);
+  }
+  if (password !== undefined) {
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+    const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    updates.push('password_hash = ?');
+    params.push(hash);
+  }
+  // WHY: Don't allow role changes on super_admin — role is set by the system, not editable
+  if (role !== undefined && user.role !== 'super_admin') {
     if (!['admin', 'module_owner', 'viewer'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
     updates.push('role = ?');
     params.push(role);
   }
-  if (status !== undefined) {
+  if (status !== undefined && user.role !== 'super_admin') {
     if (!['active', 'disabled'].includes(status)) {
       return res.status(400).json({ error: 'Status must be active or disabled' });
     }

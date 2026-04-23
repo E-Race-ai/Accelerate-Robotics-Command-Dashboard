@@ -1,11 +1,11 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
 
 // ── List all markets ──────────────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, requirePermission('prospects', 'view'), (req, res) => {
   const markets = db.prepare(`
     SELECT m.*, COUNT(p.id) as prospect_count
     FROM markets m
@@ -17,7 +17,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // ── Create a market ──────────────────────────────────────────
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('prospects', 'edit'), (req, res) => {
   const { id, name, cluster, color, notes } = req.body;
 
   if (!id || !name) {
@@ -42,7 +42,7 @@ router.post('/', requireAuth, (req, res) => {
 });
 
 // ── Update a market ──────────────────────────────────────────
-router.patch('/:id', requireAuth, (req, res) => {
+router.patch('/:id', requireAuth, requirePermission('prospects', 'edit'), (req, res) => {
   const market = db.prepare('SELECT * FROM markets WHERE id = ?').get(req.params.id);
   if (!market) return res.status(404).json({ error: 'Market not found' });
 
@@ -63,7 +63,7 @@ router.patch('/:id', requireAuth, (req, res) => {
 });
 
 // ── Delete a market and its prospects ─────────────────────────
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAuth, requirePermission('prospects', 'edit'), (req, res) => {
   const market = db.prepare('SELECT * FROM markets WHERE id = ?').get(req.params.id);
   if (!market) return res.status(404).json({ error: 'Market not found' });
 
@@ -75,7 +75,7 @@ router.delete('/:id', requireAuth, (req, res) => {
 // ── Trigger AI market research ───────────────────────────────
 const { runResearch } = require('../services/market-research');
 
-router.post('/:id/research', requireAuth, async (req, res) => {
+router.post('/:id/research', requireAuth, requirePermission('prospects', 'edit'), async (req, res) => {
   // WHY: parseInt handles both number and string values from JSON body
   const count = parseInt(req.body.count, 10);
   const validCounts = [5, 8, 10];

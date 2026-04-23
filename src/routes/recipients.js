@@ -1,20 +1,17 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
 
-// All routes require admin auth
-router.use(requireAuth);
-
 // ── List recipients ─────────────────────────────────────────────
-router.get('/', (req, res) => {
+router.get('/', requireAuth, requirePermission('inquiries', 'view'), (req, res) => {
   const rows = db.prepare('SELECT * FROM notification_recipients ORDER BY created_at DESC').all();
   res.json(rows);
 });
 
 // ── Add recipient ───────────────────────────────────────────────
-router.post('/', (req, res) => {
+router.post('/', requireAuth, requirePermission('inquiries', 'edit'), (req, res) => {
   const { email, name } = req.body;
 
   if (!email) {
@@ -41,7 +38,7 @@ router.post('/', (req, res) => {
 });
 
 // ── Update recipient ────────────────────────────────────────────
-router.patch('/:id', (req, res) => {
+router.patch('/:id', requireAuth, requirePermission('inquiries', 'edit'), (req, res) => {
   const { email, name, active } = req.body;
   const fields = [];
   const values = [];
@@ -70,7 +67,7 @@ router.patch('/:id', (req, res) => {
 });
 
 // ── Delete recipient ────────────────────────────────────────────
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requireAuth, requirePermission('inquiries', 'edit'), (req, res) => {
   const result = db.prepare('DELETE FROM notification_recipients WHERE id = ?').run(req.params.id);
   if (result.changes === 0) {
     return res.status(404).json({ error: 'Recipient not found' });

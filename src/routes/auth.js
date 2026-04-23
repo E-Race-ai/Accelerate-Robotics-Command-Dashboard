@@ -54,8 +54,48 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', requireAuth, (req, res) => {
+  const user = db.prepare('SELECT id, email, name, role FROM admin_users WHERE id = ?').get(req.admin.id);
   const permissions = getAllPermissions(db, req.admin);
-  res.json({ id: req.admin.id, email: req.admin.email, role: req.admin.role, permissions });
+  res.json({ id: req.admin.id, email: user?.email || req.admin.email, name: user?.name || '', role: req.admin.role, permissions });
+});
+
+// ── Self-service profile update ───────────────────────────────
+// WHY: Any authenticated user can update their own name/password without needing settings:edit
+router.patch('/me', requireAuth, async (req, res) => {
+  const { name, password, current_password } = req.body;
+  const updates = [];
+  const params = [];
+
+  if (name !== undefined) {
+    updates.push('name = ?');
+    params.push(name);
+  }
+
+  if (password !== undefined) {
+    if (!current_password) {
+      return res.status(400).json({ error: 'Current password is required to set a new password' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    }
+    const user = db.prepare('SELECT password_hash FROM admin_users WHERE id = ?').get(req.admin.id);
+    const match = await bcrypt.compare(current_password, user.password_hash);
+    if (!match) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+    const hash = await bcrypt.hash(password, 12);
+    updates.push('password_hash = ?');
+    params.push(hash);
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'No fields to update' });
+  }
+
+  params.push(req.admin.id);
+  db.prepare(`UPDATE admin_users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+  const updated = db.prepare('SELECT id, email, name, role FROM admin_users WHERE id = ?').get(req.admin.id);
+  res.json({ id: updated.id, email: updated.email, name: updated.name, role: updated.role });
 });
 
 // ── Invite validation & acceptance ─────────────────────────────

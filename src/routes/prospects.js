@@ -1,11 +1,11 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
 
 // ── List prospects ────────────────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, requirePermission('prospects', 'view'), (req, res) => {
   const { market_id, status, brand_class } = req.query;
   let sql = 'SELECT p.*, m.name as market_name, m.cluster FROM prospects p LEFT JOIN markets m ON p.market_id = m.id';
   const conditions = [];
@@ -32,7 +32,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // ── Get single prospect ──────────────────────────────────────
-router.get('/:id', requireAuth, (req, res) => {
+router.get('/:id', requireAuth, requirePermission('prospects', 'view'), (req, res) => {
   const prospect = db.prepare(`
     SELECT p.*, m.name as market_name, m.cluster
     FROM prospects p LEFT JOIN markets m ON p.market_id = m.id
@@ -43,7 +43,7 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // ── Create a prospect (manual entry) ─────────────────────────
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('prospects', 'edit'), (req, res) => {
   const { market_id, name, address, brand, brand_class, keys, floors, stars,
           signal, operator, portfolio, monogram, mono_color } = req.body;
 
@@ -67,7 +67,7 @@ router.post('/', requireAuth, (req, res) => {
 });
 
 // ── Update a prospect ────────────────────────────────────────
-router.patch('/:id', requireAuth, (req, res) => {
+router.patch('/:id', requireAuth, requirePermission('prospects', 'edit'), (req, res) => {
   const prospect = db.prepare('SELECT * FROM prospects WHERE id = ?').get(req.params.id);
   if (!prospect) return res.status(404).json({ error: 'Prospect not found' });
 
@@ -94,7 +94,7 @@ router.patch('/:id', requireAuth, (req, res) => {
 });
 
 // ── Delete a prospect ────────────────────────────────────────
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAuth, requirePermission('prospects', 'edit'), (req, res) => {
   const prospect = db.prepare('SELECT * FROM prospects WHERE id = ?').get(req.params.id);
   if (!prospect) return res.status(404).json({ error: 'Prospect not found' });
 
@@ -103,7 +103,7 @@ router.delete('/:id', requireAuth, (req, res) => {
 });
 
 // ── Bulk confirm (staged → confirmed) ────────────────────────
-router.post('/bulk-confirm', requireAuth, (req, res) => {
+router.post('/bulk-confirm', requireAuth, requirePermission('prospects', 'edit'), (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
     return res.status(400).json({ error: 'ids array is required' });
@@ -119,7 +119,7 @@ router.post('/bulk-confirm', requireAuth, (req, res) => {
 });
 
 // ── Bulk delete ──────────────────────────────────────────────
-router.post('/bulk-delete', requireAuth, (req, res) => {
+router.post('/bulk-delete', requireAuth, requirePermission('prospects', 'edit'), (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
     return res.status(400).json({ error: 'ids array is required' });

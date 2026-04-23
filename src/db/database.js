@@ -386,6 +386,16 @@ function seedAdmin() {
     return;
   }
 
+  // WHY: If ADMIN_EMAIL changed but a super_admin already exists, update their email
+  // instead of creating a duplicate. This handles env var email changes on redeploy.
+  const existingSuperAdmin = db.prepare("SELECT id, password_hash FROM admin_users WHERE role = 'super_admin' LIMIT 1").get();
+  if (existingSuperAdmin) {
+    const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
+    db.prepare('UPDATE admin_users SET email = ?, password_hash = ? WHERE id = ?').run(email, hash, existingSuperAdmin.id);
+    console.log(`[db] Updated super admin email to: ${email}`);
+    return;
+  }
+
   const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
   db.prepare("INSERT INTO admin_users (email, password_hash, role, status, name) VALUES (?, ?, 'super_admin', 'active', 'Eric Race')").run(email, hash);
   console.log(`[db] Seeded admin user: ${email}`);

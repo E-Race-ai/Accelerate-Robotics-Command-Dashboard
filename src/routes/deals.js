@@ -11,7 +11,7 @@ const VALID_SOURCES = ['inbound', 'referral', 'outbound', 'event'];
 const CLOSING_STAGES = ['won', 'lost'];
 
 // ── List deals ─────────────────────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, requirePermission('deals', 'view'), (req, res) => {
   const { stage, owner } = req.query;
   // WHY: Subquery grabs the most recent activity per deal so the table view can show "who did what" inline
   let sql = `
@@ -49,7 +49,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // ── Get single deal ────────────────────────────────────────────
-router.get('/:id', requireAuth, (req, res) => {
+router.get('/:id', requireAuth, requirePermission('deals', 'view'), (req, res) => {
   const deal = db.prepare(`
     SELECT d.*, f.name as facility_name, f.type as facility_type, f.city, f.state
     FROM deals d
@@ -155,7 +155,7 @@ router.delete('/:id', requireAuth, requirePermission('deals', 'edit'), (req, res
 });
 
 // ── Get activities for a deal ──────────────────────────────────
-router.get('/:id/activities', requireAuth, (req, res) => {
+router.get('/:id/activities', requireAuth, requirePermission('deals', 'view'), (req, res) => {
   const activities = db.prepare(
     'SELECT * FROM activities WHERE deal_id = ? ORDER BY created_at DESC'
   ).all(req.params.id);
