@@ -7,12 +7,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
  */
 function requireAuth(req, res, next) {
   const token = req.cookies?.token;
+  const isDev = process.env.NODE_ENV !== 'production';
 
-  // WHY: Auth disabled for local dev — all requests pass through as admin.
-  // Re-enable token checking when deploying to production.
   if (!token) {
-    req.admin = { id: 1, email: 'dev@accelerate.com', role: 'admin' };
-    return next();
+    // WHY: In dev, skip login wall so local iteration is frictionless.
+    // In production, require real authentication.
+    if (isDev) {
+      req.admin = { id: 1, email: 'dev@accelerate.com', role: 'admin' };
+      return next();
+    }
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
   try {
@@ -20,9 +24,11 @@ function requireAuth(req, res, next) {
     req.admin = { id: payload.id, email: payload.email, role: payload.role || 'admin' };
     next();
   } catch (err) {
-    // WHY: Expired tokens still pass through in dev — avoids login wall
-    req.admin = { id: 1, email: 'dev@accelerate.com', role: 'admin' };
-    next();
+    if (isDev) {
+      req.admin = { id: 1, email: 'dev@accelerate.com', role: 'admin' };
+      return next();
+    }
+    return res.status(401).json({ error: 'Session expired. Please log in again.' });
   }
 }
 

@@ -862,10 +862,14 @@ let deals = [];
 let ccMap = null;
 
 // ── Init ────────────────────────────────────────────────────────
-// WHY: Show dashboard immediately — auth is disabled server-side, so
-// checkAuth() returns null on stale/missing JWT cookies. Guarding on
-// it blocks all rendering and leaves the page dead.
 document.addEventListener('DOMContentLoaded', async () => {
+  // WHY: Gate on auth — redirect to login if session is missing or expired.
+  // Store return URL so user lands back here after login.
+  const user = await checkAuth();
+  if (!user) {
+    window.location.href = '/admin-login?return=' + encodeURIComponent(window.location.pathname);
+    return;
+  }
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('dashboard').classList.remove('hidden');
   refreshAll();
