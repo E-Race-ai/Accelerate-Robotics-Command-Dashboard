@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — Accelerate Robotics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/brand.css">
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+    .settings-tab {
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      background: none;
+      border-top: none; border-left: none; border-right: none;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .settings-tab:hover { color: #111827; }
+    .settings-tab.active { color: #0055ff; border-bottom-color: #0055ff; }
+
+    .user-row {
+      display: grid;
+      grid-template-columns: 2fr 2fr 1fr 1fr 1.5fr 120px;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 0.84rem;
+    }
+    .user-row:hover { background: #f9fafb; }
+    .user-row-header {
+      font-weight: 700;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9ca3af;
+      background: #f9fafb;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .role-super_admin { background: #fef3c7; color: #92400e; }
+    .role-admin { background: #dbeafe; color: #1e40af; }
+    .role-module_owner { background: #e0e7ff; color: #3730a3; }
+    .role-viewer { background: #f3f4f6; color: #6b7280; }
+
+    .status-active { color: #059669; }
+    .status-invited { color: #d97706; }
+    .status-disabled { color: #dc2626; }
+
+    .perm-cell {
+      text-align: center;
+      padding: 8px 4px;
+    }
+    .perm-cell select {
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: white;
+      cursor: pointer;
+    }
+    .perm-grid {
+      display: grid;
+      align-items: center;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 0.84rem;
+    }
+    .perm-grid:hover { background: #f9fafb; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    .action-btn {
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border: 1px solid #e5e7eb;
+      background: white;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .action-btn:hover { background: #f3f4f6; }
+    .action-btn.danger { color: #dc2626; border-color: #fecaca; }
+    .action-btn.danger:hover { background: #fef2f2; }
+  </style>
+</head>
+<body class="bg-[#f7f8fc] min-h-screen">
+  <div id="appRoot">
+    <nav class="brand-nav">
+      <div class="brand-nav-logo">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white" stroke="white" stroke-width="1.5"/></svg>
+      </div>
+      <div class="brand-nav-identity">
+        <div class="brand-nav-name">Accelerate <span>Robotics</span></div>
+        <div class="brand-nav-tagline">One Brain. Many Bots.</div>
+      </div>
+      <div class="brand-nav-links">
+        <a href="/admin">Command Center</a>
+        <a href="/admin/deals">Deals</a>
+        <a href="/pages/pipeline-prospects.html">Prospects</a>
+        <a href="/pages/assessments.html">Assessments</a>
+        <a href="/pages/robot-catalog.html">Catalog</a>
+        <a href="/pages/fleet-designer.html">Fleet</a>
+        <a href="/admin/settings" class="active">Settings</a>
+      </div>
+      <div style="margin-left:16px;display:flex;align-items:center;gap:12px;">
+        <span id="adminEmail" style="font-size:0.78rem;color:var(--text-faint);"></span>
+        <a href="/" style="font-size:0.78rem;color:var(--text-dim);text-decoration:none;">View Site</a>
+        <button onclick="logout()" style="font-size:0.78rem;color:var(--text-dim);background:none;border:none;cursor:pointer;">Sign Out</button>
+      </div>
+    </nav>
+
+    <main class="max-w-[1200px] mx-auto px-6 py-8">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="headline text-2xl font-bold text-gray-900">Settings</h1>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex gap-1 border-b border-gray-200 mb-6">
+        <button class="settings-tab active" data-tab="team">Team</button>
+        <button class="settings-tab" data-tab="permissions">Permissions</button>
+      </div>
+
+      <!-- ═══ Team Tab ═══ -->
+      <div id="tab-team">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="headline text-lg font-bold text-gray-800">Team Members</h2>
+          <button onclick="openInviteModal()" class="brand-btn-primary px-4 py-2 rounded-xl text-sm font-semibold">
+            + Invite User
+          </button>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div class="user-row user-row-header">
+            <div>Name / Email</div>
+            <div>Email</div>
+            <div>Role</div>
+            <div>Status</div>
+            <div>Last Login</div>
+            <div>Actions</div>
+          </div>
+          <div id="userList">
+            <div class="p-8 text-center text-gray-400 text-sm">Loading team...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Permissions Tab ═══ -->
+      <div id="tab-permissions" class="hidden">
+        <h2 class="headline text-lg font-bold text-gray-800 mb-4">Default Role Permissions</h2>
+        <p class="text-sm text-gray-500 mb-4">Set default module access per role. Super Admin always has full access.</p>
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden" id="permMatrix">
+          <div class="p-8 text-center text-gray-400 text-sm">Loading permissions...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ═══ Invite Modal ═══ -->
+  <div id="inviteModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 class="headline text-lg font-bold mb-4">Invite Team Member</h3>
+      <form id="inviteForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input type="email" name="email" required
+                 class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+          <input type="text" name="name"
+                 class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+          <select name="role" required
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+            <option value="admin">Admin</option>
+            <option value="module_owner">Module Owner</option>
+            <option value="viewer">Viewer</option>
+          </select>
+        </div>
+        <div id="moduleCheckboxes" class="hidden">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Module Access (edit)</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="deals"> Deals</label>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="prospects"> Prospects</label>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="assessments"> Assessments</label>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="fleet"> Fleet</label>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="investors"> Investors</label>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="inquiries"> Inquiries</label>
+          </div>
+        </div>
+        <p id="inviteError" class="text-red-600 text-sm font-medium hidden"></p>
+        <div class="flex gap-3 justify-end pt-2">
+          <button type="button" onclick="closeInviteModal()" class="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">Cancel</button>
+          <button type="submit" class="brand-btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Send Invite</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/admin-auth.js"></script>
+  <script>
+const MODULES = ['deals', 'prospects', 'assessments', 'fleet', 'investors', 'inquiries', 'settings'];
+const MODULE_LABELS = {
+  deals: 'Deals', prospects: 'Prospects', assessments: 'Assessments',
+  fleet: 'Fleet', investors: 'Investors', inquiries: 'Inquiries', settings: 'Settings'
+};
+const ROLE_LABELS = {
+  super_admin: 'Super Admin', admin: 'Admin', module_owner: 'Module Owner', viewer: 'Viewer'
+};
+const EDITABLE_ROLES = ['admin', 'module_owner', 'viewer'];
+
+let currentUser = null;
+
+// ── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  currentUser = await checkAuth();
+  if (!currentUser) {
+    window.location.href = '/admin-login?return=/admin/settings';
+    return;
+  }
+  document.getElementById('adminEmail').textContent = currentUser.email;
+
+  // WHY: Only users with settings:edit can manage team. Redirect others.
+  if (currentUser.permissions?.settings !== 'edit' && currentUser.role !== 'super_admin') {
+    window.location.href = '/admin';
+    return;
+  }
+
+  loadUsers();
+  loadPermissions();
+});
+
+// ── Tabs ─────────────────────────────────────────────────────
+document.querySelectorAll('.settings-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-team').classList.toggle('hidden', tab.dataset.tab !== 'team');
+    document.getElementById('tab-permissions').classList.toggle('hidden', tab.dataset.tab !== 'permissions');
+  });
+});
+
+// ── Team ─────────────────────────────────────────────────────
+async function loadUsers() {
+  try {
+    const res = await fetch('/api/users');
+    if (!res.ok) throw new Error('Failed to load users');
+    const users = await res.json();
+    renderUsers(users);
+  } catch (err) {
+    document.getElementById('userList').innerHTML =
+      `<div class="p-8 text-center text-red-500 text-sm">${err.message}</div>`;
+  }
+}
+
+function renderUsers(users) {
+  const container = document.getElementById('userList');
+  if (!users.length) {
+    container.innerHTML = '<div class="p-8 text-center text-gray-400 text-sm">No team members yet.</div>';
+    return;
+  }
+  container.innerHTML = users.map(u => {
+    const isSuperAdmin = u.role === 'super_admin';
+    const lastLogin = u.last_login_at ? timeAgo(new Date(u.last_login_at + 'Z')) : 'Never';
+    return `
+      <div class="user-row">
+        <div>
+          <div class="font-semibold text-gray-900">${escapeHtml(u.name || '—')}</div>
+        </div>
+        <div class="text-gray-500">${escapeHtml(u.email)}</div>
+        <div><span class="role-badge role-${u.role}">${ROLE_LABELS[u.role] || u.role}</span></div>
+        <div class="status-${u.status} font-medium capitalize">${u.status}</div>
+        <div class="text-gray-400 text-xs">${lastLogin}</div>
+        <div class="flex gap-1">
+          ${u.status === 'invited' ? `<button class="action-btn" onclick="resendInvite(${u.id})">Resend</button>` : ''}
+          ${!isSuperAdmin ? `<button class="action-btn" onclick="editUser(${u.id},'${escapeHtml(u.name||'')}','${u.role}','${u.status}')">\u270E</button>` : ''}
+          ${!isSuperAdmin ? `<button class="action-btn danger" onclick="deleteUser(${u.id},'${escapeHtml(u.email)}')">\u2715</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Invite ───────────────────────────────────────────────────
+function openInviteModal() {
+  document.getElementById('inviteModal').classList.remove('hidden');
+  document.getElementById('inviteForm').reset();
+  document.getElementById('inviteError').classList.add('hidden');
+  document.getElementById('moduleCheckboxes').classList.add('hidden');
+}
+
+function closeInviteModal() {
+  document.getElementById('inviteModal').classList.add('hidden');
+}
+
+// WHY: Show module checkboxes only for module_owner role
+document.querySelector('[name="role"]').addEventListener('change', (e) => {
+  document.getElementById('moduleCheckboxes').classList.toggle('hidden', e.target.value !== 'module_owner');
+});
+
+document.getElementById('inviteForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const errEl = document.getElementById('inviteError');
+  errEl.classList.add('hidden');
+
+  const role = form.role.value;
+  const modules = role === 'module_owner'
+    ? [...form.querySelectorAll('[name="modules"]:checked')].map(c => c.value)
+    : [];
+
+  const btn = form.querySelector('[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  try {
+    const res = await fetch('/api/users/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: form.email.value,
+        name: form.name.value,
+        role,
+        modules,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.error || 'Failed to send invite';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    closeInviteModal();
+    loadUsers();
+  } catch {
+    errEl.textContent = 'Network error. Please try again.';
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Invite';
+  }
+});
+
+// WHY: Close modal when clicking overlay background
+document.getElementById('inviteModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeInviteModal();
+});
+
+// ── User actions ─────────────────────────────────────────────
+async function resendInvite(id) {
+  if (!confirm('Resend invite email?')) return;
+  try {
+    const res = await fetch(`/api/users/${id}/resend-invite`, { method: 'POST' });
+    if (res.ok) {
+      alert('Invite resent.');
+    } else {
+      const data = await res.json();
+      alert(data.error || 'Failed to resend');
+    }
+  } catch { alert('Network error'); }
+}
+
+async function deleteUser(id, email) {
+  if (!confirm(`Remove ${email} from the team? This cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+    if (res.ok) loadUsers();
+    else {
+      const data = await res.json();
+      alert(data.error || 'Failed to delete');
+    }
+  } catch { alert('Network error'); }
+}
+
+async function editUser(id, name, role, status) {
+  const newRole = prompt(`Change role for ${name || 'user'}?\nCurrent: ${ROLE_LABELS[role]}\n\nOptions: admin, module_owner, viewer`, role);
+  if (!newRole || newRole === role) return;
+  if (!EDITABLE_ROLES.includes(newRole)) { alert('Invalid role'); return; }
+  try {
+    const res = await fetch(`/api/users/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole }),
+    });
+    if (res.ok) loadUsers();
+    else {
+      const data = await res.json();
+      alert(data.error || 'Failed to update');
+    }
+  } catch { alert('Network error'); }
+}
+
+// ── Permissions ──────────────────────────────────────────────
+async function loadPermissions() {
+  try {
+    const res = await fetch('/api/roles/permissions');
+    if (!res.ok) throw new Error('Failed to load permissions');
+    const perms = await res.json();
+    renderPermissions(perms);
+  } catch (err) {
+    document.getElementById('permMatrix').innerHTML =
+      `<div class="p-8 text-center text-red-500 text-sm">${err.message}</div>`;
+  }
+}
+
+function renderPermissions(perms) {
+  // WHY: Build a map of role → module → permission for quick lookup
+  const matrix = {};
+  for (const p of perms) {
+    if (!matrix[p.role]) matrix[p.role] = {};
+    matrix[p.role][p.module] = p.permission;
+  }
+
+  const cols = EDITABLE_ROLES.length + 1;
+  const colTemplate = `180px repeat(${EDITABLE_ROLES.length}, 1fr)`;
+
+  let html = `<div class="perm-grid" style="grid-template-columns:${colTemplate};font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-radius:8px 8px 0 0;">
+    <div style="padding:12px 16px;">Module</div>
+    ${EDITABLE_ROLES.map(r => `<div class="perm-cell">${ROLE_LABELS[r]}</div>`).join('')}
+  </div>`;
+
+  for (const mod of MODULES) {
+    html += `<div class="perm-grid" style="grid-template-columns:${colTemplate};">
+      <div style="padding:8px 16px;font-weight:600;">${MODULE_LABELS[mod]}</div>
+      ${EDITABLE_ROLES.map(role => {
+        const current = matrix[role]?.[mod] || 'none';
+        return `<div class="perm-cell">
+          <select onchange="updateRolePerm('${role}','${mod}',this.value)" ${mod === 'settings' && role !== 'admin' ? '' : ''}>
+            <option value="edit" ${current === 'edit' ? 'selected' : ''}>Edit</option>
+            <option value="view" ${current === 'view' ? 'selected' : ''}>View</option>
+            <option value="none" ${current === 'none' ? 'selected' : ''}>None</option>
+          </select>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  document.getElementById('permMatrix').innerHTML = html;
+}
+
+async function updateRolePerm(role, module, permission) {
+  try {
+    const res = await fetch('/api/roles/permissions', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, module, permission }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || 'Failed to update');
+      loadPermissions();
+    }
+  } catch {
+    alert('Network error');
+    loadPermissions();
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function timeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return date.toLocaleDateString();
+}
+  </script>
+  <script src="/js/brand.js"></script>
+</body>
+</html>

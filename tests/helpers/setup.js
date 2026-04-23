@@ -23,7 +23,13 @@ function createTestDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
-      role TEXT DEFAULT 'admin' CHECK(role IN ('admin', 'sales', 'ops', 'viewer')),
+      role TEXT DEFAULT 'admin',
+      name TEXT DEFAULT '',
+      invited_by INTEGER REFERENCES admin_users(id),
+      invite_token TEXT,
+      invite_expires_at TEXT,
+      status TEXT DEFAULT 'active',
+      last_login_at TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -231,6 +237,22 @@ function createTestDb() {
       research_date TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS role_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      role TEXT NOT NULL,
+      module TEXT NOT NULL,
+      permission TEXT NOT NULL DEFAULT 'none' CHECK(permission IN ('edit', 'view', 'none')),
+      UNIQUE(role, module)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+      module TEXT NOT NULL,
+      permission TEXT NOT NULL CHECK(permission IN ('edit', 'view', 'none')),
+      UNIQUE(user_id, module)
     );
 
     CREATE INDEX IF NOT EXISTS idx_prospects_market ON prospects(market_id);

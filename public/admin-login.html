@@ -41,6 +41,36 @@
         Sign In
       </button>
       <p id="loginError" class="text-red-600 text-sm font-medium text-center hidden"></p>
+
+      <div class="text-center pt-1">
+        <button type="button" id="forgotPasswordBtn" class="text-sm text-blue-600 hover:underline transition bg-transparent border-0 cursor-pointer">
+          Forgot your password?
+        </button>
+      </div>
+    </form>
+
+    <!-- Forgot Password form — hidden by default, shown when link is clicked -->
+    <form id="forgotForm" class="bg-white rounded-2xl shadow-lg p-8 space-y-5 hidden">
+      <div class="text-center mb-2">
+        <h2 class="text-lg font-bold">Reset Password</h2>
+        <p class="text-gray-400 text-sm mt-1">Enter your email and we'll send a reset link.</p>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input type="email" name="email" required autocomplete="email"
+               class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition">
+      </div>
+      <button type="submit"
+              class="brand-btn-primary w-full py-3 font-semibold rounded-xl transition"
+              style="font-size:0.95rem;">
+        Send Reset Link
+      </button>
+      <p id="forgotMsg" class="text-sm font-medium text-center hidden"></p>
+      <div class="text-center pt-1">
+        <button type="button" id="backToLoginBtn" class="text-sm text-blue-600 hover:underline transition bg-transparent border-0 cursor-pointer">
+          Back to login
+        </button>
+      </div>
     </form>
 
     <p class="text-center mt-6">
@@ -58,6 +88,48 @@
     // WHY: Redirect to dashboard if already logged in so admins don't see the login page unnecessarily
     checkAuth().then(user => { if (user) window.location.href = safeReturn; });
 
+    // ── Forgot password toggle ─────────────────────────────────
+    document.getElementById('forgotPasswordBtn').addEventListener('click', () => {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('forgotForm').classList.remove('hidden');
+    });
+    document.getElementById('backToLoginBtn').addEventListener('click', () => {
+      document.getElementById('forgotForm').classList.add('hidden');
+      document.getElementById('loginForm').classList.remove('hidden');
+    });
+
+    document.getElementById('forgotForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msgEl = document.getElementById('forgotMsg');
+      msgEl.classList.add('hidden');
+
+      const form = e.target;
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+
+      try {
+        const res = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email.value }),
+        });
+        const data = await res.json();
+        // WHY: Always show success — server returns ok:true even for unknown emails to prevent enumeration
+        msgEl.textContent = 'If an account exists with that email, a reset link has been sent.';
+        msgEl.className = 'text-green-600 text-sm font-medium text-center';
+        msgEl.classList.remove('hidden');
+      } catch {
+        msgEl.textContent = 'Network error. Please try again.';
+        msgEl.className = 'text-red-600 text-sm font-medium text-center';
+        msgEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Reset Link';
+      }
+    });
+
+    // ── Login form ────────────────────────────────────────────
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errEl = document.getElementById('loginError');

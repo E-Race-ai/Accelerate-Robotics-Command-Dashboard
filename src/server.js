@@ -9,6 +9,8 @@ const path = require('path');
 require('./db/database');
 
 const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
+const roleRoutes = require('./routes/roles');
 const inquiryRoutes = require('./routes/inquiries');
 const recipientRoutes = require('./routes/recipients');
 const stockRoutes = require('./routes/stocks');
@@ -117,6 +119,8 @@ for (const repo of hotelRepos) {
 
 // ── API routes ──────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
 app.use('/api/inquiries', (req, res, next) => {
   // WHY: Only rate-limit the public POST, not admin GET/PATCH
   if (req.method === 'POST') return inquiryLimiter(req, res, next);
@@ -148,6 +152,16 @@ app.get('/admin/inquiries', (req, res) => {
 });
 app.get('/admin-login', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-login.html'));
+});
+// WHY: Public pages — no auth required since users arrive via email links before they have a session
+app.get('/accept-invite', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'accept-invite.html'));
+});
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html'));
+});
+app.get('/admin/settings', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-settings.html'));
 });
 app.get('/admin/deals', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-deals.html'));

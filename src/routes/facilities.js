@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 const { generateId } = require('../services/id-generator');
 
 const router = express.Router();
@@ -39,7 +39,7 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // ── Create facility ────────────────────────────────────────────
-router.post('/', requireAuth, requireRole('admin', 'sales', 'ops'), (req, res) => {
+router.post('/', requireAuth, requirePermission('deals', 'edit'), (req, res) => {
   const { name, type, address, city, state, country, floors, rooms_or_units, sqft_total,
     elevator_count, elevator_brand, elevator_type, surfaces, wifi_available,
     operator, brand, gm_name, gm_email, gm_phone, eng_name, eng_email, notes } = req.body;
@@ -67,7 +67,7 @@ router.post('/', requireAuth, requireRole('admin', 'sales', 'ops'), (req, res) =
 });
 
 // ── Update facility ────────────────────────────────────────────
-router.patch('/:id', requireAuth, requireRole('admin', 'sales', 'ops'), (req, res) => {
+router.patch('/:id', requireAuth, requirePermission('deals', 'edit'), (req, res) => {
   const existing = db.prepare('SELECT * FROM facilities WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Facility not found' });
 
@@ -108,7 +108,7 @@ router.get('/:id/challenges', requireAuth, (req, res) => {
   res.json(db.prepare('SELECT * FROM operational_challenges WHERE facility_id = ? ORDER BY priority DESC').all(req.params.id));
 });
 
-router.post('/:id/challenges', requireAuth, requireRole('admin', 'sales', 'ops'), (req, res) => {
+router.post('/:id/challenges', requireAuth, requirePermission('deals', 'edit'), (req, res) => {
   const { category, description, priority, current_cost_monthly, current_staff_count, area_sqft, floors_affected, schedule } = req.body;
 
   if (!category || !description) {
@@ -129,7 +129,7 @@ router.post('/:id/challenges', requireAuth, requireRole('admin', 'sales', 'ops')
   res.status(201).json(db.prepare('SELECT * FROM operational_challenges WHERE id = ?').get(id));
 });
 
-router.delete('/:facilityId/challenges/:challengeId', requireAuth, requireRole('admin', 'sales'), (req, res) => {
+router.delete('/:facilityId/challenges/:challengeId', requireAuth, requirePermission('deals', 'edit'), (req, res) => {
   const result = db.prepare('DELETE FROM operational_challenges WHERE id = ? AND facility_id = ?').run(req.params.challengeId, req.params.facilityId);
   if (result.changes === 0) return res.status(404).json({ error: 'Challenge not found' });
   res.json({ ok: true });
@@ -140,7 +140,7 @@ router.get('/:id/contacts', requireAuth, (req, res) => {
   res.json(db.prepare('SELECT * FROM contacts WHERE facility_id = ? ORDER BY created_at').all(req.params.id));
 });
 
-router.post('/:id/contacts', requireAuth, requireRole('admin', 'sales'), (req, res) => {
+router.post('/:id/contacts', requireAuth, requirePermission('deals', 'edit'), (req, res) => {
   const { name, title, email, phone, role, notes } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Contact name is required' });
@@ -157,7 +157,7 @@ router.post('/:id/contacts', requireAuth, requireRole('admin', 'sales'), (req, r
   res.status(201).json(db.prepare('SELECT * FROM contacts WHERE id = ?').get(id));
 });
 
-router.delete('/:facilityId/contacts/:contactId', requireAuth, requireRole('admin', 'sales'), (req, res) => {
+router.delete('/:facilityId/contacts/:contactId', requireAuth, requirePermission('deals', 'edit'), (req, res) => {
   const result = db.prepare('DELETE FROM contacts WHERE id = ? AND facility_id = ?').run(req.params.contactId, req.params.facilityId);
   if (result.changes === 0) return res.status(404).json({ error: 'Contact not found' });
   res.json({ ok: true });

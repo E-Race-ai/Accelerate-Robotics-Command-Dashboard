@@ -270,16 +270,49 @@ db.exec(`
     updated_at TEXT DEFAULT (datetime('now'))
   );
 
+  -- WHY: Role-level default permissions per module — defines what each role can do out of the box.
+  -- User-level overrides live in user_permissions.
+  CREATE TABLE IF NOT EXISTS role_permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role TEXT NOT NULL,
+    module TEXT NOT NULL,
+    permission TEXT NOT NULL DEFAULT 'none' CHECK(permission IN ('edit', 'view', 'none')),
+    UNIQUE(role, module)
+  );
+
+  CREATE TABLE IF NOT EXISTS user_permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    module TEXT NOT NULL,
+    permission TEXT NOT NULL CHECK(permission IN ('edit', 'view', 'none')),
+    UNIQUE(user_id, module)
+  );
+
   CREATE INDEX IF NOT EXISTS idx_prospects_market ON prospects(market_id);
   CREATE INDEX IF NOT EXISTS idx_prospects_status ON prospects(status);
 `);
 
 // WHY: Add role column for role-based access control. ALTER TABLE ADD COLUMN is safe with IF NOT EXISTS guard.
 try {
-  db.exec("ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin' CHECK(role IN ('admin', 'sales', 'ops', 'viewer'))");
+  db.exec("ALTER TABLE admin_users ADD COLUMN role TEXT DEFAULT 'admin' CHECK(role IN ('super_admin', 'admin', 'module_owner', 'sales', 'ops', 'viewer'))");
 } catch (e) {
   // WHY: SQLite throws "duplicate column name" if column already exists — safe to ignore
   if (!e.message.includes('duplicate column')) throw e;
+}
+
+// WHY: Multi-user auth columns — name, invite workflow, status, last login tracking
+const userColumns = [
+  { sql: "ALTER TABLE admin_users ADD COLUMN name TEXT DEFAULT ''", col: 'name' },
+  { sql: "ALTER TABLE admin_users ADD COLUMN invited_by INTEGER REFERENCES admin_users(id)", col: 'invited_by' },
+  { sql: "ALTER TABLE admin_users ADD COLUMN invite_token TEXT", col: 'invite_token' },
+  { sql: "ALTER TABLE admin_users ADD COLUMN invite_expires_at TEXT", col: 'invite_expires_at' },
+  { sql: "ALTER TABLE admin_users ADD COLUMN status TEXT DEFAULT 'active'", col: 'status' },
+  { sql: "ALTER TABLE admin_users ADD COLUMN last_login_at TEXT", col: 'last_login_at' },
+];
+for (const { sql } of userColumns) {
+  try { db.exec(sql); } catch (e) {
+    if (!e.message.includes('duplicate column')) throw e;
+  }
 }
 
 // WHY: Add lat/lng for map view — market-level geocoding is sufficient for territory visualization
@@ -292,6 +325,40 @@ try {
   db.exec("ALTER TABLE markets ADD COLUMN lng REAL");
 } catch (e) {
   if (!e.message.includes('duplicate column')) throw e;
+}
+
+// WHY: Migration — remove old CHECK constraint on role column that blocks 'super_admin' and 'module_owner'.
+// SQLite can't ALTER CHECK constraints, so we recreate the table if the old constraint is detected.
+try {
+  // Test if the new roles work — if this fails, we need to migrate
+  db.exec("INSERT INTO admin_users (email, password_hash, role) VALUES ('__check_test__', 'x', 'super_admin')");
+  db.exec("DELETE FROM admin_users WHERE email = '__check_test__'");
+} catch (e) {
+  if (e.message.includes('CHECK constraint failed')) {
+    console.log('[db] Migrating admin_users table to support new roles...');
+    db.exec(`
+      CREATE TABLE admin_users_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        role TEXT DEFAULT 'admin' CHECK(role IN ('super_admin', 'admin', 'module_owner', 'sales', 'ops', 'viewer')),
+        name TEXT DEFAULT '',
+        invited_by INTEGER REFERENCES admin_users_new(id),
+        invite_token TEXT,
+        invite_expires_at TEXT,
+        status TEXT DEFAULT 'active',
+        last_login_at TEXT
+      );
+      INSERT INTO admin_users_new SELECT id, email, password_hash, created_at,
+        COALESCE(role, 'admin'), COALESCE(name, ''), invited_by, invite_token,
+        invite_expires_at, COALESCE(status, 'active'), last_login_at
+        FROM admin_users;
+      DROP TABLE admin_users;
+      ALTER TABLE admin_users_new RENAME TO admin_users;
+    `);
+    console.log('[db] Migration complete — admin_users now supports super_admin/module_owner roles');
+  }
 }
 
 // ── Seed admin user ─────────────────────────────────────────────
@@ -314,11 +381,13 @@ function seedAdmin() {
       db.prepare('UPDATE admin_users SET password_hash = ? WHERE id = ?').run(hash, existing.id);
       console.log(`[db] Updated admin password for: ${email}`);
     }
+    // WHY: Ensure the seed admin is always super_admin — handles upgrades from older schemas
+    db.prepare("UPDATE admin_users SET role = 'super_admin' WHERE id = ? AND (role IS NULL OR role = 'admin')").run(existing.id);
     return;
   }
 
   const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
-  db.prepare('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)').run(email, hash);
+  db.prepare("INSERT INTO admin_users (email, password_hash, role, status, name) VALUES (?, ?, 'super_admin', 'active', 'Eric Race')").run(email, hash);
   console.log(`[db] Seeded admin user: ${email}`);
 
   // WHY: Also add admin as a notification recipient so they get inquiry emails by default
@@ -330,6 +399,30 @@ function seedAdmin() {
 }
 
 seedAdmin();
+
+// ── Seed role permissions ───────────────────────────────────────
+// WHY: Pre-populate default permissions so every role has a known baseline.
+// Admins can customize later; this avoids a blank permissions table on first boot.
+function seedRolePermissions() {
+  const count = db.prepare('SELECT COUNT(*) as c FROM role_permissions').get().c;
+  if (count > 0) return;
+  const modules = ['deals', 'prospects', 'assessments', 'fleet', 'investors', 'inquiries', 'settings'];
+  const defaults = {
+    admin: { deals: 'edit', prospects: 'edit', assessments: 'edit', fleet: 'edit', investors: 'edit', inquiries: 'edit', settings: 'edit' },
+    module_owner: { deals: 'view', prospects: 'view', assessments: 'view', fleet: 'view', investors: 'view', inquiries: 'view', settings: 'none' },
+    viewer: { deals: 'view', prospects: 'view', assessments: 'view', fleet: 'view', investors: 'view', inquiries: 'view', settings: 'none' },
+  };
+  const insert = db.prepare('INSERT INTO role_permissions (role, module, permission) VALUES (?, ?, ?)');
+  const seed = db.transaction(() => {
+    for (const [role, perms] of Object.entries(defaults)) {
+      for (const mod of modules) { insert.run(role, mod, perms[mod]); }
+    }
+  });
+  seed();
+  console.log('[db] Seeded default role permissions');
+}
+
+seedRolePermissions();
 
 // ── Seed deals ──────────────────────────────────────────────────
 // WHY: Pre-populate with existing hotel pipeline. Idempotent — skips if deals exist.
