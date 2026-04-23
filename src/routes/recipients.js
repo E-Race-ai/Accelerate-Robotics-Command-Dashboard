@@ -8,13 +8,13 @@ const router = express.Router();
 router.use(requireAuth);
 
 // ── List recipients ─────────────────────────────────────────────
-router.get('/', (req, res) => {
-  const rows = db.prepare('SELECT * FROM notification_recipients ORDER BY created_at DESC').all();
+router.get('/', async (req, res) => {
+  const rows = await db.all('SELECT * FROM notification_recipients ORDER BY created_at DESC');
   res.json(rows);
 });
 
 // ── Add recipient ───────────────────────────────────────────────
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { email, name } = req.body;
 
   if (!email) {
@@ -26,13 +26,14 @@ router.post('/', (req, res) => {
   }
 
   try {
-    const result = db.prepare(
-      'INSERT INTO notification_recipients (email, name) VALUES (?, ?)'
-    ).run(email, name || null);
-
-    res.status(201).json({ id: result.lastInsertRowid, email, name, active: 1 });
+    const inserted = await db.one(
+      'INSERT INTO notification_recipients (email, name) VALUES ($1, $2) RETURNING id',
+      [email, name || null],
+    );
+    res.status(201).json({ id: inserted.id, email, name, active: 1 });
   } catch (err) {
-    if (err.message.includes('UNIQUE constraint')) {
+    // WHY: Postgres unique-violation SQLSTATE is 23505 (distinct from SQLite's text message)
+    if (err.code === '23505') {
       return res.status(409).json({ error: 'Recipient already exists' });
     }
     console.error('[recipients] Insert error:', err.message);
@@ -41,27 +42,31 @@ router.post('/', (req, res) => {
 });
 
 // ── Update recipient ────────────────────────────────────────────
-router.patch('/:id', (req, res) => {
+router.patch('/:id', async (req, res) => {
   const { email, name, active } = req.body;
-  const fields = [];
+  const sets = [];
   const values = [];
+  let n = 1;
 
   if (email !== undefined) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Invalid email address' });
     }
-    fields.push('email = ?');
+    sets.push(`email = $${n++}`);
     values.push(email);
   }
-  if (name !== undefined) { fields.push('name = ?'); values.push(name); }
-  if (active !== undefined) { fields.push('active = ?'); values.push(active ? 1 : 0); }
+  if (name !== undefined) { sets.push(`name = $${n++}`); values.push(name); }
+  if (active !== undefined) { sets.push(`active = $${n++}`); values.push(active ? 1 : 0); }
 
-  if (fields.length === 0) {
+  if (sets.length === 0) {
     return res.status(400).json({ error: 'No fields to update' });
   }
 
   values.push(req.params.id);
-  const result = db.prepare(`UPDATE notification_recipients SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  const result = await db.run(
+    `UPDATE notification_recipients SET ${sets.join(', ')} WHERE id = $${n}`,
+    values,
+  );
 
   if (result.changes === 0) {
     return res.status(404).json({ error: 'Recipient not found' });
@@ -70,8 +75,11 @@ router.patch('/:id', (req, res) => {
 });
 
 // ── Delete recipient ────────────────────────────────────────────
-router.delete('/:id', (req, res) => {
-  const result = db.prepare('DELETE FROM notification_recipients WHERE id = ?').run(req.params.id);
+router.delete('/:id', async (req, res) => {
+  const result = await db.run(
+    'DELETE FROM notification_recipients WHERE id = $1',
+    [req.params.id],
+  );
   if (result.changes === 0) {
     return res.status(404).json({ error: 'Recipient not found' });
   }

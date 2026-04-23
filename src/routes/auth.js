@@ -16,7 +16,7 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
-  const user = db.prepare('SELECT * FROM admin_users WHERE email = ?').get(email);
+  const user = await db.one('SELECT * FROM admin_users WHERE email = $1', [email]);
   if (!user) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
