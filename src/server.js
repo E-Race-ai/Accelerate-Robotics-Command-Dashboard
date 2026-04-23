@@ -5,8 +5,9 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 
-// WHY: Import db first so schema + seed run before routes try to query
-require('./db/database');
+// WHY: Import db first so schema + seed run before routes try to query.
+// The libsql-based db module exports a `ready` promise that server.js awaits before listen().
+const db = require('./db/database');
 
 const authRoutes = require('./routes/auth');
 const inquiryRoutes = require('./routes/inquiries');
@@ -20,7 +21,6 @@ const assessmentPdfRoutes = require('./routes/assessment-pdf');
 const narrateRoutes = require('./routes/narrate');
 const marketRoutes = require('./routes/markets');
 const prospectRoutes = require('./routes/prospects');
-const { seedProspects } = require('./db/seed-prospects');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -94,7 +94,11 @@ app.use('/data', (req, res, next) => {
 }, express.static(path.join(__dirname, '..', 'data')));
 
 // WHY: Serve each hotel repo so proposal pages (with relative asset paths) work correctly from the deals dashboard
-const HOTEL_REPOS_DIR = path.join(__dirname, '..', '..');
+// WHY: Local dev: serve from sibling directories (../../{repo}) for live edits.
+// Production: fall back to bundled repos/ directory committed to this repo.
+// This solves the 404 problem where proposal pages only existed on Eric's machine.
+const HOTEL_REPOS_SIBLING = path.join(__dirname, '..', '..');
+const HOTEL_REPOS_BUNDLED = path.join(__dirname, '..', 'repos');
 const hotelRepos = [
   'accelerate-thesis-hotel',
   'accelerate-moore-miami',
@@ -110,8 +114,12 @@ const hotelRepos = [
   'accelerate-carts',
   'accelerate-elevator',
 ];
+const fs = require('fs');
 for (const repo of hotelRepos) {
-  const repoPath = path.join(HOTEL_REPOS_DIR, repo);
+  const siblingPath = path.join(HOTEL_REPOS_SIBLING, repo);
+  const bundledPath = path.join(HOTEL_REPOS_BUNDLED, repo);
+  // WHY: Prefer sibling (local dev with live edits) over bundled (production fallback)
+  const repoPath = fs.existsSync(siblingPath) ? siblingPath : bundledPath;
   app.use(`/repos/${repo}`, express.static(repoPath));
 }
 
@@ -158,8 +166,14 @@ app.get('/admin/deals/:id', (req, res) => {
 });
 
 // ── Start ───────────────────────────────────────────────────────
-// WHY: Seed prospect data on first boot — idempotent, skips if data exists
-seedProspects();
-app.listen(PORT, () => {
-  console.log(`[server] Accelerate Robotics running at http://localhost:${PORT}`);
-});
+// WHY: Await schema init + seeds before binding the port so routes never race against an unready DB.
+db.ready
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`[server] Accelerate Robotics running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('[server] Failed to initialize database:', err);
+    process.exit(1);
+  });

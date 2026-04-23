@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Moore — Full Proposal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        /* Moore palette — Design District material language */
+        --bronze: #8a6f47;
+        --bronze-light: #a68a5c;
+        --bronze-soft: #d9c9a8;
+        --navy: #151515;              /* Blackened — not navy */
+        --navy-light: #2a2620;
+        --charcoal: #1a1a1e;
+        --cream: #f6f1e8;             /* Ivory */
+        --cream-warm: #faf6ec;
+        --cream-deep: #ede6d3;
+        /* Accelerate Robotics brand */
+        --accel-blue: #0055ff;
+        --accel-cyan: #00c8ff;
+        --accel-purple: #7c3aed;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; }
+    .bronze-gradient { background: linear-gradient(135deg, var(--bronze), var(--bronze-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .accel-gradient { background: linear-gradient(135deg, var(--accel-blue), var(--accel-cyan), var(--accel-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    .callout-soft   { background: var(--cream); border: 1px solid rgba(138, 111, 71, 0.25); border-radius: 0.75rem; }
+    .callout-warm   { background: var(--cream-warm); border: 1px solid rgba(138, 111, 71, 0.35); border-radius: 0.75rem; }
+    .callout-deep   { background: var(--cream-deep); border: 1px solid rgba(21, 21, 21, 0.15); border-radius: 0.75rem; }
+    .callout-navy   { background: var(--navy); color: #fff; border-radius: 0.75rem; }
+    .callout-navy h3, .callout-navy h4 { color: var(--bronze-light); }
+
+    .brand-dot   { color: var(--bronze); font-weight: 700; }
+    .brand-check { color: var(--bronze); font-weight: 700; }
+    .brand-x     { color: var(--navy); font-weight: 700; }
+
+    .robot-chip { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 0.5rem; background: var(--navy); color: var(--bronze-light); font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.75rem; }
+    .step-circle { width: 1.75rem; height: 1.75rem; border-radius: 999px; background: var(--bronze); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; font-family: 'Space Grotesk', sans-serif; }
+    .recommended-pill { background: var(--bronze); color: #fff; font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.65rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    .solution-card { background: white; border: 1px solid #e8e0d0; border-radius: 1.25rem; overflow: hidden; transition: all 0.3s ease; }
+    .solution-card:hover { box-shadow: 0 12px 40px rgba(138, 111, 71, 0.18); transform: translateY(-2px); border-color: var(--bronze); }
+    .robot-img-wrap { position: relative; display: flex; align-items: center; justify-content: center; padding: 1.5rem 1rem; min-height: 200px; }
+    .robot-img-wrap img { max-height: 180px; width: auto; object-fit: contain; filter: drop-shadow(0 8px 24px rgba(0,0,0,0.12)); transition: transform 0.4s ease; }
+    .solution-card:hover .robot-img-wrap img { transform: scale(1.05); }
+    .stat-pill { display: inline-flex; align-items: center; padding: 0.2rem 0.5rem; background: #f0ebde; border-radius: 999px; font-size: 0.6rem; font-weight: 600; color: #6b5c3e; white-space: nowrap; }
+
+    .tier-a { background: var(--cream); color: var(--navy); border: 1px solid rgba(21, 21, 21, 0.15); }
+    .tier-b { background: var(--cream-deep); color: var(--navy); border: 1px solid rgba(138, 111, 71, 0.4); }
+    .tier-c { background: var(--bronze); color: #fff; }
+    .tier-badge { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .data-table th { background: var(--navy); color: #fff; font-weight: 700; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.7rem; }
+    .data-table th.center { text-align: center; }
+    .data-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    .data-table tr:nth-child(even) td { background: #f9fafb; }
+    .data-table td.num { text-align: right; font-family: 'Space Grotesk', monospace; }
+    .data-table td.center { text-align: center; }
+    .data-table td.label { font-weight: 600; color: var(--navy); }
+    .data-table tr.section-header td { background: var(--navy) !important; color: #fff; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
+    .data-table tr.total td { background: var(--cream-warm) !important; font-weight: 700; border-top: 2px solid var(--bronze); }
+    .data-table tr.highlight td { background: var(--cream) !important; }
+
+    @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .solution-card { break-inside: avoid; }
+        .page-break { page-break-before: always; }
+        .no-print { display: none; }
+    }
+
+    .section-divider { border: none; height: 1px; background: linear-gradient(to right, transparent, var(--bronze-light), transparent); margin: 3rem 0; }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       DEVICE MOCKUPS — iPhone 15 / MacBook Pro frames for the OS section
+       ═══════════════════════════════════════════════════════════════════ */
+    .device-showcase {
+        display: flex; align-items: center; justify-content: center;
+        padding: 3rem 2rem;
+        background: linear-gradient(135deg, #f6f1e8 0%, #ede6d3 100%);
+        border-bottom: 1px solid #e8e0d0;
+        position: relative;
+    }
+    .device-showcase--dark {
+        background: linear-gradient(135deg, #1a1a1e 0%, #2a2620 100%);
+        border-bottom: 1px solid rgba(168,138,92,0.3);
+    }
+    .device-showcase--split {
+        justify-content: space-around; gap: 2rem; flex-wrap: wrap;
+    }
+    .device-caption {
+        position: absolute; top: 1rem; left: 50%; transform: translateX(-50%);
+        font-family: 'Space Grotesk', sans-serif; font-size: 0.65rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.15em; color: #8a6f47;
+    }
+    .device-showcase--dark .device-caption { color: #a68a5c; }
+
+    /* iPhone 15 frame */
+    .device-iphone {
+        position: relative;
+        width: 240px;
+        aspect-ratio: 390 / 844;
+        background: #0a0a0c;
+        border-radius: 40px;
+        padding: 8px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.08);
+        flex-shrink: 0;
+    }
+    .device-iphone::after {
+        content: ""; position: absolute;
+        top: 16px; left: 50%; transform: translateX(-50%);
+        width: 88px; height: 24px;
+        background: #000;
+        border-radius: 14px;
+        z-index: 20;
+    }
+    .iphone-screen {
+        width: 100%; height: 100%;
+        border-radius: 32px;
+        overflow: hidden;
+        background: #fbefe2;
+        position: relative;
+        display: flex; flex-direction: column;
+        font-family: -apple-system, 'SF Pro Display', 'Source Sans 3', system-ui, sans-serif;
+    }
+    .iphone-statusbar {
+        height: 50px; flex-shrink: 0;
+        display: flex; justify-content: space-between; align-items: flex-end;
+        padding: 0 22px 7px;
+        font-size: 11px; font-weight: 700;
+        color: #302e2f;
+    }
+    .iphone-home-bar {
+        position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+        width: 110px; height: 4px;
+        background: #302e2f; border-radius: 2px; opacity: 0.4;
+        z-index: 30;
+    }
+
+    /* Concierge AI chat content */
+    .chat-header {
+        padding: 10px 16px 12px;
+        border-bottom: 1px solid rgba(48,46,47,0.08);
+        text-align: center;
+    }
+    .chat-header .brand {
+        font-family: 'Playfair Display', 'Source Serif 4', serif;
+        font-size: 14px; font-weight: 500; color: #302e2f;
+    }
+    .chat-header .sub {
+        font-size: 8px; font-weight: 700; letter-spacing: 0.15em;
+        text-transform: uppercase; color: #999283; margin-top: 2px;
+    }
+    .chat-body {
+        flex: 1; padding: 10px 12px 16px;
+        display: flex; flex-direction: column; gap: 7px;
+        overflow: hidden;
+    }
+    .bubble {
+        max-width: 78%; padding: 7px 11px; border-radius: 14px;
+        font-size: 10px; line-height: 1.4;
+    }
+    .bubble-ai {
+        background: #ffffff; color: #302e2f; align-self: flex-start;
+        border: 1px solid rgba(48,46,47,0.08); border-bottom-left-radius: 4px;
+    }
+    .bubble-me {
+        background: #b07d56; color: #fbefe2; align-self: flex-end;
+        border-bottom-right-radius: 4px;
+    }
+    .chat-input {
+        padding: 7px 12px 12px;
+        border-top: 1px solid rgba(48,46,47,0.08);
+    }
+    .chat-input-pill {
+        background: #fff; border: 1px solid rgba(48,46,47,0.1);
+        border-radius: 16px; padding: 7px 12px;
+        font-size: 10px; color: #999283;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .chat-ai-footer {
+        text-align: center; font-size: 7px; font-weight: 600; letter-spacing: 0.08em;
+        color: #999283; padding: 4px 0 14px; text-transform: uppercase;
+    }
+
+    /* Member-app home content */
+    .me-header {
+        padding: 10px 16px 10px;
+        text-align: center;
+    }
+    .me-header .brand {
+        font-family: 'Playfair Display', serif;
+        font-size: 14px; font-weight: 500; color: #302e2f; letter-spacing: 0.02em;
+    }
+    .me-header .greet {
+        font-size: 8px; color: #999283; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.12em; margin-top: 3px;
+    }
+    .me-hero {
+        margin: 6px 12px 10px; padding: 12px;
+        background: linear-gradient(135deg, #302e2f 0%, #4a4748 100%);
+        border-radius: 12px; color: #fbefe2;
+    }
+    .me-hero .label { font-size: 8px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.6; font-weight: 700; }
+    .me-hero .title { font-family: 'Playfair Display', serif; font-size: 15px; margin-top: 3px; font-weight: 500; }
+    .me-hero .sub { font-size: 9px; opacity: 0.7; margin-top: 3px; line-height: 1.3; }
+    .me-grid {
+        padding: 0 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .me-card {
+        background: #fff; border: 1px solid rgba(48,46,47,0.08);
+        border-radius: 10px; padding: 9px 10px;
+    }
+    .me-card .icon {
+        width: 20px; height: 20px; border-radius: 6px;
+        background: #f9e4d0; color: #b07d56;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; margin-bottom: 5px;
+    }
+    .me-card .title { font-size: 9.5px; font-weight: 700; color: #302e2f; }
+    .me-card .sub { font-size: 7.5px; color: #999283; margin-top: 1px; line-height: 1.2; }
+    .me-active {
+        margin: 10px 12px 0; padding: 9px 11px;
+        background: #fbe3c9; border: 1px solid rgba(176,125,86,0.3);
+        border-radius: 10px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .me-active .label { font-size: 7.5px; font-weight: 700; letter-spacing: 0.1em; color: #8a6f47; text-transform: uppercase; }
+    .me-active .item { font-size: 10px; color: #302e2f; font-weight: 600; margin-top: 2px; }
+    .me-active .eta {
+        font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700;
+        color: #b07d56;
+    }
+
+    /* MacBook Pro frame */
+    .macbook-wrap { flex-shrink: 0; width: 100%; max-width: 680px; }
+    .device-macbook {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 10;
+        background: #0a0a0c;
+        border-radius: 12px;
+        padding: 14px 10px 10px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.28), inset 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    .device-macbook::before {
+        content: ""; position: absolute;
+        top: 5px; left: 50%; transform: translateX(-50%);
+        width: 68px; height: 10px;
+        background: #000;
+        border-radius: 0 0 6px 6px;
+        z-index: 20;
+    }
+    .device-macbook::after {
+        content: ""; position: absolute;
+        top: 10px; left: calc(50% + 20px);
+        width: 3px; height: 3px; border-radius: 50%;
+        background: #1a1a1e; border: 1px solid #333;
+    }
+    .macbook-screen {
+        width: 100%; height: 100%;
+        border-radius: 3px; overflow: hidden;
+        background: #fbefe2;
+        display: flex;
+        font-family: 'Source Sans 3', system-ui, sans-serif;
+        font-size: 9px;
+    }
+    .macbook-base {
+        width: 112%; margin-left: -6%; height: 10px;
+        background: linear-gradient(to bottom, #2a2a30 0%, #0a0a0c 50%, #2a2a30 100%);
+        border-radius: 0 0 18px 18px;
+        position: relative;
+    }
+    .macbook-base::before {
+        content: ""; position: absolute;
+        top: 0; left: 50%; transform: translateX(-50%);
+        width: 13%; height: 4px;
+        background: linear-gradient(to bottom, #0a0a0c, #2a2a30);
+        border-radius: 0 0 6px 6px;
+    }
+
+    /* Financial Dashboard content */
+    .fd-sidebar {
+        width: 22%; background: #302e2f; color: #fbefe2;
+        padding: 10px 0; display: flex; flex-direction: column; gap: 1px;
+    }
+    .fd-sidebar .logo {
+        padding: 4px 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.08);
+        margin-bottom: 8px;
+    }
+    .fd-sidebar .logo-mark {
+        font-family: 'Playfair Display', serif; font-size: 12px; color: #a68a5c; text-align: center;
+    }
+    .fd-sidebar .logo-sub {
+        font-size: 6px; text-align: center; color: rgba(251,239,226,0.45);
+        letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; margin-top: 2px;
+    }
+    .fd-nav {
+        padding: 4px 12px; font-size: 7.5px; color: rgba(251,239,226,0.55);
+        display: flex; align-items: center; gap: 6px;
+    }
+    .fd-nav.active { background: rgba(255,255,255,0.06); color: #fbefe2; font-weight: 600; }
+    .fd-nav.alert { color: #f08080; font-weight: 600; }
+    .fd-main { flex: 1; padding: 10px 14px; overflow: hidden; }
+    .fd-main h3 {
+        font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 500;
+        color: #302e2f;
+    }
+    .fd-main .date {
+        font-size: 7px; color: #999283; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+    }
+    .fd-alert {
+        background: #b07d56; color: #fff;
+        padding: 5px 9px; border-radius: 4px; margin-top: 8px;
+        font-size: 7.5px; font-weight: 600;
+        display: flex; align-items: center; gap: 6px;
+    }
+    .fd-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 8px; }
+    .fd-kpi {
+        background: #fff; border: 1px solid rgba(48,46,47,0.06);
+        border-radius: 4px; padding: 6px 7px;
+    }
+    .fd-kpi .label { font-size: 6.5px; color: #999283; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+    .fd-kpi .val {
+        font-family: 'Space Grotesk', monospace; font-size: 12px; color: #302e2f;
+        font-weight: 700; margin-top: 1px;
+    }
+    .fd-kpi .trend { font-size: 6.5px; color: #5a8a6e; font-weight: 700; margin-top: 1px; }
+    .fd-kpi .trend.red { color: #c45c5c; }
+    .fd-row { display: grid; grid-template-columns: 1.3fr 1fr; gap: 6px; margin-top: 8px; }
+    .fd-panel {
+        background: #fff; border: 1px solid rgba(48,46,47,0.06);
+        border-radius: 4px; padding: 7px 9px;
+    }
+    .fd-panel h4 { font-size: 7.5px; color: #302e2f; font-weight: 700; margin-bottom: 5px; }
+    .fd-bar { display: flex; align-items: center; gap: 5px; font-size: 7px; margin-bottom: 3px; }
+    .fd-bar .name { width: 50px; color: #302e2f; font-weight: 600; }
+    .fd-bar .bar {
+        flex: 1; height: 5px; background: rgba(48,46,47,0.08);
+        border-radius: 2px; overflow: hidden; position: relative;
+    }
+    .fd-bar .bar-fill { height: 100%; background: #b07d56; border-radius: 2px; }
+    .fd-bar .pct { width: 28px; text-align: right; color: #302e2f; font-family: 'Space Grotesk', monospace; font-weight: 700; }
+    .fd-variance-row {
+        font-size: 7px; padding: 3px 0;
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid rgba(48,46,47,0.06);
+    }
+    .fd-variance-row:last-child { border-bottom: none; }
+    .fd-variance-row .label { color: #302e2f; font-weight: 600; }
+    .fd-variance-row .val {
+        font-family: 'Space Grotesk', monospace; font-weight: 700; color: #c45c5c;
+    }
+
+    /* Fleet Command content */
+    .fc-wrap { background: #1a1a1e; color: #fbefe2; width: 100%; height: 100%; display: flex; flex-direction: column; }
+    .fc-topbar {
+        padding: 7px 12px; border-bottom: 1px solid rgba(255,255,255,0.08);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .fc-topbar .title {
+        font-family: 'Playfair Display', serif; font-size: 12px; color: #a68a5c;
+    }
+    .fc-topbar .status {
+        font-size: 7px; color: #5a8a6e; font-weight: 700; letter-spacing: 0.1em;
+        text-transform: uppercase;
+        display: flex; align-items: center; gap: 4px;
+    }
+    .fc-topbar .status .dot {
+        width: 6px; height: 6px; border-radius: 50%; background: #5a8a6e;
+        box-shadow: 0 0 6px #5a8a6e;
+    }
+    .fc-body { flex: 1; display: grid; grid-template-columns: 140px 1fr 150px; gap: 0; }
+    .fc-fleet {
+        background: rgba(255,255,255,0.02);
+        border-right: 1px solid rgba(255,255,255,0.06);
+        padding: 8px 0; overflow: hidden;
+    }
+    .fc-fleet .section {
+        font-size: 6.5px; letter-spacing: 0.15em; text-transform: uppercase;
+        color: rgba(251,239,226,0.4); padding: 4px 10px; font-weight: 700;
+    }
+    .fc-robot {
+        padding: 4px 10px; font-size: 8px; display: flex; align-items: center; gap: 6px;
+        border-left: 2px solid transparent;
+    }
+    .fc-robot .dot {
+        width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+    }
+    .fc-robot .dot.green { background: #5a8a6e; box-shadow: 0 0 4px #5a8a6e; }
+    .fc-robot .dot.amber { background: #c49a3c; box-shadow: 0 0 4px #c49a3c; }
+    .fc-robot .dot.grey { background: #6b6563; }
+    .fc-robot .name { font-weight: 600; color: #fbefe2; font-family: 'Space Grotesk', monospace; font-size: 8px; }
+    .fc-robot .sub { font-size: 6.5px; color: rgba(251,239,226,0.45); margin-left: auto; }
+    .fc-robot.active { border-left-color: #b07d56; background: rgba(176,125,86,0.08); }
+    .fc-map {
+        padding: 10px 12px; display: flex; flex-direction: column;
+    }
+    .fc-map h4 {
+        font-size: 7px; letter-spacing: 0.12em; text-transform: uppercase;
+        color: rgba(251,239,226,0.55); font-weight: 700; margin-bottom: 6px;
+    }
+    .fc-floor {
+        flex: 1; background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 3px; margin-bottom: 4px;
+        padding: 4px 7px; position: relative;
+        display: flex; align-items: center; gap: 6px;
+        font-size: 7px; color: rgba(251,239,226,0.7);
+    }
+    .fc-floor .num {
+        font-family: 'Playfair Display', serif; font-size: 11px; color: #a68a5c; width: 16px;
+    }
+    .fc-floor .label { font-size: 7px; color: rgba(251,239,226,0.55); }
+    .fc-floor .dots { display: flex; gap: 3px; margin-left: auto; }
+    .fc-floor .dots .dot {
+        width: 6px; height: 6px; border-radius: 50%;
+    }
+    .fc-floor .dots .dot.g { background: #5a8a6e; box-shadow: 0 0 4px #5a8a6e; }
+    .fc-floor .dots .dot.a { background: #c49a3c; box-shadow: 0 0 4px #c49a3c; }
+    .fc-floor .dots .dot.b { background: #6b8f9e; box-shadow: 0 0 4px #6b8f9e; }
+    .fc-tasks {
+        border-left: 1px solid rgba(255,255,255,0.06);
+        padding: 8px 10px;
+    }
+    .fc-tasks h4 {
+        font-size: 7px; letter-spacing: 0.12em; text-transform: uppercase;
+        color: rgba(251,239,226,0.55); font-weight: 700; margin-bottom: 6px;
+    }
+    .fc-task {
+        padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .fc-task:last-child { border-bottom: none; }
+    .fc-task .head {
+        display: flex; justify-content: space-between;
+        font-size: 7.5px; font-weight: 700;
+        font-family: 'Space Grotesk', monospace;
+        color: #fbefe2;
+    }
+    .fc-task .head .eta { color: #a68a5c; }
+    .fc-task .sub { font-size: 7px; color: rgba(251,239,226,0.5); margin-top: 1px; }
+    .fc-alert {
+        margin-top: 8px; padding: 5px 7px;
+        background: rgba(196,92,92,0.15);
+        border: 1px solid rgba(196,92,92,0.35);
+        border-radius: 3px;
+        font-size: 7px; color: #f08080;
+        font-weight: 600;
+    }
+
+    /* Stacked-report showcase (Surface 2 — three reports on three MacBooks) */
+    .device-showcase--stacked {
+        flex-direction: column; gap: 2.5rem;
+        padding: 3.5rem 2rem 3rem;
+    }
+    .report-label {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.7rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.18em;
+        color: #8a6f47;
+        text-align: center;
+        margin-bottom: 0.6rem;
+    }
+    .report-label .num {
+        display: inline-block;
+        width: 22px; height: 22px; border-radius: 50%;
+        background: #b07d56; color: #fff;
+        text-align: center; line-height: 22px; margin-right: 10px;
+        font-family: 'Playfair Display', serif;
+        vertical-align: middle;
+    }
+
+    /* CFO Close-Out content — P&L rows + sign-off panel */
+    .fd-pnl-row {
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 7.5px; padding: 3px 0;
+        border-bottom: 1px solid rgba(48,46,47,0.06);
+    }
+    .fd-pnl-row:last-child { border-bottom: none; }
+    .fd-pnl-row.total {
+        border-top: 1px solid rgba(48,46,47,0.25);
+        font-weight: 700; padding-top: 5px; margin-top: 4px;
+        border-bottom: none;
+    }
+    .fd-pnl-row .name { color: #302e2f; font-weight: 600; }
+    .fd-pnl-row .sub { font-size: 6px; color: #999283; margin-left: 5px; font-weight: 500; }
+    .fd-pnl-row .val {
+        font-family: 'Space Grotesk', monospace; font-weight: 700; color: #302e2f;
+    }
+    .fd-pnl-row .val.pos { color: #5a8a6e; }
+    .fd-pnl-row .val.neg { color: #c45c5c; }
+    .fd-signoff {
+        margin-top: 6px; padding: 5px 9px;
+        background: rgba(90,138,110,0.1); border: 1px solid rgba(90,138,110,0.3);
+        border-radius: 4px;
+        font-size: 7px; color: #3d6a53; font-weight: 600;
+        display: flex; align-items: center; gap: 6px;
+    }
+    .fd-audit-row {
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 6.5px; padding: 2.5px 0;
+        border-bottom: 1px dashed rgba(48,46,47,0.08);
+    }
+    .fd-audit-row:last-child { border-bottom: none; }
+    .fd-audit-row .who { color: #302e2f; font-weight: 600; }
+    .fd-audit-row .when { color: #999283; font-family: 'Space Grotesk', monospace; }
+    .fd-audit-row .chk { color: #5a8a6e; font-weight: 700; }
+
+    /* Fleet Performance content — per-robot productivity table */
+    .fd-robot-row {
+        display: grid; grid-template-columns: 46px 1fr 42px 52px;
+        gap: 6px; font-size: 7px; padding: 3.5px 0; align-items: center;
+        border-bottom: 1px solid rgba(48,46,47,0.06);
+    }
+    .fd-robot-row.head {
+        font-size: 6px; color: #999283; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        padding-bottom: 4px; border-bottom: 1px solid rgba(48,46,47,0.15);
+    }
+    .fd-robot-row:last-child { border-bottom: none; }
+    .fd-robot-row .code {
+        font-family: 'Space Grotesk', monospace; font-weight: 700; color: #302e2f;
+        font-size: 7.5px;
+    }
+    .fd-robot-row .desc { color: #666060; font-size: 6.5px; }
+    .fd-robot-row .tasks {
+        font-family: 'Space Grotesk', monospace; text-align: right;
+        font-weight: 700; color: #302e2f;
+    }
+    .fd-robot-row .saved {
+        font-family: 'Space Grotesk', monospace; text-align: right;
+        font-weight: 700; color: #5a8a6e;
+    }
+    .fd-metric-stack { display: flex; flex-direction: column; gap: 4px; }
+    .fd-metric-card {
+        background: #faf6ec; border: 1px solid rgba(138,111,71,0.2);
+        border-radius: 4px; padding: 5px 8px;
+    }
+    .fd-metric-card .label {
+        font-size: 6px; color: #8a6f47; text-transform: uppercase;
+        letter-spacing: 0.1em; font-weight: 700;
+    }
+    .fd-metric-card .val {
+        font-family: 'Space Grotesk', monospace; font-size: 11px;
+        font-weight: 700; color: #302e2f; margin-top: 1px;
+    }
+    .fd-metric-card .sub {
+        font-size: 6px; color: #666060; margin-top: 1px; line-height: 1.2;
+    }
+
+    @media print {
+        .device-showcase { padding: 1.5rem 1rem; break-inside: avoid; }
+        .device-showcase--stacked { gap: 1.5rem; padding: 2rem 1rem; }
+        .device-iphone, .device-macbook { box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important; }
+    }
+</style>
+</head>
+<body class="bg-white text-gray-900">
+
+<!-- ================================================================ -->
+<!-- HEADER -->
+<!-- ================================================================ -->
+<header class="bg-gradient-to-br from-[#151515] via-[#2a2620] to-[#151515] text-white px-8 py-12 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%221%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+
+    <div class="max-w-5xl mx-auto relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-14 h-14 rounded-xl border-2 border-[#a68a5c] flex items-center justify-center">
+                        <span class="text-[#a68a5c] font-bold text-2xl headline">M</span>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">
+                            Th<span class="text-[#a68a5c]">e</span> Moore
+                        </h1>
+                        <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Full Proposal &middot; Autonomous Member Service</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                    </div>
+                    <span class="text-sm font-bold tracking-tight accel-gradient tech-font">Accelerate Robotics</span>
+                </div>
+                <div class="text-[10px] text-gray-400 text-right tracking-wide">
+                    One Brain. Many Bots.<br>
+                    <span class="text-gray-500">April 2026 &middot; OPP-002</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats bar -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#a68a5c] tech-font">Up to 10</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Autonomous Robots</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#a68a5c] tech-font">24/7</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Member Service</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#a68a5c] tech-font">3</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Scalable Tiers</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#a68a5c] tech-font">$0</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Capital Required</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ================================================================ -->
+<!-- COVER LETTER -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-10">
+    <!-- Executive Proposal callout -->
+    <div class="no-print mb-8 p-5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #151515 0%, #2a2620 100%); border: 1px solid rgba(166, 138, 92, 0.4);">
+        <div>
+            <p class="text-[10px] uppercase tracking-widest text-[#a68a5c] font-semibold mb-1">Executive Proposal</p>
+            <p class="text-white text-sm font-semibold">One-page read with a live configurator &mdash; drag to size the fleet, watch cost and ROI update in real time.</p>
+            <p class="text-gray-400 text-xs mt-1">Same numbers as this full proposal, distilled for executive review.</p>
+        </div>
+        <a href="proposal-interactive.html" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm tech-font whitespace-nowrap" style="background: #8a6f47; color: #fff;">
+            Open Executive Proposal
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </a>
+    </div>
+
+    <p class="text-gray-600 text-sm leading-relaxed mb-4">Dear Moore Members' Club Leadership,</p>
+
+    <p class="text-gray-700 text-sm leading-relaxed mb-4">Following our conversations and my own time as a member of The Moore, we've developed three service tiers for bringing autonomous member service to the club — not as a cost-cutting exercise, but as an <strong class="text-[#151515]">amenity extension</strong> that reinforces what the Michelin Key stands for.</p>
+
+    <div class="bg-gradient-to-r from-[#f6f1e8] to-[#faf6ec] rounded-xl p-6 border border-[#e8e0d0] my-6">
+        <p class="text-gray-800 text-sm leading-relaxed font-medium"><strong class="text-[#151515]">Moore-branded autonomous member service, available 24 hours a day, 7 days a week</strong> — something no amount of human staffing can sustainably deliver in a 13-residence club. Every robot carries The Moore identity. The S100 delivery platform is dressed with a <strong class="text-[#151515]">custom blackened-bronze, quartered-oak, and ivory-leather three-tier service cart</strong> — swappable configurations for Torno Subito in-residence dining, cocktail runs from The Roof, private event service, and residence bellhop — all fitted to the Design District's material vocabulary. Members don't see a vendor's equipment. They see another expression of The Moore.</p>
+    </div>
+
+    <p class="text-gray-700 text-sm leading-relaxed mb-4">This fleet doesn't replace your team. It gives your team <strong>leverage</strong>. The repetitive, time-consuming movement tasks — linens, supplies, floor maintenance on 90,000 square feet of hardwood and tile, overnight delivery, event setup and strike — happen automatically, so your staff focuses on the member-facing moments that define the club.</p>
+
+    <p class="text-gray-700 text-sm leading-relaxed mb-6"><strong class="text-[#151515]">The Moore becomes the first members' club in Miami to deliver 24/7 autonomous member service as an amenity.</strong> A service floor that doesn't drop off at midnight, a member experience calibrated to Michelin Key standards across every hour the building is open.</p>
+
+    <!-- Three tiers summary -->
+    <div class="grid md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-xl p-5 border border-gray-200 hover:border-[#8a6f47] transition-colors">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="tier-badge tier-a">Option A</span>
+            </div>
+            <h3 class="font-bold text-base text-[#151515]">Signature Service</h3>
+            <p class="text-xs text-gray-500 mt-1 mb-3">3 robots — core service &amp; delivery</p>
+            <p class="text-xs text-gray-600 leading-relaxed">Torno hardwood care, S100 in-residence dining cart, late-evening W3 branded delivery. The entry point that proves the concept.</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-gray-200 hover:border-[#8a6f47] transition-colors">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="tier-badge tier-b">Option B</span>
+            </div>
+            <h3 class="font-bold text-base text-[#151515]">Full-Property Service</h3>
+            <p class="text-xs text-gray-500 mt-1 mb-3">6 robots — full indoor coverage</p>
+            <p class="text-xs text-gray-600 leading-relaxed">Adds member-lounge carpet, The Roof service loop, event turnover, residence bellhop, and second late-evening delivery.</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 border-2 border-[#8a6f47] hover:border-[#6b5436] transition-colors relative">
+            <div class="absolute -top-2.5 right-4">
+                <span class="recommended-pill">Recommended</span>
+            </div>
+            <div class="flex items-center gap-2 mb-2">
+                <span class="tier-badge tier-c">Option C</span>
+            </div>
+            <h3 class="font-bold text-base text-[#151515]">The Moore Autonomous</h3>
+            <p class="text-xs text-gray-500 mt-1 mb-3">10 robots + Intelligence Platform</p>
+            <p class="text-xs text-gray-600 leading-relaxed">Full fleet, linens and event-turnover S300s, and real-time facility intelligence. 24/7 member service as a signature amenity.</p>
+        </div>
+    </div>
+
+    <p class="text-gray-600 text-sm">Eric Race<br><strong class="text-[#151515]">Founder &amp; CEO, Accelerate Robotics</strong></p>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- MEMBER EXPERIENCE -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#151515] headline mb-6">The Member Experience</h2>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <div class="bg-gradient-to-br from-[#faf6ec] to-[#f0ebde] rounded-xl p-6 border border-[#e8e0d0]">
+            <h3 class="font-bold text-sm text-[#151515] mb-3 tech-font uppercase tracking-wide">What Members See</h3>
+            <p class="text-sm text-gray-700 leading-relaxed mb-3">Every robot is <strong>custom-branded with The Moore identity</strong>. The S100 platform carries a <strong>bespoke blackened-bronze, quartered-oak, and ivory-leather three-tier service cart</strong> — swappable for Torno in-residence dining, cocktail trolley from The Roof, private event service, or residence bellhop — designed to match the property's Design District material palette.</p>
+            <p class="text-sm text-gray-700 leading-relaxed">A member dines in their residence at 11 PM. A Moore-branded S100 arrives with hot plates under insulated cloches from Torno, an ivory-leather-lined beverage bucket, and a linen napkin on the top shelf. The same Michelin-grade service at 2 AM as 2 PM.</p>
+        </div>
+        <div class="bg-gradient-to-br from-[#f6f1e8] to-[#ede6d3] rounded-xl p-6 border border-[#e8e0d0]">
+            <h3 class="font-bold text-sm text-[#151515] mb-3 tech-font uppercase tracking-wide">What Members Don't See</h3>
+            <p class="text-sm text-gray-700 leading-relaxed mb-3">Behind the scenes, the fleet handles repetitive logistics that consume your team's hours without adding member value:</p>
+            <ul class="text-sm text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="text-[#8a6f47] mt-0.5">&#9670;</span> <span><strong>Hard-floor care</strong> on 90,000 sq ft of hardwood and tile runs overnight without a porter pushing a scrubber for hours</span></li>
+                <li class="flex items-start gap-2"><span class="text-[#8a6f47] mt-0.5">&#9670;</span> <span><strong>Linen, glassware, and tabletop transport</strong> moves floor-to-floor without tying up a runner or service lift</span></li>
+                <li class="flex items-start gap-2"><span class="text-[#8a6f47] mt-0.5">&#9670;</span> <span><strong>Event turnover</strong> — strike-and-reset between back-to-back private functions handled autonomously</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="bg-[#151515] text-white rounded-xl p-6">
+        <h3 class="font-bold text-sm mb-3 tech-font text-[#a68a5c] tracking-wide uppercase">Why This Belongs at The Moore</h3>
+        <p class="text-sm text-gray-300 leading-relaxed mb-4">The Moore can present autonomous member service as a Michelin-grade amenity — a visible, marketable extension of the club's service culture, calibrated to the Design District material vocabulary:</p>
+        <div class="grid md:grid-cols-3 gap-4">
+            <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+                <p class="text-sm text-white italic headline">"The first members' club in Miami to offer 24/7 autonomous in-residence dining."</p>
+            </div>
+            <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+                <p class="text-sm text-white italic headline">"Torno Subito dining, delivered to your residence any hour, by The Moore's member service fleet."</p>
+            </div>
+            <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+                <p class="text-sm text-white italic headline">"Michelin Key service that doesn't rotate a shift. That's what a members' club is supposed to feel like."</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- FLEET SHOWCASE -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#151515] headline mb-2">The Fleet</h2>
+    <p class="text-sm text-gray-500 mb-8">Moore-branded robots from Keenon — coordinated through a single Accelerate platform. Five robot types tuned to a 13-residence members' club on 90,000 sq ft of hardwood and tile.</p>
+
+    <div class="grid md:grid-cols-2 gap-6">
+
+        <!-- ROBOT: C40 Hard Floor -->
+        <div class="solution-card">
+            <div class="bg-gradient-to-r from-[#f6f1e8] to-[#faf6ec] border-b border-[#e8e0d0] px-5 py-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip">C40</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">Hard-Floor Maintenance</h3>
+                            <p class="text-[10px] text-gray-500">Keenon Robotics &middot; the workhorse</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="tier-badge tier-a">A</span>
+                        <span class="tier-badge tier-b">B</span>
+                        <span class="tier-badge tier-c">C</span>
+                    </div>
+                </div>
+            </div>
+            <div class="robot-img-wrap bg-gradient-to-b from-[#faf6ec]/60 to-white">
+                <img src="../assets/robots/photos/keenon-c40-cleaning.png" alt="Keenon C40 Hard-Floor Cleaning Robot">
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100">
+                <p class="text-xs text-gray-600 mb-3">Autonomous scrub, sweep, and mop across Torno, The Roof, lobby, and event rooms. Full coverage overnight on 90,000 sq ft of hardwood and tile without adding a porter shift.</p>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <span class="stat-pill">540 sqm/hr</span>
+                    <span class="stat-pill">3-4h battery</span>
+                    <span class="stat-pill">61-68 dB</span>
+                    <span class="stat-pill">Auto-charge</span>
+                </div>
+                <div class="callout-soft p-2.5 text-xs text-[#151515]">
+                    <strong>Use Case:</strong> Runs 2 AM–6 AM across Torno, lobby, event rooms, and The Roof service floor. Members arrive to spotless hard surfaces every morning — no overnight cleaning crew pushing equipment through the club.
+                </div>
+            </div>
+        </div>
+
+        <!-- ROBOT: C30 Carpet -->
+        <div class="solution-card">
+            <div class="bg-gradient-to-r from-[#f6f1e8] to-[#faf6ec] px-5 py-3 border-b border-[#e8e0d0]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip">C30</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">Rug &amp; Corridor Care</h3>
+                            <p class="text-[10px] text-gray-500">Keenon Robotics &middot; B and C tiers</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="tier-badge tier-b">B</span>
+                        <span class="tier-badge tier-c">C</span>
+                    </div>
+                </div>
+            </div>
+            <div class="robot-img-wrap bg-gradient-to-b from-[#faf6ec]/60 to-white">
+                <img src="../assets/robots/photos/keenon-c30-white.png" alt="Keenon C30 Autonomous Carpet Cleaner">
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100">
+                <p class="text-xs text-gray-600 mb-3">Quiet autonomous vacuum for member-lounge rugs and residence-corridor runners on floors 2–4. Thorough enough to replace manual vacuuming entirely; quiet enough for late-morning passes.</p>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <span class="stat-pill">LiDAR + Vision</span>
+                    <span class="stat-pill">Low-pile carpet</span>
+                    <span class="stat-pill">Auto-charge</span>
+                    <span class="stat-pill">11,000 Pa</span>
+                </div>
+                <div class="callout-soft p-2.5 text-xs text-[#151515]">
+                    <strong>Use Case:</strong> One C30 covers member-lounge rugs and all residence-corridor runners across floors 2–4. Housekeepers focus on residence interiors and member touches instead of hallway vacuuming.
+                </div>
+            </div>
+        </div>
+
+        <!-- ROBOT: W3 Room Delivery -->
+        <div class="solution-card">
+            <div class="bg-gradient-to-r from-[#f6f1e8] to-[#faf6ec] px-5 py-3 border-b border-[#e8e0d0]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip">W3</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">Late-Evening Branded Delivery</h3>
+                            <p class="text-[10px] text-gray-500">Keenon Robotics &middot; up to 2 units</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="tier-badge tier-a">A</span>
+                        <span class="tier-badge tier-b">B</span>
+                        <span class="tier-badge tier-c">C</span>
+                    </div>
+                </div>
+            </div>
+            <div class="robot-img-wrap bg-gradient-to-b from-[#faf6ec]/60 to-white">
+                <img src="../assets/robots/photos/keenon-w3.png" alt="Keenon W3 — Moore-Branded Delivery Robot" style="max-height:200px;">
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100">
+                <p class="text-xs text-gray-600 mb-3">Moore-branded enclosed delivery robot with <strong>custom ivory-leather-lined compartments</strong>. Delivers amenities, post-service Torno items, and late-evening requests to residences — discreetly, contactlessly, when staffing is thin.</p>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <span class="stat-pill">9-12h battery</span>
+                    <span class="stat-pill">150+ deliveries/day</span>
+                    <span class="stat-pill">20 kg capacity</span>
+                    <span class="stat-pill">Residence-phone notification</span>
+                </div>
+                <div class="callout-soft p-2.5 text-xs text-[#151515]">
+                    <strong>Use Case:</strong> Member requests a nightcap at 12:30 AM. Concierge loads the W3, taps the residence number. It rides the member elevator to floor 3, calls the residence phone, and presents items in a leather-lined compartment. No staff trip. No quality drop when the bar is winding down.
+                </div>
+            </div>
+        </div>
+
+        <!-- ROBOT: S100 Luxury Service Cart -->
+        <div class="solution-card">
+            <div class="bg-gradient-to-r from-[#f6f1e8] to-[#faf6ec] px-5 py-3 border-b border-[#e8e0d0]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip" style="width: 2.5rem;">S100</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">Torno Subito × In-Residence Dining</h3>
+                            <p class="text-[10px] text-gray-500">Keenon Robotics &middot; blackened bronze + quartered oak + ivory leather topper &middot; up to 2 units</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="tier-badge tier-a">A</span>
+                        <span class="tier-badge tier-b">B</span>
+                        <span class="tier-badge tier-c">C</span>
+                    </div>
+                </div>
+            </div>
+            <div class="robot-img-wrap bg-gradient-to-b from-[#faf6ec]/60 to-white" style="min-height:280px;">
+                <img src="../assets/robots/photos/keenon-s100-luxury-cart-hero.png" alt="Keenon S100 with custom three-tier Moore service cart" style="max-height:260px;">
+                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-[#8a6f47] text-white text-[9px] font-semibold px-3 py-1 rounded-full">Blackened Bronze &middot; Quartered Oak &middot; Ivory Leather</div>
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100">
+                <p class="text-xs text-gray-600 mb-3">Heavy-duty S100 platform dressed in a <strong>custom three-tier Moore service cart</strong> — quartered-oak shelves, blackened-bronze uprights, ivory-leather padded trim. Interchangeable toppers transform one robot into a Torno dining cart, a Roof cocktail trolley, an event service cart, or a residence bellhop rack — without ever looking like vendor equipment.</p>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-gray-600 mb-3">
+                    <div class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-[#8a6f47]"></span>Torno in-residence dining</div>
+                    <div class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-[#8a6f47]"></span>The Roof cocktail &amp; amenity trolley</div>
+                    <div class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-[#8a6f47]"></span>Private event service cart</div>
+                    <div class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-[#8a6f47]"></span>Residence arrival bellhop</div>
+                </div>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <span class="stat-pill">100+ kg / 220 lbs</span>
+                    <span class="stat-pill">8h battery</span>
+                    <span class="stat-pill">Swappable topper</span>
+                    <span class="stat-pill">Elevator-capable</span>
+                </div>
+                <div class="callout-soft p-2.5 text-xs text-[#151515]">
+                    <strong>Use Case:</strong> A member orders from Torno at 11:15 PM. The Torno runner plates on porcelain at the pass, loads thermal modules under the leather-trimmed oak tray — ice bucket, flowers, linens beneath. The S100 rides the member elevator to floor 3, calls the residence phone, and arrives at the door as a piece of The Moore's furniture. The member rolls the top tray into the residence; the cart waits, retrieves, and returns itself.
+                </div>
+            </div>
+        </div>
+
+        <!-- ROBOT: S300 Transport -->
+        <div class="solution-card md:col-span-2">
+            <div class="bg-gradient-to-r from-[#f6f1e8] to-[#faf6ec] px-5 py-3 border-b border-[#e8e0d0]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip" style="width: 2.5rem;">S300</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">Linens, Event Turnover &amp; Back-of-House Transport</h3>
+                            <p class="text-[10px] text-gray-500">Keenon Robotics &middot; Option C only &middot; up to 2 units</p>
+                        </div>
+                    </div>
+                    <span class="tier-badge tier-c">C only</span>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-2">
+                <div class="robot-img-wrap bg-gradient-to-b from-[#faf6ec]/60 to-white">
+                    <img src="../assets/robots/photos/keenon-s300-linen-bin.png" alt="Keenon S300 with Linen Bin — Heavy-Load Transport">
+                </div>
+                <div class="px-5 py-4 flex flex-col justify-center">
+                    <p class="text-xs text-gray-600 mb-3">Workhorse transport platform for linens, glassware, tabletop setups, and event turnover. Moves heavy loads floor-to-floor autonomously — the invisible logistics backbone that keeps member-facing operations running without tying up a runner and the service lift.</p>
+                    <div class="flex flex-wrap gap-1.5 mb-3">
+                        <span class="stat-pill">100+ kg capacity</span>
+                        <span class="stat-pill">8h battery</span>
+                        <span class="stat-pill">15-sec battery swap</span>
+                        <span class="stat-pill">Dual LiDAR</span>
+                    </div>
+                    <div class="callout-soft p-2.5 text-xs text-[#151515]">
+                        <strong>Use Case:</strong> Unit #1 runs overnight linen and tabletop cycles between laundry staging and residence/event floors. Unit #2 handles event turnover — strike-and-reset between back-to-back private functions in the L1 and L2 event rooms without pulling bodies off the dining-room floor.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Custom Branding callout -->
+    <div class="mt-6 bg-gradient-to-r from-[#151515] to-[#2a2620] text-white rounded-xl p-6">
+        <h3 class="font-bold text-sm mb-3 tech-font text-[#a68a5c] tracking-wide uppercase">Custom Branding &amp; Materials — Included at No Additional Cost</h3>
+        <div class="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
+            <div class="flex items-start gap-3">
+                <span class="text-[#a68a5c] text-lg">&#9670;</span>
+                <span><strong class="text-white">Moore brand wraps</strong> — logo, palette, and identity applied to every unit in the fleet</span>
+            </div>
+            <div class="flex items-start gap-3">
+                <span class="text-[#a68a5c] text-lg">&#9670;</span>
+                <span><strong class="text-white">Blackened bronze, quartered oak &amp; ivory leather service cart</strong> — three-tier topper on the S100 platform; swappable for Torno dining, The Roof cocktails, event service, and bellhop</span>
+            </div>
+            <div class="flex items-start gap-3">
+                <span class="text-[#a68a5c] text-lg">&#9670;</span>
+                <span><strong class="text-white">Moore-branded touchscreen UI</strong> — member-facing displays carry the club's identity, not a manufacturer interface</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- IN-RESIDENCE DINING WORKFLOW (S100) -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#151515] headline mb-2">In-Residence Dining Workflow — Torno Subito × S100</h2>
+    <p class="text-sm text-gray-600 mb-6">The S100 is a <strong>transport platform</strong> — it moves the meal between two humans. The choreography is designed so Torno's pass-side plating standards, health-code compliance, and Michelin Key service expectations are never compromised by the robot.</p>
+
+    <!-- 7-step choreography -->
+    <div class="grid md:grid-cols-7 gap-2 mb-6">
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-xs font-bold mb-2">1</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Member orders.</strong> In-residence tablet, phone, or Moore app → Torno POS (Toast or Simphony).</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-xs font-bold mb-2">2</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Kitchen plates.</strong> Torno's runner plates on porcelain at the pass — same as today.</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-xs font-bold mb-2">3</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Load thermal modules.</strong> Hot tier: stainless cloche (140°F+). Cold: phase-change cradle (40°F−). Runner taps "dispatch."</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-xs font-bold mb-2">4</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Dispatch.</strong> S100 rides elevator to residence. <strong>4–6 min pass → door.</strong> Temp logged per order.</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-xs font-bold mb-2">5</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Member notified.</strong> Residence-phone call via PBX + gentle knock-tone. Touchscreen auth unlocks top lid.</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-xs font-bold mb-2">6</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Tray removal.</strong> Top tier slides out as a single tray. Robot waits 90 sec for additional tiers.</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-xs font-bold mb-2">7</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Pickup return.</strong> Scheduled sweep (every 45 min) or member-triggered. Runner reloads for dish-room.</p>
+        </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-5">
+        <div class="callout-warm p-5">
+            <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-3">What This Preserves</h3>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> <strong>Torno plates, loads, retrieves.</strong> Robot replaces the elevator-and-corridor walk — the lowest-value leg of the trip.</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> <strong>Food-safety compliance.</strong> Temperature logged per order; thermal modules NSF-certified; phase-change packs cycle through Torno's walk-in on banquet-caddy schedule.</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> <strong>Plating standards.</strong> Top tier is a removable tray the member sees open — looks like residence dining service, not "robot output." Bronze/oak/leather shell is cosmetic; thermal modules work invisibly.</li>
+            </ul>
+        </div>
+        <div class="callout-deep p-5">
+            <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-3">What This Does NOT Claim</h3>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-x">&#10005;</span> Not a replacement for in-residence dining attendants on premium orders (tasting menus, wine service, table-side).</li>
+                <li class="flex items-start gap-2"><span class="brand-x">&#10005;</span> Not a carrier for items requiring active heating — no ovens on board.</li>
+                <li class="flex items-start gap-2"><span class="brand-x">&#10005;</span> Not a substitute for Torno runners during peak dinner service. Humans handle complex orders; S100 handles simple parallel runs (post-service late-night, breakfast, amenity drops).</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- FLEET OPTIONS TABLE -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#151515] headline mb-6">Fleet Options — Side by Side</h2>
+
+    <table class="data-table">
+        <tr>
+            <th></th>
+            <th class="center">Option A<br><span class="font-normal opacity-75">Signature Service</span></th>
+            <th class="center">Option B<br><span class="font-normal opacity-75">Full-Property Service</span></th>
+            <th class="center">Option C<br><span class="font-normal opacity-75">The Moore Autonomous</span></th>
+        </tr>
+        <tr class="section-header"><td colspan="4">Cleaning</td></tr>
+        <tr><td>C40 — Hard floor (Torno, lobby, event rooms)</td><td class="center">1</td><td class="center">2</td><td class="center">3</td></tr>
+        <tr><td>C30 — Rug &amp; residence-corridor care</td><td class="center">—</td><td class="center">1</td><td class="center">1</td></tr>
+        <tr class="section-header"><td colspan="4">Member Services &amp; Transport</td></tr>
+        <tr><td>W3 — Late-evening branded delivery</td><td class="center">1</td><td class="center">1</td><td class="center">2</td></tr>
+        <tr><td>S100 — In-residence dining cart (bronze / oak / ivory leather topper)</td><td class="center">1</td><td class="center">2</td><td class="center">2</td></tr>
+        <tr><td>S300 — Linens &amp; tabletop transport</td><td class="center">—</td><td class="center">—</td><td class="center">1</td></tr>
+        <tr><td>S300 — Event turnover (strike &amp; reset)</td><td class="center">—</td><td class="center">—</td><td class="center">1</td></tr>
+        <tr class="section-header"><td colspan="4">Facility Intelligence Platform</td></tr>
+        <tr><td>BLE/UWB indoor positioning + asset tracking</td><td class="center">—</td><td class="center">—</td><td class="center">Yes</td></tr>
+        <tr><td>Real-time dashboard + smart dispatch</td><td class="center">—</td><td class="center">—</td><td class="center">Yes</td></tr>
+        <tr><td>Workflow analytics &amp; reporting</td><td class="center">—</td><td class="center">—</td><td class="center">Yes</td></tr>
+        <tr class="total">
+            <td><strong>Total Robots</strong></td>
+            <td class="center"><strong>3</strong></td>
+            <td class="center"><strong>6</strong></td>
+            <td class="center"><strong>10</strong></td>
+        </tr>
+    </table>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- ELEVATOR OPERATIONS -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#151515] headline mb-6">Elevator Operations</h2>
+    <p class="text-sm text-gray-600 mb-4">The Moore operates 2 Otis elevators serving floors 1–4. Robot-elevator coexistence with a 13-residence club is a design constraint we've built the operating plan around.</p>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-2">Member-Yield Protocol</h3>
+            <p class="text-xs text-gray-700">Robots <strong>always</strong> yield to waiting members. If a member is waiting on any floor, the robot holds position and takes the next available car. Members never wait for a robot.</p>
+        </div>
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-2">Off-Peak Scheduling</h3>
+            <p class="text-xs text-gray-700">Cleaning robots operate 2 AM–6 AM when elevator demand is minimal. Full floor sequences before returning to dock — minimizing total trips through the shared stack.</p>
+        </div>
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-2">Batch Transport</h3>
+            <p class="text-xs text-gray-700">Linen and event-turnover robots batch their loads — one full cart per trip instead of multiple partial runs. Fewer elevator trips, more efficient logistics.</p>
+        </div>
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-2">Non-Invasive Integration</h3>
+            <p class="text-xs text-gray-700">Our universal button emulator doesn't modify Otis firmware or require an OEM API contract. Fully reversible hardware layer — leaves the elevator as we found it if removed.</p>
+        </div>
+    </div>
+
+    <div class="bg-[#f6f1e8] rounded-xl p-5 border border-[#e8e0d0] mb-5">
+        <p class="text-xs text-gray-700"><strong class="text-[#151515]">Realistic impact at peak fleet (Option C):</strong> 5–8 additional elevator trips/hour during overnight cleaning; 2–4 trips/hour during daytime (on-demand member delivery). Two elevators serving four floors with 13 residences handle well under capacity in member windows. Robot traffic is a modest incremental load concentrated outside peak member hours.</p>
+    </div>
+
+    <h3 class="text-base font-bold text-[#151515] mb-3">Otis Contingency</h3>
+    <p class="text-xs text-gray-600 mb-3">The button emulator is non-invasive, but physical installation still requires Otis review. We take that risk rather than pushing it to The Moore.</p>
+    <table class="data-table">
+        <tr><th style="width:32%;">Mitigation</th><th>What It Means</th></tr>
+        <tr><td class="label">Pre-deployment Otis review</td><td>Emulator design package submitted to the Otis regional service office <strong>before Phase 2 begins</strong>. Accelerate absorbs any engineering changes Otis requests.</td></tr>
+        <tr><td class="label">Otis-supervised install</td><td>Accelerate pays for an Otis certified technician to supervise install. All work logged to Otis service-record standard — your maintenance agreement remains intact.</td></tr>
+        <tr><td class="label">Service-contract preservation</td><td>If Otis flags any warranty or service impact, Accelerate either redesigns to remove it or reimburses The Moore for any incremental Otis fee for the term of the RaaS agreement.</td></tr>
+        <tr><td class="label">Fallback if Otis refuses</td><td>Per-floor staging model. Cleaning robots dock and operate on individual floors. Delivery robots dispatched via scheduled staff-assisted transfer windows. Fleet still delivers most operational value; in-residence delivery becomes time-bounded rather than fully on-demand.</td></tr>
+        <tr class="highlight"><td class="label">No-cost exit if Phase 2 is blocked</td><td>If after 60 days from Phase 1 completion the elevator integration cannot be commissioned, <strong>The Moore may terminate with no penalty.</strong> Accelerate removes all equipment at our cost.</td></tr>
+    </table>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- THE MOORE OPERATING SYSTEM — SOFTWARE PACKAGE -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6 page-break">
+    <div class="mb-8">
+        <p class="text-xs text-[#8a6f47] tech-font uppercase tracking-widest mb-2">The Package Deal</p>
+        <h2 class="text-3xl md:text-4xl font-bold text-[#151515] headline mb-4">The Moore Operating System</h2>
+        <p class="text-base text-gray-700 leading-relaxed mb-3">The fleet is the hardware. <strong class="text-[#151515]">The Moore OS is the software platform that wraps around it.</strong> Four integrated surfaces, one data model, one login. Built for The Moore — not adapted from hotel-chain software.</p>
+        <p class="text-sm text-gray-600 leading-relaxed">Every robot, every service line, and every piece of the club's operational data lives behind a single platform: a <strong>Concierge AI</strong> inside the Moore-sponsored app, a <strong>Financial Operations Dashboard</strong> that overhauls your Oracle MICROS reporting, an enterprise <strong>Fleet Command Center</strong>, and a <strong>Member Experience</strong> layer for the guest-facing fleet interface. Each surface is designed for a specific audience. They share the same underlying data model — no more reconciling between three dashboards and two POS exports at the end of the night.</p>
+    </div>
+
+    <!-- FOUR-SURFACE OVERVIEW GRID -->
+    <div class="grid md:grid-cols-4 gap-3 mb-10">
+        <div class="callout-navy p-5">
+            <div class="text-[10px] text-[#a68a5c] tech-font uppercase tracking-widest mb-2">Surface 1</div>
+            <div class="text-sm font-bold text-white headline mb-2">Concierge AI</div>
+            <div class="text-[11px] text-gray-300 leading-snug">Branded chatbot plugin in The Moore-sponsored app. Answers membership, books reservations, dispatches the fleet.</div>
+        </div>
+        <div class="callout-navy p-5">
+            <div class="text-[10px] text-[#a68a5c] tech-font uppercase tracking-widest mb-2">Surface 2</div>
+            <div class="text-sm font-bold text-white headline mb-2">Financial Operations</div>
+            <div class="text-[11px] text-gray-300 leading-snug">Oracle MICROS reporting overhaul. Variance, revenue-center, menu-mix, labor, comps — one pane.</div>
+        </div>
+        <div class="callout-navy p-5">
+            <div class="text-[10px] text-[#a68a5c] tech-font uppercase tracking-widest mb-2">Surface 3</div>
+            <div class="text-sm font-bold text-white headline mb-2">Fleet Command</div>
+            <div class="text-[11px] text-gray-300 leading-snug">Enterprise ops backend. Live fleet map, task routing, utilization, alerts, integrations, audit logs.</div>
+        </div>
+        <div class="callout-navy p-5">
+            <div class="text-[10px] text-[#a68a5c] tech-font uppercase tracking-widest mb-2">Surface 4</div>
+            <div class="text-sm font-bold text-white headline mb-2">Member Experience</div>
+            <div class="text-[11px] text-gray-300 leading-snug">Guest-facing fleet interface. Summon, track, book, pay. No download. Single sign-on.</div>
+        </div>
+    </div>
+
+    <!-- SURFACE 1: CONCIERGE AI -->
+    <div class="solution-card mb-6">
+        <div class="device-showcase">
+            <span class="device-caption">What the member sees &mdash; iPhone</span>
+            <div class="device-iphone">
+                <div class="iphone-screen">
+                    <div class="iphone-statusbar">
+                        <span>12:34</span>
+                        <span>&#9679;&#9679;&#9679; &#9600;&#9600;&#9600;&#9600;</span>
+                    </div>
+                    <div class="chat-header">
+                        <div class="brand">The Moore</div>
+                        <div class="sub">Concierge</div>
+                    </div>
+                    <div class="chat-body">
+                        <div class="bubble bubble-ai">Welcome back, Mr. Chang. How may I help this evening?</div>
+                        <div class="bubble bubble-me">Nightcap to 1204 &mdash; something from The Roof</div>
+                        <div class="bubble bubble-ai">Of course. An Old Fashioned from the Rooftop bar &mdash; ETA 11 minutes. Charge to house account &middot;&middot;4471?</div>
+                        <div class="bubble bubble-me">Yes, thank you.</div>
+                        <div class="bubble bubble-ai">On its way. W-3 will chime at your door.</div>
+                    </div>
+                    <div class="chat-input">
+                        <div class="chat-input-pill"><span>Ask The Moore&hellip;</span><span style="color:#b07d56;font-weight:700;">&uarr;</span></div>
+                    </div>
+                    <div class="chat-ai-footer">AI-assisted &middot; tap to reach a human concierge</div>
+                    <div class="iphone-home-bar"></div>
+                </div>
+            </div>
+        </div>
+        <div class="grid md:grid-cols-3 gap-0">
+            <div class="bg-[#f6f1e8] p-6 border-r border-[#e8e0d0] md:col-span-1">
+                <p class="text-[10px] text-[#8a6f47] tech-font uppercase tracking-widest mb-1">Surface 1</p>
+                <h3 class="text-xl font-bold text-[#151515] headline mb-2">The Concierge AI</h3>
+                <p class="text-[11px] text-gray-600 italic mb-4">Plugin on The Moore-sponsored app.</p>
+                <p class="text-xs text-gray-700 leading-relaxed">A conversational AI concierge, branded as The Moore, embedded as a plugin inside the Moore-sponsored member app. No separate login. No "AI assistant" disclaimer — members experience it as an extension of the concierge desk, fluent in everything from Michelin Key dining at Torno to terrace policy at The Roof.</p>
+            </div>
+            <div class="p-6 md:col-span-2">
+                <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-3">What it knows</h4>
+                <p class="text-xs text-gray-700 leading-relaxed mb-4">Fully trained on The Moore's knowledge base — all five verticals (Club, Hotel, Workplace, Torno Subito, The Roof), membership tiers, reciprocal partnerships, art program, event policies, hours, history — every detail on mooremiami.com, plus every internal SOP we're given access to. Retrained weekly.</p>
+
+                <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-3">What it does</h4>
+                <ul class="text-xs text-gray-700 space-y-1.5 mb-4">
+                    <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Answers membership, booking, and amenity questions 24/7 in Moore's voice and Manier/Source Serif typography</li>
+                    <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Books Torno reservations, Roof terrace seating, event-room holds, spa slots through existing Moore systems</li>
+                    <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Routes service requests into the fleet — <em>"nightcap to the residence"</em> → Fleet Command → W3 dispatched, no human relay</li>
+                    <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Places residence dining orders against Torno's MICROS menu; confirms allergies; schedules the S100 delivery window</li>
+                    <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Escalates with full context to a human concierge whenever tone or discretion matters</li>
+                    <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Captures every interaction for the GM's weekly review</li>
+                </ul>
+
+                <div class="bg-[#faf6ec] border border-[#8a6f47]/25 rounded-lg p-3">
+                    <p class="text-[11px] text-gray-700 leading-snug"><strong class="text-[#151515]">What it does not do:</strong> Never pretends to be human — every message carries a soft AI-assisted signature with one-tap escalation to a real concierge. Never holds PII it doesn't need. Never contradicts a human staff decision — the concierge always outranks the bot.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SURFACE 2: FINANCIAL OPERATIONS DASHBOARD -->
+    <div class="solution-card mb-6">
+        <div class="device-showcase device-showcase--stacked">
+            <span class="device-caption">Three reports, one dashboard &mdash; MacBook Pro</span>
+
+            <!-- REPORT 1 — Oracle MICROS Manager's Report -->
+            <div class="macbook-wrap">
+                <div class="report-label"><span class="num">1</span>Oracle MICROS &middot; Manager's Report &middot; Daily</div>
+                <div class="device-macbook">
+                    <div class="macbook-screen">
+                        <div class="fd-sidebar">
+                            <div class="logo">
+                                <div class="logo-mark">M</div>
+                                <div class="logo-sub">Operations</div>
+                            </div>
+                            <div class="fd-nav alert">&#9632; Variance Report &middot; 6</div>
+                            <div class="fd-nav active">&#9632; Manager's Report</div>
+                            <div class="fd-nav">&#9633; CFO Close-Out</div>
+                            <div class="fd-nav">&#9633; Fleet Performance</div>
+                            <div class="fd-nav">&#9633; Revenue Centers</div>
+                            <div class="fd-nav">&#9633; Menu Mix</div>
+                            <div class="fd-nav">&#9633; Labor</div>
+                            <div class="fd-nav">&#9633; Voids &amp; Comps</div>
+                            <div class="fd-nav">&#9633; Trends</div>
+                            <div class="fd-nav">&#9633; Import / Export</div>
+                        </div>
+                        <div class="fd-main">
+                            <h3>Manager's Report &middot; Daily</h3>
+                            <div class="date">Thursday, March 28, 2026 &middot; Torno + Roof + Bar &middot; Oracle MICROS Simphony</div>
+                            <div class="fd-alert">&#9888; 6 control issues flagged since last close &mdash; tap to triage</div>
+                            <div class="fd-kpis">
+                                <div class="fd-kpi"><div class="label">Revenue</div><div class="val">$48,275</div><div class="trend">&uarr; 8.2% WoW</div></div>
+                                <div class="fd-kpi"><div class="label">Covers</div><div class="val">187</div><div class="trend">&uarr; 4.0%</div></div>
+                                <div class="fd-kpi"><div class="label">Avg Check</div><div class="val">$258</div><div class="trend">&uarr; 4.0%</div></div>
+                                <div class="fd-kpi"><div class="label">Tip %</div><div class="val">22.4%</div><div class="trend red">&darr; 1.1%</div></div>
+                            </div>
+                            <div class="fd-row">
+                                <div class="fd-panel">
+                                    <h4>Revenue by Center</h4>
+                                    <div class="fd-bar"><span class="name">Torno</span><span class="bar"><span class="bar-fill" style="width:82%"></span></span><span class="pct">$28.1k</span></div>
+                                    <div class="fd-bar"><span class="name">The Roof</span><span class="bar"><span class="bar-fill" style="width:48%"></span></span><span class="pct">$11.4k</span></div>
+                                    <div class="fd-bar"><span class="name">Bar</span><span class="bar"><span class="bar-fill" style="width:26%"></span></span><span class="pct">$6.2k</span></div>
+                                    <div class="fd-bar"><span class="name">Events</span><span class="bar"><span class="bar-fill" style="width:12%"></span></span><span class="pct">$2.6k</span></div>
+                                </div>
+                                <div class="fd-panel">
+                                    <h4>Variances</h4>
+                                    <div class="fd-variance-row"><span class="label">Cash position</span><span class="val">&minus;$3,273</span></div>
+                                    <div class="fd-variance-row"><span class="label">Cash due vs. deposit</span><span class="val">$4,161</span></div>
+                                    <div class="fd-variance-row"><span class="label">Missing revenue</span><span class="val">$688</span></div>
+                                    <div class="fd-variance-row"><span class="label">Unauthorized comps</span><span class="val">4</span></div>
+                                    <div class="fd-variance-row"><span class="label">Dead rev. center</span><span class="val">1</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="macbook-base"></div>
+            </div>
+
+            <!-- REPORT 2 — CFO Close-Out -->
+            <div class="macbook-wrap">
+                <div class="report-label"><span class="num">2</span>CFO Close-Out Report &middot; Period-End</div>
+                <div class="device-macbook">
+                    <div class="macbook-screen">
+                        <div class="fd-sidebar">
+                            <div class="logo">
+                                <div class="logo-mark">M</div>
+                                <div class="logo-sub">Operations</div>
+                            </div>
+                            <div class="fd-nav">&#9633; Variance Report</div>
+                            <div class="fd-nav">&#9633; Manager's Report</div>
+                            <div class="fd-nav active">&#9632; CFO Close-Out</div>
+                            <div class="fd-nav">&#9633; Fleet Performance</div>
+                            <div class="fd-nav">&#9633; Revenue Centers</div>
+                            <div class="fd-nav">&#9633; Menu Mix</div>
+                            <div class="fd-nav">&#9633; Labor</div>
+                            <div class="fd-nav">&#9633; Voids &amp; Comps</div>
+                            <div class="fd-nav">&#9633; Trends</div>
+                            <div class="fd-nav">&#9633; Import / Export</div>
+                        </div>
+                        <div class="fd-main">
+                            <h3>CFO Close-Out &middot; Q1 2026</h3>
+                            <div class="date">Period Jan 1 &ndash; Mar 31, 2026 &middot; Audit-ready &middot; Locked by controller</div>
+                            <div class="fd-signoff">&#10003; Controller sign-off complete &middot; 12 of 12 revenue centers reconciled &middot; 0 open variances</div>
+                            <div class="fd-kpis">
+                                <div class="fd-kpi"><div class="label">Revenue</div><div class="val">$4.12M</div><div class="trend">&uarr; 4.6% vs plan</div></div>
+                                <div class="fd-kpi"><div class="label">COGS</div><div class="val">25.1%</div><div class="trend">&darr; 0.8 pts</div></div>
+                                <div class="fd-kpi"><div class="label">Labor</div><div class="val">34.3%</div><div class="trend">&darr; 1.9 pts</div></div>
+                                <div class="fd-kpi"><div class="label">EBITDA</div><div class="val">21.7%</div><div class="trend">&uarr; 3.1 pts</div></div>
+                            </div>
+                            <div class="fd-row">
+                                <div class="fd-panel">
+                                    <h4>P&amp;L Roll-Up (Q1)</h4>
+                                    <div class="fd-pnl-row"><span class="name">Torno Subito <span class="sub">F&amp;B</span></span><span class="val">$2,412,800</span></div>
+                                    <div class="fd-pnl-row"><span class="name">The Roof <span class="sub">bar / terrace</span></span><span class="val">$958,400</span></div>
+                                    <div class="fd-pnl-row"><span class="name">Bar <span class="sub">ground floor</span></span><span class="val">$521,100</span></div>
+                                    <div class="fd-pnl-row"><span class="name">Private Events</span><span class="val">$178,200</span></div>
+                                    <div class="fd-pnl-row"><span class="name">Member charges <span class="sub">dues + retail</span></span><span class="val">$49,600</span></div>
+                                    <div class="fd-pnl-row"><span class="name">Fleet labor savings <span class="sub">robot-substituted hrs</span></span><span class="val pos">+$247,000</span></div>
+                                    <div class="fd-pnl-row total"><span class="name">Operating income (Q1)</span><span class="val pos">$892,400</span></div>
+                                </div>
+                                <div class="fd-panel">
+                                    <h4>Audit Trail &middot; Sign-Offs</h4>
+                                    <div class="fd-audit-row"><span class="who">R. Kessler &middot; Controller</span><span class="when">Apr 04 09:12</span><span class="chk">&#10003;</span></div>
+                                    <div class="fd-audit-row"><span class="who">M. Ortiz &middot; GM</span><span class="when">Apr 03 16:48</span><span class="chk">&#10003;</span></div>
+                                    <div class="fd-audit-row"><span class="who">Torno reconciliation</span><span class="when">Apr 02 23:55</span><span class="chk">&#10003;</span></div>
+                                    <div class="fd-audit-row"><span class="who">Roof reconciliation</span><span class="when">Apr 02 22:30</span><span class="chk">&#10003;</span></div>
+                                    <div class="fd-audit-row"><span class="who">6 Jan&ndash;Mar variances cleared</span><span class="when">Apr 01</span><span class="chk">&#10003;</span></div>
+                                    <div class="fd-audit-row"><span class="who">Fleet labor savings attested</span><span class="when">Mar 31</span><span class="chk">&#10003;</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="macbook-base"></div>
+            </div>
+
+            <!-- REPORT 3 — Fleet Performance -->
+            <div class="macbook-wrap">
+                <div class="report-label"><span class="num">3</span>Fleet Performance Report &middot; Month-to-Date</div>
+                <div class="device-macbook">
+                    <div class="macbook-screen">
+                        <div class="fd-sidebar">
+                            <div class="logo">
+                                <div class="logo-mark">M</div>
+                                <div class="logo-sub">Operations</div>
+                            </div>
+                            <div class="fd-nav">&#9633; Variance Report</div>
+                            <div class="fd-nav">&#9633; Manager's Report</div>
+                            <div class="fd-nav">&#9633; CFO Close-Out</div>
+                            <div class="fd-nav active">&#9632; Fleet Performance</div>
+                            <div class="fd-nav">&#9633; Revenue Centers</div>
+                            <div class="fd-nav">&#9633; Menu Mix</div>
+                            <div class="fd-nav">&#9633; Labor</div>
+                            <div class="fd-nav">&#9633; Voids &amp; Comps</div>
+                            <div class="fd-nav">&#9633; Trends</div>
+                            <div class="fd-nav">&#9633; Import / Export</div>
+                        </div>
+                        <div class="fd-main">
+                            <h3>Fleet Performance &middot; March MTD</h3>
+                            <div class="date">8 robots operational &middot; 1,847 tasks completed &middot; reconciled against Phase-1 baseline</div>
+                            <div class="fd-kpis">
+                                <div class="fd-kpi"><div class="label">Tasks</div><div class="val">1,847</div><div class="trend">&uarr; 12% MoM</div></div>
+                                <div class="fd-kpi"><div class="label">Hours Saved</div><div class="val">312 hr</div><div class="trend">&uarr; 8%</div></div>
+                                <div class="fd-kpi"><div class="label">Labor $ Saved</div><div class="val">$23,400</div><div class="trend">vs plan +6%</div></div>
+                                <div class="fd-kpi"><div class="label">Utilization</div><div class="val">74%</div><div class="trend">&uarr; 4 pts</div></div>
+                            </div>
+                            <div class="fd-row">
+                                <div class="fd-panel">
+                                    <h4>Per-Robot Performance (MTD)</h4>
+                                    <div class="fd-robot-row head"><span>Robot</span><span>Role</span><span>Tasks</span><span>Saved</span></div>
+                                    <div class="fd-robot-row"><span class="code">W3-01</span><span class="desc">Residence delivery</span><span class="tasks">284</span><span class="saved">$4,260</span></div>
+                                    <div class="fd-robot-row"><span class="code">W3-02</span><span class="desc">Torno to door</span><span class="tasks">246</span><span class="saved">$3,690</span></div>
+                                    <div class="fd-robot-row"><span class="code">C40-01</span><span class="desc">Hard-floor clean</span><span class="tasks">188</span><span class="saved">$2,820</span></div>
+                                    <div class="fd-robot-row"><span class="code">C40-02</span><span class="desc">Hard-floor clean</span><span class="tasks">174</span><span class="saved">$2,610</span></div>
+                                    <div class="fd-robot-row"><span class="code">C40-03</span><span class="desc">Residence corridors</span><span class="tasks">192</span><span class="saved">$2,880</span></div>
+                                    <div class="fd-robot-row"><span class="code">C30</span><span class="desc">Carpet / Roof</span><span class="tasks">156</span><span class="saved">$2,340</span></div>
+                                    <div class="fd-robot-row"><span class="code">S100</span><span class="desc">Back-of-house</span><span class="tasks">412</span><span class="saved">$3,090</span></div>
+                                    <div class="fd-robot-row"><span class="code">S300</span><span class="desc">Linen &amp; turnover</span><span class="tasks">195</span><span class="saved">$1,710</span></div>
+                                </div>
+                                <div class="fd-panel">
+                                    <h4>Revenue-Adjacent Metrics</h4>
+                                    <div class="fd-metric-stack">
+                                        <div class="fd-metric-card">
+                                            <div class="label">Robot-assisted F&amp;B</div>
+                                            <div class="val">$84,200</div>
+                                            <div class="sub">22% of Torno residence dining &middot; W3 + S100 deliveries</div>
+                                        </div>
+                                        <div class="fd-metric-card">
+                                            <div class="label">Event turnover</div>
+                                            <div class="val">17 min avg</div>
+                                            <div class="sub">Ballroom strike-and-reset &middot; was 42 min pre-fleet</div>
+                                        </div>
+                                        <div class="fd-metric-card">
+                                            <div class="label">Member touchpoints</div>
+                                            <div class="val">428</div>
+                                            <div class="sub">Summon / deliver / pickup from member app</div>
+                                        </div>
+                                        <div class="fd-metric-card">
+                                            <div class="label">Fleet uptime</div>
+                                            <div class="val">99.2%</div>
+                                            <div class="sub">Target 98%+ &middot; SLA-backed</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="macbook-base"></div>
+            </div>
+        </div>
+        <div class="grid md:grid-cols-3 gap-0">
+            <div class="bg-[#f6f1e8] p-6 border-r border-[#e8e0d0] md:col-span-1">
+                <p class="text-[10px] text-[#8a6f47] tech-font uppercase tracking-widest mb-1">Surface 2</p>
+                <h3 class="text-xl font-bold text-[#151515] headline mb-2">Financial Operations Dashboard</h3>
+                <p class="text-[11px] text-gray-600 italic mb-4">Oracle MICROS Simphony / RES 3700 overhaul &middot; fleet management integrated.</p>
+                <p class="text-xs text-gray-700 leading-relaxed">A full overhaul of the club's POS reporting stack, with the robot fleet treated as a first-class line item. Three reports anchor the surface &mdash; the <strong>MICROS Manager's Report</strong>, the <strong>CFO Close-Out Report</strong>, and the <strong>Fleet Performance Report</strong> &mdash; all living inside one dashboard and all built around the questions a GM, CFO, and operations lead actually ask.</p>
+            </div>
+            <div class="p-6 md:col-span-2">
+                <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-3">The problem this solves</h4>
+                <p class="text-xs text-gray-700 leading-relaxed mb-4">Native MICROS reports bury the issues that matter. A recent daily summary from a comparable F&amp;B operation immediately surfaced <strong>six control issues that had been running invisibly</strong>: a <strong>-$3,273 negative cash position</strong>, a <strong>$4,161 cash-due vs. deposit variance</strong>, <strong>$688 of missing revenue</strong>, COGS and labor cost not configured, unauthorized comps across servers, and a dead revenue center still in the active roll-up. Standard MICROS reports surface none of this on a single pane &mdash; and they have no concept of the fleet at all.</p>
+
+                <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-3">The three anchor reports</h4>
+                <table class="data-table mb-4">
+                    <tr><th style="width:30%;">Report</th><th>Who opens it &middot; what it answers</th></tr>
+                    <tr><td class="label">MICROS Manager's Report <span class="text-[10px] text-gray-500 font-normal">(daily, pre-open)</span></td><td>GM. Revenue, covers, average check, tip %, every variance that crossed an alert threshold, tied back to the underlying MICROS tickets. Replaces the stack of MICROS native exports the GM currently mines every morning.</td></tr>
+                    <tr><td class="label">CFO Close-Out Report <span class="text-[10px] text-gray-500 font-normal">(period-end)</span></td><td>Controller &amp; CFO. Full P&amp;L roll-up by revenue center, EBITDA, labor %, COGS, fleet labor savings as a discrete line item, plus an audit trail of who signed off when. Locks cleanly for the quarterly close.</td></tr>
+                    <tr><td class="label">Fleet Performance Report <span class="text-[10px] text-gray-500 font-normal">(month-to-date)</span></td><td>COO / Ops lead. Tasks completed, hours saved, labor dollars saved, per-robot productivity, utilization, and the <strong>revenue-adjacent metrics</strong> that matter &mdash; robot-assisted F&amp;B revenue, event-turnover speed, member touchpoints, fleet uptime vs. SLA.</td></tr>
+                </table>
+
+                <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-3">Plus every supporting module the GM needs</h4>
+                <div class="grid md:grid-cols-2 gap-x-5 gap-y-1 mb-4 text-[11px] text-gray-700">
+                    <div><strong class="text-[#151515]">Variance Report</strong> &middot; cash position, cash due vs. deposit, missing revenue, error-correct anomalies, comp thresholds, COGS-vs-theoretical</div>
+                    <div><strong class="text-[#151515]">Revenue Centers</strong> &middot; Torno, Roof, Bar, Events, Member Charges &mdash; trend lines, day-part mix, food/beverage/service split</div>
+                    <div><strong class="text-[#151515]">Menu Mix</strong> &middot; item-level engineering quadrants (stars / puzzles / plowhorses / dogs) feeding Torno's menu review with data</div>
+                    <div><strong class="text-[#151515]">Labor</strong> &middot; scheduled vs. actual, labor % of revenue, OT flags, paired against POS throughput and fleet substitution</div>
+                    <div><strong class="text-[#151515]">Voids, Comps &amp; Service Perf</strong> &middot; authorization audit trail, server-level comp outliers, void patterns</div>
+                    <div><strong class="text-[#151515]">Payments &amp; Trends</strong> &middot; method mix, tips, house account vs. card; WoW / MoM / YoY on everything above</div>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-3">
+                    <div class="bg-[#f6f1e8] border border-[#8a6f47]/25 rounded-lg p-3">
+                        <p class="text-[11px] text-gray-700 leading-snug"><strong class="text-[#151515]">What it replaces:</strong> Manual nightly reconciliations, MICROS native reports that never talk to each other, and a spreadsheet someone maintains to reconcile fleet hours against labor. MICROS continues to run the POS transactions untouched &mdash; we replace only the <em>reporting layer</em> and extend it to cover the fleet.</p>
+                    </div>
+                    <div class="bg-[#faf6ec] border border-[#8a6f47]/25 rounded-lg p-3">
+                        <p class="text-[11px] text-gray-700 leading-snug"><strong class="text-[#151515]">What it is not:</strong> Not a POS replacement. Not a CRM. Not a reservation system. A <strong>reporting, reconciliation, and operational-intelligence layer</strong> on top of the data MICROS and the fleet are already generating &mdash; finally in one pane.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SURFACE 3: FLEET COMMAND CENTER -->
+    <div class="solution-card mb-6">
+        <div class="device-showcase device-showcase--dark">
+            <span class="device-caption">What the ops team sees &mdash; MacBook Pro</span>
+            <div class="macbook-wrap">
+                <div class="device-macbook">
+                    <div class="macbook-screen">
+                        <div class="fc-wrap">
+                            <div class="fc-topbar">
+                                <div class="title">Fleet Command &middot; The Moore</div>
+                                <div class="status"><span class="dot"></span>Live &middot; 8 robots operational</div>
+                            </div>
+                            <div class="fc-body">
+                                <div class="fc-fleet">
+                                    <div class="section">Delivery</div>
+                                    <div class="fc-robot active"><span class="dot green"></span><span class="name">W3-01</span><span class="sub">1204</span></div>
+                                    <div class="fc-robot"><span class="dot green"></span><span class="name">W3-02</span><span class="sub">Torno</span></div>
+                                    <div class="section">Cleaning</div>
+                                    <div class="fc-robot"><span class="dot green"></span><span class="name">C40-01</span><span class="sub">L6 corr.</span></div>
+                                    <div class="fc-robot"><span class="dot amber"></span><span class="name">C40-02</span><span class="sub">lobby</span></div>
+                                    <div class="fc-robot"><span class="dot green"></span><span class="name">C40-03</span><span class="sub">L8 corr.</span></div>
+                                    <div class="fc-robot"><span class="dot green"></span><span class="name">C30</span><span class="sub">Roof</span></div>
+                                    <div class="section">Logistics</div>
+                                    <div class="fc-robot"><span class="dot green"></span><span class="name">S100</span><span class="sub">back-hall</span></div>
+                                    <div class="fc-robot"><span class="dot grey"></span><span class="name">S300</span><span class="sub">charging</span></div>
+                                </div>
+                                <div class="fc-map">
+                                    <h4>Live Floor Map</h4>
+                                    <div class="fc-floor"><span class="num">R</span><span class="label">The Roof &middot; Terrace + Bar</span><span class="dots"><span class="dot g"></span></span></div>
+                                    <div class="fc-floor"><span class="num">10</span><span class="label">Residences &middot; 04/06</span><span class="dots"><span class="dot g"></span></span></div>
+                                    <div class="fc-floor"><span class="num">9</span><span class="label">Residences &middot; 01/04</span><span class="dots"></span></div>
+                                    <div class="fc-floor"><span class="num">8</span><span class="label">Residences &middot; 02/06</span><span class="dots"><span class="dot g"></span></span></div>
+                                    <div class="fc-floor"><span class="num">6</span><span class="label">Residences &middot; 03/06</span><span class="dots"><span class="dot g"></span></span></div>
+                                    <div class="fc-floor"><span class="num">2</span><span class="label">Event Rooms &middot; Ballroom</span><span class="dots"><span class="dot a"></span></span></div>
+                                    <div class="fc-floor"><span class="num">L</span><span class="label">Lobby &middot; Torno &middot; Bar</span><span class="dots"><span class="dot g"></span><span class="dot a"></span></span></div>
+                                </div>
+                                <div class="fc-tasks">
+                                    <h4>Task Queue</h4>
+                                    <div class="fc-task">
+                                        <div class="head"><span>Nightcap &rarr; 1204</span><span class="eta">3m</span></div>
+                                        <div class="sub">W3-01 &middot; from Roof bar</div>
+                                    </div>
+                                    <div class="fc-task">
+                                        <div class="head"><span>Linen &rarr; 807</span><span class="eta">7m</span></div>
+                                        <div class="sub">S100 &middot; HK auto-trigger</div>
+                                    </div>
+                                    <div class="fc-task">
+                                        <div class="head"><span>Turnover &mdash; Ballroom</span><span class="eta">22m</span></div>
+                                        <div class="sub">S300 + C40 &middot; reset</div>
+                                    </div>
+                                    <div class="fc-task">
+                                        <div class="head"><span>Corr. sweep &mdash; L6</span><span class="eta">14m</span></div>
+                                        <div class="sub">C40-01 &middot; nightly</div>
+                                    </div>
+                                    <div class="fc-alert">&#9888; C40-02 stalled at elevator 2</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="macbook-base"></div>
+            </div>
+        </div>
+        <div class="grid md:grid-cols-3 gap-0">
+            <div class="bg-[#f6f1e8] p-6 border-r border-[#e8e0d0] md:col-span-1">
+                <p class="text-[10px] text-[#8a6f47] tech-font uppercase tracking-widest mb-1">Surface 3</p>
+                <h3 class="text-xl font-bold text-[#151515] headline mb-2">Fleet Command Center</h3>
+                <p class="text-[11px] text-gray-600 italic mb-4">Enterprise ops backend — included in RaaS.</p>
+                <p class="text-xs text-gray-700 leading-relaxed">A browser-based enterprise dashboard for the GM, facilities director, F&amp;B leadership, and member experience team. Role-based permissions. Live by default. One pane of glass for the operational state of the club.</p>
+            </div>
+            <div class="p-6 md:col-span-2">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-2">Operations</h4>
+                        <ul class="text-[11px] text-gray-700 space-y-1.5 mb-4">
+                            <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Live fleet map</strong> — every robot, every task, every floor. Color-coded status.</li>
+                            <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Task queue &amp; routing</strong> — assign, reassign, override. VIP priority queues.</li>
+                            <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Smart dispatch</strong> <em>(Option C)</em> — robot tasks triggered by asset-tag state. Linen hamper full on 3 → S300 auto-dispatches.</li>
+                            <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Alerts &amp; exceptions</strong> — stuck robot, low battery, failed delivery, elevator conflict. Email/SMS/Slack.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-2">Analytics &amp; Integrations</h4>
+                        <ul class="text-[11px] text-gray-700 space-y-1.5 mb-4">
+                            <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Utilization analytics</strong> — heatmaps by floor and day-part, shift throughput, service-line drill-downs.</li>
+                            <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>ROI tracking</strong> — live reconciliation against Phase-1 baseline and monthly committed savings.</li>
+                            <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Integrations</strong> — MICROS (auto-dispatch), PMS, elevator controls, door access, work orders.</li>
+                            <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Audit logs</strong> — every task, every override — SSO, timestamped, exportable.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="bg-[#f6f1e8] border border-[#8a6f47]/25 rounded-lg p-3">
+                    <p class="text-[11px] text-gray-700 leading-snug"><strong class="text-[#151515]">Included in RaaS on every option.</strong> The Fleet Command Center is not an add-on — it's how the fleet becomes a service. Already baked into the $2,850 per robot per month.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SURFACE 4: MEMBER EXPERIENCE -->
+    <div class="solution-card mb-10">
+        <div class="device-showcase">
+            <span class="device-caption">What the member taps &mdash; iPhone</span>
+            <div class="device-iphone">
+                <div class="iphone-screen">
+                    <div class="iphone-statusbar">
+                        <span>10:42</span>
+                        <span>&#9679;&#9679;&#9679; &#9600;&#9600;&#9600;&#9600;</span>
+                    </div>
+                    <div class="me-header">
+                        <div class="brand">The Moore</div>
+                        <div class="greet">Good evening, Mr. Chang</div>
+                    </div>
+                    <div class="me-hero">
+                        <div class="label">Tonight at The Roof</div>
+                        <div class="title">Vinyl Hour &middot; Kirsten Chen</div>
+                        <div class="sub">8 PM &ndash; midnight &middot; Rooftop Terrace &middot; table 04 held for you</div>
+                    </div>
+                    <div class="me-grid">
+                        <div class="me-card">
+                            <div class="icon">&#9749;</div>
+                            <div class="title">Nightcap</div>
+                            <div class="sub">Roof bar to door</div>
+                        </div>
+                        <div class="me-card">
+                            <div class="icon">&#128251;</div>
+                            <div class="title">Laundry</div>
+                            <div class="sub">Pickup within 15m</div>
+                        </div>
+                        <div class="me-card">
+                            <div class="icon">&#127869;</div>
+                            <div class="title">Torno</div>
+                            <div class="sub">Residence dining</div>
+                        </div>
+                        <div class="me-card">
+                            <div class="icon">&#127912;</div>
+                            <div class="title">Spa</div>
+                            <div class="sub">Book by 11 PM</div>
+                        </div>
+                        <div class="me-card">
+                            <div class="icon">&#9728;</div>
+                            <div class="title">Terrace</div>
+                            <div class="sub">The Roof seating</div>
+                        </div>
+                        <div class="me-card">
+                            <div class="icon">&#127873;</div>
+                            <div class="title">Event Room</div>
+                            <div class="sub">Private hold</div>
+                        </div>
+                    </div>
+                    <div class="me-active">
+                        <div>
+                            <div class="label">In progress</div>
+                            <div class="item">Old Fashioned &rarr; Residence 1204</div>
+                        </div>
+                        <div class="eta">3m</div>
+                    </div>
+                    <div class="iphone-home-bar"></div>
+                </div>
+            </div>
+        </div>
+        <div class="grid md:grid-cols-3 gap-0">
+            <div class="bg-[#f6f1e8] p-6 border-r border-[#e8e0d0] md:col-span-1">
+                <p class="text-[10px] text-[#8a6f47] tech-font uppercase tracking-widest mb-1">Surface 4</p>
+                <h3 class="text-xl font-bold text-[#151515] headline mb-2">The Member Experience</h3>
+                <p class="text-[11px] text-gray-600 italic mb-4">Guest-facing fleet interface — included in RaaS.</p>
+                <p class="text-xs text-gray-700 leading-relaxed">The guest-facing layer of the same platform. Accessible via in-residence QR, a texted link, or embedded in the Moore-sponsored app alongside the Concierge AI. <strong>No download. No new account.</strong></p>
+            </div>
+            <div class="p-6 md:col-span-2">
+                <div class="grid md:grid-cols-3 gap-3 mb-3">
+                    <div class="callout-soft p-3">
+                        <div class="text-xs font-bold text-[#151515] mb-1">Summon</div>
+                        <div class="text-[10px] text-gray-600 leading-snug">Nightcap, laundry pickup, late-night Torno order, amenity drop. Tap a card; the fleet dispatches.</div>
+                    </div>
+                    <div class="callout-soft p-3">
+                        <div class="text-xs font-bold text-[#151515] mb-1">Track</div>
+                        <div class="text-[10px] text-gray-600 leading-snug">Live ETA on every robot order, with the same map the GM sees — stripped of ops data.</div>
+                    </div>
+                    <div class="callout-soft p-3">
+                        <div class="text-xs font-bold text-[#151515] mb-1">Book</div>
+                        <div class="text-[10px] text-gray-600 leading-snug">The Roof terrace seating, event rooms, spa, Torno reservations, Workplace meeting rooms — single interface.</div>
+                    </div>
+                    <div class="callout-soft p-3">
+                        <div class="text-xs font-bold text-[#151515] mb-1">Discover</div>
+                        <div class="text-[10px] text-gray-600 leading-snug">Curated Moore experiences. Ties into the art program, member events, rotating exhibits.</div>
+                    </div>
+                    <div class="callout-soft p-3">
+                        <div class="text-xs font-bold text-[#151515] mb-1">Pay</div>
+                        <div class="text-[10px] text-gray-600 leading-snug">House-account charges, tips, upsells, settlement summaries — without touching the concierge desk.</div>
+                    </div>
+                    <div class="callout-soft p-3">
+                        <div class="text-xs font-bold text-[#151515] mb-1">Concierge Handoff</div>
+                        <div class="text-[10px] text-gray-600 leading-snug">One tap moves the member into chat with the Concierge AI, with current context carried.</div>
+                    </div>
+                </div>
+                <div class="bg-[#faf6ec] border border-[#8a6f47]/25 rounded-lg p-3">
+                    <p class="text-[11px] text-gray-700 leading-snug"><strong class="text-[#151515]">Your branding. Your voice. Zero third-party logos shown to the member.</strong> Included in RaaS on every option.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA FLOW: HOW THE SURFACES TALK -->
+    <h3 class="text-xl font-bold text-[#151515] headline mb-3">How the Surfaces Talk to Each Other</h3>
+    <p class="text-sm text-gray-700 mb-4 leading-relaxed">One data model. One event stream. One ops surface per audience. The workflows below are possible because all four surfaces share state — not because we wrote a dozen integrations.</p>
+
+    <table class="data-table mb-8">
+        <tr><th style="width:32%;">Event</th><th>End-to-end flow across the four surfaces</th></tr>
+        <tr>
+            <td class="label">Member asks Concierge AI for a nightcap at 12:30 AM</td>
+            <td><span class="text-[#8a6f47] font-semibold">Concierge AI</span> parses intent → creates service ticket → <span class="text-[#8a6f47] font-semibold">Fleet Command</span> routes to the available W3 → W3 loads at the bar → <span class="text-[#8a6f47] font-semibold">Member Experience</span> app shows live ETA → payment posts to the member's house account on arrival → Torno POS records the charge → next morning it appears in the <span class="text-[#8a6f47] font-semibold">Financial Dashboard's</span> beverage revenue-center roll-up.</td>
+        </tr>
+        <tr>
+            <td class="label">Torno dinner service closes with a cash variance</td>
+            <td>Oracle MICROS nightly export lands at 3 AM → <span class="text-[#8a6f47] font-semibold">Financial Dashboard</span> flags the variance against tolerance → GM gets a morning alert with the specific tickets + server attribution → one-tap GM comment threads back into the dashboard as a resolution note.</td>
+        </tr>
+        <tr>
+            <td class="label">Event-room turnover between back-to-back private functions</td>
+            <td><span class="text-[#8a6f47] font-semibold">Fleet Command</span> queues strike-and-reset tasks to S300 + C40 → <span class="text-[#8a6f47] font-semibold">Concierge AI</span> acknowledges to the event host that turnover is under way → post-event, <span class="text-[#8a6f47] font-semibold">Financial Dashboard</span> shows event revenue by center and the fleet labor saved for that window.</td>
+        </tr>
+        <tr>
+            <td class="label">Member asks "is the Torno tasting menu available tonight?"</td>
+            <td><span class="text-[#8a6f47] font-semibold">Concierge AI</span> queries MICROS availability (menu + cover pacing) → responds with real-time availability → if the member books, reservation lands in OpenTable/Torno and confirms back through chat.</td>
+        </tr>
+    </table>
+
+    <div class="callout-navy p-5 mb-8">
+        <p class="text-sm text-white leading-relaxed"><strong class="text-[#a68a5c]">This is why the platform is a moat</strong> — not a collection of tools. A single member request flows intake → routing → dispatch → execution → billing → reporting without a human relaying it between systems.</p>
+    </div>
+
+    <!-- PACKAGE PRICING -->
+    <h3 class="text-xl font-bold text-[#151515] headline mb-2">Intelligence Suite — Package Pricing</h3>
+    <p class="text-sm text-gray-700 mb-4 leading-relaxed">Surfaces 3 and 4 (<strong>Fleet Command</strong> + <strong>Member Experience</strong>) are included in RaaS on every option. The <strong>Concierge AI plugin</strong> and the <strong>Financial Operations Dashboard</strong> are add-on modules — taken individually or as a bundle. Pricing is the same whether added to Option A, B, or C.</p>
+
+    <table class="data-table mb-5">
+        <tr>
+            <th>Module</th>
+            <th class="center">Year 1 Install<br><span class="font-normal opacity-75">(one-time)</span></th>
+            <th class="center">Year 2+ Monthly</th>
+        </tr>
+        <tr>
+            <td class="label">Member Experience + Fleet Command <em class="text-gray-500 font-normal">(included in RaaS)</em></td>
+            <td class="center">—</td>
+            <td class="center">—</td>
+        </tr>
+        <tr>
+            <td class="label"><strong>Concierge AI plugin</strong> <em class="text-gray-500 font-normal">(Moore-sponsored app)</em></td>
+            <td class="num">$15,000</td>
+            <td class="num">$750 / mo</td>
+        </tr>
+        <tr>
+            <td class="label"><strong>Financial Operations Dashboard</strong> <em class="text-gray-500 font-normal">(Oracle MICROS overhaul)</em></td>
+            <td class="num">$22,000</td>
+            <td class="num">$1,200 / mo</td>
+        </tr>
+        <tr class="total">
+            <td class="label"><strong>Full Intelligence Suite</strong> <em class="text-[#8a6f47] font-normal">(both add-ons — bundled)</em></td>
+            <td class="num"><strong>$32,000</strong> <span class="text-xs text-[#8a6f47] font-normal">(save $5K)</span></td>
+            <td class="num"><strong>$1,800 / mo</strong> <span class="text-xs text-[#8a6f47] font-normal">(save $150/mo)</span></td>
+        </tr>
+    </table>
+
+    <div class="grid md:grid-cols-2 gap-5 mb-5">
+        <div class="callout-warm p-5">
+            <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-3">What the Install Covers</h4>
+            <ul class="text-xs text-gray-700 space-y-1.5">
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Knowledge-base ingestion and training for the Concierge AI</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> MICROS Simphony / RES 3700 nightly-export integration</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Dashboard commissioning and SSO + role setup</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Branding pass to The Moore's visual identity (Manier, cream, charcoal, Moore-warm accents)</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Staff training — two half-day sessions per module</li>
+            </ul>
+        </div>
+        <div class="callout-soft p-5">
+            <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-3">What the Monthly Covers</h4>
+            <ul class="text-xs text-gray-700 space-y-1.5">
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> LLM usage (Claude / GPT-4 class) for the Concierge AI</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Weekly knowledge-base re-training</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Hosting, security patches, analytics-platform updates</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Weekly variance-alert tuning for the Financial Dashboard</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Monthly 60-minute advisory review with the GM (Financial module)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- OPTION C BUNDLE CALLOUT -->
+    <div class="callout-navy p-6">
+        <div class="flex items-center gap-3 mb-3">
+            <span class="tier-badge tier-c">Option C Bundle</span>
+            <h4 class="text-sm font-bold text-white headline">The Moore Autonomous + Full Intelligence Suite</h4>
+        </div>
+        <p class="text-sm text-gray-300 leading-relaxed mb-3">If The Moore takes Option C + the Full Intelligence Suite, the Year-1 software package consolidates to:</p>
+        <div class="grid md:grid-cols-2 gap-3">
+            <div class="bg-white/5 border border-white/15 rounded-lg p-4">
+                <div class="text-[10px] text-[#a68a5c] tech-font uppercase tracking-widest mb-1">Year 1 Install</div>
+                <div class="text-xl font-bold text-white tech-font">$70,500</div>
+                <div class="text-[11px] text-gray-400 mt-1">$32,000 Intelligence Suite + $38,500 Facility Intelligence Platform — one line item, one platform</div>
+            </div>
+            <div class="bg-white/5 border border-white/15 rounded-lg p-4">
+                <div class="text-[10px] text-[#a68a5c] tech-font uppercase tracking-widest mb-1">Monthly Software</div>
+                <div class="text-xl font-bold text-white tech-font">$2,633 / mo</div>
+                <div class="text-[11px] text-gray-400 mt-1">$1,800 Suite + $833 Platform license ($10K/yr amortized) — bundled onto a single invoice</div>
+            </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-4 leading-snug"><strong class="text-white">What the club does NOT pay for:</strong> Oracle MICROS licensing, existing PMS fees, payment processor fees, concierge labor. We replace no human role — we overhaul the reporting layer and add the conversational concierge layer on top of what the club already runs.</p>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- INSURANCE & INDEMNIFICATION -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#151515] headline mb-3">Insurance &amp; Indemnification</h2>
+    <p class="text-sm text-gray-600 mb-5">Accelerate Robotics carries coverage sized for commercial robotics deployment in an ultra-premium hospitality environment. All policies list <strong>The Moore Miami, the property ownership entity, and any designated management affiliates as additional insureds</strong> at no cost to the club.</p>
+
+    <h3 class="text-base font-bold text-[#151515] mb-3">Coverage in Force</h3>
+    <table class="data-table">
+        <tr><th>Policy</th><th class="center">Limit</th><th>Notes</th></tr>
+        <tr><td class="label">Commercial General Liability</td><td class="center">$1M / $2M agg</td><td>Premises, operations, personal &amp; advertising injury</td></tr>
+        <tr><td class="label">Products / Completed Operations</td><td class="center">$1M / $2M agg</td><td>Robot hardware and branded accessories (bundled within CGL)</td></tr>
+        <tr><td class="label">Professional Liability / Tech E&amp;O</td><td class="center">$1M / $2M agg</td><td>Software, integration, service errors</td></tr>
+        <tr><td class="label">Cyber Liability &amp; Data Privacy</td><td class="center">$1M / claim</td><td>Incidental exposure — no member data is collected</td></tr>
+        <tr><td class="label">Commercial Auto</td><td class="center">$1M CSL</td><td>Service van, hired &amp; non-owned vehicles</td></tr>
+        <tr><td class="label">Workers' Compensation</td><td class="center">Statutory + $500K EL</td><td>All Accelerate techs and subcontractors</td></tr>
+        <tr><td class="label">Umbrella / Excess</td><td class="center">$5M</td><td>Sits over GL, Auto, Employer's Liability</td></tr>
+    </table>
+
+    <div class="mt-4 bg-[#f6f1e8] rounded-lg p-4 border border-[#8a6f47]/30">
+        <p class="text-xs text-gray-700"><strong class="text-[#151515]">Limits-up clause:</strong> If owner counsel, insurance-broker review, or membership counsel calls for higher limits, Accelerate will endorse coverage upward within 30 days. The incremental premium is passed through at Accelerate's cost basis — The Moore pays the differential, with full carrier invoice backup.</p>
+    </div>
+
+    <p class="text-xs text-gray-600 mt-3 mb-6">Certificates of Insurance delivered to The Moore and the ownership entity before Phase 1 kickoff and renewed annually. Any material change in coverage triggers 30-day written notice.</p>
+
+    <div class="grid md:grid-cols-2 gap-5 mb-6">
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-3">Indemnification — Mutual, Fault-Based</h3>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Accelerate indemnifies The Moore</strong> against member injury, property damage, or third-party claim caused by robot malfunction or technician error.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>The Moore indemnifies Accelerate</strong> against claims caused by staff misuse, unauthorized modifications, or facility hazards flagged in the site survey.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Defense costs follow the indemnity.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Caps:</strong> uncapped for bodily injury, property damage, IP claims. 2× annual RaaS spend for all other claims.</li>
+            </ul>
+        </div>
+        <div class="callout-deep p-5">
+            <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-3">Dispute Resolution</h3>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Governing law:</strong> Florida. <strong>Venue:</strong> Miami-Dade County.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Monthly operational review is the first path to resolution.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Unresolved matters → <strong>non-binding mediation</strong> within 30 days.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Still unresolved → <strong>binding arbitration</strong> under AAA Commercial Rules in Miami.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Either party retains the right to injunctive relief for IP or confidentiality matters.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="callout-warm p-5">
+        <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-3">Compliance Confirmations</h3>
+        <div class="grid md:grid-cols-2 gap-3 text-xs text-gray-700">
+            <div><strong class="text-[#151515]">OSHA:</strong> Field procedures meet the general-duty clause for robotic equipment in occupied commercial spaces.</div>
+            <div><strong class="text-[#151515]">ADA:</strong> Robots yield to members; programmed to recognize and give right-of-way to mobility aids and service animals.</div>
+            <div><strong class="text-[#151515]">PCI:</strong> No cardholder data touched. No PCI scope extension to The Moore's environment.</div>
+            <div><strong class="text-[#151515]">GDPR / CCPA:</strong> No member PII processed. Positioning anchors detect <em>asset tags</em>, not people or phones.</div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- PRICING -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6 page-break">
+    <h2 class="text-2xl font-bold text-[#151515] headline mb-2">Pricing</h2>
+    <p class="text-sm text-gray-600 mb-6">Robot-as-a-Service — <strong class="text-[#151515]">$2,850 per robot per month</strong>, all-inclusive. Custom Moore branding and the blackened-bronze / quartered-oak / ivory-leather service cart are included.</p>
+
+    <table class="data-table">
+        <tr>
+            <th></th>
+            <th class="center">Option A<br><span class="font-normal opacity-75">Signature</span></th>
+            <th class="center">Option B<br><span class="font-normal opacity-75">Full-Property</span></th>
+            <th class="center">Option C<br><span class="font-normal opacity-75">The Moore Autonomous</span></th>
+        </tr>
+        <tr><td class="label">Number of Robots</td><td class="center">3</td><td class="center">6</td><td class="center">10</td></tr>
+        <tr><td class="label">Monthly RaaS</td><td class="num">$8,550</td><td class="num">$17,100</td><td class="num">$28,500</td></tr>
+        <tr class="total"><td class="label">Monthly Total</td><td class="num"><strong>$8,550</strong></td><td class="num"><strong>$17,100</strong></td><td class="num"><strong>$28,500</strong></td></tr>
+        <tr><td class="label">Annualized</td><td class="num"><strong>$102,600</strong></td><td class="num"><strong>$205,200</strong></td><td class="num"><strong>$342,000</strong></td></tr>
+        <tr><td colspan="4" style="padding: 2px;"></td></tr>
+        <tr><td class="label">Intelligence Platform (Year 1)</td><td class="center">—</td><td class="center">—</td><td class="num">$38,500</td></tr>
+        <tr><td class="label">Intelligence Platform (Year 2+)</td><td class="center">—</td><td class="center">—</td><td class="num">$10,000/yr</td></tr>
+        <tr class="total"><td class="label">Year 1 All-In</td><td class="num"><strong>$102,600</strong></td><td class="num"><strong>$205,200</strong></td><td class="num"><strong>$380,500</strong></td></tr>
+        <tr><td class="label">Year 2+ Steady-State</td><td class="num"><strong>$102,600</strong></td><td class="num"><strong>$205,200</strong></td><td class="num"><strong>$352,000</strong></td></tr>
+    </table>
+
+    <!-- Facility Intelligence Platform Clarification -->
+    <div class="mt-8 bg-gradient-to-br from-[#f6f1e8] to-white rounded-xl p-6 border-2 border-[#8a6f47]/30">
+        <h3 class="text-lg font-bold text-[#151515] mb-2">Facility Intelligence Platform — What You're Actually Buying</h3>
+        <p class="text-xs text-gray-700 mb-5">Option C includes a facility-wide sensing and dashboard layer. The structure is deliberate: <strong>The Moore owns the physical infrastructure; Accelerate licenses the software that runs on top of it.</strong></p>
+
+        <!-- Hardware Trio -->
+        <div class="bg-white rounded-lg p-5 border border-gray-200 mb-5">
+            <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-4 text-center">The Physical Infrastructure</h4>
+            <div class="grid md:grid-cols-3 gap-5">
+                <div class="text-center">
+                    <div class="bg-gradient-to-br from-[#f6f1e8] to-white rounded-lg p-4 mb-3 border border-gray-100 flex items-center justify-center" style="height: 160px;">
+                        <img src="../assets/sensors/ble-anchor.png" alt="BLE ceiling anchor" class="max-h-full max-w-full object-contain" />
+                    </div>
+                    <p class="text-[11px] font-bold text-[#151515] uppercase tracking-wide">BLE Ceiling Anchor</p>
+                    <p class="text-[10px] text-[#8a6f47] font-semibold tech-font">48 UNITS</p>
+                    <p class="text-[10px] text-gray-600 mt-1.5 leading-snug">Ceiling-mounted, battery-powered. Room-level location for any asset within ~5m.</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-gradient-to-br from-[#f6f1e8] to-white rounded-lg p-4 mb-3 border border-gray-100 flex items-center justify-center" style="height: 160px;">
+                        <img src="../assets/sensors/uwb-anchor.png" alt="UWB precision anchor" class="max-h-full max-w-full object-contain" />
+                    </div>
+                    <p class="text-[11px] font-bold text-[#151515] uppercase tracking-wide">UWB Precision Anchor</p>
+                    <p class="text-[10px] text-[#8a6f47] font-semibold tech-font">7 UNITS</p>
+                    <p class="text-[10px] text-gray-600 mt-1.5 leading-snug">Wall/corner mount at chokepoints (elevators, Torno pass, event-room doors). Sub-30cm accuracy.</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-gradient-to-br from-[#f6f1e8] to-white rounded-lg p-4 mb-3 border border-gray-100 flex items-center justify-center" style="height: 160px;">
+                        <img src="../assets/sensors/asset-tag.png" alt="BLE asset tag" class="max-h-full max-w-full object-contain" style="max-height: 110px;" />
+                    </div>
+                    <p class="text-[11px] font-bold text-[#151515] uppercase tracking-wide">BLE Asset Tag</p>
+                    <p class="text-[10px] text-[#8a6f47] font-semibold tech-font">65 UNITS</p>
+                    <p class="text-[10px] text-gray-600 mt-1.5 leading-snug">Adhesive or clip-on. Attached to service carts, linen totes, event-turnover kits, housekeeping caddies.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works -->
+        <div class="bg-[#151515] rounded-lg p-5 mb-5">
+            <h4 class="text-xs font-bold text-white tech-font uppercase tracking-wide mb-4 text-center">How It Works</h4>
+            <div class="grid md:grid-cols-4 gap-3">
+                <div class="bg-white/5 rounded-lg p-4 border border-white/10 relative">
+                    <div class="absolute -top-2 -left-2 bg-[#8a6f47] text-[#151515] rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-bold tech-font">1</div>
+                    <p class="text-[11px] font-bold text-[#a68a5c] uppercase tracking-wide mb-1.5 tech-font">Tag Attached</p>
+                    <p class="text-[10px] text-white/80 leading-snug">An asset tag is affixed to a service cart, linen tote, or event-turnover kit. Each tag broadcasts a unique ID every few seconds.</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4 border border-white/10 relative">
+                    <div class="absolute -top-2 -left-2 bg-[#8a6f47] text-[#151515] rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-bold tech-font">2</div>
+                    <p class="text-[11px] font-bold text-[#a68a5c] uppercase tracking-wide mb-1.5 tech-font">Anchors Listen</p>
+                    <p class="text-[10px] text-white/80 leading-snug">Ceiling + wall anchors pick up the signal. Three or more anchors triangulate the tag's position in real time.</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4 border border-white/10 relative">
+                    <div class="absolute -top-2 -left-2 bg-[#8a6f47] text-[#151515] rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-bold tech-font">3</div>
+                    <p class="text-[11px] font-bold text-[#a68a5c] uppercase tracking-wide mb-1.5 tech-font">Dashboard Updates</p>
+                    <p class="text-[10px] text-white/80 leading-snug">Position data streams to the facility dashboard. Staff see every tagged asset on a live floor map — where it is, how long it's been idle.</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4 border border-white/10 relative">
+                    <div class="absolute -top-2 -left-2 bg-[#8a6f47] text-[#151515] rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-bold tech-font">4</div>
+                    <p class="text-[11px] font-bold text-[#a68a5c] uppercase tracking-wide mb-1.5 tech-font">Robot Dispatched</p>
+                    <p class="text-[10px] text-white/80 leading-snug">Rules trigger action — a linen cart idle &gt;20 min in a corridor? The nearest robot is dispatched to retrieve it. No ticket, no radio call.</p>
+                </div>
+            </div>
+            <p class="text-[10px] text-white/60 italic text-center mt-4">Same infrastructure; different use cases. Once the anchors are live, new workflows are software configuration — not new hardware.</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-5">
+            <div>
+                <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-3">Year 1 Install — $38,500 (one-time)</h4>
+                <table class="data-table">
+                    <tr><th>Component</th><th class="center">Qty</th></tr>
+                    <tr><td class="label">BLE indoor positioning anchors</td><td class="center">48</td></tr>
+                    <tr><td class="label">UWB precision anchors</td><td class="center">7</td></tr>
+                    <tr><td class="label">Asset tags (BLE)</td><td class="center">65</td></tr>
+                    <tr><td class="label">Dashboard + POS integration (Torno + Roof)</td><td class="center">1</td></tr>
+                    <tr><td class="label">Labor &amp; electrician install</td><td class="center">—</td></tr>
+                </table>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-[#151515] tech-font uppercase tracking-wide mb-3">Year 2+ Software License — $10,000/yr</h4>
+                <table class="data-table">
+                    <tr><th>Included</th><th class="center">&nbsp;</th></tr>
+                    <tr><td class="label">Real-time facility dashboard (web + mobile)</td><td class="center">&#10003;</td></tr>
+                    <tr><td class="label">Smart dispatch (asset-triggered tasks)</td><td class="center">&#10003;</td></tr>
+                    <tr><td class="label">Workflow analytics + monthly reporting</td><td class="center">&#10003;</td></tr>
+                    <tr><td class="label">Cloud hosting, security patches, updates</td><td class="center">&#10003;</td></tr>
+                    <tr><td class="label">Anchor firmware updates</td><td class="center">&#10003;</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-5 grid md:grid-cols-2 gap-4">
+            <div class="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 class="text-xs font-bold text-[#151515] mb-2">Ownership &amp; Exit</h4>
+                <ul class="text-[11px] text-gray-700 space-y-1.5">
+                    <li class="flex items-start gap-1.5"><span class="text-[#8a6f47]">&#9670;</span> <strong>Hardware transfers to The Moore</strong> on Year 1 payment (signed delivery-and-acceptance schedule at Phase 4)</li>
+                    <li class="flex items-start gap-1.5"><span class="text-[#8a6f47]">&#9670;</span> <strong>2-year hardware warranty</strong> from install date — regardless of RaaS status</li>
+                    <li class="flex items-start gap-1.5"><span class="text-[#8a6f47]">&#9670;</span> If The Moore cancels RaaS: hardware stays, software terminates at paid-term end</li>
+                    <li class="flex items-start gap-1.5"><span class="text-[#8a6f47]">&#9670;</span> The Moore may keep $10K/yr software independently, migrate anchors to 3rd-party RTLS, or decommission — no obligation</li>
+                </ul>
+            </div>
+            <div class="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 class="text-xs font-bold text-[#151515] mb-2">If Accelerate Dissolves</h4>
+                <ul class="text-[11px] text-gray-700 space-y-1.5">
+                    <li class="flex items-start gap-1.5"><span class="text-[#8a6f47]">&#9670;</span> The Moore retains full ownership of anchors and tags</li>
+                    <li class="flex items-start gap-1.5"><span class="text-[#8a6f47]">&#9670;</span> Dashboard source + anchor firmware specs held in <strong>third-party escrow</strong> with release-on-bankruptcy</li>
+                    <li class="flex items-start gap-1.5"><span class="text-[#8a6f47]">&#9670;</span> You are not stranded if we go away</li>
+                </ul>
+            </div>
+        </div>
+
+        <p class="text-[11px] text-gray-600 mt-4 italic">The $38,500 is a hard asset on your balance sheet, not a service fee disguised as install labor.</p>
+    </div>
+
+    <!-- What's included -->
+    <h3 class="text-lg font-bold text-[#151515] mt-8 mb-4">What's Included in Every Option</h3>
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+        <div class="callout-soft p-5">
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Robot hardware (on our balance sheet)</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Moore custom branding + bronze/oak/leather service cart</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Deployment, SLAM mapping &amp; commissioning</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Elevator integration (button emulator)</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> 24/7 remote monitoring + 2-hr on-site response</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> All consumables (brushes, filters, mop pads)</li>
+            </ul>
+        </div>
+        <div class="callout-soft p-5">
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Scheduled preventive maintenance</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Break-fix repair + loaner within 24 hours</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Extended warranty beyond manufacturer</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> 3-day on-site training + quarterly refreshers</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Monthly operational review &amp; reporting</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Annual safety inspection</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- What you don't pay for -->
+    <div class="mt-6 callout-deep p-5">
+        <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-3">What The Moore Does NOT Pay For</h3>
+        <div class="grid md:grid-cols-2 gap-x-8 text-xs text-gray-700">
+            <ul class="space-y-1">
+                <li><span class="brand-x">&#10005;</span> No robot purchase or capital expenditure</li>
+                <li><span class="brand-x">&#10005;</span> No software license</li>
+                <li><span class="brand-x">&#10005;</span> No elevator integration hardware cost</li>
+                <li><span class="brand-x">&#10005;</span> No deployment or professional services fee</li>
+            </ul>
+            <ul class="space-y-1">
+                <li><span class="brand-x">&#10005;</span> No support or response fee</li>
+                <li><span class="brand-x">&#10005;</span> No maintenance or consumables fee</li>
+                <li><span class="brand-x">&#10005;</span> No branding, service cart, or customization fee</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- OPERATIONAL EFFICIENCY + ROI -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#151515] headline mb-2">Return on Investment</h2>
+    <p class="text-sm text-gray-600 mb-2">At The Moore, we lead with <strong>amenity extension</strong> — delivering Michelin-grade member service across hours human-only staffing can't economically cover. Cash ROI is real but secondary; we show it honestly below.</p>
+    <p class="text-sm text-gray-600 mb-6">The savings below are <strong>hard-dollar labor and vendor reductions</strong> — cash that doesn't leave your P&amp;L once the fleet is running. We do <strong>not</strong> count "hours redirected to other work" in the ROI math. That's capacity, shown separately below as upside.</p>
+
+    <h3 class="text-lg font-bold text-[#151515] mb-3">Hard Labor Savings — Committed Line Items</h3>
+
+    <table class="data-table">
+        <tr><th>Category</th><th>How the Fleet Captures It</th><th class="center">Monthly Savings</th></tr>
+        <tr class="section-header"><td colspan="3">Option A — Signature Service (3 robots)</td></tr>
+        <tr><td class="label">Overnight hard-floor vendor contract terminated</td><td>C40 runs Torno, lobby, event-room hardwood/tile overnight</td><td class="num">$3,500</td></tr>
+        <tr><td class="label">Torno late-evening runner OT reduction</td><td>S100 handles post-service in-residence dining runs</td><td class="num">$2,500</td></tr>
+        <tr><td class="label">Housekeeping OT reduction (13-residence property)</td><td>Fewer corridor hauls; staff stays on residence interiors</td><td class="num">$1,500</td></tr>
+        <tr><td class="label">Bellhop peak-shift OT</td><td>W3 absorbs non-premium late-evening amenity runs</td><td class="num">$800</td></tr>
+        <tr><td class="label">Third-party deep-clean contract reduction</td><td>C40 keeps daily baseline; deep-clean frequency reduced</td><td class="num">$500</td></tr>
+        <tr class="total"><td colspan="2"><strong>Option A Monthly Hard Savings</strong></td><td class="num"><strong>$8,800</strong></td></tr>
+        <tr><td colspan="2" class="label">Fleet cost</td><td class="num">$8,550</td></tr>
+        <tr class="highlight"><td colspan="2"><strong>Net hard cash benefit</strong></td><td class="num"><strong>+$250 / mo</strong></td></tr>
+
+        <tr class="section-header"><td colspan="3">Option B — Full-Property Service (6 robots)</td></tr>
+        <tr><td colspan="2" class="label"><em>Option A savings</em></td><td class="num"><em>$8,800</em></td></tr>
+        <tr><td class="label">Member-lounge + residence-corridor carpet care</td><td>C30 replaces manual vacuum rounds</td><td class="num">$1,800</td></tr>
+        <tr><td class="label">The Roof service runs (indoor → rooftop staging)</td><td>Second S100 + branded delivery loops reduce runner count</td><td class="num">$2,500</td></tr>
+        <tr><td class="label">Event turnover assist (pre-S300 era)</td><td>Additional S100 supports strike-and-reset between events</td><td class="num">$2,000</td></tr>
+        <tr><td class="label">Second late-evening W3 delivery coverage</td><td>Residence amenity runs covered without late-night FTE</td><td class="num">$1,400</td></tr>
+        <tr><td class="label">Second C40 for extended Torno hours</td><td>Full coverage during Torno brunch + The Roof turnover</td><td class="num">$800</td></tr>
+        <tr class="total"><td colspan="2"><strong>Option B Monthly Hard Savings</strong></td><td class="num"><strong>$17,300</strong></td></tr>
+        <tr><td colspan="2" class="label">Fleet cost</td><td class="num">$17,100</td></tr>
+        <tr class="highlight"><td colspan="2"><strong>Net hard cash benefit</strong></td><td class="num"><strong>+$200 / mo</strong></td></tr>
+
+        <tr class="section-header"><td colspan="3">Option C — The Moore Autonomous (10 robots)</td></tr>
+        <tr><td colspan="2" class="label"><em>Option B savings</em></td><td class="num"><em>$17,300</em></td></tr>
+        <tr><td class="label">Linens &amp; tabletop transport automation (S300 #1)</td><td>Replaces floor-to-laundry manual hauls across residences</td><td class="num">$3,200</td></tr>
+        <tr><td class="label">Event turnover — strike &amp; reset (S300 #2)</td><td>Dedicated event robot between back-to-back functions</td><td class="num">$4,200</td></tr>
+        <tr><td class="label">Third C40 for extended floor-care coverage</td><td>Full daily hard-floor maintenance, not just overnight</td><td class="num">$2,900</td></tr>
+        <tr><td class="label">Overnight porter PT position not backfilled</td><td>Fleet covers overnight cleaning without hire-back</td><td class="num">$2,200</td></tr>
+        <tr><td class="label">Agency temp spend reduced 50%</td><td>Fleet absorbs peak-event coverage normally needing temps</td><td class="num">$1,600</td></tr>
+        <tr class="total"><td colspan="2"><strong>Option C Monthly Hard Savings</strong></td><td class="num"><strong>$31,400</strong></td></tr>
+        <tr><td colspan="2" class="label">Fleet cost (RaaS)</td><td class="num">$28,500</td></tr>
+        <tr class="highlight"><td colspan="2"><strong>Net hard cash benefit</strong></td><td class="num"><strong>+$2,900 / mo</strong></td></tr>
+    </table>
+
+    <div class="mt-4 callout-warm p-4">
+        <p class="text-xs text-gray-700"><strong class="text-[#151515]">Savings tracking.</strong> Targets are measured against a baseline built jointly with The Moore controller and department heads during Phase 1. We sign a <strong>savings tracking worksheet</strong> — monthly operational reviews reconcile actual vs. committed. If we materially miss the target, we work with The Moore in good faith to diagnose and fix the gap during the monthly operational review.</p>
+    </div>
+
+    <h3 class="text-lg font-bold text-[#151515] mt-8 mb-3">Capacity Created — The Real Story</h3>
+    <p class="text-sm text-gray-600 mb-4">Beyond the cash line items, the fleet returns staff hours for member-facing work and extends service into hours staffing can't economically cover. At The Moore, <strong>this is the primary story</strong> — the cash above is the reassurance.</p>
+    <table class="data-table">
+        <tr>
+            <th></th>
+            <th class="center">Option A</th>
+            <th class="center">Option B</th>
+            <th class="center">Option C</th>
+        </tr>
+        <tr><td class="label">Staff hours returned per day</td><td class="center">20</td><td class="center">42</td><td class="center">70</td></tr>
+        <tr><td class="label">Extended service hours</td><td class="center" style="font-size:10px;">+4 evening hours</td><td class="center" style="font-size:10px;">+6 evening hours</td><td class="center" style="font-size:10px;"><strong>24/7 member service</strong></td></tr>
+        <tr><td class="label">Redirected to</td><td class="center" style="font-size:10px;">Torno + bellhop + member touches</td><td class="center" style="font-size:10px;">+ The Roof + event service</td><td class="center" style="font-size:10px;">+ Round-the-clock member coverage, service recovery</td></tr>
+    </table>
+
+    <h3 class="text-lg font-bold text-[#151515] mt-8 mb-4">Return on Investment — Cash Only</h3>
+    <table class="data-table">
+        <tr>
+            <th></th>
+            <th class="center">Option A<br><span class="font-normal opacity-75">Signature</span></th>
+            <th class="center">Option B<br><span class="font-normal opacity-75">Full-Property</span></th>
+            <th class="center">Option C<br><span class="font-normal opacity-75">The Moore Autonomous</span></th>
+        </tr>
+        <tr><td class="label">Monthly Fleet Cost</td><td class="num">$8,550</td><td class="num">$17,100</td><td class="num">$28,500</td></tr>
+        <tr><td class="label">Monthly Hard Savings</td><td class="num">$8,800</td><td class="num">$17,300</td><td class="num">$31,400</td></tr>
+        <tr class="highlight"><td class="label">Monthly Net Cash Benefit</td><td class="num"><strong>+$250</strong></td><td class="num"><strong>+$200</strong></td><td class="num"><strong>+$2,900</strong></td></tr>
+        <tr class="highlight"><td class="label">Annual Net Cash Benefit</td><td class="num"><strong>+$3,000</strong></td><td class="num"><strong>+$2,400</strong></td><td class="num"><strong>+$34,800</strong></td></tr>
+    </table>
+
+    <div class="mt-4 callout-warm p-5">
+        <p class="text-xs text-gray-700 mb-2"><strong class="text-[#151515]">What these numbers are:</strong> Hard labor and vendor costs that leave the P&amp;L once the fleet is running. Line items you can point to on next year's operating statement.</p>
+        <p class="text-xs text-gray-700 mb-2"><strong class="text-[#151515]">What these numbers are not:</strong> "Efficiency value" of hours that may or may not translate to real savings. We've moved that to the capacity section above — The Moore gets that value too, it just doesn't show up as cash.</p>
+        <p class="text-xs text-gray-700"><strong class="text-[#151515]">What's still not counted:</strong> Membership retention impact, initiation-fee pricing power, press and Michelin-world chatter for being the first members' club to extend service via autonomous fleet, member-satisfaction lift. Real but harder to commit to in a contract — we leave them off the ROI line and let them compound as upside.</p>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- DEPLOYMENT PHASES -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#151515] headline mb-2">Phased Deployment</h2>
+    <p class="text-sm text-gray-600 mb-6">All options begin with the same 30-day pilot. If Phase 1 doesn't meet its success criteria, both parties walk away.</p>
+
+    <!-- Option A -->
+    <h3 class="text-base font-bold text-[#151515] mb-3">Option A — Signature Service <span class="text-gray-400 font-normal">(3 phases, ~4 months)</span></h3>
+    <div class="grid md:grid-cols-3 gap-3 mb-8">
+        <div class="bg-[#faf6ec] rounded-xl p-4 border-2 border-[#8a6f47]/40 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">1</div>
+                <div class="font-bold text-xs text-[#151515]">Month 1 — Pilot</div>
+            </div>
+            <p class="text-[11px] text-gray-600">1× C40 on Torno + lobby hardwood overnight. Success criteria agreed in advance. 30 days.</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-[#e8e0d0]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">2</div>
+                <div class="font-bold text-xs text-[#151515]">Month 2–3 — Core Fleet</div>
+            </div>
+            <p class="text-[11px] text-gray-600">Elevator integration. Deploy S100 + W3. Moore branding + service cart applied. <strong>Fleet: 3</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-[#e8e0d0]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">3</div>
+                <div class="font-bold text-xs text-[#151515]">Month 4 — Optimize</div>
+            </div>
+            <p class="text-[11px] text-gray-600">Route tuning, schedule refinement, Torno workflow integration. <strong>Fleet: 3</strong></p>
+        </div>
+    </div>
+
+    <!-- Option B -->
+    <h3 class="text-base font-bold text-[#151515] mb-3">Option B — Full-Property Service <span class="text-gray-400 font-normal">(4 phases, ~6 months)</span></h3>
+    <div class="grid md:grid-cols-4 gap-3 mb-8">
+        <div class="bg-[#faf6ec] rounded-xl p-4 border-2 border-[#8a6f47]/40 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">1</div>
+                <div class="font-bold text-xs text-[#151515]">Pilot</div>
+            </div>
+            <p class="text-[11px] text-gray-600">1× C40. 30 days.</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-[#e8e0d0]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">2</div>
+                <div class="font-bold text-xs text-[#151515]">Core Fleet</div>
+            </div>
+            <p class="text-[11px] text-gray-600">+S100, W3. Elevator integration. Branding + cart. <strong>Fleet: 3</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-[#e8e0d0]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">3</div>
+                <div class="font-bold text-xs text-[#151515]">Full Coverage</div>
+            </div>
+            <p class="text-[11px] text-gray-600">+C40 #2, C30, S100 #2. <strong>Fleet: 6</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-[#e8e0d0]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">4</div>
+                <div class="font-bold text-xs text-[#151515]">Optimize</div>
+            </div>
+            <p class="text-[11px] text-gray-600">Full route optimization. <strong>Fleet: 6</strong></p>
+        </div>
+    </div>
+
+    <!-- Option C -->
+    <h3 class="text-base font-bold text-[#151515] mb-3">Option C — The Moore Autonomous <span class="text-gray-400 font-normal">(5 phases, ~8 months)</span> <span class="recommended-pill ml-2">Recommended</span></h3>
+    <div class="grid md:grid-cols-5 gap-3 mb-6">
+        <div class="bg-[#faf6ec] rounded-xl p-3 border-2 border-[#8a6f47]/40 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">1</div>
+                <div class="font-bold text-[11px] text-[#151515]">Pilot</div>
+            </div>
+            <p class="text-[10px] text-gray-600">1× C40. 30 days.</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-[#e8e0d0]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">2</div>
+                <div class="font-bold text-[11px] text-[#151515]">Core Fleet</div>
+            </div>
+            <p class="text-[10px] text-gray-600">+S100, W3, C40 #2. Elevator integration. <strong>Fleet: 4</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-[#e8e0d0]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">3</div>
+                <div class="font-bold text-[11px] text-[#151515]">Full Fleet</div>
+            </div>
+            <p class="text-[10px] text-gray-600">+C40 #3, C30, S100 #2, W3 #2, S300 ×2. <strong>Fleet: 10</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-[#e8e0d0]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">4</div>
+                <div class="font-bold text-[11px] text-[#151515]">Intelligence</div>
+            </div>
+            <p class="text-[10px] text-gray-600">48 BLE + 7 UWB anchors, 65 tags, dashboard. <strong>+RTLS</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-[#e8e0d0]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">5</div>
+                <div class="font-bold text-[11px] text-[#151515]">Smart Ops</div>
+            </div>
+            <p class="text-[10px] text-gray-600">Smart dispatch, analytics, Torno + Roof POS integration.</p>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- RISK MITIGATION -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#151515] headline mb-6">Risk Mitigation</h2>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div class="callout-warm p-5">
+            <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-3">Early-Deployment Transparency</h3>
+            <p class="text-xs text-gray-700 mb-3">The Moore would be one of Accelerate Robotics' first two commercial deployments. We don't hide that — we structure around it:</p>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Founder on-site</strong> for the entirety of Phase 1 and Phase 2. Not a PM — the CEO.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Weekly operational reviews</strong> during Phases 1–3, monthly in steady state.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Defined success criteria</strong> agreed in writing before the pilot begins.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>No-penalty cancellation</strong> after 90 days with 30 days' notice.</li>
+            </ul>
+        </div>
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#151515] tech-font uppercase tracking-wide mb-3">Michelin Key &amp; Member-Experience Standards</h3>
+            <p class="text-xs text-gray-700 mb-3">Before Phase 1 begins, we'll work with The Moore's team to address the standards the club is rated against:</p>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Technology summary</strong> provided for owner and member counsel review if required</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> All robots meet <strong>UL and CE safety standards</strong></li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>No member data collected</strong> — no cameras recording members, no PII</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Member-yield protocol protects the Michelin Key service signal at every touchpoint</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3 class="text-base font-bold text-[#151515] mb-3">Operational Safeguards</h3>
+    <table class="data-table">
+        <tr><th style="width:30%;">Scenario</th><th>Response</th></tr>
+        <tr><td class="label">Robot malfunctions in a member corridor</td><td>Remote disable within 5 min. Nearest staff notified to move unit to service area.</td></tr>
+        <tr><td class="label">Robot blocks an elevator</td><td>Member-yield protocol prevents this. Robot holds on-floor if any member call is pending.</td></tr>
+        <tr><td class="label">Member noise complaint</td><td>Cleaning schedule adjusted to avoid the reported time window within 24 hours.</td></tr>
+        <tr><td class="label">Private event in an event room</td><td>Event-room robots automatically paused during scheduled member events and private functions.</td></tr>
+        <tr><td class="label">Power outage / network loss</td><td>Robots safe-stop in place. Resume autonomously when connectivity returns.</td></tr>
+        <tr><td class="label">Staff questions</td><td>3-day hands-on training + quarterly refreshers. Dedicated channel with Accelerate for real-time support.</td></tr>
+    </table>
+
+    <div class="mt-4 bg-[#faf6ec] rounded-xl p-5 border border-[#8a6f47]/40">
+        <p class="text-xs text-gray-800"><strong class="text-[#151515]">The risk to The Moore is a 30-day pilot of one hard-floor cleaning robot.</strong> The upside is being the flagship members' club for a platform that will scale across hospitality — with the founder-level attention that comes from being first.</p>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- TERMS + WHY + ASK -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <div>
+            <h2 class="text-2xl font-bold text-[#151515] headline mb-4">Commitment Terms</h2>
+            <ul class="text-sm text-gray-700 space-y-3">
+                <li class="flex items-start gap-2"><span class="text-[#8a6f47]">&#9670;</span> <strong>30-day pilot</strong> — one robot, defined success criteria</li>
+                <li class="flex items-start gap-2"><span class="text-[#8a6f47]">&#9670;</span> <strong>90-day minimum term</strong> — covers pilot + Phase 2 start</li>
+                <li class="flex items-start gap-2"><span class="text-[#8a6f47]">&#9670;</span> <strong>30-day cancellation notice</strong> — no penalty, return the robots</li>
+                <li class="flex items-start gap-2"><span class="text-[#8a6f47]">&#9670;</span> <strong>No long-term lock-in</strong> — service agreement, not a lease</li>
+                <li class="flex items-start gap-2"><span class="text-[#8a6f47]">&#9670;</span> <strong>Right-sizing</strong> — add or remove at phase boundaries</li>
+                <li class="flex items-start gap-2"><span class="text-[#8a6f47]">&#9670;</span> <strong>Upgrade path</strong> — start A, expand to B or C anytime</li>
+            </ul>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-[#151515] headline mb-4">Why Accelerate Robotics</h2>
+            <ol class="text-sm text-gray-700 space-y-3 list-decimal list-inside">
+                <li><strong>Designed for Design District premium.</strong> Custom bronze/oak/leather service cart, Moore-branded identity, member-yield protocols, noise-aware scheduling.</li>
+                <li><strong>We solve the elevator.</strong> Universal button emulator. No firmware mods, no OEM contract. Non-invasive and reversible.</li>
+                <li><strong>Multi-vendor integration.</strong> One brain, many bots — you buy capability, not a manufacturer.</li>
+                <li><strong>Miami-based founder attention.</strong> The Moore is a flagship members' club proof point — your success is our proof of concept.</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- The Ask -->
+    <div class="bg-gradient-to-r from-[#151515] to-[#2a2620] text-white rounded-xl p-8">
+        <h2 class="text-2xl font-bold headline mb-5 text-[#a68a5c]">The Ask</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+                <div>
+                    <h3 class="font-bold text-sm mb-1">Choose your tier</h3>
+                    <p class="text-xs text-gray-400">Review the three options and select the scope that matches your ambition for member service.</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+                <div>
+                    <h3 class="font-bold text-sm mb-1">Align internally</h3>
+                    <p class="text-xs text-gray-400">Ownership, F&amp;B (Torno + Roof), facilities, member experience. We'll provide any documentation required upfront.</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+                <div>
+                    <h3 class="font-bold text-sm mb-1">Sign the Phase 1 pilot</h3>
+                    <p class="text-xs text-gray-400">One robot, one use case, 30 days, measurable outcomes. Lowest commitment, highest evidence.</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#8a6f47] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+                <div>
+                    <h3 class="font-bold text-sm mb-1">Grant facility access</h3>
+                    <p class="text-xs text-gray-400">Charging dock outlet, Wi-Fi credentials, cleaning schedule agreement. That's all Phase 1 needs.</p>
+                </div>
+            </div>
+        </div>
+        <div class="mt-6 bg-white/10 rounded-lg p-4 text-center">
+            <p class="text-sm text-gray-300">If Phase 1 succeeds, we plan Phase 2 together. If it doesn't, both parties walk away.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- FOOTER -->
+<!-- ================================================================ -->
+<footer class="max-w-5xl mx-auto px-8 py-8 mt-4">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-gray-200 pt-6">
+        <div>
+            <p class="text-sm font-bold text-[#151515]">Eric Race</p>
+            <p class="text-xs text-gray-500">Founder &amp; CEO, Accelerate Robotics &middot; Miami, Florida</p>
+            <p class="text-xs text-gray-400 mt-1">Direct founder access. No call center, no ticket queue.</p>
+        </div>
+        <div class="text-right">
+            <div class="flex items-center gap-2 justify-end">
+                <div class="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-400 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <span class="text-xs text-gray-400 italic">One brain, many bots.</span>
+            </div>
+            <p class="text-[10px] text-gray-400 mt-1">&copy; April 2026 &middot; Accelerate Robotics &middot; OPP-002</p>
+        </div>
+    </div>
+</footer>
+
+<div class="no-print text-center py-6">
+    <button onclick="window.print()" class="px-8 py-3 bg-[#8a6f47] hover:bg-[#a68a5c] text-white rounded-xl font-bold text-sm transition shadow-lg">
+        Print / Save as PDF
+    </button>
+</div>
+
+</body>
+</html>

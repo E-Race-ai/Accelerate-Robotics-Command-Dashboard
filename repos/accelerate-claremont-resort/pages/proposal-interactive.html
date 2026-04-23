@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claremont Resort &amp; Club — Executive Proposal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        /* Claremont palette — Tudor Heritage / Berkeley Teal */
+        --teal: #2e7d6a;              /* Heritage teal — Tudor gardens, Bay laurel */
+        --teal-light: #42a08a;
+        --teal-deep: #1e5c4d;
+        --teal-soft: #a8d5c8;
+        --tudor: #1a1814;             /* Tudor dark — aged timber */
+        --tudor-light: #2a2520;
+        --tudor-deep: #0f0e0c;
+        --parchment: #f7f2e8;         /* Aged parchment — historic document feel */
+        --parchment-warm: #faf5ea;
+        --parchment-deep: #ede4d0;
+        --bay: #6b7d5f;               /* Bay laurel — Berkeley hills botanical */
+        --accel-blue: #0055ff;
+        --accel-cyan: #00c8ff;
+        --accel-purple: #7c3aed;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--parchment); color: #1f2937; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; font-feature-settings: 'tnum'; }
+    .teal-gradient { background: linear-gradient(135deg, var(--teal), var(--teal-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .accel-gradient { background: linear-gradient(135deg, var(--accel-blue), var(--accel-cyan), var(--accel-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ── Configurator panel (tudor — aged timber background) ─────────── */
+    .config-panel {
+        background: linear-gradient(160deg, var(--tudor) 0%, var(--tudor-deep) 100%);
+        color: #fff;
+        border-radius: 1.5rem;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        position: relative;
+        overflow: hidden;
+    }
+    .config-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle at 20% 0%, rgba(46, 125, 106, 0.15), transparent 40%),
+                          radial-gradient(circle at 80% 100%, rgba(66, 160, 138, 0.10), transparent 40%);
+        pointer-events: none;
+    }
+    .config-panel > * { position: relative; }
+
+    /* Slider */
+    .slider-wrap { position: relative; padding: 1.5rem 0; }
+    .slider-track {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        position: relative;
+        margin: 0 12px;
+    }
+    .slider-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: linear-gradient(90deg, var(--teal) 0%, var(--teal-light) 100%);
+        border-radius: 999px;
+        box-shadow: 0 0 20px rgba(46, 125, 106, 0.5);
+        transition: width 0.25s ease;
+    }
+    .slider-ticks {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 12px;
+        pointer-events: none;
+    }
+    .tick { width: 2px; height: 12px; background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
+    .tick.tier-marker {
+        width: 3px;
+        height: 18px;
+        background: var(--teal-light);
+        box-shadow: 0 0 8px rgba(46, 125, 106, 0.7);
+    }
+    .slider-input {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        background: transparent;
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        transform: translateY(-50%);
+        height: 40px;
+        cursor: pointer;
+        padding: 0 12px;
+    }
+    .slider-input::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--teal-light), var(--teal));
+        border: 3px solid #fff;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px rgba(46, 125, 106, 0.6), 0 0 0 1px rgba(0,0,0,0.2);
+        transition: transform 0.15s ease;
+    }
+    .slider-input::-webkit-slider-thumb:active { transform: scale(1.15); cursor: grabbing; }
+    .slider-input::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--teal-light), var(--teal));
+        border: 3px solid #fff;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px rgba(46, 125, 106, 0.6);
+    }
+
+    /* Fleet slot grid */
+    .robot-slot {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.75rem;
+        padding: 0.875rem 0.75rem;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        opacity: 0.4;
+        filter: grayscale(0.6);
+    }
+    .robot-slot.active {
+        background: linear-gradient(140deg, rgba(46, 125, 106, 0.18), rgba(46, 125, 106, 0.06));
+        border-color: rgba(46, 125, 106, 0.5);
+        opacity: 1;
+        filter: none;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    .robot-slot.active::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 10px;
+        height: 10px;
+        margin: 8px;
+        background: var(--teal-light);
+        border-radius: 50%;
+        box-shadow: 0 0 12px var(--teal-light);
+    }
+    .robot-chip-mini {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.5rem;
+        background: rgba(46, 125, 106, 0.18);
+        color: var(--teal-light);
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
+    }
+    .robot-slot.active .robot-chip-mini { background: var(--teal); color: #fff; }
+    .robot-photo {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: contain;
+        object-position: center;
+        margin-bottom: 0.5rem;
+        background:
+            radial-gradient(circle at 50% 60%, rgba(46, 125, 106, 0.12), transparent 65%),
+            linear-gradient(140deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
+        border-radius: 0.5rem;
+        padding: 0.25rem;
+        filter: grayscale(0.85) brightness(0.7);
+        transition: filter 0.5s ease, transform 0.5s ease;
+    }
+    .robot-slot.active .robot-photo { filter: grayscale(0) brightness(1); transform: scale(1.02); }
+
+    /* Stat tiles */
+    .stat-tile {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        transition: all 0.3s ease;
+    }
+    .stat-tile.accent {
+        background: linear-gradient(135deg, rgba(46, 125, 106, 0.18), rgba(46, 125, 106, 0.05));
+        border-color: rgba(46, 125, 106, 0.4);
+    }
+    .stat-tile.accent-green {
+        background: linear-gradient(135deg, rgba(107, 125, 95, 0.22), rgba(107, 125, 95, 0.08));
+        border-color: rgba(140, 170, 115, 0.4);
+    }
+
+    /* Toggle */
+    .toggle {
+        display: inline-flex;
+        align-items: center;
+        width: 52px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        flex-shrink: 0;
+    }
+    .toggle::after {
+        content: '';
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        background: #fff;
+        border-radius: 50%;
+        top: 3px;
+        left: 3px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle.on { background: var(--teal); }
+    .toggle.on::after { left: 27px; }
+
+    /* Preset chips */
+    .preset-chip {
+        padding: 0.5rem 1rem;
+        border-radius: 0.6rem;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.85);
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+    .preset-chip:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(46, 125, 106, 0.4);
+    }
+    .preset-chip.active {
+        background: var(--teal);
+        color: #fff;
+        border-color: var(--teal);
+        box-shadow: 0 4px 16px rgba(46, 125, 106, 0.4);
+    }
+
+    /* Phase timeline */
+    .phase-timeline {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.5rem;
+    }
+    .phase-card {
+        background: var(--parchment-warm);
+        border: 1px solid rgba(26, 24, 20, 0.15);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
+    .phase-card.included {
+        background: #fff;
+        border-color: var(--teal);
+    }
+    .phase-card.skipped { opacity: 0.35; filter: grayscale(0.8); }
+
+    /* Service LEDs (inside dark panel) */
+    .led-indicator {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 11px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: background 0.35s ease, border-color 0.35s ease;
+    }
+    .led-indicator.on {
+        background: rgba(46, 125, 106, 0.09);
+        border-color: rgba(46, 125, 106, 0.35);
+    }
+    .led-dot {
+        flex: 0 0 auto;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #3a3833;
+        box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+        transition: background 0.35s ease, box-shadow 0.35s ease;
+    }
+    .led-indicator.on .led-dot {
+        background: #5eff88;
+        box-shadow: 0 0 9px rgba(94, 255, 136, 0.75), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.6);
+        animation: ledPulse 2.4s ease-in-out infinite;
+    }
+    .led-indicator.on:nth-child(3n)   .led-dot { animation-delay: 0.3s; }
+    .led-indicator.on:nth-child(3n+1) .led-dot { animation-delay: 0.8s; }
+    .led-indicator.on:nth-child(3n+2) .led-dot { animation-delay: 1.4s; }
+    @keyframes ledPulse {
+        0%, 100% { box-shadow: 0 0 8px rgba(94, 255, 136, 0.65), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.5); }
+        50%      { box-shadow: 0 0 14px rgba(94, 255, 136, 0.95), 0 0 4px #5eff88, inset 0 0 2px rgba(255,255,255,0.7); }
+    }
+    .led-label {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.45);
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        transition: color 0.35s ease, font-weight 0.35s ease;
+        line-height: 1.25;
+    }
+    .led-indicator.on .led-label { color: #ffffff; font-weight: 600; }
+    .led-threshold {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.3);
+        margin-left: auto;
+        letter-spacing: 0.05em;
+    }
+    .led-indicator.on .led-threshold { color: var(--teal-light); }
+
+    /* Tables */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th { background: var(--tudor); color: #fff; font-weight: 700; text-align: left; padding: 0.65rem 0.85rem; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .data-table th.right { text-align: right; }
+    .data-table td { padding: 0.6rem 0.85rem; border-bottom: 1px solid #e5e7eb; background: #fff; }
+    .data-table tr:nth-child(even) td { background: var(--parchment-warm); }
+    .data-table td.num { text-align: right; font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
+    .data-table tr.total td { background: var(--parchment-deep) !important; font-weight: 700; border-top: 2px solid var(--teal); }
+
+    @media print {
+        /* -------- Global print reset --------
+           Screen glows render as flat colored rectangles on paper,
+           so we strip every box-shadow, animation, and backdrop-filter
+           and rely on borders + solid fills for hierarchy. */
+        @page { size: Letter; margin: 0.5in; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }
+        .no-print, .print-only-hide { display: none !important; }
+
+        /* Kill every glow/shadow/animation that prints badly */
+        *, *::before, *::after {
+            box-shadow: none !important;
+            text-shadow: none !important;
+            animation: none !important;
+            transition: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        /* Force any grayscale filters off so photos print at full fidelity */
+        .robot-slot, .robot-photo, .phase-card.skipped { filter: none !important; }
+
+        /* The live config panel — keep the dark aesthetic but make it
+           print-friendly: no gradient overlays from the ::before pseudo,
+           and a single clean border. */
+        .config-panel { border: 2px solid #1a1814 !important; break-inside: avoid; }
+        .config-panel::before { display: none !important; }
+
+        /* Slider track + thumb — solid shapes, no halos.
+           WHY: the universal "* { box-shadow: none }" rule above doesn't
+           reach vendor pseudo-elements like ::-webkit-slider-thumb, so we
+           must null the shadow explicitly on both thumb pseudos — otherwise
+           the 0 4px 20px teal glow prints as a soft square smear. */
+        .slider-fill { background: #2e7d6a !important; box-shadow: none !important; }
+        .slider-input { outline: none !important; }
+        .slider-input::-webkit-slider-thumb {
+            background: #2e7d6a !important;
+            border: 2px solid #fff !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
+        .slider-input::-moz-range-thumb {
+            background: #2e7d6a !important;
+            border: 2px solid #fff !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
+        .tick.tier-marker { background: #2e7d6a !important; box-shadow: none !important; }
+
+        /* Preset chips — active chip reads via bold fill + border, not glow */
+        .preset-chip.active {
+            background: #2e7d6a !important;
+            color: #fff !important;
+            border: 2px solid #1a1814 !important;
+        }
+
+        /* Service LEDs — solid filled circles, not glow dots.
+           Off LEDs: hollow gray; On LEDs: solid green with a dark outline.
+           WHY: border-radius on tiny pseudo-elements gets stripped by
+           some browser print renderers — force it with !important. */
+        .led-dot {
+            background: #d1d5db !important;
+            border: 1px solid #6b7280 !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+        .led-dot.on {
+            background: #10b981 !important;
+            border: 1px solid #065f46 !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+        .led-indicator.on .led-dot {
+            background: #10b981 !important;
+            border: 1px solid #065f46 !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+        .led-indicator.on {
+            background: rgba(46, 125, 106, 0.12) !important;
+            border-color: #2e7d6a !important;
+        }
+
+        /* Robot-slot active accent dot — solid circle, no glow halo.
+           WHY: browsers drop border-radius on tiny pseudo-elements during
+           print rendering — force it explicitly. */
+        .robot-slot.active::after {
+            background: #2e7d6a !important;
+            border: 1px solid #1a1814;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            overflow: hidden;
+        }
+
+        /* Robot slots — force full opacity and no filter on all slots */
+        .robot-slot { opacity: 1 !important; filter: none !important; }
+        .robot-photo { filter: none !important; max-height: 120px; object-fit: contain; }
+
+        /* Stat tiles + phase cards — keep borders, avoid orphaned rows */
+        .stat-tile, .phase-card, .solution-card { break-inside: avoid; }
+
+        /* Tables stay readable on paper */
+        .data-table { border-collapse: collapse; }
+        .data-table td, .data-table th {
+            break-inside: avoid;
+            border: 1px solid #d1d5db !important;
+        }
+        .data-table thead { display: table-header-group; }
+        .data-table tr { break-inside: avoid; }
+
+        /* ---- Atomic card units ----
+           WHY: "section { break-inside: avoid }" tries to keep an entire
+           section on one page — but a section like the configurator is
+           taller than a page, so the browser gives up and splits anywhere,
+           often mid-card. Instead, mark *inner* card containers atomic so
+           breaks happen between cards, never through them. */
+        .print-keep {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+        }
+
+        /* ---- Logical "parts" of the proposal ---- */
+        .print-hero {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+        }
+        .print-part {
+            break-before: page !important;
+            page-break-before: always !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+        }
+
+        /* Tighten the dark config-panel in print so the hero fits on one
+           Letter page without losing the dark-panel aesthetic. */
+        .config-panel { padding: 0.5in 0.4in !important; break-inside: auto; }
+        .print-hero > .mb-8 { margin-bottom: 0.75rem !important; }
+        .print-hero .mb-6 { margin-bottom: 0.5rem !important; }
+        .print-hero .mb-2 { margin-bottom: 0.25rem !important; }
+
+        /* Let major section headers start a new page when the card before
+           them is close to the page break — prevents orphaned headers. */
+        section h2 { break-after: avoid; page-break-after: avoid; }
+        section h3 { break-after: avoid; page-break-after: avoid; }
+
+        /* Top-level sections after the configurator each get their own page */
+        section + section { break-before: page; page-break-before: always; }
+
+        /* Fleet Composition grid — force 4 cols for 14 robots (4 rows). */
+        #robotGrid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 0.5rem !important; }
+        .robot-slot { padding: 0.5rem 0.45rem !important; }
+        .robot-photo { aspect-ratio: 4 / 3; margin-bottom: 0.25rem !important; }
+
+        /* Service-line LED grid — 4 cols fits 14 lights in 4 rows. */
+        #serviceLedGrid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+
+        /* Dark panels — keep dark background but remove box-shadow */
+        .config-panel { background: #1a1814 !important; }
+
+        /* Whitespace — reduce padding on section wrappers to save pages */
+        section { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+
+        /* Fixed/sticky elements */
+        header { position: static !important; }
+    }
+    @media (max-width: 768px) {
+        .phase-timeline { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- HEADER -->
+<!-- ================================================================ -->
+<header class="bg-gradient-to-br from-[#1a1814] via-[#2a2520] to-[#1a1814] text-white px-6 md:px-8 py-10 md:py-12 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%221%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+    <div class="max-w-6xl mx-auto relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-xl border-2 border-[#2e7d6a] flex items-center justify-center">
+                    <span class="text-[#2e7d6a] font-bold text-2xl headline">C</span>
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">
+                        Cl<span class="text-[#2e7d6a]">a</span>remont Resort
+                    </h1>
+                    <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Executive Proposal &middot; Live Configurator</p>
+                </div>
+            </div>
+            <div class="flex flex-col md:items-end gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                    </div>
+                    <span class="text-sm font-bold tracking-tight accel-gradient tech-font">Accelerate Robotics</span>
+                </div>
+                <div class="text-[10px] text-gray-400 md:text-right tracking-wide">
+                    One Brain. Many Bots.<br>
+                    <span class="text-gray-500">OPP-006 &middot; April 2026</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ================================================================ -->
+<!-- INTRO -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 pt-10 pb-4">
+    <div class="max-w-3xl">
+        <p class="text-sm uppercase tracking-widest text-[#2e7d6a] font-semibold mb-3">Executive Proposal</p>
+        <h2 class="headline text-3xl md:text-4xl font-bold text-[#1a1814] mb-4 leading-tight">
+            111 years of heritage. The next chapter is autonomous.
+        </h2>
+        <p class="text-gray-700 leading-relaxed">
+            A one-page read of the entire proposal. Drag the slider from one robot to fourteen and watch the guest experience scale: which service lines come online, monthly fleet cost, hard-dollar labor savings, and how the economics compare to hiring. Toggle the Facility Intelligence Platform to see how unit economics shift. Limewood &times; W3 room-service choreography, Forbes spa logistics, 22-meeting-room conference automation, and 1,500-member club service &mdash; all modeled live. This is an <strong>augmentation proposal</strong>: the fleet supports the existing Claremont team. For the full walkthrough &mdash; robot specs, elevator survey protocol, historic-building integration plan, union cooperation framework, insurance &amp; liability, and signature block &mdash; see the <a href="proposal.html" class="text-[#2e7d6a] font-semibold underline">full proposal</a>.
+        </p>
+        <p class="text-xs text-gray-500 italic mt-4">
+            The Claremont Resort &amp; Club is a 276-key landmark resort on 22 acres in the Berkeley Hills &mdash; Tudor Revival, all-wood construction since 1915. Oakland City Historical Landmark #133. Forbes Four-Star spa with 32 treatment rooms. 1,500-member private club. 30,000 sq ft of event space. Newly independent after 11 years as a Fairmont property. Owned by Ohana Real Estate Investors, managed by HEI Hotels &amp; Resorts. Two miles from UC Berkeley&rsquo;s BAIR Lab &mdash; where AI research meets hospitality heritage.
+        </p>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- CONFIGURATOR -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-8">
+    <div class="config-panel p-6 md:p-10">
+
+        <!-- ============ PART A — HERO: Fleet size, slider, stats, Intelligence Platform ============ -->
+        <div class="print-hero">
+
+        <!-- Fleet size header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+            <div>
+                <p class="text-[11px] uppercase tracking-widest text-[#a8d5c8] font-semibold mb-2">Fleet Size</p>
+                <div class="flex items-baseline gap-3">
+                    <div class="text-6xl md:text-7xl font-bold tech-font text-white" id="fleetCount">4</div>
+                    <div class="text-xl text-gray-400 font-light">/ 14 robots</div>
+                </div>
+                <p class="text-sm text-gray-400 mt-1" id="tierLabel">Signature Service</p>
+            </div>
+            <div class="flex flex-wrap gap-2" id="presetChips">
+                <button class="preset-chip" data-count="1">Pilot &middot; 1</button>
+                <button class="preset-chip active" data-count="4">Signature &middot; 4</button>
+                <button class="preset-chip" data-count="8">Full-Property &middot; 8</button>
+                <button class="preset-chip" data-count="14">Claremont Renaissance &middot; 14</button>
+            </div>
+        </div>
+
+        <!-- Slider -->
+        <div class="slider-wrap mb-2">
+            <div class="slider-track">
+                <div class="slider-fill" id="sliderFill" style="width: 23.08%"></div>
+                <div class="slider-ticks" id="sliderTicks"></div>
+            </div>
+            <input type="range" min="1" max="14" value="4" step="1" class="slider-input" id="fleetSlider">
+        </div>
+        <div class="flex justify-between text-[10px] text-gray-500 uppercase tracking-wider px-3 mb-8">
+            <span>1 &middot; Pilot</span>
+            <span>&middot;</span>
+            <span>4 &middot; A</span>
+            <span>&middot;</span>
+            <span>8 &middot; B</span>
+            <span>&middot;</span>
+            <span>14 &middot; C</span>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Fleet Cost</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="monthlyCost">$11,400</span></p>
+                <p class="text-[11px] text-gray-500 mt-1" id="costBreakdownLine">4 robots &times; $2,850</p>
+            </div>
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Hard Savings</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-[#a8d5c8]"><span id="monthlySavings">$12,400</span></p>
+                <p class="text-[11px] text-gray-500 mt-1">Labor &amp; vendor contracts terminated</p>
+            </div>
+            <div class="stat-tile accent-green">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Net Monthly Benefit</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="netMonthly">+$1,000</span></p>
+                <p class="text-[11px] text-gray-300 mt-1"><span id="annualNet">+$12,000</span> annualized</p>
+            </div>
+            <div class="stat-tile accent">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Staff Hours Returned</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="staffHours">28</span> <span class="text-base text-gray-300 font-normal">/ day</span></p>
+                <p class="text-[11px] text-gray-300 mt-1">Redirected to guest-facing moments</p>
+            </div>
+        </div>
+
+        <!-- Intelligence Platform toggle -->
+        <div class="mb-8">
+            <div class="print-keep flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="flex-1 pr-4">
+                    <p class="text-sm font-semibold text-white">Facility Intelligence Platform</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Asset sensing, BLE + UWB tags, smart-dispatch rules, ops dashboard &middot; <span class="text-[#a8d5c8]">$55,000 Y1 install &middot; $12,000/yr license</span></p>
+                </div>
+                <div class="toggle" id="intelToggle"></div>
+            </div>
+        </div>
+
+        </div>
+        <!-- ============ END PART A — HERO ============ -->
+
+        <!-- ============ PART B — Fleet Composition (robot lineup) ============ -->
+        <div class="print-part">
+            <p class="text-[11px] uppercase tracking-widest text-[#a8d5c8] font-semibold mb-3">Fleet Composition</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5" id="robotGrid"></div>
+        </div>
+
+        <!-- ============ PART C — Service Lines (LED system status) ============ -->
+        <div class="print-part mt-8">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[11px] uppercase tracking-widest text-[#a8d5c8] font-semibold">Service Lines — System Status</p>
+                <p class="text-[10px] uppercase tracking-widest text-gray-400">
+                    <span class="tech-font text-[#5eff88] font-bold" id="serviceOnCount">4</span>
+                    <span class="text-gray-500"> / 14 online</span>
+                </p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2" id="serviceLedGrid"></div>
+        </div>
+
+        <!-- ============ PART D — Annual Summary + vs. Hiring (the ROI moment) ============ -->
+        <div class="print-part print-keep mt-8 p-5 rounded-xl" style="background: linear-gradient(135deg, rgba(46, 125, 106, 0.15), rgba(46, 125, 106, 0.04)); border: 1px solid rgba(46, 125, 106, 0.35);">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center md:text-left">
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#a8d5c8] font-semibold mb-1">Year 1 All-In</p>
+                    <p class="text-2xl font-bold tech-font text-white" id="year1AllIn">$136,800</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#a8d5c8] font-semibold mb-1">Year 2+ Steady-State</p>
+                    <p class="text-2xl font-bold tech-font text-white" id="year2SteadyState">$136,800</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#a8d5c8] font-semibold mb-1">Annual Net Cash Benefit</p>
+                    <p class="text-2xl font-bold tech-font text-[#a8d5c8]" id="annualBenefitBig">+$12,000</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- vs. Hiring -->
+        <div class="print-keep mt-6 p-6 rounded-xl" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12);">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-[11px] uppercase tracking-widest text-[#a8d5c8] font-semibold">vs. Hiring — Fully Loaded Labor Comparison</p>
+                <span class="text-[10px] text-gray-400 italic">Bay Area unionized luxury hospitality, 2026</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Your Fleet</p>
+                    <p class="text-3xl font-bold tech-font text-white"><span id="fleetCostCompare">$11,400</span><span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1">Hardware, service, Claremont heritage wrap, installation &mdash; all-in</p>
+                </div>
+                <div class="text-center text-3xl text-gray-500 font-light hidden md:block">&rarr;</div>
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Equivalent FTE Coverage</p>
+                    <p class="text-3xl font-bold tech-font text-white"><span id="fteEquivCost">$12,740</span><span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1"><span id="fteEquivCount">2.45</span> FTEs &times; $5,200/mo fully-loaded</p>
+                </div>
+            </div>
+            <div class="mt-5 pt-5 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-3">
+                <p class="text-sm text-gray-300">The fleet delivers this coverage for</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-[#a8d5c8]" id="fteSavings">$1,340/mo less</p>
+                <p class="text-sm text-gray-300"><span id="fteSavingsPct">11%</span> cheaper &middot; <span id="fteSavingsAnnual">$16,080/yr</span> delta</p>
+            </div>
+            <p class="text-[10px] text-gray-500 italic mt-4 leading-relaxed">
+                Not counted: recruiting, 70&ndash;90%/yr hospitality turnover, OT premiums, overnight differentials, Bay Area housing premium, union benefit escalators. Typical add-on: 30&ndash;50% on top of base FTE cost.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- PHASE TIMELINE -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="max-w-3xl mb-6">
+        <p class="text-sm uppercase tracking-widest text-[#2e7d6a] font-semibold mb-3">Deployment Roadmap</p>
+        <h2 class="headline text-3xl font-bold text-[#1a1814] mb-3 leading-tight">Phases included at your fleet size</h2>
+        <p class="text-gray-700 leading-relaxed">
+            Each phase is success-gated &mdash; HEI Hotels operations, Ohana asset management, and Accelerate agree on measurable criteria before moving forward. Rolling back a phase costs nothing more than de-installing the added robots. Union representatives are consulted at each phase transition.
+        </p>
+    </div>
+    <div class="phase-timeline" id="phaseTimeline"></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- WHAT GUESTS NOTICE -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="flex items-end justify-between mb-6 flex-wrap gap-4">
+        <div>
+            <p class="text-sm uppercase tracking-widest text-[#2e7d6a] font-semibold mb-3">What Guests Notice</p>
+            <h2 class="headline text-3xl font-bold text-[#1a1814] mb-1">Guest experience at this fleet size</h2>
+            <p class="text-gray-700 text-sm">The heritage resort service floor scales with the robots deployed &mdash; each slot unlocks something guests, reviewers, and HEI ops can see.</p>
+        </div>
+    </div>
+
+    <div id="serviceTierCallout" class="print-keep p-6 md:p-8 rounded-2xl mb-6 text-white" style="background: linear-gradient(135deg, #1a1814 0%, #2a2520 100%); border: 1px solid rgba(46, 125, 106, 0.4);">
+        <div class="flex items-start justify-between flex-wrap gap-4 mb-3">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-[#a8d5c8] font-semibold mb-2">At <span id="tierFleetCount">4</span> robots, the guest experience is:</p>
+                <h3 class="headline text-3xl md:text-4xl font-bold"><span id="tierName">Signature Service</span></h3>
+                <p class="text-[11px] uppercase tracking-widest text-[#a8d5c8] mt-1" id="tierTag">Guest-facing automation</p>
+            </div>
+            <div class="tech-font text-5xl font-bold text-[#2e7d6a]/30 tracking-tighter" id="tierBadge">III</div>
+        </div>
+        <p class="text-gray-300 leading-relaxed max-w-3xl" id="tierDescription">Four robots in concert: Limewood delivery across 10 floors, lobby and spa-level care, corridor carpet, and Forbes spa/club service. The tier where Cond&eacute; Nast Traveler notices &mdash; the Claremont&rsquo;s new chapter.</p>
+    </div>
+
+    <p class="text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-3">Active Capabilities</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8" id="unlockGrid"></div>
+
+    <div id="lockedPreview">
+        <p class="text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-3">Next To Unlock</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="lockedGrid"></div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- HARD SAVINGS BREAKDOWN -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <p class="text-sm uppercase tracking-widest text-[#2e7d6a] font-semibold mb-3">Hard-Dollar Savings Breakdown</p>
+    <h2 class="headline text-3xl font-bold text-[#1a1814] mb-3 leading-tight">Labor &amp; vendor contracts actually eliminated</h2>
+    <p class="text-gray-700 mb-6 max-w-3xl text-sm leading-relaxed">
+        Hard-dollar savings are cash that stops leaving the P&amp;L once the fleet is running. &ldquo;Hours redirected to higher-value guest-facing work&rdquo; is shown separately &mdash; it&rsquo;s real value, but it isn&rsquo;t cash.
+    </p>
+
+    <div class="print-keep overflow-x-auto rounded-xl border border-gray-200">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Capability unlocked at this slot</th>
+                    <th>What the robot replaces</th>
+                    <th class="right">Monthly savings</th>
+                </tr>
+            </thead>
+            <tbody id="savingsTable"></tbody>
+            <tfoot>
+                <tr class="total">
+                    <td colspan="2">Monthly Hard Savings</td>
+                    <td class="num" id="savingsTotal">$12,400</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <p class="text-xs text-gray-500 italic mt-3">
+        Baselined jointly with the Claremont Resort controller, HEI regional ops, and Ohana asset management during Phase 1. Union representatives consulted on workflow integration. Monthly operational reviews reconcile actual vs. committed; material misses are diagnosed and fixed together in good faith.
+    </p>
+</section>
+
+<!-- ================================================================ -->
+<!-- FOOTER -->
+<!-- ================================================================ -->
+<footer class="max-w-6xl mx-auto px-6 md:px-8 py-10 border-t border-gray-200 mt-12">
+    <div class="flex flex-col md:flex-row justify-between items-start gap-6">
+        <div>
+            <p class="text-sm text-gray-700 leading-relaxed max-w-2xl">
+                This is the <strong>Executive Proposal</strong> &mdash; a one-page read of the deal. The <strong>Full Proposal</strong> has every robot&rsquo;s spec sheet, the Limewood &times; W3 room-service choreography, the elevator survey protocol, the historic-building integration plan, the union cooperation framework, the Facility Intelligence Platform detail, insurance &amp; liability, deployment roadmap, and signature block.
+            </p>
+            <p class="text-sm text-gray-700 mt-3">
+                <a href="proposal.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm tech-font" style="background: #2e7d6a; color: #fff;">
+                    Open Full Proposal
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                </a>
+            </p>
+        </div>
+        <div class="text-xs text-gray-500 md:text-right">
+            <p><strong class="text-[#1a1814]">Eric Race</strong></p>
+            <p>Founder &amp; CEO, Accelerate Robotics</p>
+            <p class="mt-2 italic">OPP-006 &middot; Claremont Resort &amp; Club, Berkeley &middot; April 2026</p>
+        </div>
+    </div>
+</footer>
+
+<!-- ================================================================ -->
+<!-- DATA + LOGIC -->
+<!-- ================================================================ -->
+<script>
+/* ──────────────────────────────────────────────────────────────────
+   ROBOT LADDER — order of addition by marginal ROI
+   Slots 1-4  → Tier A — Signature Service
+   Slots 5-8  → Tier B — Full-Property Service
+   Slots 9-14 → Tier C — Claremont Renaissance
+   ────────────────────────────────────────────────────────────────── */
+const ROBOTS = [
+    // Tier A (slots 1-4) — Signature Service
+    { code: 'W3',   label: 'W3 \u00b7 Limewood room service',         role: 'Enclosed delivery \u2014 Limewood dinner to guest rooms across 10 floors',
+      photo: '../assets/robots/photos/keenon-w3.png',
+      savings: 3400, hours: 8, fte: 0.65,
+      captures: 'Room-service runner shifts across 10 floors + overnight amenity coverage',
+      unlock: 'Room service from Limewood arrives in a branded W3 at 10:45 PM \u2014 276 rooms, 10 floors, one fleet.',
+      category: 'Delivery' },
+
+    { code: 'C40',  label: 'C40 \u00b7 Lobby & Limewood overnight',   role: 'Hard-floor scrubber \u2014 restored hardwood lobby, Limewood dining, public areas',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 3000, hours: 7, fte: 0.60,
+      captures: 'Overnight lobby/restaurant scrub vendor + AM porter on restored hardwoods',
+      unlock: 'The 1915 restored hardwood floors gleam before the first morning coffee \u2014 111 years of heritage, polished nightly.',
+      category: 'Cleaning' },
+
+    { code: 'C30',  label: 'C30 \u00b7 Guest-floor carpet care',      role: 'Corridor vacuum \u2014 10 floors, two wings of carpeted corridors overnight',
+      photo: '../assets/robots/photos/keenon-c30-white.png',
+      savings: 2800, hours: 6, fte: 0.55,
+      captures: 'Overnight housekeeping vacuum shifts across 10 floors and two wings',
+      unlock: 'Ten floors of corridors reset between midnight and 5 AM \u2014 guests in the Tudor wings wake to silence.',
+      category: 'Cleaning' },
+
+    { code: 'S100', label: 'S100 \u00b7 Spa & club service',          role: 'Open-tray runner \u2014 Forbes spa amenities, pool towels, club F&B',
+      photo: '../assets/robots/photos/keenon-s100-luxury-cart-hero.png',
+      savings: 3200, hours: 7, fte: 0.65,
+      captures: 'Spa amenity porter + pool towel service + club locker-room runner',
+      unlock: 'Poolside towels and post-treatment refreshments arrive on pace \u2014 the Forbes Four-Star spa runs at tempo.',
+      category: 'Delivery' },
+
+    // Tier B delta (slots 5-8) — Full-Property Service
+    { code: 'W3',   label: 'W3 \u00b7 Multi-outlet delivery',         role: 'Second delivery \u2014 East Bay Provisions, Lobby Lounge, Bayview Terrace to rooms',
+      photo: '../assets/robots/photos/keenon-w3.png',
+      savings: 3000, hours: 6, fte: 0.60,
+      captures: 'Second-outlet delivery shifts + peak-hour surge coverage',
+      unlock: 'Four F&B outlets feed into one delivery fleet \u2014 any menu, any room, any hour.',
+      category: 'Delivery' },
+
+    { code: 'S300', label: 'S300 \u00b7 Housekeeping logistics',      role: 'Heavy transport \u2014 linen runs across 10 floors + amenity restocking',
+      photo: '../assets/robots/photos/keenon-s300-linen-bin.png',
+      savings: 2600, hours: 5, fte: 0.50,
+      captures: 'Housekeeping supply runner shifts + linen cart distribution across two wings',
+      unlock: 'Linens and amenities stage on every floor by 7 AM \u2014 housekeeping starts guest service, not elevator rides.',
+      category: 'Logistics' },
+
+    { code: 'C30',  label: 'C30 \u00b7 Wing depth carpet care',       role: 'Second carpet \u2014 coverage for both wings on high-occupancy nights',
+      photo: '../assets/robots/photos/keenon-c30-white.png',
+      savings: 2600, hours: 6, fte: 0.55,
+      captures: 'Peak-occupancy carpet cleaning overtime across both wings',
+      unlock: 'Both Tudor wings run at full carpet care even on sold-out nights \u2014 no quality compromise at 276 rooms.',
+      category: 'Cleaning' },
+
+    { code: 'C40',  label: 'C40 \u00b7 Spa & club hard floors',       role: 'Second hard-floor \u2014 20,000 sq ft spa level, fitness center, club areas',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 2400, hours: 5, fte: 0.50,
+      captures: 'Spa-level daily hard-floor maintenance + club facility cleaning',
+      unlock: 'The 20,000 sq ft spa level resets autonomously between treatments \u2014 tile, stone, and wet areas spotless.',
+      category: 'Cleaning' },
+
+    // Tier C delta (slots 9-14) — Claremont Renaissance
+    { code: 'W3',   label: 'W3 \u00b7 Conference & event delivery',   role: 'Third delivery \u2014 22 meeting rooms, banquet service, conference support',
+      photo: '../assets/robots/photos/keenon-w3.png',
+      savings: 2800, hours: 5, fte: 0.55,
+      captures: 'Conference break delivery + banquet support runner labor',
+      unlock: 'Twenty-two meeting rooms get break service on schedule \u2014 conference planners see the Bay Area\'s smartest venue.',
+      category: 'Delivery' },
+
+    { code: 'S300', label: 'S300 \u00b7 Event strike & setup',        role: 'Second heavy \u2014 ballroom strike/reset, event materials transport',
+      photo: '../assets/robots/photos/keenon-s300-linen-bin.png',
+      savings: 2200, hours: 5, fte: 0.45,
+      captures: 'Event-turnover agency temps + ballroom setup labor',
+      unlock: 'Events strike in under 90 minutes \u2014 agency temp spend drops while the Garden Room turns over for the next reception.',
+      category: 'Logistics' },
+
+    { code: 'S100', label: 'S100 \u00b7 Pool & tennis service',       role: 'Second open-tray \u2014 poolside drinks, tennis court refreshments, club events',
+      photo: '../assets/robots/photos/keenon-s100-luxury-cart-hero.png',
+      savings: 2600, hours: 5, fte: 0.50,
+      captures: 'Pool attendant F&B runs + tennis court refreshment service',
+      unlock: '1,500 club members get poolside and courtside service at resort tempo \u2014 the amenity that justifies the $50 resort fee.',
+      category: 'Delivery' },
+
+    { code: 'C30',  label: 'C30 \u00b7 Event & meeting carpet',       role: 'Third carpet \u2014 30,000 sq ft of meeting space between events',
+      photo: '../assets/robots/photos/keenon-c30-white.png',
+      savings: 2400, hours: 5, fte: 0.50,
+      captures: 'Meeting-space carpet maintenance between events',
+      unlock: 'Thirty-thousand square feet of event carpet resets between every session \u2014 the Claremont Ballroom stage shines.',
+      category: 'Cleaning' },
+
+    { code: 'C40',  label: 'C40 \u00b7 Campus depth coverage',        role: 'Third hard-floor \u2014 22-acre campus coverage, carriage entrance, public paths',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 2000, hours: 4, fte: 0.40,
+      captures: 'Campus hard-floor cleaning shift + carriage entrance maintenance',
+      unlock: 'From the carriage entrance to the spa level \u2014 every hard surface on the 22-acre campus autonomous.',
+      category: 'Depth' },
+
+    { code: 'S300', label: 'S300 \u00b7 Spa supply logistics',        role: 'Third heavy \u2014 spa product delivery to 32 treatment rooms + laundry transport',
+      photo: '../assets/robots/photos/keenon-s300-linen-bin.png',
+      savings: 2000, hours: 4, fte: 0.40,
+      captures: 'Spa supply porter + treatment room reset material transport',
+      unlock: 'Thirty-two treatment rooms turn over autonomously \u2014 products, linens, and amenities stage without a porter.',
+      category: 'Logistics' },
+];
+
+/* Flat monthly RaaS rate — luxury resort tier, Bay Area market */
+const RAAS_PER_ROBOT = 2850;
+
+/* One-time capex — sensing + dashboard install for the largest property
+   in the fleet; extensive infrastructure across 10 floors + 22 acres */
+const INTEL_Y1_INSTALL = 55000;
+
+/* Annual software license after Y1 */
+const INTEL_Y2_LICENSE = 12000;
+
+/* Blended fully-loaded FTE monthly cost — Bay Area unionized luxury
+   hospitality, 2026. Wages + FICA + benefits + PTO + uniforms +
+   training burden + union benefit escalators for hospitality labor
+   (housekeeping, F&B runner, porter, spa attendant blend). */
+const FTE_MONTHLY_COST = 5200;
+
+/* Service tier narratives — what guests experience at each fleet size */
+const SERVICE_TIERS = [
+    { min: 1, max: 1, name: 'Pilot Mode', tag: 'Proof of concept',
+      description: 'One W3 running Limewood room service on a single guest floor. Thirty-day pilot proves quality, noise profile, and guest reception in a historic building. Elevator compatibility confirmed during Foundation phase.' },
+    { min: 2, max: 3, name: 'Essential Service', tag: 'Core automation',
+      description: 'Room service, overnight lobby care on the restored hardwoods, and guest-floor carpet cleaning. The 111-year-old building wakes up pristine \u2014 heritage preserved, service modernized.' },
+    { min: 4, max: 5, name: 'Signature Service', tag: 'Guest-facing automation',
+      description: 'Four robots in concert: Limewood delivery across 10 floors, lobby and spa-level care, corridor carpet, and Forbes spa/club service. The tier where Cond\u00e9 Nast Traveler notices \u2014 the Claremont\'s new chapter.' },
+    { min: 6, max: 8, name: 'Full-Property Service', tag: 'Resort-wide coverage',
+      description: 'Every guest-facing surface and delivery route covered. Multi-outlet delivery, housekeeping logistics across 10 floors, spa-level hard floors, and depth carpet for both wings. Ohana sees the operational data that validates the $163M investment.' },
+    { min: 9, max: 14, name: 'Claremont Renaissance', tag: '24/7 campus autonomous',
+      description: 'Conference delivery, event strike/reset, poolside and tennis service, 30,000 sq ft of event carpet, campus-wide depth, and spa logistics for 32 treatment rooms. The Claremont enters the AI era \u2014 two miles from UC Berkeley\'s robotics labs, 111 years of heritage augmented by the future being built in its own backyard.' },
+];
+
+function currentServiceTier(n) {
+    return SERVICE_TIERS.find(t => n >= t.min && n <= t.max) || SERVICE_TIERS[0];
+}
+
+/* Service lines — illuminate as the fleet crosses each threshold */
+const SERVICE_LINES = [
+    { id: 'roomservice',  label: 'Limewood Room Service',         activateAt: 1 },
+    { id: 'lobby',        label: 'Lobby & Limewood Hard Floors',  activateAt: 2 },
+    { id: 'carpet',       label: 'Guest-Floor Carpet Care',       activateAt: 3 },
+    { id: 'spa',          label: 'Forbes Spa & Club Service',      activateAt: 4 },
+    { id: 'multioutlet',  label: 'Multi-Outlet Delivery',         activateAt: 5 },
+    { id: 'linens',       label: 'Housekeeping Logistics',        activateAt: 6 },
+    { id: 'wingdepth',    label: 'Wing Depth Carpet',             activateAt: 7 },
+    { id: 'spadepth',     label: 'Spa & Club Hard Floors',        activateAt: 8 },
+    { id: 'conference',   label: 'Conference & Event Delivery',    activateAt: 9 },
+    { id: 'eventstrike',  label: 'Event Strike & Setup',          activateAt: 10 },
+    { id: 'pooltennis',   label: 'Pool & Tennis Service',         activateAt: 11 },
+    { id: 'eventcarpet',  label: 'Event & Meeting Carpet',        activateAt: 12 },
+    { id: 'campus',       label: 'Campus Depth Coverage',         activateAt: 13 },
+    { id: 'spalogistics', label: 'Spa Supply Logistics',          activateAt: 14 },
+];
+
+/* Phase definitions */
+const PHASES = [
+    { name: 'Foundation', desc: 'Comprehensive elevator survey, WiFi mapping across 10 floors and two wings, historic-building assessment, charging dock install. 3 weeks.' },
+    { name: 'Pilot', desc: 'Single W3 on one guest floor for Limewood room service. 30-day success criteria signed by HEI ops and Ohana asset management.' },
+    { name: 'Signature', desc: 'Cleaning fleet + spa/club service. Multi-floor elevator integration. Heritage-building compatibility confirmed at scale.' },
+    { name: 'Full-Property', desc: 'Multi-outlet delivery, housekeeping logistics, spa depth. Every guest-facing line online across 276 rooms and 10 floors.' },
+    { name: 'Renaissance', desc: 'Conference support, event logistics, campus-wide coverage. Full 24/7 autonomous operations \u2014 the Claremont enters the AI era.' },
+];
+
+/* Fleet phase mapping — how many phases get activated at each fleet size.
+   1      → phases 1-2 (Foundation + Pilot)
+   2-4    → phases 1-3 (through Signature)
+   5-8    → phases 1-4 (through Full-Property)
+   9-14   → phases 1-5 (through Renaissance) */
+const TIERS = {
+    1:  { name: 'Pilot Mode',              phases: 2 },
+    2:  { name: 'Essential Service',       phases: 3 },
+    3:  { name: 'Essential Service',       phases: 3 },
+    4:  { name: 'Signature Service',       phases: 3 },
+    5:  { name: 'Signature + Multi-Outlet',phases: 4 },
+    6:  { name: 'Full-Property Service',   phases: 4 },
+    7:  { name: 'Full-Property Service',   phases: 4 },
+    8:  { name: 'Full-Property Service',   phases: 4 },
+    9:  { name: 'Claremont Renaissance',   phases: 5 },
+    10: { name: 'Claremont Renaissance',   phases: 5 },
+    11: { name: 'Claremont Renaissance',   phases: 5 },
+    12: { name: 'Claremont Renaissance',   phases: 5 },
+    13: { name: 'Claremont Renaissance',   phases: 5 },
+    14: { name: 'Claremont Renaissance',   phases: 5 },
+};
+
+/* STATE ─────────────────────────────────────────────────────────── */
+let state = { count: 4, intel: false };
+
+const $ = (id) => document.getElementById(id);
+
+/* RENDER: Robot grid ──────────────────────────────────────────── */
+function renderRobotGrid() {
+    const grid = $('robotGrid');
+    grid.innerHTML = '';
+    ROBOTS.forEach((r, i) => {
+        const active = i < state.count;
+        const slot = document.createElement('div');
+        slot.className = 'robot-slot' + (active ? ' active' : '');
+        slot.innerHTML = `
+            <img class="robot-photo" src="${r.photo}" alt="${r.code}" loading="lazy" onerror="this.style.visibility='hidden'">
+            <div class="flex items-start gap-2.5">
+                <div class="robot-chip-mini">${r.code}</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[11px] font-semibold text-white leading-snug truncate">${r.label}</p>
+                    <p class="text-[10px] text-gray-400 leading-snug mt-0.5 truncate">${r.role}</p>
+                </div>
+            </div>
+        `;
+        grid.appendChild(slot);
+    });
+}
+
+/* RENDER: Savings table ───────────────────────────────────────── */
+function renderSavingsTable() {
+    const tbody = $('savingsTable');
+    tbody.innerHTML = '';
+    let total = 0;
+    for (let i = 0; i < state.count; i++) {
+        const r = ROBOTS[i];
+        total += r.savings;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${r.label}</strong></td>
+            <td>${r.captures}</td>
+            <td class="num">$${r.savings.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    }
+    $('savingsTotal').textContent = '$' + total.toLocaleString();
+}
+
+/* RENDER: Phase timeline ──────────────────────────────────────── */
+function renderPhases() {
+    const tier = TIERS[state.count];
+    const phaseCount = tier.phases;
+    const timeline = $('phaseTimeline');
+    timeline.innerHTML = '';
+
+    const phaseDefs = [
+        { n: 1, name: 'Foundation',      time: 'Weeks 1\u20133',
+          detail: 'Comprehensive elevator survey (including 30\u2033 cab constraints), WiFi mapping across 10 floors and two wings, historic-building structural assessment, charging dock installation. Heritage preservation review with Ohana.' },
+        { n: 2, name: 'Pilot',           time: 'Months 1\u20132',
+          detail: 'Single W3 on one guest floor for Limewood room service. 30-day success criteria signed jointly by HEI ops and Ohana asset management. Noise, vibration, and historic-surface compatibility validated.' },
+        { n: 3, name: 'Signature',       time: 'Months 2\u20134',
+          detail: 'C40 on restored lobby hardwoods, C30 corridor vac on guest floors, S100 for Forbes spa and club service. Multi-floor elevator integration. Heritage-building compatibility confirmed at scale.' },
+        { n: 4, name: 'Full-Property',   time: 'Months 4\u20137',
+          detail: 'Second W3 for multi-outlet delivery, S300 for housekeeping logistics, depth carpet and spa hard floors. Every guest-facing service line online across 276 rooms, 10 floors, and the 20,000 sq ft spa level.' },
+        { n: 5, name: 'Renaissance',     time: 'Months 7\u201310',
+          detail: 'Conference delivery across 22 meeting rooms, event strike/reset, poolside and tennis service, campus-wide depth coverage, spa supply logistics for 32 treatment rooms. Full 24/7 autonomous operations.' },
+    ];
+
+    phaseDefs.forEach((p) => {
+        const included = p.n <= phaseCount;
+        const card = document.createElement('div');
+        card.className = 'phase-card' + (included ? ' included' : ' skipped');
+        card.innerHTML = `
+            <div class="flex items-center gap-2 mb-2">
+                <div class="w-7 h-7 rounded-full bg-[#2e7d6a] text-white flex items-center justify-center text-xs font-bold tech-font">${p.n}</div>
+                <p class="text-[10px] uppercase tracking-widest text-[#1a1814] font-semibold">${p.time}</p>
+            </div>
+            <p class="font-bold text-[#1a1814] mb-1 text-sm">${p.name}</p>
+            <p class="text-xs text-gray-600 leading-snug">${p.detail}</p>
+        `;
+        timeline.appendChild(card);
+    });
+}
+
+/* RENDER: Stats ─────────────────────────────────────────────── */
+function renderStats() {
+    const n = state.count;
+    const activeRobots = ROBOTS.slice(0, n);
+
+    const fleetCost = n * RAAS_PER_ROBOT;
+    const laborSavings = activeRobots.reduce((s, r) => s + r.savings, 0);
+    const staffHours = activeRobots.reduce((s, r) => s + r.hours, 0);
+
+    const monthlyCost = fleetCost;
+    const netMonthly = laborSavings - monthlyCost;
+    const annualNet = netMonthly * 12;
+
+    // Intelligence Platform add-ons
+    const intelY1 = state.intel ? INTEL_Y1_INSTALL : 0;
+    const intelY2 = state.intel ? INTEL_Y2_LICENSE : 0;
+    const year1AllIn = monthlyCost * 12 + intelY1;
+    const year2SteadyState = monthlyCost * 12 + intelY2;
+
+    // FTE equivalence
+    const fteCount = activeRobots.reduce((s, r) => s + r.fte, 0);
+    const fteEquivCost = Math.round(fteCount * FTE_MONTHLY_COST);
+    const fteSavings = fteEquivCost - monthlyCost;
+    const fteSavingsPct = fteEquivCost > 0 ? Math.round((fteSavings / fteEquivCost) * 100) : 0;
+
+    const tier = TIERS[n];
+
+    $('fleetCount').textContent = n;
+    $('tierLabel').textContent = tier.name;
+    $('monthlyCost').textContent = '$' + monthlyCost.toLocaleString();
+    $('fleetCostCompare').textContent = '$' + monthlyCost.toLocaleString();
+    $('fteEquivCost').textContent = '$' + fteEquivCost.toLocaleString();
+    $('fteEquivCount').textContent = fteCount.toFixed(2);
+    $('fteSavings').textContent = (fteSavings >= 0 ? '$' : '\u2212$') + Math.abs(fteSavings).toLocaleString() + '/mo ' + (fteSavings >= 0 ? 'less' : 'more');
+    $('fteSavingsPct').textContent = Math.abs(fteSavingsPct) + '%';
+    $('fteSavingsAnnual').textContent = (fteSavings >= 0 ? '$' : '\u2212$') + Math.abs(fteSavings * 12).toLocaleString() + '/yr';
+
+    const robotWord = n === 1 ? 'robot' : 'robots';
+    $('costBreakdownLine').textContent = `${n} ${robotWord} \u00d7 $${RAAS_PER_ROBOT.toLocaleString()}`;
+
+    $('monthlySavings').textContent = '$' + laborSavings.toLocaleString();
+    $('netMonthly').textContent = (netMonthly >= 0 ? '+$' : '\u2212$') + Math.abs(netMonthly).toLocaleString();
+    $('annualNet').textContent = (annualNet >= 0 ? '+$' : '\u2212$') + Math.abs(annualNet).toLocaleString();
+    $('staffHours').textContent = staffHours;
+    $('year1AllIn').textContent = '$' + year1AllIn.toLocaleString();
+    $('year2SteadyState').textContent = '$' + year2SteadyState.toLocaleString();
+    $('annualBenefitBig').textContent = (annualNet >= 0 ? '+$' : '\u2212$') + Math.abs(annualNet).toLocaleString();
+
+    // Slider fill — 13 steps between 1 and 14
+    const pct = ((n - 1) / 13) * 100;
+    $('sliderFill').style.width = pct + '%';
+    $('fleetSlider').value = n;
+
+    // Preset chips
+    document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+        chip.classList.toggle('active', parseInt(chip.dataset.count) === n);
+    });
+}
+
+/* RENDER: Slider ticks (markers at preset positions: 1, 4, 8, 14) ─── */
+function renderTicks() {
+    const ticks = $('sliderTicks');
+    ticks.innerHTML = '';
+    for (let i = 1; i <= 14; i++) {
+        const tick = document.createElement('div');
+        tick.className = 'tick' + ([1, 4, 8, 14].includes(i) ? ' tier-marker' : '');
+        ticks.appendChild(tick);
+    }
+}
+
+/* RENDER: Service LEDs ─────────────────────────────────────── */
+function renderServiceLines() {
+    const n = state.count;
+    const grid = $('serviceLedGrid');
+    grid.innerHTML = '';
+    let onCount = 0;
+    SERVICE_LINES.forEach((svc) => {
+        const on = n >= svc.activateAt;
+        if (on) onCount++;
+        const row = document.createElement('div');
+        row.className = 'led-indicator' + (on ? ' on' : '');
+        row.innerHTML = `
+            <span class="led-dot"></span>
+            <span class="led-label">${svc.label}</span>
+            <span class="led-threshold">${svc.activateAt}+</span>
+        `;
+        grid.appendChild(row);
+    });
+    $('serviceOnCount').textContent = onCount;
+}
+
+/* RENDER: Service unlock cards ─────────────────────────────── */
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+const CATEGORY_COLOR = {
+    Cleaning:   '#6b8e23',
+    Delivery:   '#2e7d6a',
+    Logistics:  '#5a6b7a',
+    Luxury:     '#b8935a',
+    Depth:      '#4a3a2a',
+};
+
+function renderUnlocks() {
+    const n = state.count;
+    const tier = currentServiceTier(n);
+    const tierIdx = SERVICE_TIERS.indexOf(tier) + 1;
+
+    $('tierFleetCount').textContent = n;
+    $('tierName').textContent = tier.name;
+    $('tierTag').textContent = tier.tag;
+    $('tierDescription').textContent = tier.description;
+    $('tierBadge').textContent = ROMAN[tierIdx] || '';
+
+    const unlockGrid = $('unlockGrid');
+    unlockGrid.innerHTML = '';
+    ROBOTS.slice(0, n).forEach((r) => {
+        const color = CATEGORY_COLOR[r.category] || '#2e7d6a';
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-lg';
+        card.style.cssText = `background: white; border: 1px solid rgba(26, 24, 20, 0.08); border-left: 3px solid ${color};`;
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-3 mb-2">
+                <span class="tech-font text-[10px] uppercase tracking-widest font-bold" style="color: ${color};">${r.category}</span>
+                <span class="tech-font text-[10px] text-gray-400">${r.code}</span>
+            </div>
+            <p class="text-sm text-[#1a1814] leading-snug">${r.unlock}</p>
+        `;
+        unlockGrid.appendChild(card);
+    });
+
+    const lockedPreview = $('lockedPreview');
+    const lockedGrid = $('lockedGrid');
+    const remaining = ROBOTS.slice(n, n + 3);
+    if (remaining.length === 0) {
+        lockedPreview.style.display = 'none';
+    } else {
+        lockedPreview.style.display = '';
+        lockedGrid.innerHTML = '';
+        remaining.forEach((r, i) => {
+            const card = document.createElement('div');
+            card.className = 'p-4 rounded-lg';
+            card.style.cssText = 'background: rgba(26, 24, 20, 0.03); border: 1px dashed rgba(26, 24, 20, 0.15); opacity: 0.75;';
+            card.innerHTML = `
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <span class="tech-font text-[10px] uppercase tracking-widest font-bold text-gray-400">+${n + i + 1}th robot</span>
+                    <span class="tech-font text-[10px] text-gray-400">${r.code}</span>
+                </div>
+                <p class="text-sm text-gray-500 leading-snug">${r.unlock}</p>
+            `;
+            lockedGrid.appendChild(card);
+        });
+    }
+}
+
+/* RENDER ALL ─────────────────────────────────────────────── */
+function render() {
+    renderStats();
+    renderRobotGrid();
+    renderSavingsTable();
+    renderPhases();
+    renderServiceLines();
+    renderUnlocks();
+}
+
+/* EVENTS ──────────────────────────────────────────────────── */
+$('fleetSlider').addEventListener('input', (e) => {
+    state.count = parseInt(e.target.value);
+    render();
+});
+
+document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        state.count = parseInt(chip.dataset.count);
+        render();
+    });
+});
+
+$('intelToggle').addEventListener('click', () => {
+    state.intel = !state.intel;
+    $('intelToggle').classList.toggle('on', state.intel);
+    render();
+});
+
+/* INIT ──────────────────────────────────────────────────── */
+renderTicks();
+render();
+</script>
+
+</body>
+</html>

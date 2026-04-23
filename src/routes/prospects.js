@@ -5,7 +5,7 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 
 // ── List prospects ────────────────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const { market_id, status, brand_class } = req.query;
   let sql = 'SELECT p.*, m.name as market_name, m.cluster FROM prospects p LEFT JOIN markets m ON p.market_id = m.id';
   const conditions = [];
@@ -27,23 +27,23 @@ router.get('/', requireAuth, (req, res) => {
   if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
   sql += ' ORDER BY p.keys DESC';
 
-  const prospects = db.prepare(sql).all(...params);
+  const prospects = await db.all(sql, params);
   res.json(prospects);
 });
 
 // ── Get single prospect ──────────────────────────────────────
-router.get('/:id', requireAuth, (req, res) => {
-  const prospect = db.prepare(`
+router.get('/:id', requireAuth, async (req, res) => {
+  const prospect = await db.one(`
     SELECT p.*, m.name as market_name, m.cluster
     FROM prospects p LEFT JOIN markets m ON p.market_id = m.id
     WHERE p.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
   if (!prospect) return res.status(404).json({ error: 'Prospect not found' });
   res.json(prospect);
 });
 
 // ── Create a prospect (manual entry) ─────────────────────────
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   const { market_id, name, address, brand, brand_class, keys, floors, stars,
           signal, operator, portfolio, monogram, mono_color } = req.body;
 
@@ -51,24 +51,24 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'market_id and name are required' });
   }
 
-  const market = db.prepare('SELECT id FROM markets WHERE id = ?').get(market_id);
+  const market = await db.one('SELECT id FROM markets WHERE id = ?', [market_id]);
   if (!market) return res.status(400).json({ error: 'Market not found' });
 
-  const result = db.prepare(`
+  const result = await db.run(`
     INSERT INTO prospects (market_id, status, name, address, brand, brand_class,
       keys, floors, stars, signal, operator, portfolio, monogram, mono_color, source)
     VALUES (?, 'confirmed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual')
-  `).run(market_id, name, address || null, brand || null, brand_class || null,
+  `, [market_id, name, address || null, brand || null, brand_class || null,
     keys || null, floors || null, stars || null, signal || null,
-    operator || null, portfolio || null, monogram || null, mono_color || null);
+    operator || null, portfolio || null, monogram || null, mono_color || null]);
 
-  const prospect = db.prepare('SELECT * FROM prospects WHERE id = ?').get(result.lastInsertRowid);
+  const prospect = await db.one('SELECT * FROM prospects WHERE id = ?', [result.lastInsertRowid]);
   res.status(201).json(prospect);
 });
 
 // ── Update a prospect ────────────────────────────────────────
-router.patch('/:id', requireAuth, (req, res) => {
-  const prospect = db.prepare('SELECT * FROM prospects WHERE id = ?').get(req.params.id);
+router.patch('/:id', requireAuth, async (req, res) => {
+  const prospect = await db.one('SELECT * FROM prospects WHERE id = ?', [req.params.id]);
   if (!prospect) return res.status(404).json({ error: 'Prospect not found' });
 
   const fields = ['name', 'address', 'brand', 'brand_class', 'keys', 'floors',
@@ -88,45 +88,45 @@ router.patch('/:id', requireAuth, (req, res) => {
   updates.push("updated_at = datetime('now')");
   params.push(req.params.id);
 
-  db.prepare(`UPDATE prospects SET ${updates.join(', ')} WHERE id = ?`).run(...params);
-  const updated = db.prepare('SELECT * FROM prospects WHERE id = ?').get(req.params.id);
+  await db.run(`UPDATE prospects SET ${updates.join(', ')} WHERE id = ?`, params);
+  const updated = await db.one('SELECT * FROM prospects WHERE id = ?', [req.params.id]);
   res.json(updated);
 });
 
 // ── Delete a prospect ────────────────────────────────────────
-router.delete('/:id', requireAuth, (req, res) => {
-  const prospect = db.prepare('SELECT * FROM prospects WHERE id = ?').get(req.params.id);
+router.delete('/:id', requireAuth, async (req, res) => {
+  const prospect = await db.one('SELECT * FROM prospects WHERE id = ?', [req.params.id]);
   if (!prospect) return res.status(404).json({ error: 'Prospect not found' });
 
-  db.prepare('DELETE FROM prospects WHERE id = ?').run(req.params.id);
+  await db.run('DELETE FROM prospects WHERE id = ?', [req.params.id]);
   res.json({ deleted: true });
 });
 
 // ── Bulk confirm (staged → confirmed) ────────────────────────
-router.post('/bulk-confirm', requireAuth, (req, res) => {
+router.post('/bulk-confirm', requireAuth, async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
     return res.status(400).json({ error: 'ids array is required' });
   }
 
   const placeholders = ids.map(() => '?').join(',');
-  const result = db.prepare(`
+  const result = await db.run(`
     UPDATE prospects SET status = 'confirmed', updated_at = datetime('now')
     WHERE id IN (${placeholders}) AND status = 'staged'
-  `).run(...ids);
+  `, ids);
 
   res.json({ confirmed: result.changes });
 });
 
 // ── Bulk delete ──────────────────────────────────────────────
-router.post('/bulk-delete', requireAuth, (req, res) => {
+router.post('/bulk-delete', requireAuth, async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
     return res.status(400).json({ error: 'ids array is required' });
   }
 
   const placeholders = ids.map(() => '?').join(',');
-  const result = db.prepare(`DELETE FROM prospects WHERE id IN (${placeholders})`).run(...ids);
+  const result = await db.run(`DELETE FROM prospects WHERE id IN (${placeholders})`, ids);
   res.json({ deleted: result.changes });
 });
 

@@ -15,10 +15,10 @@ const upload = multer({
 const MAX_BATCH = 5; // WHY: Avoid request timeout on slow connections; also keeps memory pressure bounded
 
 // ── POST / — Upload photos in batch ──────────────────────────
-router.post('/', requireAuth, upload.array('photos', MAX_BATCH), (req, res) => {
+router.post('/', requireAuth, upload.array('photos', MAX_BATCH), async (req, res) => {
   const assessmentId = req.params.id;
 
-  const assessment = db.prepare('SELECT id FROM assessments WHERE id = ?').get(assessmentId);
+  const assessment = await db.one('SELECT id FROM assessments WHERE id = ?', [assessmentId]);
   if (!assessment) return res.status(404).json({ error: 'Assessment not found' });
 
   const files = req.files || [];
@@ -37,11 +37,11 @@ router.post('/', requireAuth, upload.array('photos', MAX_BATCH), (req, res) => {
 
   // WHY: INSERT OR REPLACE so re-syncing the same photo ID updates it without duplicates.
   // This supports offline-first: client generates the ID and may re-upload on reconnect.
-  const upsertPhoto = db.prepare(`
+  const upsertPhotoSql = `
     INSERT OR REPLACE INTO assessment_photos (
       id, assessment_id, zone_id, checklist_item, photo_data, thumbnail, annotations, caption, taken_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))
-  `);
+  `;
 
   const uploaded = [];
 
@@ -50,7 +50,7 @@ router.post('/', requireAuth, upload.array('photos', MAX_BATCH), (req, res) => {
     const meta = metadata[i] || {};
     const photoId = meta.id || generateId();
 
-    upsertPhoto.run(
+    await db.run(upsertPhotoSql, [
       photoId,
       assessmentId,
       meta.zone_id || null,
@@ -60,7 +60,7 @@ router.post('/', requireAuth, upload.array('photos', MAX_BATCH), (req, res) => {
       meta.annotations != null ? JSON.stringify(meta.annotations) : null,
       meta.caption || null,
       meta.taken_at || null,
-    );
+    ]);
 
     uploaded.push({ id: photoId, status: 'uploaded' });
   }
@@ -69,33 +69,33 @@ router.post('/', requireAuth, upload.array('photos', MAX_BATCH), (req, res) => {
 });
 
 // ── GET / — List photo metadata for an assessment (no blobs) ──
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const assessmentId = req.params.id;
 
-  const assessment = db.prepare('SELECT id FROM assessments WHERE id = ?').get(assessmentId);
+  const assessment = await db.one('SELECT id FROM assessments WHERE id = ?', [assessmentId]);
   if (!assessment) return res.status(404).json({ error: 'Assessment not found' });
 
   // WHY: Exclude photo_data BLOB from list response — blobs are large and only needed
   // when downloading a specific photo. Thumbnail column is kept for preview use.
-  const photos = db.prepare(`
+  const photos = await db.all(`
     SELECT id, assessment_id, zone_id, checklist_item, thumbnail, annotations, caption, taken_at
     FROM assessment_photos
     WHERE assessment_id = ?
     ORDER BY taken_at
-  `).all(assessmentId);
+  `, [assessmentId]);
 
   res.json(photos);
 });
 
 // ── GET /:photoId — Get single photo with full data ───────────
-router.get('/:photoId', requireAuth, (req, res) => {
+router.get('/:photoId', requireAuth, async (req, res) => {
   const { id: assessmentId, photoId } = req.params;
 
   // WHY: Verify both photoId AND assessmentId match to prevent cross-assessment data leaks
-  const photo = db.prepare(`
+  const photo = await db.one(`
     SELECT * FROM assessment_photos
     WHERE id = ? AND assessment_id = ?
-  `).get(photoId, assessmentId);
+  `, [photoId, assessmentId]);
 
   if (!photo) return res.status(404).json({ error: 'Photo not found' });
 
@@ -108,18 +108,18 @@ router.get('/:photoId', requireAuth, (req, res) => {
 });
 
 // ── DELETE /:photoId — Delete a photo ─────────────────────────
-router.delete('/:photoId', requireAuth, (req, res) => {
+router.delete('/:photoId', requireAuth, async (req, res) => {
   const { id: assessmentId, photoId } = req.params;
 
   // WHY: Verify both photoId AND assessmentId match before deleting to prevent cross-assessment mutations
-  const photo = db.prepare(`
+  const photo = await db.one(`
     SELECT id FROM assessment_photos
     WHERE id = ? AND assessment_id = ?
-  `).get(photoId, assessmentId);
+  `, [photoId, assessmentId]);
 
   if (!photo) return res.status(404).json({ error: 'Photo not found' });
 
-  db.prepare('DELETE FROM assessment_photos WHERE id = ?').run(photoId);
+  await db.run('DELETE FROM assessment_photos WHERE id = ?', [photoId]);
 
   res.json({ message: 'Photo deleted' });
 });

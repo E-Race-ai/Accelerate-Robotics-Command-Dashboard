@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Robotics — Thesis Hotel Site Profile</title>
+<style>
+  @page { size: letter; margin: 0.6in; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 10.5pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    max-width: 8.5in;
+    margin: 0 auto;
+    padding: 0.6in;
+    background: #fff;
+  }
+  h1 { font-size: 22pt; font-weight: 700; color: #0d2137; margin-bottom: 2pt; border-bottom: 3px solid #0d2137; padding-bottom: 6pt; }
+  h2 { font-size: 14pt; font-weight: 700; color: #0d2137; margin-top: 22pt; margin-bottom: 8pt; border-bottom: 1px solid #ccc; padding-bottom: 4pt; page-break-after: avoid; }
+  h3 { font-size: 11pt; font-weight: 700; color: #1a3a5c; margin-top: 14pt; margin-bottom: 5pt; page-break-after: avoid; }
+  h4 { font-size: 10pt; font-weight: 700; color: #1a3a5c; margin-top: 10pt; margin-bottom: 4pt; page-break-after: avoid; }
+  p { margin-bottom: 7pt; }
+  .subtitle { font-size: 12pt; color: #555; margin-bottom: 2pt; }
+  .meta { font-size: 9pt; color: #777; margin-bottom: 14pt; }
+  .confidential { display: inline-block; background: #c0392b; color: #fff; font-size: 8pt; font-weight: 700; padding: 2pt 6pt; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 6pt; }
+  .draft { display: inline-block; background: #e67e22; color: #fff; font-size: 8pt; font-weight: 700; padding: 2pt 6pt; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 6pt; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 14pt 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt 0; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: #0d2137; color: #fff; font-weight: 700; text-align: left; padding: 5pt 8pt; font-size: 9pt; }
+  td { padding: 4pt 8pt; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7f9fb; }
+  td.num { text-align: right; font-family: 'Courier New', monospace; font-size: 9.5pt; }
+  td.center { text-align: center; }
+  td.label { font-weight: 600; color: #1a3a5c; }
+  tr.total td { background: #eef4ed !important; font-weight: 700; border-top: 2px solid #0d2137; }
+  tr.highlight td { background: #e8f5e9 !important; }
+  tr.amber td { background: #fef5e7 !important; }
+
+  .callout { background: #eaf2f8; border-left: 4px solid #2980b9; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-green { background: #eef4ed; border-left: 4px solid #27ae60; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-amber { background: #fdf2e9; border-left: 4px solid #e67e22; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-red { background: #fdeaea; border-left: 4px solid #c0392b; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+
+  ul, ol { margin: 4pt 0 8pt 18pt; }
+  li { margin-bottom: 3pt; }
+  strong { color: #0d2137; }
+
+  .section-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: #999; margin-bottom: 4pt; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8pt; margin: 10pt 0 14pt 0; }
+  .stat-box { background: #f4f6f9; border-top: 3px solid #0d2137; padding: 8pt 10pt; text-align: center; page-break-inside: avoid; }
+  .stat-box .number { font-size: 15pt; font-weight: 700; color: #0d2137; display: block; }
+  .stat-box .label { font-size: 7.5pt; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .spec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4pt 14pt;
+    font-size: 9.5pt;
+    margin: 6pt 0 8pt 0;
+  }
+  .spec-grid div { border-bottom: 1px dotted #d0d7de; padding: 2pt 0; }
+  .spec-grid strong { font-weight: 700; color: #0d2137; }
+
+  .page-break { page-break-before: always; }
+  .footer { margin-top: 28pt; padding-top: 10pt; border-top: 1px solid #ccc; font-size: 8pt; color: #999; text-align: center; }
+  .note { font-size: 9pt; color: #777; font-style: italic; margin: 4pt 0 8pt 0; }
+
+  blockquote { background: #f4f6f9; border-left: 4px solid #0d2137; padding: 10pt 14pt; margin: 10pt 0; font-style: italic; font-size: 10pt; }
+
+  a { color: #2980b9; text-decoration: none; border-bottom: 1px dotted #2980b9; }
+  a:hover { color: #1a5f8e; border-bottom-style: solid; }
+
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none; }
+  }
+
+  .no-print { text-align: center; padding: 20pt 0; background: #f4f6f9; margin: 0 -0.6in 14pt -0.6in; }
+  .no-print button { padding: 10pt 24pt; background: #0d2137; color: #fff; border: none; border-radius: 4pt; font-family: 'Georgia', serif; font-size: 11pt; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; }
+  .no-print button:hover { background: #1a3a5c; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<!-- =============================================================
+     COVER
+============================================================= -->
+<h1>Accelerate Robotics <span style="font-weight:400;font-size:13pt;">&mdash; Thesis Hotel Site Profile</span></h1>
+<p class="subtitle">THesis Hotel Miami, Curio Collection by Hilton &mdash; Coral Gables, FL &mdash; Q2 2026</p>
+<p class="meta">Public-Information Profile <span class="confidential">Confidential</span> <span class="draft">Working Draft</span></p>
+
+<p>Comprehensive profile of our Phase 1 deployment site, compiled from public web sources on 2026-04-11. This document captures identity, building facts, outdoor amenities, F&amp;B, events, wellness, and the facts that directly shape robot-deployment planning. For measurements captured on a site walk, see <code>docs/40-deployments/thesis-hotel/site-survey.md</code>.</p>
+
+<div class="stat-grid">
+  <div class="stat-box"><span class="number">10</span><span class="label">Hotel Stories</span></div>
+  <div class="stat-box"><span class="number">245</span><span class="label">Guest Rooms</span></div>
+  <div class="stat-box"><span class="number">204</span><span class="label">Residence Units</span></div>
+  <div class="stat-box"><span class="number">$225M</span><span class="label">Project Cost</span></div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-box"><span class="number">1</span><span class="label">Rooftop Pool (L3)</span></div>
+  <div class="stat-box"><span class="number">25&times;202</span><span class="label">Paseo (ft)</span></div>
+  <div class="stat-box"><span class="number">3</span><span class="label">F&amp;B Outlets</span></div>
+  <div class="stat-box"><span class="number">~20k</span><span class="label">Sq Ft Events</span></div>
+</div>
+
+<hr>
+
+<!-- =============================================================
+     1. IDENTITY
+============================================================= -->
+<h2>1. Identity &amp; Ownership</h2>
+
+<table>
+<tr><td class="label">Full name</td><td>THesis Hotel Miami, Curio Collection by Hilton</td></tr>
+<tr><td class="label">Address</td><td>1350 S Dixie Hwy, Coral Gables, FL 33146 (hotel) &middot; 1340 S Dixie Hwy (residences)</td></tr>
+<tr><td class="label">Phone</td><td>(305) 667-5611</td></tr>
+<tr><td class="label">Owner / Developer</td><td>Nolan Reynolds International (NRI) &mdash; Brent Reynolds, CEO</td></tr>
+<tr><td class="label">Management</td><td>Pyramid Global Hospitality (since Nov 2024). Prior: Hersha Hospitality Management.</td></tr>
+<tr><td class="label">Brand affiliation</td><td>Curio Collection by Hilton (joined 2024-11-12)</td></tr>
+<tr><td class="label">Design architect</td><td>Jorge Hernandez Architects (Coral Gables)</td></tr>
+<tr><td class="label">Architect of record / interiors</td><td>Gensler</td></tr>
+<tr><td class="label">Landscape architect</td><td>Geomantic Designs (Coral Gables, founded 1983)</td></tr>
+<tr><td class="label">MEP engineer</td><td>TLC Engineering</td></tr>
+<tr><td class="label">Opened</td><td>Hotel Aug 2020 (soft launch Apr 2020) &middot; Residences Jul 2020</td></tr>
+<tr><td class="label">Project name</td><td>Paseo de la Riviera</td></tr>
+<tr><td class="label">Rating</td><td>AAA Four Diamond &middot; Upper-upscale / lifestyle boutique</td></tr>
+</table>
+
+<h3>Key People</h3>
+<div class="spec-grid">
+  <div><strong>General Manager:</strong> Vikash Maharaj</div>
+  <div><strong>Director of Restaurants &amp; Bars:</strong> Massimiliano Giua</div>
+  <div><strong>Director of Beverage:</strong> Vincent Fabris</div>
+  <div><strong>Corporate events:</strong> tjammaers@thesishotelmiami.com</div>
+  <div><strong>Owner principal:</strong> Brent Reynolds (NRI)</div>
+  <div><strong>Director of Engineering:</strong> <em>unconfirmed &mdash; capture 2026-03-23</em></div>
+</div>
+
+<h3>Location Context</h3>
+<p>Directly across US-1 from the University of Miami and Lennar Medical Center. ~6.6 mi / 25 min to Miami International Airport. Near University MetroRail station. A pedestrian bridge connects the site to Metrorail / the Underline. On the seam of Coral Gables, South Miami, and Coconut Grove.</p>
+
+<hr>
+
+<!-- =============================================================
+     2. BUILDING FACTS
+============================================================= -->
+<h2>2. Building Facts</h2>
+
+<div class="spec-grid">
+  <div><strong>Hotel stories:</strong> 10 (per TLC Engineering)</div>
+  <div><strong>Hotel gross area:</strong> ~146,500 sq ft</div>
+  <div><strong>Residences stories:</strong> 6</div>
+  <div><strong>Residences gross area:</strong> ~519,000 sq ft</div>
+  <div><strong>Total project area:</strong> ~665,500 sq ft mixed-use</div>
+  <div><strong>Land acquisition:</strong> $44M in 2016 (former Holiday Inn site)</div>
+</div>
+
+<div class="callout-amber"><strong>Conflict flag:</strong> Some travel listings cite "4 stories" for the hotel. TLC Engineering's 10-story figure is authoritative and matches prior site-survey assumptions. <strong>LEED:</strong> Residences LEED certified; hotel LEED status unclear &mdash; one source says "pending," others don't document it.</div>
+
+<hr>
+
+<!-- =============================================================
+     3. GUEST ROOMS
+============================================================= -->
+<h2>3. Accommodations &mdash; Guest Rooms</h2>
+
+<p><strong>245 total keys:</strong> 108 king / 137 double / 13 suites.</p>
+
+<table>
+<tr><th style="width:34%">Room Type</th><th style="width:16%">Size</th><th>Notes</th></tr>
+<tr><td class="label">Signature THesis King</td><td>345 sq ft</td><td>Base king</td></tr>
+<tr><td class="label">Deluxe King</td><td>442 sq ft</td><td></td></tr>
+<tr><td class="label">Deluxe Double Queen</td><td>494 sq ft</td><td></td></tr>
+<tr><td class="label">Junior King Suite</td><td>500 sq ft</td><td></td></tr>
+<tr><td class="label">King Suite</td><td>772 sq ft</td><td>Waterway / city views, kitchenette, dining for 6</td></tr>
+<tr><td class="label">Signature Penthouse Suite</td><td>not published</td><td>Top-floor signature accommodation</td></tr>
+<tr><td class="label">King Waterway Hearing Accessible (ADA)</td><td>345 sq ft</td><td></td></tr>
+<tr><td class="label">Ultra-high-ceiling ADA</td><td>545 sq ft</td><td></td></tr>
+<tr><td class="label">King Mobility &amp; Hearing Access Suite (ADA)</td><td>784 sq ft</td><td></td></tr>
+</table>
+
+<div class="spec-grid">
+  <div><strong>Rates:</strong> ~$153&ndash;$597/night; most commonly $214&ndash;$400</div>
+  <div><strong>Historical ADR at open:</strong> ~$220 (2020)</div>
+  <div><strong>Destination fee:</strong> $30.51/night (yoga, $20 daily F&amp;B credit, wellness)</div>
+  <div><strong>Loyalty:</strong> Hilton Honors (via Curio)</div>
+</div>
+
+<hr>
+
+<!-- =============================================================
+     4. RESIDENCES
+============================================================= -->
+<h2>4. Residences (NOT Condos)</h2>
+
+<p>The residential tower, "The Residences at THesis," is a <strong>rental apartment building</strong>, not a branded-residence or condo-hotel. There is <strong>no for-sale ownership component</strong>.</p>
+
+<div class="spec-grid">
+  <div><strong>Units:</strong> 204 luxury rentals, studios through 3-bedroom</div>
+  <div><strong>Operator:</strong> Gables Residential</div>
+  <div><strong>Address:</strong> 1340 S Dixie Hwy (separate from hotel)</div>
+  <div><strong>Rents (2026):</strong> ~$3,329&ndash;$7,006/month</div>
+  <div><strong>Stories:</strong> 6</div>
+  <div><strong>Gross area:</strong> ~519,000 sq ft</div>
+</div>
+
+<div class="callout"><strong>Implication for robot deployment:</strong> The residence tower is a separate operational domain. Hotel-side robots should not need to cross into the residence wing. Marketing mentions a separate "elevated pool deck" for residents &mdash; confirm on site walk whether it is physically separate from the hotel rooftop pool.</div>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     5. LAYOUT
+============================================================= -->
+<h2>5. Floor Plans &amp; Layout</h2>
+
+<p>No publicly downloadable architectural floor plans surfaced. TLC Engineering's project page is the most detailed public engineering reference. Neither Gensler nor Jorge Hernandez Architects has posted a public project page.</p>
+
+<h3>Two-Building Layout</h3>
+<p>The hotel (10 stories) and residence tower (6 stories) flank a shared <strong>ground-level Paseo Courtyard</strong>, ~25 ft &times; 202 ft between the two wings.</p>
+
+<h3>Hotel Vertical Organization</h3>
+<table>
+<tr><th style="width:18%">Floor</th><th>Use</th></tr>
+<tr><td class="label">L1</td><td>Lobby, Mamey (restaurant), meeting and event space</td></tr>
+<tr><td class="label">L2</td><td>Meeting rooms, Theory Ballroom</td></tr>
+<tr class="highlight"><td class="label">L3</td><td><strong>Rooftop amenity deck &mdash; pool + Mamey on 3rd / Ivy Rooftop</strong></td></tr>
+<tr><td class="label">L4&ndash;10</td><td>Guest rooms</td></tr>
+</table>
+
+<div class="callout-green"><strong>Most important site-fact correction:</strong> The rooftop pool and rooftop bar are co-located on <strong>floor 3</strong>, not on a separate upper roof. Any pool-deck cleaning robot reaches the deck via hotel lobby elevators to L3 &mdash; not via exterior stairs or a ground-level ramp.</div>
+
+<h3>Circulation Notes</h3>
+<ul>
+  <li>Rooftop amenity deck accessed via hotel lobby elevators to L3</li>
+  <li>Paseo Courtyard has entries from both the hotel lobby and the residence tower &mdash; semi-private, controlled but not guest-exclusive</li>
+  <li>Dedicated pool-service elevator vs. shared guest elevators: <strong>unconfirmed</strong></li>
+  <li>Elevator OEM: ThyssenKrupp TAC32T (confirmed from site photo of CPUA service card &mdash; see <code>site-survey.md</code>)</li>
+</ul>
+
+<hr>
+
+<!-- =============================================================
+     6. OUTDOOR AMENITIES
+============================================================= -->
+<h2>6. Outdoor Amenities</h2>
+
+<h3>6a. Pools</h3>
+
+<p><strong>One confirmed pool:</strong> heated <strong>rooftop pool on the 3rd floor</strong>, sitting above the Coral Gables tree canopy.</p>
+
+<table>
+<tr><td class="label">Location</td><td>Hotel L3 rooftop amenity deck</td></tr>
+<tr><td class="label">Hours</td><td>7:00 AM &ndash; 6:30 PM (per Hilton listing)</td></tr>
+<tr><td class="label">Features</td><td>Umbrellas, sun loungers, tropical island aesthetic</td></tr>
+<tr><td class="label">Co-located with</td><td>Mamey on 3rd rooftop bar / Ivy Rooftop</td></tr>
+<tr class="amber"><td class="label">Dimensions / depth</td><td><strong>Unconfirmed</strong> &mdash; not published</td></tr>
+<tr class="amber"><td class="label">Deck surface material</td><td><strong>Unconfirmed</strong> &mdash; Kool-Deck vs. travertine vs. pavers all possible</td></tr>
+<tr class="amber"><td class="label">Cabana count</td><td><strong>Unconfirmed</strong></td></tr>
+<tr><td class="label">Lap lane availability</td><td>Yes (advertised for lap swim + water aerobics)</td></tr>
+</table>
+
+<h3>6b. Padel Court &mdash; CONFIRMED</h3>
+
+<p>The sport court in the Paseo Courtyard is <strong>padel</strong>, not pickleball and not tennis.</p>
+
+<div class="spec-grid">
+  <div><strong>Brand:</strong> Priv&eacute; Padel at THesis Hotel</div>
+  <div><strong>Distinction:</strong> First padel court in Coral Gables</div>
+  <div><strong>Milestone:</strong> Reportedly the 1,000th padel court in the USA</div>
+  <div><strong>Installation:</strong> "Pop-up" / exclusive court on the Paseo</div>
+  <div><strong>Positioning:</strong> "Athletes and socialites"</div>
+  <div><strong>Standard padel dims:</strong> 20 &times; 10 m (~65 &times; 33 ft)</div>
+</div>
+
+<div class="callout"><strong>Implication for robot deployment:</strong> Standard padel court (~65 &times; 33 ft) occupies roughly 32% of the 202 ft courtyard length. Dynamic obstacle during play &mdash; expect players, ball chases, and spectators. Robot routing must either route around the court footprint or execute only during non-play windows.</div>
+
+<h3>6c. Paseo Courtyard</h3>
+
+<div class="spec-grid">
+  <div><strong>Dimensions:</strong> 25 ft &times; 202 ft</div>
+  <div><strong>Area:</strong> ~5,050 sq ft (events chart) to ~8,232 sq ft (Vendry)</div>
+  <div><strong>Landscape:</strong> Palm-lined, "towering palms and colorful blooms"</div>
+  <div><strong>Cover:</strong> Open to sky (hosts outdoor yoga and padel)</div>
+  <div><strong>Design thesis:</strong> "Urban Living Room" &mdash; open to residents, UM students, neighbors, and guests</div>
+  <div><strong>Max event capacity:</strong> 200 banquet / 500 cocktail reception</div>
+</div>
+
+<p><strong>Regular programming:</strong> ceremonies, dinners, outdoor yoga (Thu 9:30 AM, Sat 10 AM "Gentle Warrior Saturdays" with Ahana Yoga), Herpreneur Artisan Market, live music, farmers markets, weddings.</p>
+
+<div class="callout-amber"><strong>Unconfirmed:</strong> Presence of loggia / arcade walkways around the Paseo, specific water features, topiary details. Public sources do not confirm these, though site photos may show them &mdash; verify on walk.</div>
+
+<h3>6d. Other Outdoor Spaces</h3>
+<ul>
+  <li><strong>Mamey on 3rd / Ivy Rooftop terrace</strong> &mdash; rooftop bar and lounge, integrated with the rooftop pool (one deck, not two)</li>
+  <li><strong>Half-acre green space</strong> with public art along the US-1 frontage</li>
+  <li><strong>Total outdoor event space:</strong> ~14,000 sq ft</li>
+  <li>No dedicated yoga lawn or running path confirmed</li>
+</ul>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     7. F&B
+============================================================= -->
+<h2>7. Food &amp; Beverage</h2>
+
+<div class="callout-amber"><strong>2024 F&amp;B context:</strong> Chef Niven Patel (F&amp;W "Best New Chef" 2020) and Alpareno Restaurant Group <strong>exited</strong> the Thesis F&amp;B program on 2024-01-14. Orno was replaced by The Collab; Mamey is now hotel-operated, not Patel. Patel continues to run Ghee and Erba elsewhere.</div>
+
+<table>
+<tr><th style="width:18%">Outlet</th><th>Concept</th><th>Lead</th><th>Hours</th></tr>
+<tr>
+  <td class="label">The Collab</td>
+  <td>Mediterranean-Asian ("MediterrAsian")</td>
+  <td>Exec Chef Nicolas Mazier (Nobu Miami / Mila alum, French-trained)</td>
+  <td>Breakfast daily 7&ndash;10:30am; Sun brunch 11am&ndash;3pm; dinner Tue&ndash;Thu 5:30&ndash;10pm, Fri&ndash;Sat 5:30&ndash;11pm</td>
+</tr>
+<tr>
+  <td class="label">Mamey Miami</td>
+  <td>Tropical Latin / Caribbean / Polynesian / Asian fusion</td>
+  <td>Hotel-operated post-Patel</td>
+  <td>Breakfast 6:30&ndash;10:30am; lunch 11:30am&ndash;5pm; dinner 3&ndash;10/11pm depending on day</td>
+</tr>
+<tr>
+  <td class="label">Ivy Rooftop</td>
+  <td>Open-air rooftop bar + small bites (L3)</td>
+  <td>Dir. Beverage Vincent Fabris</td>
+  <td>Tue&ndash;Thu 4&ndash;10pm; Fri&ndash;Sat 4&ndash;11:30pm; <strong>closed Sun&ndash;Mon</strong></td>
+</tr>
+<tr>
+  <td class="label">Crema</td>
+  <td>Coffee / grab-and-go espresso bar</td>
+  <td>&mdash;</td>
+  <td>All-day</td>
+</tr>
+</table>
+
+<ul>
+  <li><strong>The Collab</strong> opened 2024-04-04; OpenTable Diners' Choice 2024; private dining available.</li>
+  <li><strong>Mamey</strong> refreshed menu: Ahi Taquitos, Crispy Calamari, Iberico Pork Chop. Entr&eacute;es ~$18&ndash;$45.</li>
+  <li><strong>Ivy Rooftop</strong> has daily live music (jazz to DJ sets); 2 hours complimentary garage parking for diners.</li>
+  <li>Hotel markets "three chef-driven restaurants"; only two sit-down outlets (Collab + Mamey) are currently active. The "third" is Ivy Rooftop.</li>
+  <li><strong>Room service / in-room dining</strong> offered; 24-hour availability <strong>unconfirmed</strong>.</li>
+  <li>In-room espresso machines plus complimentary lobby coffee station.</li>
+  <li>No lobby bar or speakeasy confirmed.</li>
+</ul>
+
+<hr>
+
+<!-- =============================================================
+     8. EVENTS
+============================================================= -->
+<h2>8. Event &amp; Meeting Spaces</h2>
+
+<div class="spec-grid">
+  <div><strong>Indoor meeting space:</strong> ~15,432 sq ft</div>
+  <div><strong>Dedicated rooms:</strong> 9&ndash;10 (13 ft ceilings)</div>
+  <div><strong>Outdoor event space:</strong> ~14,000 sq ft</div>
+  <div><strong>Marketed total:</strong> "more than 20,000 sq ft"</div>
+</div>
+
+<table>
+<tr><th>Room</th><th>Size</th><th>Dims</th><th>Theater</th><th>Banquet</th><th>Classroom</th><th>Reception</th></tr>
+<tr><td class="label">Theory Ballroom (combined)</td><td>2,262 sq ft</td><td>58 &times; 39 ft</td><td>200&ndash;440</td><td>180</td><td>112</td><td>250</td></tr>
+<tr><td class="label">Theory (half)</td><td>1,599 sq ft</td><td>&mdash;</td><td>200</td><td>120</td><td>88</td><td>150</td></tr>
+<tr><td class="label">Study (half)</td><td>624 sq ft</td><td>&mdash;</td><td>120</td><td>40</td><td>24</td><td>50</td></tr>
+<tr><td class="label">Ideology (boardroom)</td><td>540 sq ft</td><td>&mdash;</td><td>35</td><td>40</td><td>20</td><td>&mdash;</td></tr>
+<tr><td class="label">Innovation (boardroom)</td><td>440 sq ft</td><td>&mdash;</td><td>30</td><td>30</td><td>18</td><td>&mdash;</td></tr>
+<tr class="highlight"><td class="label">Paseo Courtyard (outdoor)</td><td>~5,050 sq ft</td><td>202 &times; 25 ft</td><td>&mdash;</td><td>200</td><td>&mdash;</td><td><strong>500</strong></td></tr>
+</table>
+
+<h3>Weddings</h3>
+<ul>
+  <li>Dedicated microsite: <code>weddings.thesishotelmiami.com</code></li>
+  <li>Max seated indoor ~140; combined Theory Ballroom 180; up to 250 reception-style</li>
+  <li>Max cocktail indoor ~200; <strong>up to 500 outdoor</strong> (Paseo Courtyard)</li>
+  <li>Catering included. Listed on The Knot, Zola, WeddingWire.</li>
+</ul>
+
+<h3>AV &amp; Tech</h3>
+<p>In-house AV (third-party PSAV / Encore partnership not confirmed). Built-in share-screen on all meeting-room displays. <strong>Meeting Owl Pro</strong> hybrid cameras in every room. High-speed WiFi, on-site technical support.</p>
+
+<p><strong>No traditional standalone business center</strong> &mdash; Ideology and Innovation boardrooms fill that role. Adjacent lifestyle venue <strong>TH&emacr;sis Miami</strong> markets gathering/coworking space.</p>
+
+<hr>
+
+<!-- =============================================================
+     9. WELLNESS
+============================================================= -->
+<h2>9. Spa, Fitness &amp; Wellness</h2>
+
+<h3>Hydrology at THesis (Spa)</h3>
+<p>In-house branded wellness center (not a licensed chain). Marketed as the only Coral Gables wellness center pairing concierge medicine with spa services. Led by a <strong>quadruple board-certified physician</strong> (name not public).</p>
+
+<div class="spec-grid">
+  <div><strong>Services:</strong> concierge medicine, functional recovery, massage, aesthetic, facials, rejuvenation</div>
+  <div><strong>In-room:</strong> massages, facials, blowouts, manicures</div>
+  <div><strong>Facilities:</strong> sauna, cold plunge, relaxation lounge</div>
+  <div><strong>Treatment rooms:</strong> not published</div>
+  <div><strong>Hours:</strong> "select days" &mdash; booked via front desk</div>
+  <div><strong>Medical director name:</strong> not public</div>
+</div>
+
+<h3>THesis Fitness</h3>
+<ul>
+  <li>Cardio equipment, weight stations, free weights, strength accessories</li>
+  <li>Guest-exclusive; 24-hour access implied but unconfirmed</li>
+  <li>Equipment brand and square footage not published</li>
+  <li>Complimentary yoga classes included in destination fee</li>
+  <li>Outdoor yoga in Paseo Courtyard (Thu 9:30 AM, Sat 10 AM, Ahana Yoga partnership)</li>
+  <li>Lap swimming and water aerobics at rooftop pool</li>
+</ul>
+
+<hr>
+
+<!-- =============================================================
+     10. OPERATIONS
+============================================================= -->
+<h2>10. Operations &amp; Amenities</h2>
+
+<table>
+<tr><td class="label">Valet parking</td><td>$39&ndash;$45/night (sources vary); garage hours 6am&ndash;11pm</td></tr>
+<tr><td class="label">Self-parking</td><td>$36/night in THesis Residences garage</td></tr>
+<tr><td class="label">Destination fee</td><td>$30.51/night (yoga, $20 daily F&amp;B credit, wellness)</td></tr>
+<tr><td class="label">Pet policy</td><td>Up to 50 lbs; $250 deposit + $150 fee per stay; service animals exempt</td></tr>
+<tr><td class="label">Airport shuttle</td><td>6.6 mi from MIA</td></tr>
+<tr><td class="label">Sustainability</td><td>Hilton EarthView / LightStay; Clean the World soap recycling; paper straws, wooden stirrers; CEO Action Pledge for D&amp;I</td></tr>
+<tr><td class="label">Certifications</td><td>AAA Four Diamond. LEED: residences certified; hotel unclear. No Forbes Travel Guide star rating found.</td></tr>
+</table>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     11. ROBOT OBSERVATIONS
+============================================================= -->
+<h2>11. Observations for Robot Deployment</h2>
+
+<p>Facts from the profile that directly shape how we plan robot work at this site:</p>
+
+<ul>
+  <li><strong>Rooftop pool is on L3, not ground level.</strong> The pool-deck slip-hazard use case runs on a 3rd-floor rooftop reached via hotel lobby elevators. Any pool-deck robot must fit in a guest elevator for initial placement. Deck material still unconfirmed (Kool-Deck vs. travertine vs. pavers).</li>
+  <li><strong>Paseo Courtyard is long and narrow (25 &times; 202 ft).</strong> Earlier site estimates of 800&ndash;1,500 m&sup2; were too generous. Working figure is ~5,050 sq ft cocktail area, with a ~65 &times; 33 ft padel court eating ~32% of the length.</li>
+  <li><strong>Padel is confirmed in the courtyard</strong> &mdash; not pickleball, not tennis. Dynamic obstacle during play. Robot routing must route around the court footprint or execute during non-play windows.</li>
+  <li><strong>Courtyard is semi-public.</strong> The "Urban Living Room" framing means robots will mix with residents, UM students, neighbors, yoga classes (Thu/Sat mornings), farmers markets, padel players, wedding setups, and live-music events. The opposite of a controlled environment.</li>
+  <li><strong>10-story hotel wing</strong> with guest rooms on floors 4&ndash;10. Any room-service or delivery robot traverses the full vertical stack via ThyssenKrupp TAC32T elevators.</li>
+  <li><strong>Inferred autonomous window: ~11pm&ndash;6am.</strong> Pool closes 6:30pm; Ivy Rooftop kitchen 11pm; Collab/Mamey dinner 10&ndash;11pm; Mamey breakfast 6:30am; pool opens 7am.</li>
+  <li><strong>Event surges</strong> &mdash; Paseo hosts 500-person cocktails and 200-seat dinners; Theory Ballroom up to 250 reception. Routing should adapt to setup/breakdown schedules.</li>
+  <li><strong>Back-of-house / loading dock: unknown.</strong> Must be confirmed on site walk.</li>
+  <li><strong>Curio Collection under Hilton</strong> means the hotel participates in LightStay / EarthView. Brand-level integrations (loyalty, Honors app, centralized ops standards) may bias against standalone robot tech unless Hilton-approved or explicitly carved out.</li>
+  <li><strong>Meeting room AV standard</strong> (Meeting Owl Pro, built-in share-screen in every room) signals a tech-friendly operations culture.</li>
+  <li><strong>$30.51 destination fee</strong> already bundles wellness perks &mdash; a precedent for bundling "robot-enabled service" into a single guest line item (useful framing for RaaS commercial structure).</li>
+  <li><strong>Two-building mixed use</strong> means hotel robots should stay on the hotel side. Residences are a separate Gables Residential property.</li>
+</ul>
+
+<hr>
+
+<!-- =============================================================
+     12. OPEN ITEMS
+============================================================= -->
+<h2>12. Unconfirmed &mdash; To Verify on Site Walk</h2>
+
+<ul>
+  <li>Rooftop pool deck surface material (Kool-Deck vs. travertine vs. pavers)</li>
+  <li>Rooftop pool exact dimensions and depth</li>
+  <li>Cabana count and chaise layout</li>
+  <li>Whether residences pool is physically separate from hotel rooftop pool</li>
+  <li>Padel court exact dimensions and surface type</li>
+  <li>Paseo Courtyard exact square footage (5,050 vs. 8,232 figure conflict)</li>
+  <li>Presence of loggia / arcade walkways around the Paseo</li>
+  <li>Dedicated pool-service elevator vs. shared guest elevators</li>
+  <li>Loading dock / back-of-house access</li>
+  <li>Director of Engineering name and contact</li>
+  <li>24-hour room service confirmation</li>
+  <li>In-house AV partner name</li>
+  <li>LEED / Forbes Travel Guide certifications (hotel side)</li>
+</ul>
+
+<hr>
+
+<!-- =============================================================
+     SOURCES
+============================================================= -->
+<h2>13. Sources</h2>
+
+<p class="note">All facts compiled from public web sources on 2026-04-11. No site-walk data yet.</p>
+
+<ul>
+  <li><a href="https://thesishotelmiami.com" target="_blank" rel="noopener">thesishotelmiami.com</a> &mdash; main site, amenities, dining, meetings, weddings, wellness</li>
+  <li><a href="https://thesisresidencesmiami.com/" target="_blank" rel="noopener">thesisresidencesmiami.com</a></li>
+  <li><a href="https://mameymiami.com" target="_blank" rel="noopener">mameymiami.com</a> &middot; <a href="https://thecollabmiami.com/" target="_blank" rel="noopener">thecollabmiami.com</a></li>
+  <li><a href="https://www.hilton.com/en/hotels/mialtqq-thesis-hotel-miami-coral-gables/" target="_blank" rel="noopener">Hilton Curio listing</a></li>
+  <li><a href="https://tlc-engineers.com/projects/the-residences-at-thesis-and-thesis-hotel-miami/" target="_blank" rel="noopener">TLC Engineering project page</a> (authoritative for 10 stories)</li>
+  <li><a href="https://therealdeal.com/miami/2020/08/14/developer-completes-225m-paseo-de-la-riviera-mixed-use-project/" target="_blank" rel="noopener">The Real Deal &mdash; Paseo de la Riviera $225M completion</a></li>
+  <li><a href="https://www.prweb.com/releases/the-acclaimed-thesis-hotel-miami-joins-curio-collection-by-hilton-302300874.html" target="_blank" rel="noopener">PRWeb &mdash; Curio Collection join (Nov 2024)</a></li>
+  <li><a href="https://coralgablesmagazine.com/paseo-building-on-u-s-1-completed/" target="_blank" rel="noopener">Coral Gables Magazine &mdash; Paseo completion</a></li>
+  <li><a href="https://coralgablesmagazine.com/the-collab-miami/" target="_blank" rel="noopener">Coral Gables Magazine &mdash; The Collab profile</a></li>
+  <li><a href="https://www.cvent.com/venues/coral-gables/hotel/thesis-hotel-miami-coral-gables-curio-collection-by-hilton/venue-76b3514a-d3de-4047-9d3a-75b6384bda82" target="_blank" rel="noopener">Cvent venue listing (event capacities)</a></li>
+  <li><a href="https://thevendry.com/venue/162807/thesis-hotel-miami-coral-gables-fl/space/23548" target="_blank" rel="noopener">The Vendry &mdash; Paseo Courtyard</a></li>
+  <li><a href="http://geomanticdesigns.com/project_post/paseo-de-la-riviera-thesis-hotel-coral-gables-florida/" target="_blank" rel="noopener">Geomantic Designs &mdash; landscape project page</a></li>
+  <li><a href="https://thepadelpaper.com/usa-1000-padel-courts/" target="_blank" rel="noopener">The Padel Paper &mdash; USA 1,000th padel court milestone</a></li>
+  <li><a href="https://padel.tennistonic.com/padel-news/13225/usa-reaches-1000th-padel-courts/" target="_blank" rel="noopener">Tennis Tonic &mdash; padel milestone</a></li>
+  <li><a href="https://www.miaminewtimes.com/food-drink/miami-mediterranean-asian-restaurant-the-collab-opens-in-coral-gables-19493821/" target="_blank" rel="noopener">Miami New Times &mdash; The Collab opens</a></li>
+  <li><a href="https://www.miaminewtimes.com/food-drink/the-closing-of-orno-and-new-ownership-of-mamey-at-thesis-hotel-spark-heartbreak-18709856/" target="_blank" rel="noopener">Miami New Times &mdash; Patel exit</a></li>
+  <li><a href="https://www.opentable.com/r/ivy-rooftop-coral-gables" target="_blank" rel="noopener">OpenTable &mdash; Ivy Rooftop</a></li>
+  <li><a href="https://www.fb101.com/thesis-hotel-welcomes-massimiliano-giua-as-director-of-restaurants-and-bars/" target="_blank" rel="noopener">F&amp;B Magazine &mdash; Giua appointment</a></li>
+  <li><a href="https://www.gables.com/theresidencesatthesis" target="_blank" rel="noopener">Gables Residential &mdash; The Residences at THesis</a></li>
+  <li><a href="https://weddings.thesishotelmiami.com/faqs/" target="_blank" rel="noopener">Weddings microsite FAQ</a></li>
+</ul>
+
+<div class="footer">
+  Accelerate Robotics &middot; Thesis Hotel Site Profile &middot; Q2 2026 &middot; Confidential &middot; Working Draft
+</div>
+
+</body>
+</html>

@@ -16,7 +16,7 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
-  const user = db.prepare('SELECT * FROM admin_users WHERE email = ?').get(email);
+  const user = await db.one('SELECT * FROM admin_users WHERE email = ?', [email]);
   if (!user) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
@@ -43,7 +43,13 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  // WHY: clearCookie must pass the same flags used when setting the cookie.
+  // Without matching httpOnly/secure/sameSite, Chrome (with strict SameSite) silently ignores the clear.
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
   res.json({ ok: true });
 });
 

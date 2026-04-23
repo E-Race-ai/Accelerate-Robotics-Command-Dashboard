@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carpet Robot Alternatives — C30 Replacement Research</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --gold: #b8965a;
+        --gold-light: #d4b07a;
+        --navy: #0d2137;
+        --charcoal: #1a1a2e;
+        --cream: #f8f5ef;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; }
+    .gold-gradient { background: linear-gradient(135deg, var(--gold), var(--gold-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .robot-card {
+        background: white;
+        border: 1px solid #e8e3d9;
+        border-radius: 1.25rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    .robot-card:hover {
+        box-shadow: 0 12px 40px rgba(184, 150, 90, 0.15);
+        transform: translateY(-2px);
+        border-color: var(--gold);
+    }
+
+    .rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.8rem;
+        height: 1.8rem;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 0.85rem;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+    .rank-1 { background: linear-gradient(135deg, #d4b07a, #b8965a); color: white; }
+    .rank-2 { background: linear-gradient(135deg, #cbd5e1, #94a3b8); color: white; }
+    .rank-3 { background: linear-gradient(135deg, #d4a574, #b98a5a); color: white; }
+    .rank-other { background: #e5e7eb; color: #374151; }
+
+    .stat-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.6rem;
+        background: #f5f0e6;
+        border-radius: 999px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: #6b5c3e;
+        white-space: nowrap;
+    }
+    .stat-pill.green { background: #dcfce7; color: #166534; }
+    .stat-pill.red { background: #fee2e2; color: #991b1b; }
+    .stat-pill.blue { background: #dbeafe; color: #1e40af; }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    .status-recommended { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #166534; border: 1px solid #86efac; }
+    .status-strong { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af; border: 1px solid #93c5fd; }
+    .status-contingency { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 1px solid #fcd34d; }
+    .status-monitor { background: linear-gradient(135deg, #f3e8ff, #e9d5ff); color: #6b21a8; border: 1px solid #d8b4fe; }
+    .status-eliminated { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; }
+    .status-baseline { background: linear-gradient(135deg, #f1f5f9, #e2e8f0); color: #334155; border: 1px solid #cbd5e1; }
+
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+    .data-table th { background: var(--navy); color: #fff; font-weight: 700; text-align: left; padding: 0.55rem 0.7rem; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+    .data-table th.center { text-align: center; }
+    .data-table td { padding: 0.55rem 0.7rem; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    .data-table tr:nth-child(even) td { background: #f9fafb; }
+    .data-table td.label { font-weight: 600; color: var(--navy); white-space: nowrap; }
+    .data-table td.center { text-align: center; }
+    .data-table td.baseline { background: #fef7ed !important; color: #78350f; font-weight: 500; }
+    .data-table tr.highlight td { background: #ecfdf5 !important; }
+    .data-table .winner { font-weight: 700; color: #166534; }
+    .data-table .loser { color: #991b1b; }
+
+    .pros-cons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    .pros-box, .cons-box {
+        padding: 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.8rem;
+    }
+    .pros-box { background: #f0fdf4; border-left: 3px solid #22c55e; }
+    .cons-box { background: #fef2f2; border-left: 3px solid #ef4444; }
+    .pros-box h4, .cons-box h4 {
+        font-weight: 700;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.5rem;
+    }
+    .pros-box h4 { color: #166534; }
+    .cons-box h4 { color: #991b1b; }
+    .pros-box ul, .cons-box ul {
+        list-style: none;
+        padding: 0;
+    }
+    .pros-box li, .cons-box li {
+        padding: 0.2rem 0;
+        padding-left: 1rem;
+        position: relative;
+        color: #1f2937;
+        font-size: 0.75rem;
+        line-height: 1.5;
+    }
+    .pros-box li::before { content: '+'; position: absolute; left: 0; color: #22c55e; font-weight: 700; }
+    .cons-box li::before { content: '−'; position: absolute; left: 0; color: #ef4444; font-weight: 700; }
+
+    .verdict-box {
+        background: linear-gradient(135deg, #f8f5ef, #faf7f2);
+        border-left: 3px solid var(--gold);
+        padding: 0.9rem 1.1rem;
+        border-radius: 0.5rem;
+        font-size: 0.8rem;
+        line-height: 1.6;
+        color: #1f2937;
+    }
+
+    /* Print */
+    @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .robot-card { break-inside: avoid; }
+        .page-break { page-break-before: always; }
+        .no-print { display: none; }
+    }
+
+    .section-divider {
+        border: none;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #d4b07a, transparent);
+        margin: 3rem 0;
+    }
+</style>
+</head>
+<body class="bg-white text-gray-900">
+
+<!-- ================================================================ -->
+<!-- HEADER -->
+<!-- ================================================================ -->
+<header class="bg-gradient-to-br from-[#0d2137] via-[#1a2d44] to-[#0d2137] text-white px-8 py-12 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%221%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+
+    <div class="max-w-6xl mx-auto relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-14 h-14 rounded-xl border-2 border-[#b8965a] flex items-center justify-center">
+                        <svg class="w-7 h-7 text-[#b8965a]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">
+                            Carpet Robot <span class="text-[#b8965a]">Research</span>
+                        </h1>
+                        <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Keenon C30 Alternatives — Deep Research Report</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-400 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    </div>
+                    <span class="text-xs font-bold text-gray-400 tracking-tight">Accelerate Robotics</span>
+                </div>
+                <div class="text-[10px] text-gray-500 text-right">
+                    Research Note<br>
+                    April 13, 2026
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats bar -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">13</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Robots Evaluated</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">4</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Viable Alternatives</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">PUDU</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Top Recommendation</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">10 Mfg.</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Vendors Researched</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ================================================================ -->
+<!-- EXECUTIVE SUMMARY -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-8 py-10">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-2">Executive Summary</h2>
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-6">Context: Thesis Hotel Miami — 10-story, 245 keys, carpeted corridors floors 4-10</p>
+
+    <p class="text-gray-700 text-sm leading-relaxed mb-6">After researching 10+ manufacturers and their autonomous commercial cleaning robots, there are <strong class="text-[#0d2137]">three strong alternatives</strong> to the Keenon C30 for the Thesis Hotel deployment, plus one emerging contender worth monitoring. The evaluation weighed carpet performance, elevator integration, noise level, fleet consolidation, US support availability, and price.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <!-- Primary recommendation -->
+        <div class="robot-card p-6 border-2 border-[#b8965a]">
+            <div class="flex items-center gap-3 mb-3">
+                <span class="rank-badge rank-1">1</span>
+                <div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider">Primary Recommendation</div>
+                    <div class="headline text-lg font-bold text-[#0d2137]">PUDU CC1 Pro</div>
+                </div>
+                <span class="status-badge status-recommended ml-auto">Recommended</span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">Best strategic fit — PUDU is already in the Thesis fleet (MT1 Max). 4-in-1 capability (sweep/scrub/vacuum/mop), 17,000 Pa suction, confirmed elevator integration, single fleet management platform. <strong>$22K purchase / $479-917/mo RaaS.</strong></p>
+        </div>
+
+        <!-- Gausium -->
+        <div class="robot-card p-6">
+            <div class="flex items-center gap-3 mb-3">
+                <span class="rank-badge rank-2">2</span>
+                <div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider">Strongest Performance</div>
+                    <div class="headline text-lg font-bold text-[#0d2137]">Gausium Vacuum 40</div>
+                </div>
+                <span class="status-badge status-strong ml-auto">Alternative</span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">Highest suction in class (24 kPa). Proven at InterContinental Wien and 50+ Hanting Hotels. H13 HEPA and diffuser variant add luxury differentiation. <strong>$42K / $881/mo RaaS.</strong> Heavy (91 kg) and premium-priced.</p>
+        </div>
+
+        <!-- SoftBank -->
+        <div class="robot-card p-6">
+            <div class="flex items-center gap-3 mb-3">
+                <span class="rank-badge rank-3">3</span>
+                <div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider">Safest Contingency</div>
+                    <div class="headline text-lg font-bold text-[#0d2137]">SoftBank Whiz</div>
+                </div>
+                <span class="status-badge status-contingency ml-auto">Contingency</span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">Most established commercial carpet vacuum in the Western market. 30,000+ BrainOS units globally. Best US dealer/support network (Canon, RobotLAB, NISSCO). <strong>$25K-$42K / $1,042/mo RaaS.</strong> Vacuum-only.</p>
+        </div>
+
+        <!-- ECOVACS -->
+        <div class="robot-card p-6">
+            <div class="flex items-center gap-3 mb-3">
+                <span class="rank-badge rank-other">4</span>
+                <div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider">Monitor</div>
+                    <div class="headline text-lg font-bold text-[#0d2137]">ECOVACS K1 VAC</div>
+                </div>
+                <span class="status-badge status-monitor ml-auto">Emerging</span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">Strong specs (20 kPa, built-in elevator integration, compact 42 cm). Hotel testimonials cite 40% labor reduction. <strong>US availability still ramping — demo recommended.</strong></p>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- COMPARISON TABLE -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-8 py-6">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-2">Specification Comparison</h2>
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-6">C30 baseline shaded amber — best-in-class values bolded green</p>
+
+    <div class="overflow-x-auto rounded-xl border border-gray-200">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Spec</th>
+                    <th class="baseline" style="background:#78350f; color:#fef3c7;">Keenon C30<br><span style="font-weight:400; font-size:0.55rem;">(Baseline)</span></th>
+                    <th>PUDU CC1 Pro</th>
+                    <th>Gausium V40</th>
+                    <th>SoftBank Whiz</th>
+                    <th>ECOVACS K1</th>
+                    <th>Karcher KIRA</th>
+                    <th>LionsBot R3</th>
+                    <th>Tailos Rosie</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label">Primary Function</td>
+                    <td class="baseline">Sweep/Vac/Mop</td>
+                    <td class="winner">4-in-1 (S/S/V/M)</td>
+                    <td>Vac/Sweep/Mop</td>
+                    <td>Vacuum only</td>
+                    <td>Vac/Sweep/Mop</td>
+                    <td>Vacuum only</td>
+                    <td>Vacuum</td>
+                    <td>Vacuum</td>
+                </tr>
+                <tr>
+                    <td class="label">Suction (Pa)</td>
+                    <td class="baseline">11-19K</td>
+                    <td>17,000</td>
+                    <td class="winner">24,000</td>
+                    <td class="loser">~2-3K</td>
+                    <td>20,000</td>
+                    <td>~19,200</td>
+                    <td>N/P</td>
+                    <td>N/P</td>
+                </tr>
+                <tr>
+                    <td class="label">Coverage Rate</td>
+                    <td class="baseline">540-600 sqm/hr</td>
+                    <td class="winner">700-1,000 sqm/hr</td>
+                    <td>400-800 sqm/hr</td>
+                    <td>465-557 sqm/hr</td>
+                    <td>700 sqm/hr</td>
+                    <td>525 sqm/hr</td>
+                    <td>500-800 sqm/hr</td>
+                    <td class="loser">~185 sqm/hr</td>
+                </tr>
+                <tr>
+                    <td class="label">Battery Life</td>
+                    <td class="baseline">3-6 hr</td>
+                    <td>4 hr</td>
+                    <td>3 hr</td>
+                    <td>3 hr (hot-swap)</td>
+                    <td>4 hr</td>
+                    <td>140 min</td>
+                    <td>2-3 hr</td>
+                    <td>90-180 min</td>
+                </tr>
+                <tr>
+                    <td class="label">Charge Time</td>
+                    <td class="baseline">5-6 hr</td>
+                    <td>&lt;3 hr</td>
+                    <td>2.5 hr</td>
+                    <td>4 hr</td>
+                    <td class="winner">1.5 hr</td>
+                    <td>58-81 min</td>
+                    <td>2 hr</td>
+                    <td>&lt;4 hr</td>
+                </tr>
+                <tr>
+                    <td class="label">Noise Level</td>
+                    <td class="baseline">61-68 dB</td>
+                    <td>&lt;70 dB</td>
+                    <td>N/P</td>
+                    <td>62 dB</td>
+                    <td>N/P</td>
+                    <td class="winner">57 dB</td>
+                    <td>61.7 dB</td>
+                    <td>62 dB</td>
+                </tr>
+                <tr>
+                    <td class="label">Cleaning Width</td>
+                    <td class="baseline">61 cm</td>
+                    <td>~50 cm</td>
+                    <td class="winner">72 cm</td>
+                    <td>~46 cm</td>
+                    <td>44 cm</td>
+                    <td>35 cm</td>
+                    <td>35-55 cm</td>
+                    <td class="loser">28 cm</td>
+                </tr>
+                <tr>
+                    <td class="label">Weight</td>
+                    <td class="baseline">35 kg</td>
+                    <td>75 kg</td>
+                    <td class="loser">91 kg</td>
+                    <td>30 kg</td>
+                    <td>46 kg</td>
+                    <td>15 kg</td>
+                    <td>53 kg</td>
+                    <td class="winner">8 kg</td>
+                </tr>
+                <tr>
+                    <td class="label">Navigation</td>
+                    <td class="baseline">LiDAR + 3x Stereo</td>
+                    <td>PUDU SLAM</td>
+                    <td>LiDAR + 3D + RGB</td>
+                    <td>BrainOS LiDAR</td>
+                    <td>KRUISEE LiDAR</td>
+                    <td>LiDAR</td>
+                    <td>3D LiDAR + AI</td>
+                    <td>LiDAR + 3D</td>
+                </tr>
+                <tr>
+                    <td class="label">Elevator Integration</td>
+                    <td class="baseline">Yes (E-Box)</td>
+                    <td class="winner">Yes (ECM)</td>
+                    <td class="winner">Yes (API)</td>
+                    <td class="winner">Yes (RobotLAB)</td>
+                    <td class="winner">Yes (built-in)</td>
+                    <td class="loser">No</td>
+                    <td>Partial</td>
+                    <td class="loser">No</td>
+                </tr>
+                <tr>
+                    <td class="label">Fleet Management</td>
+                    <td class="baseline">Keenon Cloud</td>
+                    <td class="winner">PUDU Cloud (unified)</td>
+                    <td>Gausium + FieldBots</td>
+                    <td>SoftBank + BrainOS</td>
+                    <td>ECOVACS Commercial</td>
+                    <td>KIRA app</td>
+                    <td>LionsOS</td>
+                    <td>Tailos app</td>
+                </tr>
+                <tr>
+                    <td class="label">HEPA Filtration</td>
+                    <td class="baseline">N/C</td>
+                    <td>N/C</td>
+                    <td class="winner">H13 medical</td>
+                    <td>Yes</td>
+                    <td>N/C</td>
+                    <td>N/C</td>
+                    <td>99.97% HEPA</td>
+                    <td>N/C</td>
+                </tr>
+                <tr>
+                    <td class="label">Price (Purchase)</td>
+                    <td class="baseline">~$8-15K est.</td>
+                    <td>$22,000</td>
+                    <td class="loser">$42,000</td>
+                    <td>$25-42K</td>
+                    <td>N/P</td>
+                    <td class="winner">$12,999</td>
+                    <td>$22,275</td>
+                    <td>~$5-6K</td>
+                </tr>
+                <tr>
+                    <td class="label">Price (RaaS/mo)</td>
+                    <td class="baseline">N/P</td>
+                    <td>$479-917</td>
+                    <td>$881</td>
+                    <td class="loser">$1,042</td>
+                    <td>N/P</td>
+                    <td>N/A</td>
+                    <td>$928</td>
+                    <td class="winner">$479</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="text-[10px] text-gray-500 mt-3 italic">N/P = Not Published · N/C = Not Confirmed · N/A = Not Available. Values in green are best-in-class; red are lagging.</p>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- ROBOT PROFILES -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-8 py-6">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-2">Robot Profiles</h2>
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-6">Detailed pros, cons, and verdict for each viable candidate</p>
+
+    <!-- PUDU CC1 Pro -->
+    <div class="robot-card mb-6 overflow-hidden">
+        <div class="bg-gradient-to-r from-[#b8965a] to-[#d4b07a] text-white p-5">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="rank-badge" style="background:white; color:#b8965a;">1</span>
+                    <div>
+                        <h3 class="headline text-xl font-bold">PUDU CC1 / CC1 Pro</h3>
+                        <p class="text-xs opacity-90 tracking-wider uppercase mt-1">PUDU Robotics · Shenzhen, China · 4-in-1 Commercial Cleaner</p>
+                    </div>
+                </div>
+                <span class="status-badge status-recommended">Primary Recommendation</span>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="flex flex-wrap gap-2 mb-5">
+                <span class="stat-pill">17,000 Pa suction</span>
+                <span class="stat-pill">700-1,000 sqm/hr</span>
+                <span class="stat-pill">4 hr battery</span>
+                <span class="stat-pill">&lt;70 dB</span>
+                <span class="stat-pill green">Elevator integrated</span>
+                <span class="stat-pill blue">Single-vendor w/ MT1 Max</span>
+                <span class="stat-pill">$22K / $479-917mo</span>
+            </div>
+
+            <div class="pros-cons mb-5">
+                <div class="pros-box">
+                    <h4>Pros</h4>
+                    <ul>
+                        <li><strong>Strategic: PUDU already in Thesis fleet</strong> — single vendor, single platform, single relationship</li>
+                        <li>17,000 Pa suction in dedicated carpet vacuum mode</li>
+                        <li>Highest coverage rate in comparison (700-1,000 sqm/hr)</li>
+                        <li>Confirmed elevator integration via Elevator Control Module (no elevator modification)</li>
+                        <li>CC1 Pro: rear AI camera for quality monitoring and auto surface detection</li>
+                        <li>4-in-1 versatility — carpet corridors AND hard-floor lobbies</li>
+                        <li>Competitive pricing vs. dedicated carpet vacuums</li>
+                    </ul>
+                </div>
+                <div class="cons-box">
+                    <h4>Cons</h4>
+                    <ul>
+                        <li>Heavy at 75 kg</li>
+                        <li>Carpet vacuum is one of four modes (dedicated nozzle sold separately)</li>
+                        <li>&lt;70 dB is highest among top contenders (still acceptable)</li>
+                        <li>Vacuum-mode cleaning width narrower than scrub path</li>
+                        <li>Newer to US market than SoftBank Whiz</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="verdict-box">
+                <strong class="text-[#0d2137]">Verdict:</strong> Strongest strategic recommendation. Consolidating on PUDU simplifies vendor management, support, and fleet software. One robot handles both carpet corridors and hard-floor lobbies. Elevator integration module is proven.
+            </div>
+        </div>
+    </div>
+
+    <!-- Gausium Vacuum 40 -->
+    <div class="robot-card mb-6 overflow-hidden">
+        <div class="bg-gradient-to-r from-slate-700 to-slate-500 text-white p-5">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="rank-badge" style="background:white; color:#334155;">2</span>
+                    <div>
+                        <h3 class="headline text-xl font-bold">Gausium Vacuum 40</h3>
+                        <p class="text-xs opacity-90 tracking-wider uppercase mt-1">Gausium · Shanghai, China · Purpose-Built Commercial Vacuum</p>
+                    </div>
+                </div>
+                <span class="status-badge status-strong">Strongest Performance</span>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="flex flex-wrap gap-2 mb-5">
+                <span class="stat-pill green">24 kPa (highest)</span>
+                <span class="stat-pill">400-800 sqm/hr</span>
+                <span class="stat-pill">3 hr battery</span>
+                <span class="stat-pill green">H13 HEPA</span>
+                <span class="stat-pill green">Elevator integrated</span>
+                <span class="stat-pill blue">InterContinental Wien reference</span>
+                <span class="stat-pill red">91 kg weight</span>
+                <span class="stat-pill">$42K / $881mo</span>
+            </div>
+
+            <div class="pros-cons mb-5">
+                <div class="pros-box">
+                    <h4>Pros</h4>
+                    <ul>
+                        <li>Highest suction power in comparison (24 kPa) — deep carpet capability</li>
+                        <li>Proven hotel deployments: InterContinental Wien, 50+ Hanting Hotels</li>
+                        <li>Elevator integration via API/IoT — autonomous multi-floor</li>
+                        <li>3D camera auto-detects floor type and switches mode</li>
+                        <li>Three carpet modes (light/medium/deep) for different pile heights</li>
+                        <li>H13 medical-grade HEPA filtration</li>
+                        <li>Diffuser variant adds ambient scenting — luxury differentiation</li>
+                        <li>FieldBots OS for multi-vendor fleet management</li>
+                    </ul>
+                </div>
+                <div class="cons-box">
+                    <h4>Cons</h4>
+                    <ul>
+                        <li>Very heavy at 91 kg — difficult to reposition manually</li>
+                        <li>Large footprint (80x69x89 cm) — may struggle in tight spaces</li>
+                        <li>Premium price: $42,000 / $881/mo RaaS</li>
+                        <li>Noise level not published (concerning for guest floors)</li>
+                        <li>Practical coverage (400-800 sqm/hr) below C30's low end</li>
+                        <li>Newer to US market; service network unknown</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="verdict-box">
+                <strong class="text-[#0d2137]">Verdict:</strong> Best raw cleaning performance and proven hotel track record, but expensive and heavy. If budget is not the primary constraint and InterContinental-level references are valued, this is the top pick.
+            </div>
+        </div>
+    </div>
+
+    <!-- SoftBank Whiz -->
+    <div class="robot-card mb-6 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-700 to-amber-500 text-white p-5">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="rank-badge" style="background:white; color:#b45309;">3</span>
+                    <div>
+                        <h3 class="headline text-xl font-bold">SoftBank Robotics Whiz</h3>
+                        <p class="text-xs opacity-90 tracking-wider uppercase mt-1">SoftBank Robotics · Powered by BrainOS · Purpose-Built Carpet Vacuum</p>
+                    </div>
+                </div>
+                <span class="status-badge status-contingency">Safest Contingency</span>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="flex flex-wrap gap-2 mb-5">
+                <span class="stat-pill">~2-3 kPa suction</span>
+                <span class="stat-pill">465-557 sqm/hr</span>
+                <span class="stat-pill">3 hr hot-swap</span>
+                <span class="stat-pill green">62 dB</span>
+                <span class="stat-pill green">HEPA</span>
+                <span class="stat-pill blue">30K+ BrainOS units global</span>
+                <span class="stat-pill">$25-42K / $1,042mo</span>
+            </div>
+
+            <div class="pros-cons mb-5">
+                <div class="pros-box">
+                    <h4>Pros</h4>
+                    <ul>
+                        <li>Most established commercial carpet vacuum in Western market</li>
+                        <li>30,000+ BrainOS robots deployed globally — mature, proven</li>
+                        <li>62 dB — quiet enough for guest floors</li>
+                        <li>Hot-swappable batteries enable true 24/7 operation</li>
+                        <li>HEPA filtration with 4L dust bags</li>
+                        <li>Memorizes up to 600 cleaning routes</li>
+                        <li>SoftBank Connect provides real-time analytics + proof-of-clean</li>
+                        <li>Elevator integration via RobotLAB Smart Pass</li>
+                        <li>Light at 30 kg — staff-friendly</li>
+                        <li>Wide US dealer network (Canon, RobotLAB, NISSCO)</li>
+                    </ul>
+                </div>
+                <div class="cons-box">
+                    <h4>Cons</h4>
+                    <ul>
+                        <li>Single-purpose vacuum only — no scrubbing/mopping</li>
+                        <li>Suction not published; likely lower than Chinese competitors</li>
+                        <li>Price variance: $25K-$42K depending on dealer</li>
+                        <li>4-hour charge time is longest in comparison</li>
+                        <li>Dated design — hardware not significantly updated</li>
+                        <li>Adds another vendor to the fleet (not PUDU)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="verdict-box">
+                <strong class="text-[#0d2137]">Verdict:</strong> Safest, most proven choice with best US support infrastructure. Ideal if minimizing deployment risk is the priority. However, single-purpose device at a premium price, and hardware is aging.
+            </div>
+        </div>
+    </div>
+
+    <!-- ECOVACS -->
+    <div class="robot-card mb-6 overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-700 to-purple-500 text-white p-5">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="rank-badge" style="background:white; color:#6b21a8;">4</span>
+                    <div>
+                        <h3 class="headline text-xl font-bold">ECOVACS DEEBOT PRO K1 VAC</h3>
+                        <p class="text-xs opacity-90 tracking-wider uppercase mt-1">ECOVACS Commercial · Suzhou, China · Commercial Vacuum/Sweep/Mop</p>
+                    </div>
+                </div>
+                <span class="status-badge status-monitor">Worth Monitoring</span>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="flex flex-wrap gap-2 mb-5">
+                <span class="stat-pill">20 kPa suction</span>
+                <span class="stat-pill">700 sqm/hr</span>
+                <span class="stat-pill">4 hr battery</span>
+                <span class="stat-pill green">1.5 hr charge (fastest)</span>
+                <span class="stat-pill green">Elevator built-in</span>
+                <span class="stat-pill green">42 cm compact</span>
+                <span class="stat-pill red">US availability TBD</span>
+            </div>
+
+            <div class="pros-cons mb-5">
+                <div class="pros-box">
+                    <h4>Pros</h4>
+                    <ul>
+                        <li>20 kPa suction — second highest in comparison</li>
+                        <li>4-hour vacuum runtime with fast 1.5-hour charging</li>
+                        <li>Autonomous elevator riding built-in (not add-on hardware)</li>
+                        <li>Most compact at 42 cm — excellent for narrow corridors</li>
+                        <li>10 L dustbin reduces emptying frequency</li>
+                        <li>Hotel testimonials: 40% labor reduction, 24/7 corridor cleaning</li>
+                        <li>Anti-tangle design and edge cleaning</li>
+                        <li>CE, CB, KC certified</li>
+                    </ul>
+                </div>
+                <div class="cons-box">
+                    <h4>Cons</h4>
+                    <ul>
+                        <li>US availability still ramping — unclear if buyable in Miami today</li>
+                        <li>Noise level not published</li>
+                        <li>Navigation tech details sparse (KRUISEE LiDAR)</li>
+                        <li>No US pricing published — contact sales</li>
+                        <li>Fleet management less documented than competitors</li>
+                        <li>Limited independent third-party case studies in West</li>
+                        <li>Adds yet another vendor to the fleet</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="verdict-box">
+                <strong class="text-[#0d2137]">Verdict:</strong> Promising on paper with excellent specs and built-in elevator integration. US availability and support are critical unknowns. Request demo and pricing, but higher deployment risk than top three.
+            </div>
+        </div>
+    </div>
+
+    <!-- Collapsed: other evaluated -->
+    <details class="robot-card overflow-hidden mb-6">
+        <summary class="cursor-pointer bg-gray-50 p-5 flex items-center justify-between hover:bg-gray-100 transition">
+            <div>
+                <h3 class="headline text-lg font-bold text-[#0d2137]">Also Evaluated — Not Recommended</h3>
+                <p class="text-xs text-gray-500 mt-1">Karcher KIRA CV 50 · LionsBot R3 Vac · Tailos Rosie 2.0</p>
+            </div>
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="p-6 space-y-4">
+            <!-- Karcher -->
+            <div class="border-l-2 border-gray-300 pl-4">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+                    <h4 class="font-bold text-[#0d2137]">Karcher KIRA CV 50</h4>
+                    <span class="status-badge status-eliminated">No Elevator Integration</span>
+                </div>
+                <p class="text-xs text-gray-600 mb-2"><strong>Best-in-class 57 dB noise</strong> and IEC 63327 public-use safety certification. Lightest at 15 kg. $12,999 — most competitive price. However, <strong>no elevator integration</strong> is a dealbreaker for 7-floor deployment, narrow 35 cm cleaning width, 140-min battery, basic app.</p>
+                <div class="verdict-box text-xs"><strong>Verdict:</strong> Excellent for single-floor or noise-critical deployments. Could complement the primary robot as supplementary unit for sensitive areas.</div>
+            </div>
+
+            <!-- LionsBot -->
+            <div class="border-l-2 border-gray-300 pl-4">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+                    <h4 class="font-bold text-[#0d2137]">LionsBot R3 Vac</h4>
+                    <span class="status-badge status-eliminated">Partial Elevator Only</span>
+                </div>
+                <p class="text-xs text-gray-600 mb-2">Red Dot Award winner. AI SmartClean with MagicTag zero-click maps. 61.7 dB, 6 L HEPA tank, LionsOS dashboard. However, elevator is "meet at lift" (not fully autonomous), 53 kg, $22,275 purchase is expensive for vacuum-only. R5 coming may obsolete R3.</p>
+                <div class="verdict-box text-xs"><strong>Verdict:</strong> Solid mid-range, but lift coordination requires staff involvement — defeats autonomous purpose.</div>
+            </div>
+
+            <!-- Tailos -->
+            <div class="border-l-2 border-gray-300 pl-4">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+                    <h4 class="font-bold text-[#0d2137]">Tailos Rosie 2.0</h4>
+                    <span class="status-badge status-eliminated">Not Corridor-Grade</span>
+                </div>
+                <p class="text-xs text-gray-600 mb-2">Miami-based manufacturer — local support advantage. Ultra-light (8 kg), $479/mo. But <strong>effectively consumer-grade</strong>: 28 cm width, 185 sqm/hr (well below commercial), 1.7L dustbin, 90-180 min battery, no elevator integration, no enterprise fleet management.</p>
+                <div class="verdict-box text-xs"><strong>Verdict:</strong> Better for in-room housekeeping productivity than corridor cleaning. Could complement a corridor robot for room turns.</div>
+            </div>
+        </div>
+    </details>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- ELIMINATED -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-8 py-6">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-2">Researched & Eliminated</h2>
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-6">Evaluated and ruled out — reasons documented</p>
+
+    <div class="overflow-x-auto rounded-xl border border-gray-200">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Robot</th>
+                    <th>Manufacturer</th>
+                    <th>Reason Eliminated</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label">Avidbots Neo / Neo 2W / Kas</td>
+                    <td>Avidbots (Canada)</td>
+                    <td>Hard-floor scrubbers only. No carpet capability.</td>
+                </tr>
+                <tr>
+                    <td class="label">Nilfisk Liberty SC50 / SC60</td>
+                    <td>Nilfisk (Denmark)</td>
+                    <td>Autonomous floor scrubber/dryer only. No vacuum or carpet capability.</td>
+                </tr>
+                <tr>
+                    <td class="label">ICE Cobotics Cobi 18</td>
+                    <td>ICE Cobotics (UK/USA)</td>
+                    <td>Floor scrubber only. ICE "Whiz" is SoftBank's Whiz resold — not a separate product.</td>
+                </tr>
+                <tr>
+                    <td class="label">Tennant T7AMR / X-series</td>
+                    <td>Tennant + Brain Corp</td>
+                    <td>Hard-floor scrubbers powered by BrainOS Clean 2.0. No carpet vacuum models.</td>
+                </tr>
+                <tr>
+                    <td class="label">TASKI Intellibot AeroBot 1850</td>
+                    <td>Diversey / Solenis</td>
+                    <td>Discontinued / end-of-life. Sonar/IR navigation is a generation behind. No elevator integration.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- DECISION FACTORS -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-8 py-6">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-2">Decision Factors — Thesis Hotel</h2>
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-6">Weighted by deployment requirements</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="robot-card p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Critical</span>
+                <span class="status-badge status-recommended">PUDU CC1 Pro</span>
+            </div>
+            <h3 class="font-bold text-[#0d2137] mb-1">Elevator Integration (Floors 4-10)</h3>
+            <p class="text-xs text-gray-600">PUDU Elevator Control Module is a dedicated IoT device requiring no elevator modification. Autonomous operation across all guest floors.</p>
+        </div>
+
+        <div class="robot-card p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">High</span>
+                <span class="status-badge status-strong">Gausium Vacuum 40</span>
+            </div>
+            <h3 class="font-bold text-[#0d2137] mb-1">Carpet Cleaning Performance</h3>
+            <p class="text-xs text-gray-600">24 kPa suction is highest in comparison. Three pile-height modes. H13 HEPA filtration.</p>
+        </div>
+
+        <div class="robot-card p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">High</span>
+                <span class="status-badge status-baseline">Karcher / SoftBank</span>
+            </div>
+            <h3 class="font-bold text-[#0d2137] mb-1">Noise Level (Guest Floors)</h3>
+            <p class="text-xs text-gray-600">Karcher KIRA CV 50 at 57 dB is best-in-class. SoftBank Whiz at 62 dB proven on guest floors.</p>
+        </div>
+
+        <div class="robot-card p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">High</span>
+                <span class="status-badge status-recommended">PUDU CC1 Pro</span>
+            </div>
+            <h3 class="font-bold text-[#0d2137] mb-1">Fleet Consolidation</h3>
+            <p class="text-xs text-gray-600">PUDU MT1 Max already deployed at Thesis. Adding CC1 Pro means one vendor, one PUDU Cloud platform, unified elevator hardware.</p>
+        </div>
+
+        <div class="robot-card p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">High</span>
+                <span class="status-badge status-contingency">SoftBank Whiz</span>
+            </div>
+            <h3 class="font-bold text-[#0d2137] mb-1">US Availability & Support</h3>
+            <p class="text-xs text-gray-600">Canon, RobotLAB, NISSCO distributor network. 30,000+ BrainOS units deployed globally.</p>
+        </div>
+
+        <div class="robot-card p-5">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Medium</span>
+                <span class="status-badge status-recommended">PUDU CC1 Pro</span>
+            </div>
+            <h3 class="font-bold text-[#0d2137] mb-1">Versatility (Carpet + Hard Floor)</h3>
+            <p class="text-xs text-gray-600">4-in-1 platform — carpet corridors AND lobby hard floors in one robot. AI auto-detects surface in Pro model.</p>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- FINAL RECOMMENDATION -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-8 py-6 page-break">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-6">Final Recommendation</h2>
+
+    <div class="bg-gradient-to-br from-[#0d2137] to-[#1a2d44] text-white rounded-2xl p-8 mb-6 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-40 h-40 bg-[#b8965a] opacity-10 rounded-full -mr-20 -mt-20"></div>
+        <div class="relative">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="rank-badge rank-1">1</span>
+                <span class="text-xs font-semibold text-[#b8965a] uppercase tracking-widest">Primary Recommendation</span>
+            </div>
+            <h3 class="headline text-3xl font-bold mb-3">Switch C30 → PUDU CC1 Pro</h3>
+            <p class="text-gray-300 text-sm leading-relaxed mb-5">Consolidate the Thesis Hotel cleaning fleet on PUDU. The MT1 Max (outdoor courtyard sweeper) is already in Option B/C, and the CC1 Pro for carpet corridors means one vendor, one fleet management platform, one elevator integration standard, and one support relationship.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Versatility</div>
+                    <div class="text-sm font-semibold">4-in-1 platform — vacuum carpets AND scrub lobby hard floors</div>
+                </div>
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Performance</div>
+                    <div class="text-sm font-semibold">17,000 Pa · 700-1,000 sqm/hr · 4 hr carpet battery</div>
+                </div>
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Pricing</div>
+                    <div class="text-sm font-semibold">$22K purchase · $479-917/mo RaaS</div>
+                </div>
+            </div>
+
+            <div class="border-t border-white/10 pt-5">
+                <div class="text-xs font-semibold text-[#b8965a] uppercase tracking-widest mb-2">Deployment Approach</div>
+                <p class="text-gray-300 text-sm leading-relaxed">Lease one CC1 Pro unit. Map guest floors 4-10 plus lobby. Schedule overnight carpet vacuuming (11 PM - 5 AM) with autonomous elevator transit between floors. Use scrub mode for lobby and hard-floor areas during low-traffic periods.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="robot-card p-5">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="rank-badge rank-2" style="width:1.5rem; height:1.5rem; font-size:0.7rem;">2</span>
+                <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Secondary</span>
+            </div>
+            <h4 class="font-bold text-[#0d2137] mb-2">Gausium Vacuum 40</h4>
+            <p class="text-xs text-gray-600 leading-relaxed">If budget allows and raw cleaning is the priority. 24 kPa and InterContinental Wien reference are compelling. Diffuser variant adds unique luxury touch. At $42K / 91 kg, it's a larger commitment.</p>
+        </div>
+
+        <div class="robot-card p-5">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="rank-badge rank-3" style="width:1.5rem; height:1.5rem; font-size:0.7rem;">3</span>
+                <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Contingency</span>
+            </div>
+            <h4 class="font-bold text-[#0d2137] mb-2">SoftBank Whiz</h4>
+            <p class="text-xs text-gray-600 leading-relaxed">If minimizing deployment risk is paramount. Largest installed base, most mature US support. Fall back here if PUDU elevator integration proves difficult at Thesis.</p>
+        </div>
+
+        <div class="robot-card p-5">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="rank-badge rank-other" style="width:1.5rem; height:1.5rem; font-size:0.7rem;">4</span>
+                <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Monitor</span>
+            </div>
+            <h4 class="font-bold text-[#0d2137] mb-2">ECOVACS K1 VAC</h4>
+            <p class="text-xs text-gray-600 leading-relaxed">Request demo + US pricing. If ECOVACS establishes reliable US commercial sales and support in 2026, K1 VAC could become top recommendation — specs and built-in elevator are excellent on paper.</p>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- SOURCES -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-8 py-6">
+    <h2 class="text-lg headline font-bold text-[#0d2137] mb-4">Sources</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-[11px] text-gray-600">
+        <a href="https://www.pudurobotics.com/en/products/puduCC1" class="hover:text-[#b8965a]">• PUDU CC1 Product Page</a>
+        <a href="https://www.pudurobotics.com/en/products/cc1-pro" class="hover:text-[#b8965a]">• PUDU CC1 Pro Product Page</a>
+        <a href="https://www.robotlab.com/cleaning-robots/store/cleaning-robot-cc1" class="hover:text-[#b8965a]">• PUDU CC1 at RobotLAB</a>
+        <a href="https://gausium.com/products/vacuum40/" class="hover:text-[#b8965a]">• Gausium Vacuum 40 Product Page</a>
+        <a href="https://gausium.com/specs/vacuum-40/" class="hover:text-[#b8965a]">• Gausium Vacuum 40 Specifications</a>
+        <a href="https://gausium.com/case/intercontinental-wien-elevates-hotel-cleanliness-with-gausium-vacuum-40-and-phantas/" class="hover:text-[#b8965a]">• Gausium InterContinental Wien Case Study</a>
+        <a href="https://gausium.com/case/chinas-hotel-giant-boosts-business-success-with-gausium-vacuum-40-diffuser/" class="hover:text-[#b8965a]">• Gausium Hanting Hotels Case Study</a>
+        <a href="https://www.robotlab.com/cleaning-robots/store/vacuum-40-cleaning-robot" class="hover:text-[#b8965a]">• Gausium Vacuum 40 at RobotLAB</a>
+        <a href="https://us.softbankrobotics.com/whiz" class="hover:text-[#b8965a]">• SoftBank Whiz Product Page</a>
+        <a href="https://www.robotlab.com/cleaning-robots/store/whiz-robot" class="hover:text-[#b8965a]">• SoftBank Whiz at RobotLAB</a>
+        <a href="https://www.ecovacscommercial.com/ecovacs-commercial-robot-vacuum-deebot-pro-k1-vac" class="hover:text-[#b8965a]">• ECOVACS K1 VAC Commercial</a>
+        <a href="https://www.ecovacscommercial.com/" class="hover:text-[#b8965a]">• ECOVACS Commercial Robotics</a>
+        <a href="https://www.kaercher.com/us/commercial/autonomous-cleaning-equipment/kira-cv-50-bp-98105800.html" class="hover:text-[#b8965a]">• Karcher KIRA CV 50</a>
+        <a href="https://www.lionsbot.com/r3-vac-autonomous-cleaning-robot/" class="hover:text-[#b8965a]">• LionsBot R3 Vac</a>
+        <a href="https://www.robotlab.com/cleaning-robots/store/r3-vac-cleaning-robot" class="hover:text-[#b8965a]">• LionsBot R3 Vac at RobotLAB</a>
+        <a href="https://tailos.com/products/rosie-2-0-commercial-robot-vacuum" class="hover:text-[#b8965a]">• Tailos Rosie 2.0</a>
+        <a href="https://www.keenon.com/en/product/C30/" class="hover:text-[#b8965a]">• Keenon C30 Product Page</a>
+        <a href="https://fieldbots.com/gausium-vacuum-40-integration/" class="hover:text-[#b8965a]">• FieldBots Gausium Integration</a>
+        <a href="https://www.robotlab.com/group/blog/commercial-grade-robotic-vacuums-hotels" class="hover:text-[#b8965a]">• RobotLAB Hotel Cleaning Robots Guide</a>
+        <a href="https://www.braincorp.com/resources/brain-corp-launches-third-generation-ai-autonomy-platform-to-power-the-next-generation-of-autonomous-commercial-robots-c8669" class="hover:text-[#b8965a]">• Brain Corp BrainOS Clean 2.0</a>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- FOOTER -->
+<!-- ================================================================ -->
+<footer class="bg-[#0d2137] text-white py-8 mt-12">
+    <div class="max-w-6xl mx-auto px-8">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <div class="text-xs text-gray-400">Accelerate Robotics · Research Note</div>
+                <div class="text-[10px] text-gray-500 mt-1">Thesis Hotel Miami — C30 Carpet Robot Alternatives · April 13, 2026</div>
+            </div>
+            <div class="text-[10px] text-gray-500">
+                Source: <code>docs/research/c30-carpet-robot-alternatives.md</code>
+            </div>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

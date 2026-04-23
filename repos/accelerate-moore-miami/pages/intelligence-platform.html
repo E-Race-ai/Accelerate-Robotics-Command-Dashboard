@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moore Intelligence Platform — Staff Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* WHY: Dark SaaS product aesthetic — this is a staff-facing tool,
+   not a marketing page. Dark theme reduces glare during evening service. */
+:root {
+    --bg: #0c0c10;
+    --bg2: #141418;
+    --bg3: #1a1a20;
+    --card: #1e1e26;
+    --card-hover: #24242e;
+    --border: rgba(255,255,255,0.06);
+    --border-active: rgba(176,125,86,0.4);
+    --text: #e8e4df;
+    --muted: #7a7572;
+    --accent: #b07d56;
+    --accent-light: #d4a06e;
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.15);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.12);
+    --purple: #a78bfa;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow: hidden; }
+
+/* ── Layout ─────────────────────────────────────── */
+.app { display: flex; height: 100vh; }
+.sidebar { width: 280px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.center { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.right-panel { width: 320px; background: var(--bg2); border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+
+/* ── Sidebar ────────────────────────────────────── */
+.sb-brand { padding: 20px 18px 14px; border-bottom: 1px solid var(--border); }
+.sb-brand .logo { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+.sb-brand .logo span { color: var(--muted); font-weight: 400; font-size: 0.7rem; font-family: 'Inter', sans-serif; letter-spacing: 2px; text-transform: uppercase; display: block; margin-top: 2px; }
+.sb-search { padding: 12px 16px; }
+.sb-search input {
+    width: 100%; padding: 9px 12px 9px 34px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg3); color: var(--text);
+    font-size: 0.8rem; font-family: inherit; outline: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237a7572' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: 10px center;
+}
+.sb-search input::placeholder { color: var(--muted); }
+.sb-search input:focus { border-color: var(--accent); }
+
+.sb-section { padding: 6px 16px; }
+.sb-section-label { font-size: 0.6rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.sb-nav { list-style: none; }
+.sb-nav li {
+    padding: 8px 12px; border-radius: 8px; cursor: pointer;
+    font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 10px;
+    transition: all 0.15s;
+}
+.sb-nav li:hover { background: var(--bg3); color: var(--text); }
+.sb-nav li.active { background: rgba(176,125,86,0.12); color: var(--accent-light); font-weight: 600; }
+.sb-nav li .icon { width: 18px; text-align: center; font-size: 0.9rem; }
+.sb-nav li .badge { margin-left: auto; background: var(--red); color: #fff; font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 10px; }
+
+.sb-members-label { padding: 16px 16px 6px; font-size: 0.6rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+.sb-members-label .count { color: var(--accent); }
+.member-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
+.member-list::-webkit-scrollbar { width: 3px; }
+.member-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+.ml-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 10px;
+    border-radius: 8px; cursor: pointer; transition: background 0.15s; margin-bottom: 1px;
+}
+.ml-item:hover { background: var(--bg3); }
+.ml-item.active { background: rgba(176,125,86,0.1); border: 1px solid var(--border-active); }
+.ml-avatar {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    position: relative; overflow: hidden;
+}
+.ml-avatar img, .ml-avatar svg { width: 100%; height: 100%; border-radius: 50%; display: block; }
+.ml-avatar .online-dot {
+    position: absolute; bottom: 0; right: 0; width: 9px; height: 9px;
+    border-radius: 50%; background: var(--green); border: 2px solid var(--bg2); z-index: 2;
+}
+.ml-info { flex: 1; min-width: 0; }
+.ml-name { font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ml-role { font-size: 0.65rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ml-tier {
+    font-size: 0.55rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+}
+.tier-founding { background: rgba(176,125,86,0.2); color: var(--accent-light); }
+.tier-platinum { background: rgba(160,160,180,0.15); color: #b0b0c0; }
+.tier-gold { background: rgba(251,191,36,0.12); color: var(--amber); }
+
+/* ── Center: Member Dossier ─────────────────────── */
+.center-header {
+    padding: 16px 28px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg2);
+}
+.center-header .view-tabs { display: flex; gap: 4px; }
+.view-tab {
+    padding: 7px 16px; border-radius: 8px; border: none;
+    background: transparent; color: var(--muted); font-size: 0.75rem;
+    font-family: inherit; font-weight: 500; cursor: pointer; transition: all 0.15s;
+}
+.view-tab:hover { background: var(--bg3); color: var(--text); }
+.view-tab.active { background: rgba(176,125,86,0.15); color: var(--accent-light); font-weight: 600; }
+.center-header .time-badge {
+    font-size: 0.7rem; color: var(--muted); display: flex; align-items: center; gap: 8px;
+}
+.center-header .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.center-body { flex: 1; overflow-y: auto; padding: 24px 28px; }
+.center-body::-webkit-scrollbar { width: 5px; }
+.center-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+/* Dossier header */
+.dossier-header { display: flex; gap: 24px; margin-bottom: 24px; }
+.dossier-avatar {
+    width: 72px; height: 72px; border-radius: 16px; flex-shrink: 0;
+    position: relative; overflow: visible;
+}
+.dossier-avatar img, .dossier-avatar svg { width: 100%; height: 100%; border-radius: 16px; display: block; }
+.dossier-avatar .tier-badge {
+    position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+    font-size: 0.5rem; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 6px;
+    border: 2px solid var(--bg); white-space: nowrap; z-index: 2;
+}
+.dossier-meta { flex: 1; }
+.dossier-name { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 2px; }
+.dossier-role { font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; }
+.dossier-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.dossier-chip {
+    font-size: 0.65rem; padding: 4px 10px; border-radius: 6px;
+    background: var(--bg3); border: 1px solid var(--border); color: var(--muted);
+}
+.dossier-chip.highlight { background: var(--green-dim); color: var(--green); border-color: rgba(52,211,153,0.2); }
+
+/* AI Briefing Card */
+.ai-briefing {
+    background: linear-gradient(135deg, rgba(176,125,86,0.08), rgba(176,125,86,0.03));
+    border: 1px solid rgba(176,125,86,0.2);
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 24px;
+}
+.ai-briefing-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ai-briefing-header .ai-icon { font-size: 1rem; }
+.ai-briefing-header .label { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent-light); }
+.ai-briefing p { font-size: 0.85rem; line-height: 1.7; color: var(--text); }
+.ai-briefing .highlight-text { color: var(--accent-light); font-weight: 600; }
+
+/* Stat grid */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.stat-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; transition: border-color 0.2s;
+}
+.stat-card:hover { border-color: var(--border-active); }
+.stat-label { font-size: 0.6rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.stat-value { font-size: 1.3rem; font-weight: 700; }
+.stat-sub { font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
+.stat-value.green { color: var(--green); }
+.stat-value.accent { color: var(--accent-light); }
+
+/* Sections */
+.section-title { font-size: 0.65rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Preference cards */
+.pref-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 24px; }
+.pref-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px;
+}
+.pref-card .pref-icon { font-size: 1.2rem; margin-bottom: 6px; }
+.pref-card .pref-label { font-size: 0.6rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.pref-card .pref-value { font-size: 0.85rem; font-weight: 600; }
+
+/* Conversation starters */
+.conv-starters { margin-bottom: 24px; }
+.conv-item {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    margin-bottom: 6px; font-size: 0.8rem; line-height: 1.5;
+}
+.conv-item .conv-icon { font-size: 0.9rem; flex-shrink: 0; margin-top: 2px; }
+
+/* Interest tags */
+.interest-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }
+.interest-tag {
+    font-size: 0.65rem; padding: 4px 10px; border-radius: 16px;
+    background: var(--bg3); border: 1px solid var(--border); color: var(--muted);
+    transition: all 0.15s;
+}
+.interest-tag.top { background: rgba(176,125,86,0.1); color: var(--accent-light); border-color: rgba(176,125,86,0.2); }
+
+/* Spend chart */
+.spend-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; margin-bottom: 24px; padding: 0 4px; }
+.spend-bar {
+    flex: 1; background: rgba(176,125,86,0.25); border-radius: 4px 4px 0 0;
+    position: relative; transition: background 0.2s; min-height: 4px;
+}
+.spend-bar:last-child { background: var(--accent); }
+.spend-bar:hover { background: var(--accent); }
+.spend-bar .bar-label {
+    position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 0.55rem; color: var(--muted); white-space: nowrap;
+}
+.spend-bar .bar-value {
+    position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 0.6rem; color: var(--text); font-weight: 600; white-space: nowrap; display: none;
+}
+.spend-bar:hover .bar-value { display: block; }
+
+/* ── Right Panel: Alerts & AI ──────────────────── */
+.rp-header { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+.rp-header h3 { font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-light); }
+.rp-tabs { display: flex; gap: 2px; padding: 10px 14px; }
+.rp-tab {
+    flex: 1; padding: 7px 0; text-align: center; border-radius: 6px;
+    font-size: 0.7rem; font-weight: 500; color: var(--muted); cursor: pointer;
+    transition: all 0.15s; border: none; background: none; font-family: inherit;
+}
+.rp-tab:hover { background: var(--bg3); color: var(--text); }
+.rp-tab.active { background: var(--bg3); color: var(--accent-light); font-weight: 600; }
+
+.rp-content { flex: 1; overflow-y: auto; padding: 0 14px 14px; }
+.rp-content::-webkit-scrollbar { width: 3px; }
+.rp-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+/* Alert cards */
+.alert-card {
+    padding: 12px 14px; border-radius: 10px; margin-bottom: 8px;
+    border: 1px solid var(--border); background: var(--card); cursor: pointer;
+    transition: border-color 0.15s;
+}
+.alert-card:hover { border-color: var(--border-active); }
+.alert-card .alert-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.alert-card .alert-icon { font-size: 0.9rem; }
+.alert-card .alert-type {
+    font-size: 0.6rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 4px;
+}
+.alert-type.arrival { background: var(--green-dim); color: var(--green); }
+.alert-type.birthday { background: var(--blue-dim); color: var(--blue); }
+.alert-type.lapsed { background: var(--red-dim); color: var(--red); }
+.alert-type.spend { background: var(--amber-dim); color: var(--amber); }
+.alert-type.event { background: rgba(167,139,250,0.12); color: var(--purple); }
+.alert-card .alert-time { margin-left: auto; font-size: 0.6rem; color: var(--muted); }
+.alert-card .alert-body { font-size: 0.8rem; line-height: 1.5; }
+.alert-card .alert-body strong { color: var(--text); }
+.alert-card .alert-action {
+    margin-top: 8px; padding: 6px 12px; border-radius: 6px;
+    background: rgba(176,125,86,0.1); border: 1px solid rgba(176,125,86,0.2);
+    color: var(--accent-light); font-size: 0.7rem; font-weight: 600;
+    cursor: pointer; display: inline-block;
+}
+
+/* AI Ask */
+.ai-ask-wrap { padding: 14px; }
+.ai-ask-input-wrap { position: relative; margin-bottom: 14px; }
+.ai-ask-input {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg3); color: var(--text);
+    font-size: 0.8rem; font-family: inherit; outline: none; resize: none; height: 80px;
+}
+.ai-ask-input:focus { border-color: var(--accent); }
+.ai-ask-input::placeholder { color: var(--muted); }
+.ai-ask-btn {
+    position: absolute; bottom: 8px; right: 8px; padding: 6px 14px;
+    border-radius: 6px; border: none; background: var(--accent); color: #fff;
+    font-size: 0.7rem; font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.ai-response {
+    padding: 14px 16px; border-radius: 10px;
+    background: var(--card); border: 1px solid var(--border);
+    font-size: 0.8rem; line-height: 1.7; max-height: 60vh; overflow-y: auto;
+}
+.ai-response strong { color: var(--accent-light); }
+.ai-response .example-queries { margin-top: 12px; }
+.ai-response .eq-item {
+    padding: 8px 12px; border-radius: 6px; background: var(--bg3);
+    margin-bottom: 4px; cursor: pointer; font-size: 0.75rem; transition: background 0.15s;
+}
+.ai-response .eq-item:hover { background: rgba(176,125,86,0.1); color: var(--accent-light); }
+
+/* ── Staff Quick-Look (arrival view) ────────────── */
+.arrival-banner {
+    background: linear-gradient(135deg, var(--green-dim), rgba(52,211,153,0.05));
+    border: 1px solid rgba(52,211,153,0.2); border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+.arrival-banner .arrival-icon { font-size: 1.5rem; }
+.arrival-banner .arrival-text { font-size: 0.85rem; }
+.arrival-banner .arrival-text strong { color: var(--green); }
+
+/* ── Companies / clubs ─────────────────────────── */
+.company-list { margin-bottom: 24px; }
+.company-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    margin-bottom: 4px;
+}
+.company-item .co-icon { width: 28px; height: 28px; border-radius: 6px; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: var(--accent); }
+.company-item .co-name { font-size: 0.8rem; font-weight: 600; }
+.company-item .co-industry { font-size: 0.65rem; color: var(--muted); }
+
+/* ── Print ──────────────────────────────────────── */
+@media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .sidebar, .right-panel { display: none; }
+    .center { width: 100%; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+    <!-- ═══ SIDEBAR ═══ -->
+    <div class="sidebar">
+        <div class="sb-brand">
+            <div class="logo">Moore Intelligence<span>Staff Portal &middot; v2.0</span></div>
+        </div>
+        <div class="sb-search">
+            <input type="text" id="memberSearch" placeholder="Search members..." oninput="filterMembers(this.value)">
+        </div>
+        <div class="sb-section">
+            <div class="sb-section-label">Navigation</div>
+            <ul class="sb-nav">
+                <li class="active" onclick="switchNav(this,'dossier')"><span class="icon">&#128100;</span> Member Dossier</li>
+                <li onclick="switchNav(this,'arrivals')"><span class="icon">&#128276;</span> Arrivals <span class="badge" id="arrivalBadge">3</span></li>
+                <li onclick="switchNav(this,'ask')"><span class="icon">&#10024;</span> Ask AI</li>
+            </ul>
+        </div>
+        <div class="sb-members-label">Members <span class="count" id="memberCount">10</span></div>
+        <div class="member-list" id="memberList"></div>
+    </div>
+
+    <!-- ═══ CENTER ═══ -->
+    <div class="center">
+        <div class="center-header">
+            <div class="view-tabs">
+                <button class="view-tab active" onclick="switchCenterTab(this,'overview')">Overview</button>
+                <button class="view-tab" onclick="switchCenterTab(this,'preferences')">Preferences</button>
+                <button class="view-tab" onclick="switchCenterTab(this,'history')">History</button>
+                <button class="view-tab" onclick="switchCenterTab(this,'connections')">Connections</button>
+            </div>
+            <div class="time-badge">
+                <div class="live-dot"></div>
+                <span id="liveTime"></span>
+            </div>
+        </div>
+        <div class="center-body" id="centerBody"></div>
+    </div>
+
+    <!-- ═══ RIGHT PANEL ═══ -->
+    <div class="right-panel">
+        <div class="rp-header"><h3>Intelligence Feed</h3></div>
+        <div class="rp-tabs">
+            <button class="rp-tab active" onclick="switchRPTab(this,'alerts')">Alerts</button>
+            <button class="rp-tab" onclick="switchRPTab(this,'insights')">Insights</button>
+            <button class="rp-tab" onclick="switchRPTab(this,'ask-ai')">Ask AI</button>
+        </div>
+        <div class="rp-content" id="rpContent"></div>
+    </div>
+</div>
+
+<script>
+/* ================================================================
+   MEMBER DATABASE — Anonymized from Freestyle Friday survey data.
+   WHY: Real survey responses with synthetic names + enriched
+   spend/visit data to demonstrate intelligence platform capabilities.
+   ================================================================ */
+const MEMBERS = [
+    {
+        id: 1, name: 'James Caldwell',
+        avatar: '#3a6b8a', initials: 'JC',
+        companies: [
+            { name: 'Meridian Equity', industry: 'FinTech' },
+            { name: 'ZetaVentures', industry: 'Ventures' },
+            { name: 'NucleusCo', industry: 'Ventures' }
+        ],
+        role: 'Operating Partner, NucleusCo',
+        sector: 'tech',
+        yearsInMiami: 5, longTerm: 'Yes',
+        marital: 'Married', kids: 'Yes',
+        dietary: 'None',
+        clubs: ['Key Biscayne Yacht Club'],
+        interests: ['Padel','Pickleball','Tennis','Snow Skiing','Snowboarding','Kite Boarding','Wake Surfing','Boating','Yachting','Networking','Poker','Game Nights','Travel','Dining','Weekend BBQ','Investments','Startups','Crypto','AI','Technology','Fitness','Wellness','Surfing'],
+        eventPriority: 'Group activities — Poker, Game nights, kite surf, boat day',
+        wouldLead: 'Poker, Padel, Boat',
+        whyJoin: 'Meet great dudes, mix up the work environment',
+        growthIdea: 'Keep small for now, referral only',
+        tier: 'Founding', joinDate: '2024-09-15',
+        ytdSpend: 38200, monthlyAvg: 9550, visits: 47, lastVisit: '2026-04-14',
+        avgCheck: 812, favVenue: 'Torno Pvt', favDrink: 'Barolo, Old Fashioned',
+        eventsAttended: 14, referrals: 3, spendTrend: [6200, 8100, 9400, 7800, 6700],
+        notes: 'Prefers corner booth. Brings wife to Saturday dinners. Competitive poker player.'
+    },
+    {
+        id: 2, name: 'Marco Reyes',
+        avatar: '#8a3a5a', initials: 'MR',
+        companies: [
+            { name: 'Candor Capital', industry: 'VC' },
+            { name: 'Dynabase', industry: 'Software Staffing' },
+            { name: 'Spotlight Media', industry: 'Celebrity Marketing' }
+        ],
+        role: 'Partner, Media Ventures',
+        sector: 'finance',
+        yearsInMiami: 3, longTerm: 'Yes',
+        marital: 'Single', kids: 'No',
+        dietary: 'None',
+        clubs: ['SOHO House', 'Milken YLC'],
+        interests: ['Padel','Pickleball','Tennis','Golf','Snow Skiing','Snowboarding','Boating','Yachting','Sports Viewing','Networking','Clubs','Poker','Game Nights','Travel','Dining','Weekend BBQ','Cigars','Wine Tasting','Watches','Art','Investments','Startups','Real Estate','AI','Technology','Fitness','Wellness'],
+        eventPriority: 'Padel, wine, cigars',
+        wouldLead: 'Wine night',
+        whyJoin: 'Local perspective',
+        tier: 'Founding', joinDate: '2024-09-15',
+        ytdSpend: 42100, monthlyAvg: 10525, visits: 62, lastVisit: '2026-04-16',
+        avgCheck: 679, favVenue: 'Roof Bar', favDrink: 'Brunello, Negroni',
+        eventsAttended: 18, referrals: 5, spendTrend: [8900, 10200, 9100, 7400, 6500],
+        notes: 'Most active member. Connects people naturally — strong network builder. Wine collector.'
+    },
+    {
+        id: 3, name: 'William Sterling',
+        avatar: '#4a6b3a', initials: 'WS',
+        companies: [{ name: 'Aston Private Wealth', industry: 'Finance / Private Wealth' }],
+        role: 'Private Wealth Advisor',
+        sector: 'finance',
+        yearsInMiami: 5, longTerm: 'Yes',
+        marital: 'Married', kids: 'Yes',
+        dietary: 'Prefers lighter fare, watches sodium',
+        clubs: ['Aman'],
+        interests: ['Padel','Pickleball','Tennis','Golf','Sports Viewing','Networking','Poker','Game Nights','Travel','Dining','Weekend BBQ','Watches','Art','Investments','Startups','AI','Technology','Fitness','Wellness','Wine'],
+        eventPriority: 'Social Events',
+        wouldLead: 'Any that I checked off',
+        whyJoin: 'Meeting like-minded people',
+        tier: 'Platinum', joinDate: '2024-11-01',
+        ytdSpend: 31400, monthlyAvg: 7850, visits: 38, lastVisit: '2026-04-12',
+        avgCheck: 826, favVenue: 'Torno', favDrink: 'Champagne, Whiskey Sour',
+        eventsAttended: 11, referrals: 2, spendTrend: [5800, 7200, 8100, 6200, 4100],
+        notes: 'Highest avg check. Prefers Torno main dining. Wife\'s birthday May 12.'
+    },
+    {
+        id: 4, name: 'Patrick Brennan',
+        avatar: '#6b4a3a', initials: 'PB',
+        companies: [
+            { name: 'Verge Dynamics', industry: 'Tech' },
+            { name: 'Avian Mobility', industry: 'Tech / Mobility' },
+            { name: 'Summit Ventures', industry: 'Venture Capital' }
+        ],
+        role: 'Founder, Verge Dynamics',
+        sector: 'tech',
+        yearsInMiami: 3.5, longTerm: 'Not Sure',
+        marital: 'Married', kids: 'Planning',
+        dietary: 'None',
+        clubs: ['SOHO House'],
+        interests: ['Padel','Pickleball','Tennis','Golf','Snow Skiing','Snowboarding','Boating','Yachting','Sports Viewing','Networking','Poker','Game Nights','Travel','Dining','Weekend BBQ','Cigars','Wine Tasting','Watches','Art','Investments','Startups','Crypto','AI','Technology','Fitness','Wellness','Racing','Everglades Hunting'],
+        eventPriority: 'Poker, padel/golf, dinner + wine, events/activities',
+        wouldLead: 'Padel/golf',
+        whyJoin: 'Meet great people + help each other out',
+        growthIdea: 'Selectively adding + invites',
+        tier: 'Founding', joinDate: '2024-09-15',
+        ytdSpend: 35800, monthlyAvg: 8950, visits: 44, lastVisit: '2026-04-15',
+        avgCheck: 814, favVenue: 'Torno', favDrink: 'Bordeaux, Mezcal Negroni',
+        eventsAttended: 16, referrals: 4, spendTrend: [7100, 8400, 9200, 6800, 4300],
+        notes: 'Broadest interest range in the club. Loves adventure — Everglades, racing. Ask about his vintage car collection.'
+    },
+    {
+        id: 5, name: 'Tyler Mitchell',
+        avatar: '#3a5a8a', initials: 'TM',
+        companies: [
+            { name: 'Keystone Realty', industry: 'Real Estate & Tech' },
+            { name: 'Lakeview Capital', industry: 'Real Estate Investing' }
+        ],
+        role: 'Founder, Keystone Realty',
+        sector: 'tech',
+        yearsInMiami: 2.8, longTerm: 'Yes',
+        marital: 'Single', kids: 'No',
+        dietary: 'None',
+        clubs: [],
+        interests: ['Padel','Pickleball','Tennis','Hunting','Fishing','Poker','Game Nights','Travel','Dining','Real Estate','Fitness','Wellness'],
+        eventPriority: 'Padel',
+        whyJoin: 'Networking, business opportunities, community building',
+        tier: 'Gold', joinDate: '2025-01-10',
+        ytdSpend: 18600, monthlyAvg: 4650, visits: 24, lastVisit: '2026-04-10',
+        avgCheck: 775, favVenue: 'Roof Bar', favDrink: 'IPA, Ranch Water',
+        eventsAttended: 8, referrals: 1, spendTrend: [3200, 4100, 4800, 3900, 2600],
+        notes: 'Quiet but engaged. Real estate conversations get him animated. Good fit for hunting/fishing trips.'
+    },
+    {
+        id: 6, name: 'Sebastian Cole',
+        avatar: '#8a6b3a', initials: 'SC',
+        companies: [
+            { name: 'Coastal Entertainment', industry: 'Entertainment' },
+            { name: 'Shine Ventures', industry: 'Operations' },
+            { name: 'Bayshore Capital', industry: 'Private Equity' }
+        ],
+        role: 'CEO / Founder',
+        sector: 'founders',
+        yearsInMiami: 30, longTerm: 'Yes',
+        marital: 'Married', kids: 'Yes',
+        dietary: 'None',
+        clubs: ['ZZ\'s Lagorce'],
+        interests: ['Padel','Pickleball','Tennis','Golf','Snow Skiing','Snowboarding','Hunting','Fishing','Boating','Yachting','Sports Viewing','Networking','Clubs','Poker','Game Nights','Travel','Dining','Weekend BBQ','Cigars','Wine Tasting','Watches','Art','Investments','Startups','Real Estate','Crypto','AI','Technology','Fitness','Wellness'],
+        eventPriority: 'Let the group pick, people own events like YPO',
+        wouldLead: 'People should lead like YPO',
+        whyJoin: 'Friendships, good times, do some business together',
+        growthIdea: 'Keep it tight, have restrictions + process',
+        tier: 'Founding', joinDate: '2024-09-15',
+        ytdSpend: 52300, monthlyAvg: 13075, visits: 71, lastVisit: '2026-04-16',
+        avgCheck: 737, favVenue: 'Torno', favDrink: 'Opus One, Espresso Martini',
+        eventsAttended: 21, referrals: 7, spendTrend: [11200, 12400, 10800, 9600, 8300],
+        notes: 'Top spender & most connected. Miami native — 30 years. Natural leader. Prefers YPO-style member-led format. Always orders Opus One.'
+    },
+    {
+        id: 7, name: 'Laurent Marchand',
+        avatar: '#5a3a8a', initials: 'LM',
+        companies: [
+            { name: 'Tessera AI', industry: 'Enterprise AI Solutions' },
+            { name: 'Wyman Partners', industry: 'Strategy Consulting' }
+        ],
+        role: 'Founder, Tessera AI (Healthcare)',
+        sector: 'tech',
+        yearsInMiami: 2.5, longTerm: 'Likely',
+        marital: 'Single', kids: 'Planning',
+        dietary: 'European palate — appreciates charcuterie, natural wines',
+        clubs: [],
+        interests: ['Padel','Pickleball','Tennis','Snow Skiing','Snowboarding','Kite Boarding','Wake Surfing','Networking','Travel','Dining','Weekend BBQ','Cigars','Wine Tasting','Watches','Art','Investments','Startups','AI','Technology'],
+        eventPriority: 'Social, sports, business education',
+        wouldLead: 'Wine nights, cool guest speeches',
+        whyJoin: 'Introductions and ideas, help members',
+        growthIdea: 'WhatsApp group with sub-threads by theme, rating system',
+        tier: 'Gold', joinDate: '2025-02-01',
+        ytdSpend: 16800, monthlyAvg: 4200, visits: 22, lastVisit: '2026-04-13',
+        avgCheck: 764, favVenue: 'TS Bar', favDrink: 'Natural Wine, Aperol Spritz',
+        eventsAttended: 9, referrals: 2, spendTrend: [2800, 3400, 4100, 3600, 2900],
+        notes: 'French background — wine + food connoisseur. Proposed WhatsApp sub-threads idea. Great for guest speaker events.'
+    },
+    {
+        id: 8, name: 'Charles Whitfield',
+        avatar: '#3a8a6b', initials: 'CW',
+        companies: [
+            { name: 'Summit & Friedman', industry: 'Private Equity' },
+            { name: 'Beacon Capital', industry: 'Private Equity' },
+            { name: 'MSD Holdings', industry: 'Investment' }
+        ],
+        role: 'Owner & Exec Chairman, Alpine Construction',
+        sector: 'finance',
+        yearsInMiami: 0.5, longTerm: 'Yes',
+        marital: 'Married', kids: 'No',
+        dietary: 'High-protein, keto-leaning',
+        clubs: [],
+        interests: ['Padel','Pickleball','Tennis','Golf','Snow Skiing','Snowboarding','Hunting','Fishing','Boating','Yachting','Travel','Cigars','Wine Tasting','Fitness','Wellness','Spearfishing'],
+        eventPriority: 'Fun, active, common time to get to know everyone',
+        wouldLead: 'Workouts, cycling, running, wine tastings',
+        whyJoin: 'Being challenged intellectually by sharp guys and having fun',
+        growthIdea: 'WhatsApp community group',
+        tier: 'Gold', joinDate: '2025-03-01',
+        ytdSpend: 12400, monthlyAvg: 3100, visits: 14, lastVisit: '2026-04-11',
+        avgCheck: 886, favVenue: 'Torno Pvt', favDrink: 'Burgundy, Dirty Martini',
+        eventsAttended: 5, referrals: 0, spendTrend: [1800, 2600, 3200, 2900, 1900],
+        notes: 'Newest member, highest avg check ($886). Only 6 months in Miami — actively building social circle. Fitness enthusiast — morning workouts. Spearfishing trips would engage him.'
+    },
+    {
+        id: 9, name: 'Ryan Prescott',
+        avatar: '#8a3a3a', initials: 'RP',
+        companies: [{ name: 'Trueform Digital', industry: 'Marketing / Tech' }],
+        role: 'CEO, Trueform Digital',
+        sector: 'founders',
+        yearsInMiami: 3, longTerm: 'Yes',
+        marital: 'Single', kids: 'No',
+        dietary: 'None',
+        clubs: ['SOHO House'],
+        interests: ['Padel','Pickleball','Tennis','Networking','Travel','Dining','Fitness','Wellness'],
+        eventPriority: 'Physical events — padel, morning run, ocean',
+        wouldLead: 'Morning run / ocean dip',
+        whyJoin: 'Social gathering, deeper friendships',
+        growthIdea: 'Keep it intimate',
+        tier: 'Gold', joinDate: '2025-01-15',
+        ytdSpend: 14200, monthlyAvg: 3550, visits: 19, lastVisit: '2026-04-09',
+        avgCheck: 747, favVenue: 'Roof Bar', favDrink: 'Espresso Martini, Paloma',
+        eventsAttended: 7, referrals: 1, spendTrend: [2400, 3100, 3800, 2800, 2100],
+        notes: 'Fitness-first lifestyle. Prefers active experiences over seated dinners. Strong morning run / ocean swim advocate. Could lead wellness programming.'
+    },
+    {
+        id: 10, name: 'David Thornton',
+        avatar: '#4a3a6b', initials: 'DT',
+        companies: [
+            { name: 'Sterling & Co', industry: 'Investment Banking' },
+            { name: 'Westfield Capital', industry: 'Private Equity' },
+            { name: 'Rhine Bank', industry: 'Investment Banking' }
+        ],
+        role: 'Founder, Litquidity Media',
+        sector: 'finance',
+        yearsInMiami: 30, longTerm: 'Yes',
+        marital: 'In a Relationship', kids: 'No',
+        dietary: 'None',
+        clubs: ['SOHO House', 'Hampton Racquet'],
+        interests: ['Padel','Pickleball','Tennis','Golf','Hunting','Fishing','Boating','Yachting','Sports Viewing','Networking','Clubs','Poker','Game Nights','Travel','Dining','Weekend BBQ','Cigars','Wine Tasting','Watches','Art','Investments','Startups','Real Estate','Crypto','AI','Technology','Fitness','Wellness'],
+        eventPriority: 'Fun stuff, padel',
+        whyJoin: 'Networking, business opportunities, community building',
+        tier: 'Platinum', joinDate: '2024-10-01',
+        ytdSpend: 25650, monthlyAvg: 6413, visits: 35, lastVisit: '2026-04-14',
+        avgCheck: 733, favVenue: 'TS Bar', favDrink: 'Macallan 18, Manhattan',
+        eventsAttended: 13, referrals: 3, spendTrend: [4800, 5600, 6200, 5100, 3950],
+        notes: 'Finance media personality — large social following. Miami native. Well-connected in banking circles. Scotch connoisseur (Macallan 18 always).'
+    }
+];
+
+/* ================================================================
+   PORTRAIT GENERATOR
+   WHY: Generates distinct SVG face illustrations for each member.
+   V1 uses generated portraits — production would use actual photos.
+   Each portrait has unique skin tone, hair style, and coloring.
+   ================================================================ */
+const PORTRAIT_CONFIG = {
+    1: { bg:'#2c4a6b', skin:'#e8c4a0', skinD:'#d4a880', hair:'#3d2b1f', brow:'#2a1a0f', lips:'#c4877a', shirt:'#1e3044',
+         hairPath:'<path d="M37,42 Q37,20 60,18 Q83,20 83,42 L83,34 Q83,16 60,14 Q37,16 37,34Z" fill="HAIR"/>' },
+    2: { bg:'#6b2c4a', skin:'#c68642', skinD:'#b07030', hair:'#1a1a1a', brow:'#111', lips:'#a06050', shirt:'#2d2d2d',
+         hairPath:'<path d="M37,42 Q37,18 60,16 Q83,18 83,42 L83,32 Q83,14 60,12 Q37,14 37,32Z" fill="HAIR"/><path d="M70,20 Q86,16 88,28" fill="HAIR"/>' },
+    3: { bg:'#3a5a3a', skin:'#f0d0b0', skinD:'#dbb898', hair:'#6b4423', brow:'#4a3018', lips:'#c4877a', shirt:'#1e3044',
+         hairPath:'<path d="M37,42 Q37,22 60,20 Q83,22 83,42 L83,34 Q83,18 60,16 Q37,18 37,34Z" fill="HAIR"/>',
+         extras:'<circle cx="51" cy="48" r="7" fill="none" stroke="#8899aa" stroke-width="1.8"/><circle cx="69" cy="48" r="7" fill="none" stroke="#8899aa" stroke-width="1.8"/><path d="M58,48 L62,48" stroke="#8899aa" stroke-width="1.5"/><path d="M44,47 L38,45" stroke="#8899aa" stroke-width="1.5"/><path d="M76,47 L82,45" stroke="#8899aa" stroke-width="1.5"/>' },
+    4: { bg:'#5a3a2a', skin:'#e8c4a0', skinD:'#d4a880', hair:'#8b3a16', brow:'#6b2a10', lips:'#c4877a', shirt:'#4a4a4a',
+         hairPath:'<path d="M37,42 Q37,20 60,18 Q83,20 83,42 L83,34 Q83,16 60,14 Q37,16 37,34Z" fill="HAIR"/>' },
+    5: { bg:'#2a4a6b', skin:'#f0d0b0', skinD:'#dbb898', hair:'#b8860b', brow:'#8a6a08', lips:'#c4877a', shirt:'#1e3044',
+         hairPath:'<path d="M37,42 Q37,22 60,20 Q83,22 83,42 L83,36 Q83,18 60,16 Q37,18 37,36Z" fill="HAIR"/>' },
+    6: { bg:'#6b5a2a', skin:'#d4a574', skinD:'#c09060', hair:'#1a1008', brow:'#111', lips:'#a06050', shirt:'#1a1a1a',
+         hairPath:'<path d="M37,42 Q37,18 60,16 Q83,18 83,42 L83,32 Q83,14 60,12 Q37,14 37,32Z" fill="HAIR"/>',
+         extras:'<path d="M42,60 Q50,68 60,66 Q70,68 78,60 Q76,70 60,72 Q44,70 42,60Z" fill="HAIR" opacity="0.35"/>' },
+    7: { bg:'#4a2a6b', skin:'#f0d0b0', skinD:'#dbb898', hair:'#3d2b1f', brow:'#2a1a0f', lips:'#c4877a', shirt:'#2d2d2d',
+         hairPath:'<path d="M35,44 Q35,16 60,14 Q85,16 85,44 L85,32 Q85,12 60,10 Q35,12 35,32Z" fill="HAIR"/><path d="M38,28 Q48,22 55,30 Q62,22 72,28" fill="HAIR"/>' },
+    8: { bg:'#2a6b5a', skin:'#e8c4a0', skinD:'#d4a880', hair:'#7b5b3a', brow:'#5a4028', lips:'#c4877a', shirt:'#1e3044',
+         hairPath:'<path d="M37,42 Q37,24 60,22 Q83,24 83,42 L83,36 Q83,20 60,18 Q37,20 37,36Z" fill="HAIR"/>' },
+    9: { bg:'#6b2a2a', skin:'#c68642', skinD:'#b07030', hair:'#1a1a1a', brow:'#111', lips:'#a06050', shirt:'#1a1a1a',
+         hairPath:'<path d="M38,42 Q38,28 60,26 Q82,28 82,42 L82,38 Q82,26 60,24 Q38,26 38,38Z" fill="HAIR"/>' },
+    10:{ bg:'#3a2a5a', skin:'#d4a574', skinD:'#c09060', hair:'#1a1008', brow:'#111', lips:'#a06050', shirt:'#2d2d2d',
+         hairPath:'<path d="M37,42 Q37,18 60,16 Q83,18 83,42 L83,32 Q83,14 60,12 Q37,14 37,32Z" fill="HAIR"/><path d="M70,20 Q85,16 87,26" fill="HAIR"/>' }
+};
+
+function getPortrait(memberId) {
+    const p = PORTRAIT_CONFIG[memberId];
+    if (!p) return '';
+    const hp = p.hairPath.replace(/HAIR/g, p.hair);
+    const ex = (p.extras || '').replace(/HAIR/g, p.hair);
+    return `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">` +
+        `<rect width="120" height="120" rx="60" fill="${p.bg}"/>` +
+        `<ellipse cx="60" cy="112" rx="36" ry="20" fill="${p.shirt}"/>` +
+        `<rect x="50" y="74" width="20" height="12" rx="6" fill="${p.skin}"/>` +
+        `<ellipse cx="60" cy="50" rx="23" ry="27" fill="${p.skin}"/>` +
+        `<ellipse cx="37" cy="50" rx="3" ry="5" fill="${p.skinD}"/>` +
+        `<ellipse cx="83" cy="50" rx="3" ry="5" fill="${p.skinD}"/>` +
+        hp +
+        `<ellipse cx="51" cy="48" rx="2.5" ry="2" fill="#2a2a2a"/>` +
+        `<ellipse cx="69" cy="48" rx="2.5" ry="2" fill="#2a2a2a"/>` +
+        `<circle cx="51" cy="48" r="1" fill="#fff" opacity="0.6"/>` +
+        `<circle cx="69" cy="48" r="1" fill="#fff" opacity="0.6"/>` +
+        `<path d="M46,43 Q51,41 56,43" fill="none" stroke="${p.brow}" stroke-width="1.5" stroke-linecap="round"/>` +
+        `<path d="M64,43 Q69,41 74,43" fill="none" stroke="${p.brow}" stroke-width="1.5" stroke-linecap="round"/>` +
+        `<ellipse cx="60" cy="54" rx="2" ry="1.5" fill="${p.skinD}" opacity="0.4"/>` +
+        `<path d="M54,59 Q60,63 66,59" fill="none" stroke="${p.lips}" stroke-width="1.5" stroke-linecap="round"/>` +
+        ex +
+        `</svg>`;
+}
+
+/* ================================================================
+   ALERTS — Simulated real-time intelligence feed
+   ================================================================ */
+const ALERTS = [
+    { type: 'arrival', icon: '&#128994;', member: 'Sebastian Cole', time: '2 min ago',
+      body: '<strong>Sebastian Cole</strong> just checked in. Founding member, 71 visits. <em>Always orders Opus One</em> — confirm the \'15 is available. Prefers Torno corner booth.',
+      action: 'Prep Opus One \'15 + corner booth' },
+    { type: 'arrival', icon: '&#128994;', member: 'Marco Reyes', time: '8 min ago',
+      body: '<strong>Marco Reyes</strong> checked in with 1 guest. Most active member (62 visits). Roof Bar regular. <em>Brunello + Negroni</em> is his standard opening order.',
+      action: 'Seat at Roof Bar, prep Brunello' },
+    { type: 'birthday', icon: '&#127874;', member: 'William Sterling', time: 'in 3 days',
+      body: '<strong>William Sterling\'s</strong> wife\'s birthday is May 12. Platinum member, $826 avg check. Suggest: complimentary dessert course + handwritten note from chef.',
+      action: 'Schedule birthday surprise' },
+    { type: 'lapsed', icon: '&#9888;', member: 'Ryan Prescott', time: '8 days',
+      body: '<strong>Ryan Prescott</strong> hasn\'t visited in 8 days (avg interval: 4 days). Spend trending down last 2 months. <em>Fitness-focused</em> — consider inviting to Thursday morning run.',
+      action: 'Send personal outreach' },
+    { type: 'spend', icon: '&#128200;', member: 'Charles Whitfield', time: 'this week',
+      body: '<strong>Charles Whitfield</strong> is your newest member (6 weeks) but has the <em>highest avg check ($886)</em>. Only 14 visits — high-value, low-frequency. Engagement opportunity.',
+      action: 'Personal intro from GM' },
+    { type: 'event', icon: '&#127942;', member: 'Padel Tournament', time: 'Tomorrow 10a',
+      body: '<strong>Padel Tournament</strong> tomorrow — 8/10 members confirmed interested in padel. <em>James Caldwell</em> and <em>Patrick Brennan</em> offered to organize. Confirm court reservations.',
+      action: 'Confirm courts + send reminder' },
+    { type: 'arrival', icon: '&#128994;', member: 'Patrick Brennan', time: '22 min ago',
+      body: '<strong>Patrick Brennan</strong> checked in. Founding member. Last ordered Bordeaux + Mezcal Negroni. <em>Ask about the vintage car collection</em> — strong conversation opener.',
+      action: 'Prep Bordeaux selection' },
+    { type: 'spend', icon: '&#128200;', member: 'Club Trend', time: 'weekly',
+      body: 'Club-wide avg check is <strong>$778</strong> this week (up 4% from last). Top venue: Torno (58% of spend). <em>Roof Bar underperforming</em> — down 12% vs. last month.',
+      action: 'Review Roof Bar programming' }
+];
+
+const INSIGHTS = [
+    { icon: '&#129504;', title: 'Dinner Pairing Intelligence', body: '<strong>Sebastian Cole</strong> and <strong>Charles Whitfield</strong> have the highest shared interest overlap (16 interests) but have never been introduced. Both are married, into hunting/fishing/wine. High-probability connection.' },
+    { icon: '&#127942;', title: 'Event Opportunity', body: '<strong>7 of 10 members</strong> listed poker as an interest. Only 3 poker events this quarter. Increase frequency to bi-weekly — Sebastian and James both offered to host.' },
+    { icon: '&#127863;', title: 'Wine Program Gap', body: '<strong>Laurent Marchand</strong> (natural wine) and <strong>William Sterling</strong> (Champagne) represent two distinct wine profiles. Consider a "Old World vs. New World" tasting event — appeals to both camps plus 6 others who listed wine tasting.' },
+    { icon: '&#128170;', title: 'Wellness Programming', body: '<strong>Ryan Prescott</strong> and <strong>Charles Whitfield</strong> are both fitness-first members who would lead morning programming. Ryan offered morning run/ocean dip, Charles offered cycling/running. These low-cost events could increase visit frequency for Gold-tier members.' },
+    { icon: '&#127757;', title: 'Network Value', body: '<strong>Marco Reyes</strong> has generated 5 referrals (highest). His connections span VC, entertainment, and real estate. Consider a "Reyes Circle" invite-only dinner to leverage his network for new member acquisition.' },
+    { icon: '&#128176;', title: 'Revenue Concentration Risk', body: 'Top 3 spenders (Sebastian, Marco, James) represent <strong>49% of total YTD spend</strong>. Diversify by increasing Gold-tier engagement — avg Gold member visits 20x vs. Founding 56x. Close that gap.' }
+];
+
+/* ================================================================
+   STATE & HELPERS
+   ================================================================ */
+let selectedMember = MEMBERS[0];
+let currentNav = 'dossier';
+let currentCenterTab = 'overview';
+let currentRPTab = 'alerts';
+
+const MONTHS = ['Dec','Jan','Feb','Mar','Apr'];
+const today = new Date();
+
+function daysSince(dateStr) {
+    const d = new Date(dateStr);
+    return Math.floor((today - d) / 86400000);
+}
+
+function formatCurrency(n) {
+    return '$' + n.toLocaleString();
+}
+
+function tierClass(tier) {
+    return 'tier-' + tier.toLowerCase();
+}
+
+/* ================================================================
+   RENDER: Sidebar member list
+   ================================================================ */
+function renderMemberList(filter = '') {
+    const list = document.getElementById('memberList');
+    const filtered = MEMBERS.filter(m =>
+        m.name.toLowerCase().includes(filter.toLowerCase()) ||
+        m.role.toLowerCase().includes(filter.toLowerCase()) ||
+        m.companies.some(c => c.name.toLowerCase().includes(filter.toLowerCase()))
+    );
+    document.getElementById('memberCount').textContent = filtered.length;
+
+    list.innerHTML = filtered.map(m => {
+        const isActive = m.id === selectedMember.id;
+        const daysAgo = daysSince(m.lastVisit);
+        /* WHY: Show online dot for members who visited today or yesterday
+           to simulate check-in status */
+        const isHere = daysAgo <= 1;
+        return `<div class="ml-item${isActive ? ' active' : ''}" onclick="selectMember(${m.id})">
+            <div class="ml-avatar">
+                ${getPortrait(m.id)}
+                ${isHere ? '<div class="online-dot"></div>' : ''}
+            </div>
+            <div class="ml-info">
+                <div class="ml-name">${m.name}</div>
+                <div class="ml-role">${m.role}</div>
+            </div>
+            <div class="ml-tier ${tierClass(m.tier)}">${m.tier}</div>
+        </div>`;
+    }).join('');
+}
+
+function filterMembers(val) { renderMemberList(val); }
+function selectMember(id) {
+    selectedMember = MEMBERS.find(m => m.id === id);
+    currentNav = 'dossier';
+    document.querySelectorAll('.sb-nav li').forEach((li,i) => li.classList.toggle('active', i === 0));
+    renderMemberList(document.getElementById('memberSearch').value);
+    renderCenter();
+}
+
+/* ================================================================
+   RENDER: Center panel — Member Dossier
+   ================================================================ */
+function renderCenter() {
+    const body = document.getElementById('centerBody');
+    if (currentNav === 'arrivals') { renderArrivals(body); return; }
+    if (currentNav === 'ask') { renderAskAI(body); return; }
+
+    const m = selectedMember;
+    const daysAgo = daysSince(m.lastVisit);
+    const isHere = daysAgo <= 1;
+    const maxSpend = Math.max(...m.spendTrend);
+
+    /* AI-generated briefing based on member data */
+    const briefing = generateBriefing(m, daysAgo, isHere);
+
+    /* Conversation starters based on interests & context */
+    const starters = generateStarters(m);
+
+    body.innerHTML = `
+        ${isHere ? `<div class="arrival-banner">
+            <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0">${getPortrait(m.id)}</div>
+            <div class="arrival-text"><strong>${m.name} is here now.</strong> Checked in ${daysAgo === 0 ? 'today' : 'yesterday'}. Visit #${m.visits + 1}. Preferred drink: <strong>${m.favDrink.split(',')[0]}</strong>.</div>
+        </div>` : ''}
+
+        <div class="dossier-header">
+            <div class="dossier-avatar">
+                ${getPortrait(m.id)}
+                <div class="tier-badge ${tierClass(m.tier)}">${m.tier}</div>
+            </div>
+            <div class="dossier-meta">
+                <div class="dossier-name">${m.name}</div>
+                <div class="dossier-role">${m.role}</div>
+                <div class="dossier-chips">
+                    <div class="dossier-chip ${isHere ? 'highlight' : ''}">${isHere ? '&#128994; Here Now' : daysAgo + 'd ago'}</div>
+                    <div class="dossier-chip">${m.visits} visits</div>
+                    <div class="dossier-chip">${formatCurrency(m.avgCheck)} avg</div>
+                    <div class="dossier-chip">${m.marital}${m.kids === 'Yes' ? ' + Kids' : ''}</div>
+                    <div class="dossier-chip">${m.yearsInMiami}yr in Miami</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-briefing">
+            <div class="ai-briefing-header">
+                <span class="ai-icon">&#10024;</span>
+                <span class="label">AI Staff Briefing</span>
+            </div>
+            <p>${briefing}</p>
+        </div>
+
+        ${currentCenterTab === 'overview' ? `
+        <div class="stat-grid">
+            <div class="stat-card"><div class="stat-label">YTD Spend</div><div class="stat-value accent">${formatCurrency(m.ytdSpend)}</div><div class="stat-sub">${formatCurrency(m.monthlyAvg)}/mo avg</div></div>
+            <div class="stat-card"><div class="stat-label">Avg Check</div><div class="stat-value">${formatCurrency(m.avgCheck)}</div><div class="stat-sub">Club avg: $778</div></div>
+            <div class="stat-card"><div class="stat-label">Total Visits</div><div class="stat-value green">${m.visits}</div><div class="stat-sub">${m.eventsAttended} events</div></div>
+            <div class="stat-card"><div class="stat-label">Referrals</div><div class="stat-value">${m.referrals}</div><div class="stat-sub">${m.referrals > 3 ? 'Top referrer' : m.referrals > 0 ? 'Active' : 'None yet'}</div></div>
+        </div>
+
+        <div class="section-title">Monthly Spend Trend</div>
+        <div class="spend-chart">
+            ${m.spendTrend.map((v,i) => `<div class="spend-bar" style="height:${(v/maxSpend)*100}%"><span class="bar-value">${formatCurrency(v)}</span><span class="bar-label">${MONTHS[i]}</span></div>`).join('')}
+        </div>
+        <div style="height:24px"></div>
+
+        <div class="section-title">Staff Notes</div>
+        <div class="conv-item" style="margin-bottom:24px">
+            <span class="conv-icon">&#128221;</span>
+            <span>${m.notes}</span>
+        </div>
+
+        <div class="section-title">Conversation Starters</div>
+        <div class="conv-starters">
+            ${starters.map(s => `<div class="conv-item"><span class="conv-icon">${s.icon}</span><span>${s.text}</span></div>`).join('')}
+        </div>
+        ` : ''}
+
+        ${currentCenterTab === 'preferences' ? `
+        <div class="section-title">Service Preferences</div>
+        <div class="pref-grid">
+            <div class="pref-card"><div class="pref-icon">&#127863;</div><div class="pref-label">Preferred Drinks</div><div class="pref-value">${m.favDrink}</div></div>
+            <div class="pref-card"><div class="pref-icon">&#127869;</div><div class="pref-label">Favorite Venue</div><div class="pref-value">${m.favVenue}</div></div>
+            <div class="pref-card"><div class="pref-icon">&#127858;</div><div class="pref-label">Dietary</div><div class="pref-value">${m.dietary || 'No restrictions'}</div></div>
+            <div class="pref-card"><div class="pref-icon">&#128101;</div><div class="pref-label">Status</div><div class="pref-value">${m.marital}${m.kids === 'Yes' ? ', has kids' : m.kids === 'Planning' ? ', planning family' : ''}</div></div>
+            <div class="pref-card"><div class="pref-icon">&#127942;</div><div class="pref-label">Event Priority</div><div class="pref-value" style="font-size:0.75rem">${m.eventPriority}</div></div>
+            <div class="pref-card"><div class="pref-icon">&#128161;</div><div class="pref-label">Would Lead</div><div class="pref-value" style="font-size:0.75rem">${m.wouldLead || 'Not specified'}</div></div>
+        </div>
+
+        <div class="section-title">Interests (${m.interests.length})</div>
+        <div class="interest-tags">
+            ${m.interests.map((int,i) => `<span class="interest-tag${i < 5 ? ' top' : ''}">${int}</span>`).join('')}
+        </div>
+
+        <div class="section-title">Club Memberships</div>
+        ${m.clubs.length ? m.clubs.map(c => `<div class="conv-item"><span class="conv-icon">&#127970;</span><span>${c}</span></div>`).join('') : '<div class="conv-item"><span class="conv-icon">&#8212;</span><span style="color:var(--muted)">No other club memberships listed</span></div>'}
+        ` : ''}
+
+        ${currentCenterTab === 'history' ? `
+        <div class="section-title">Visit & Spend History</div>
+        <div class="stat-grid">
+            <div class="stat-card"><div class="stat-label">Member Since</div><div class="stat-value" style="font-size:1rem">${m.joinDate}</div><div class="stat-sub">${m.tier} tier</div></div>
+            <div class="stat-card"><div class="stat-label">Last Visit</div><div class="stat-value" style="font-size:1rem">${m.lastVisit}</div><div class="stat-sub">${daysAgo}d ago</div></div>
+            <div class="stat-card"><div class="stat-label">Events Attended</div><div class="stat-value">${m.eventsAttended}</div><div class="stat-sub">of ~25 total</div></div>
+            <div class="stat-card"><div class="stat-label">Visit Frequency</div><div class="stat-value" style="font-size:1rem">${(m.visits / Math.max(1, Math.round((today - new Date(m.joinDate)) / (7*86400000)))).toFixed(1)}/wk</div><div class="stat-sub">${m.visits} total</div></div>
+        </div>
+
+        <div class="section-title">Monthly Spend Trend</div>
+        <div class="spend-chart">
+            ${m.spendTrend.map((v,i) => `<div class="spend-bar" style="height:${(v/maxSpend)*100}%"><span class="bar-value">${formatCurrency(v)}</span><span class="bar-label">${MONTHS[i]}</span></div>`).join('')}
+        </div>
+        <div style="height:24px"></div>
+
+        <div class="section-title">Why They Joined</div>
+        <div class="conv-item" style="margin-bottom:16px"><span class="conv-icon">&#128172;</span><span>"${m.whyJoin}"</span></div>
+
+        ${m.growthIdea ? `<div class="section-title">Growth Philosophy</div>
+        <div class="conv-item"><span class="conv-icon">&#128161;</span><span>"${m.growthIdea}"</span></div>` : ''}
+        ` : ''}
+
+        ${currentCenterTab === 'connections' ? `
+        <div class="section-title">Companies & Ventures</div>
+        <div class="company-list">
+            ${m.companies.map(c => `<div class="company-item">
+                <div class="co-icon">${c.name.charAt(0)}</div>
+                <div><div class="co-name">${c.name}</div><div class="co-industry">${c.industry}</div></div>
+            </div>`).join('')}
+        </div>
+
+        <div class="section-title">Best Dinner Pairings</div>
+        ${getBestPairings(m).map(p => `<div class="conv-item">
+            <span class="conv-icon">&#129309;</span>
+            <span><strong>${p.name}</strong> — ${p.shared} shared interests: ${p.interests.slice(0,5).join(', ')}${p.interests.length > 5 ? '...' : ''}</span>
+        </div>`).join('')}
+
+        <div class="section-title">Referral Network</div>
+        <div class="conv-item">
+            <span class="conv-icon">&#128101;</span>
+            <span>${m.referrals > 0 ? `${m.name} has referred <strong>${m.referrals} member${m.referrals > 1 ? 's' : ''}</strong>. ${m.referrals >= 5 ? 'Top referrer in the club — consider referral recognition program.' : 'Encourage additional referrals with exclusive event access.'}` : `No referrals yet. ${m.name} joined for "${m.whyJoin}" — aligned outreach could activate referral behavior.`}</span>
+        </div>
+        ` : ''}
+    `;
+}
+
+/* ================================================================
+   AI BRIEFING GENERATOR
+   WHY: This is the core value prop — turning raw data into
+   actionable intelligence for frontline staff. Every briefing
+   is personalized based on the member's data.
+   ================================================================ */
+function generateBriefing(m, daysAgo, isHere) {
+    let parts = [];
+
+    if (isHere) {
+        parts.push(`<span class="highlight-text">${m.name} is in the building.</span> This is visit #${m.visits + 1}.`);
+        parts.push(`Standard opening: <span class="highlight-text">${m.favDrink.split(',')[0]}</span> at <span class="highlight-text">${m.favVenue}</span>.`);
+    } else if (daysAgo > 7) {
+        parts.push(`<span class="highlight-text">It's been ${daysAgo} days</span> since ${m.name}'s last visit (avg interval: ${Math.round(120 / m.visits)} days).`);
+        parts.push(`Consider a personal outreach — ${m.eventPriority.toLowerCase().includes('padel') ? 'a padel invite' : m.eventPriority.toLowerCase().includes('poker') ? 'a poker night invite' : 'a personalized event invite'} would resonate.`);
+    } else {
+        parts.push(`${m.name} visited ${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago. ${m.tier} member since ${m.joinDate.slice(0,7)}.`);
+    }
+
+    if (m.avgCheck > 800) {
+        parts.push(`High-value guest — <span class="highlight-text">${formatCurrency(m.avgCheck)} avg check</span> (club avg: $778).`);
+    }
+
+    if (m.dietary && m.dietary !== 'None') {
+        parts.push(`Dietary note: <span class="highlight-text">${m.dietary}</span>.`);
+    }
+
+    if (m.kids === 'Yes') {
+        parts.push(`Family man — has kids. Saturday dinners often include his wife.`);
+    }
+
+    if (m.referrals >= 5) {
+        parts.push(`Top referrer (${m.referrals} referrals) — high-value relationship, treat accordingly.`);
+    }
+
+    return parts.join(' ');
+}
+
+function generateStarters(m) {
+    const starters = [];
+    if (m.interests.includes('Crypto') || m.interests.includes('AI'))
+        starters.push({ icon: '&#128187;', text: `${m.name} is into ${m.interests.includes('AI') ? 'AI' : ''}${m.interests.includes('AI') && m.interests.includes('Crypto') ? ' and ' : ''}${m.interests.includes('Crypto') ? 'crypto' : ''} — ask about recent developments or investments.` });
+    if (m.interests.includes('Wine Tasting'))
+        starters.push({ icon: '&#127863;', text: `Wine enthusiast — mention the new ${m.favDrink.includes('Barolo') ? 'Barolo' : m.favDrink.includes('Brunello') ? 'Brunello' : m.favDrink.includes('Burgundy') ? 'Burgundy' : 'wine'} selection or upcoming tasting events.` });
+    if (m.interests.includes('Boating') || m.interests.includes('Yachting'))
+        starters.push({ icon: '&#9973;', text: `Boating/yachting interest — ask about recent trips or if they're heading out this weekend.` });
+    if (m.interests.includes('Padel'))
+        starters.push({ icon: '&#127934;', text: `Padel player — mention tomorrow's tournament or available court times.` });
+    if (m.interests.includes('Art'))
+        starters.push({ icon: '&#127912;', text: `Art collector — mention the latest Design District gallery openings or Art Basel plans.` });
+    if (m.interests.includes('Real Estate'))
+        starters.push({ icon: '&#127968;', text: `Real estate interest — ask about any new developments or investment opportunities they're tracking.` });
+    if (m.notes.includes('vintage car'))
+        starters.push({ icon: '&#128663;', text: `Ask about the vintage car collection — always a strong opener.` });
+    if (m.notes.includes('Spearfishing'))
+        starters.push({ icon: '&#127907;', text: `Spearfishing enthusiast — ask about recent dives or upcoming trips.` });
+    return starters.slice(0, 4);
+}
+
+function getBestPairings(m) {
+    return MEMBERS
+        .filter(other => other.id !== m.id)
+        .map(other => {
+            const shared = m.interests.filter(i => other.interests.includes(i));
+            return { name: other.name, shared: shared.length, interests: shared };
+        })
+        .sort((a, b) => b.shared - a.shared)
+        .slice(0, 4);
+}
+
+/* ================================================================
+   RENDER: Arrivals view
+   ================================================================ */
+function renderArrivals(body) {
+    const arrivals = MEMBERS.filter(m => daysSince(m.lastVisit) <= 1);
+    body.innerHTML = `
+        <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-bottom:8px">Today's Arrivals</h2>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:24px">${arrivals.length} member${arrivals.length !== 1 ? 's' : ''} checked in today</p>
+        ${arrivals.map(m => `
+            <div class="ai-briefing" style="cursor:pointer;margin-bottom:16px" onclick="selectMember(${m.id})">
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+                    <div class="ml-avatar" style="width:48px;height:48px">${getPortrait(m.id)}<div class="online-dot"></div></div>
+                    <div>
+                        <div style="font-size:1.1rem;font-weight:700;font-family:'Playfair Display',serif">${m.name}</div>
+                        <div style="font-size:0.75rem;color:var(--muted)">${m.role} &middot; ${m.tier}</div>
+                    </div>
+                    <div style="margin-left:auto;text-align:right">
+                        <div style="font-size:1.1rem;font-weight:700;color:var(--accent-light)">${formatCurrency(m.avgCheck)}</div>
+                        <div style="font-size:0.65rem;color:var(--muted)">avg check</div>
+                    </div>
+                </div>
+                <div class="pref-grid" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+                    <div class="pref-card" style="padding:10px 12px"><div class="pref-label">Drink</div><div class="pref-value" style="font-size:0.75rem">${m.favDrink.split(',')[0]}</div></div>
+                    <div class="pref-card" style="padding:10px 12px"><div class="pref-label">Venue</div><div class="pref-value" style="font-size:0.75rem">${m.favVenue}</div></div>
+                    <div class="pref-card" style="padding:10px 12px"><div class="pref-label">Visit #</div><div class="pref-value" style="font-size:0.75rem">${m.visits + 1}</div></div>
+                </div>
+                <p style="font-size:0.8rem;line-height:1.6;color:var(--muted)">${m.notes}</p>
+            </div>
+        `).join('')}
+        ${arrivals.length === 0 ? '<div style="text-align:center;padding:60px 0;color:var(--muted)"><div style="font-size:2rem;margin-bottom:12px">&#128564;</div><p>No check-ins yet today. Feed updates in real-time.</p></div>' : ''}
+    `;
+}
+
+/* ================================================================
+   RENDER: Full-screen AI Ask
+   ================================================================ */
+function renderAskAI(body) {
+    body.innerHTML = `
+        <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-bottom:8px">Ask the Intelligence Platform</h2>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:24px">Query your entire member database using natural language</p>
+        <div class="ai-ask-input-wrap">
+            <textarea class="ai-ask-input" id="mainAskInput" placeholder="Ask anything about your members..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();processMainQuery()}"></textarea>
+            <button class="ai-ask-btn" onclick="processMainQuery()">Ask &#10024;</button>
+        </div>
+        <div id="mainAskResponse" class="ai-response">
+            <p style="color:var(--muted);margin-bottom:12px">Try asking:</p>
+            <div class="example-queries">
+                <div class="eq-item" onclick="askExample(this.textContent)">Who are the top 3 spenders this year?</div>
+                <div class="eq-item" onclick="askExample(this.textContent)">Which members share wine and cigar interests?</div>
+                <div class="eq-item" onclick="askExample(this.textContent)">Who hasn't visited in over a week?</div>
+                <div class="eq-item" onclick="askExample(this.textContent)">Best dinner pairing for Sebastian Cole?</div>
+                <div class="eq-item" onclick="askExample(this.textContent)">Who would lead a poker night?</div>
+                <div class="eq-item" onclick="askExample(this.textContent)">Show me all founding members</div>
+                <div class="eq-item" onclick="askExample(this.textContent)">Which members are in finance?</div>
+                <div class="eq-item" onclick="askExample(this.textContent)">Who has the most referrals?</div>
+            </div>
+        </div>
+    `;
+}
+
+function askExample(text) {
+    document.getElementById('mainAskInput').value = text;
+    processMainQuery();
+}
+
+/* ================================================================
+   NLP QUERY ENGINE
+   WHY: Demonstrates the core intelligence capability — staff can
+   ask natural language questions and get instant, actionable answers
+   from the member database.
+   ================================================================ */
+function processMainQuery() {
+    const input = document.getElementById('mainAskInput');
+    const q = input.value.trim().toLowerCase();
+    if (!q) return;
+    const resp = document.getElementById('mainAskResponse');
+
+    /* Member lookup by name */
+    const nameLookup = MEMBERS.find(m => q.includes(m.name.toLowerCase()) || q.includes(m.name.split(' ')[0].toLowerCase()));
+    if (nameLookup && (q.includes('about') || q.includes('tell') || q.includes('who is') || q.includes('profile'))) {
+        resp.innerHTML = `<strong>${nameLookup.name}</strong> — ${nameLookup.tier} member<br><br>
+            <strong>Role:</strong> ${nameLookup.role}<br>
+            <strong>YTD Spend:</strong> ${formatCurrency(nameLookup.ytdSpend)} (${formatCurrency(nameLookup.avgCheck)} avg check)<br>
+            <strong>Visits:</strong> ${nameLookup.visits} | Last: ${nameLookup.lastVisit}<br>
+            <strong>Preferred:</strong> ${nameLookup.favDrink} at ${nameLookup.favVenue}<br>
+            <strong>Interests:</strong> ${nameLookup.interests.slice(0,10).join(', ')}...<br><br>
+            <strong>Staff Notes:</strong> ${nameLookup.notes}`;
+        return;
+    }
+
+    /* Top spenders */
+    if (q.includes('top') && (q.includes('spend') || q.includes('spender'))) {
+        const sorted = [...MEMBERS].sort((a,b) => b.ytdSpend - a.ytdSpend).slice(0,5);
+        resp.innerHTML = '<strong>Top Spenders (YTD):</strong><br><br>' +
+            sorted.map((m,i) => `${i+1}. <strong>${m.name}</strong> — ${formatCurrency(m.ytdSpend)} (${formatCurrency(m.avgCheck)} avg check, ${m.visits} visits)`).join('<br>');
+        return;
+    }
+
+    /* Lapsed / hasn't visited */
+    if (q.includes('lapsed') || q.includes("hasn't visited") || q.includes('absent') || q.includes('inactive') || (q.includes('visit') && q.includes('week'))) {
+        const lapsed = MEMBERS.filter(m => daysSince(m.lastVisit) > 5).sort((a,b) => daysSince(b.lastVisit) - daysSince(a.lastVisit));
+        resp.innerHTML = '<strong>Members with 5+ days since last visit:</strong><br><br>' +
+            lapsed.map(m => `&#9888; <strong>${m.name}</strong> — ${daysSince(m.lastVisit)} days ago (last: ${m.lastVisit}). Avg interval: ${Math.round(120/m.visits)}d`).join('<br>');
+        return;
+    }
+
+    /* Dinner pairing */
+    if (nameLookup && (q.includes('pairing') || q.includes('pair') || q.includes('dinner') || q.includes('seat') || q.includes('introduce'))) {
+        const pairings = getBestPairings(nameLookup);
+        resp.innerHTML = `<strong>Best dinner pairings for ${nameLookup.name}:</strong><br><br>` +
+            pairings.map((p,i) => `${i+1}. <strong>${p.name}</strong> — ${p.shared} shared interests: ${p.interests.slice(0,6).join(', ')}`).join('<br>');
+        return;
+    }
+
+    /* Interest-based queries */
+    const interestTerms = ['wine','cigar','poker','padel','golf','hunting','fishing','boat','yacht','art','crypto','ai','real estate','fitness','kite','surf','ski','travel','watch'];
+    const matchedInterest = interestTerms.find(t => q.includes(t));
+    if (matchedInterest) {
+        const interestMap = { wine: 'Wine Tasting', cigar: 'Cigars', poker: 'Poker', padel: 'Padel', golf: 'Golf', hunting: 'Hunting', fishing: 'Fishing', boat: 'Boating', yacht: 'Yachting', art: 'Art', crypto: 'Crypto', ai: 'AI', 'real estate': 'Real Estate', fitness: 'Fitness', kite: 'Kite Boarding', surf: 'Surfing', ski: 'Snow Skiing', travel: 'Travel', watch: 'Watches' };
+        const interest = interestMap[matchedInterest] || matchedInterest;
+        const matches = MEMBERS.filter(m => m.interests.some(i => i.toLowerCase().includes(matchedInterest)));
+        resp.innerHTML = `<strong>${matches.length} members interested in ${interest}:</strong><br><br>` +
+            matches.map(m => `&#8226; <strong>${m.name}</strong> (${m.tier}) — ${m.visits} visits, ${formatCurrency(m.avgCheck)} avg`).join('<br>');
+        return;
+    }
+
+    /* Tier queries */
+    if (q.includes('founding') || q.includes('platinum') || q.includes('gold')) {
+        const tier = q.includes('founding') ? 'Founding' : q.includes('platinum') ? 'Platinum' : 'Gold';
+        const matches = MEMBERS.filter(m => m.tier === tier);
+        resp.innerHTML = `<strong>${tier} Members (${matches.length}):</strong><br><br>` +
+            matches.map(m => `&#8226; <strong>${m.name}</strong> — ${m.role}<br>&nbsp;&nbsp;${formatCurrency(m.ytdSpend)} YTD, ${m.visits} visits, ${m.referrals} referrals`).join('<br><br>');
+        return;
+    }
+
+    /* Finance / sector queries */
+    if (q.includes('finance') || q.includes('banker') || q.includes('banking') || q.includes('investor')) {
+        const matches = MEMBERS.filter(m => m.sector === 'finance' || m.companies.some(c => c.industry.toLowerCase().includes('finance') || c.industry.toLowerCase().includes('banking') || c.industry.toLowerCase().includes('equity') || c.industry.toLowerCase().includes('invest')));
+        resp.innerHTML = `<strong>Members in Finance/Investment (${matches.length}):</strong><br><br>` +
+            matches.map(m => `&#8226; <strong>${m.name}</strong> — ${m.role}<br>&nbsp;&nbsp;${m.companies.map(c => c.name + ' (' + c.industry + ')').join(', ')}`).join('<br><br>');
+        return;
+    }
+
+    /* Referrals */
+    if (q.includes('referral')) {
+        const sorted = [...MEMBERS].sort((a,b) => b.referrals - a.referrals);
+        resp.innerHTML = '<strong>Referral Leaderboard:</strong><br><br>' +
+            sorted.map((m,i) => `${i+1}. <strong>${m.name}</strong> — ${m.referrals} referral${m.referrals !== 1 ? 's' : ''} (${m.tier})`).join('<br>');
+        return;
+    }
+
+    /* Lead / organize events */
+    if (q.includes('lead') || q.includes('organize') || q.includes('host')) {
+        const leaders = MEMBERS.filter(m => m.wouldLead);
+        resp.innerHTML = '<strong>Members willing to lead events:</strong><br><br>' +
+            leaders.map(m => `&#8226; <strong>${m.name}</strong> would lead: <em>${m.wouldLead}</em>`).join('<br>');
+        return;
+    }
+
+    /* Fallback */
+    resp.innerHTML = `<p>I searched the member database for "<strong>${input.value}</strong>" but couldn't find a specific match. Try asking about:</p>
+        <div class="example-queries" style="margin-top:12px">
+            <div class="eq-item" onclick="askExample(this.textContent)">Top spenders this year</div>
+            <div class="eq-item" onclick="askExample(this.textContent)">Members interested in [wine/poker/padel/art]</div>
+            <div class="eq-item" onclick="askExample(this.textContent)">Who hasn't visited in over a week?</div>
+            <div class="eq-item" onclick="askExample(this.textContent)">Best dinner pairing for [member name]</div>
+            <div class="eq-item" onclick="askExample(this.textContent)">Show me all founding members</div>
+        </div>`;
+}
+
+/* ================================================================
+   RENDER: Right panel
+   ================================================================ */
+function renderRightPanel() {
+    const content = document.getElementById('rpContent');
+
+    if (currentRPTab === 'alerts') {
+        content.innerHTML = ALERTS.map(a => `
+            <div class="alert-card">
+                <div class="alert-top">
+                    <span class="alert-icon">${a.icon}</span>
+                    <span class="alert-type ${a.type}">${a.type}</span>
+                    <span class="alert-time">${a.time}</span>
+                </div>
+                <div class="alert-body">${a.body}</div>
+                ${a.action ? `<div class="alert-action">${a.action}</div>` : ''}
+            </div>
+        `).join('');
+        return;
+    }
+
+    if (currentRPTab === 'insights') {
+        content.innerHTML = INSIGHTS.map(ins => `
+            <div class="alert-card">
+                <div class="alert-top">
+                    <span class="alert-icon">${ins.icon}</span>
+                    <span style="font-size:0.8rem;font-weight:600">${ins.title}</span>
+                </div>
+                <div class="alert-body">${ins.body}</div>
+            </div>
+        `).join('');
+        return;
+    }
+
+    if (currentRPTab === 'ask-ai') {
+        content.innerHTML = `
+            <div class="ai-ask-wrap">
+                <div class="ai-ask-input-wrap">
+                    <textarea class="ai-ask-input" id="rpAskInput" placeholder="Quick question..." style="height:60px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();processRPQuery()}"></textarea>
+                    <button class="ai-ask-btn" onclick="processRPQuery()">&#10024;</button>
+                </div>
+                <div id="rpAskResponse" class="ai-response" style="font-size:0.75rem">
+                    <p style="color:var(--muted)">Ask about any member, trend, or recommendation.</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+}
+
+function processRPQuery() {
+    const input = document.getElementById('rpAskInput');
+    /* WHY: Reuse the main query engine — same capability in the sidebar */
+    document.getElementById('mainAskInput')?.remove();
+    const tempInput = document.createElement('input');
+    tempInput.id = 'mainAskInput';
+    tempInput.value = input.value;
+    document.body.appendChild(tempInput);
+
+    const q = input.value.trim().toLowerCase();
+    const resp = document.getElementById('rpAskResponse');
+
+    /* Quick inline version of query engine */
+    const nameLookup = MEMBERS.find(m => q.includes(m.name.toLowerCase()) || q.includes(m.name.split(' ')[0].toLowerCase()));
+    if (nameLookup) {
+        resp.innerHTML = `<strong>${nameLookup.name}</strong> — ${nameLookup.tier}<br>${nameLookup.role}<br>Drink: ${nameLookup.favDrink}<br>Avg: ${formatCurrency(nameLookup.avgCheck)}<br><em>${nameLookup.notes}</em>`;
+    } else if (q.includes('top') && q.includes('spend')) {
+        const sorted = [...MEMBERS].sort((a,b) => b.ytdSpend - a.ytdSpend).slice(0,3);
+        resp.innerHTML = sorted.map((m,i) => `${i+1}. <strong>${m.name}</strong> ${formatCurrency(m.ytdSpend)}`).join('<br>');
+    } else {
+        resp.innerHTML = '<p style="color:var(--muted)">Try: member name, "top spenders", or an interest like "wine" or "poker"</p>';
+    }
+
+    tempInput.remove();
+}
+
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+function switchNav(el, view) {
+    document.querySelectorAll('.sb-nav li').forEach(li => li.classList.remove('active'));
+    el.classList.add('active');
+    currentNav = view;
+    renderCenter();
+}
+
+function switchCenterTab(el, tab) {
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    currentCenterTab = tab;
+    renderCenter();
+}
+
+function switchRPTab(el, tab) {
+    document.querySelectorAll('.rp-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    currentRPTab = tab;
+    renderRightPanel();
+}
+
+/* ================================================================
+   CLOCK
+   ================================================================ */
+function updateClock() {
+    const now = new Date();
+    document.getElementById('liveTime').textContent =
+        now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) +
+        ' ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+renderMemberList();
+renderCenter();
+renderRightPanel();
+updateClock();
+setInterval(updateClock, 30000); // WHY: 30s is sufficient for a clock display — no need for 1s updates
+</script>
+</body>
+</html>

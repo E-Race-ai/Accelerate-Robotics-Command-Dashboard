@@ -265,4 +265,38 @@ function makeAuthToken(overrides = {}) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
 }
 
-module.exports = { createTestDb, makeAuthToken, JWT_SECRET };
+/**
+ * Wraps a better-sqlite3 instance in the async { one, all, run, transaction } API that
+ * production code in src/ now expects (libsql-style). Lets us keep in-memory SQLite
+ * for tests while the app talks to Turso in prod.
+ */
+function wrapAsLibsqlHelper(db) {
+  return {
+    one: async (sql, args = []) => db.prepare(sql).get(...args) || null,
+    all: async (sql, args = []) => db.prepare(sql).all(...args),
+    run: async (sql, args = []) => {
+      const r = db.prepare(sql).run(...args);
+      return { changes: r.changes, lastInsertRowid: Number(r.lastInsertRowid ?? 0) };
+    },
+    transaction: async (fn) => {
+      const txFn = db.transaction((innerFn) => innerFn());
+      let result;
+      txFn(() => {
+        // WHY: the libsql-style tx passed to fn must expose the same async helpers.
+        // better-sqlite3's transaction runs sync — we await at the boundary.
+        const tx = {
+          one: (sql, args = []) => Promise.resolve(db.prepare(sql).get(...args) || null),
+          all: (sql, args = []) => Promise.resolve(db.prepare(sql).all(...args)),
+          run: (sql, args = []) => {
+            const r = db.prepare(sql).run(...args);
+            return Promise.resolve({ changes: r.changes, lastInsertRowid: Number(r.lastInsertRowid ?? 0) });
+          },
+        };
+        result = fn(tx);
+      });
+      return result;
+    },
+  };
+}
+
+module.exports = { createTestDb, makeAuthToken, JWT_SECRET, wrapAsLibsqlHelper };
