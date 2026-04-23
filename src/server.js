@@ -21,6 +21,8 @@ const assessmentPdfRoutes = require('./routes/assessment-pdf');
 const narrateRoutes = require('./routes/narrate');
 const marketRoutes = require('./routes/markets');
 const prospectRoutes = require('./routes/prospects');
+const userRoutes = require('./routes/users');
+const roleRoutes = require('./routes/roles');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -144,6 +146,8 @@ app.use('/api/assessments/:id/pdf', assessmentPdfRoutes);
 app.use('/api/narrate', narrateLimiter, narrateRoutes);
 app.use('/api/markets', marketRoutes);
 app.use('/api/prospects', prospectRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
 // WHY: /admin is the master command center — unified dashboard for all tools
@@ -163,6 +167,12 @@ app.get('/admin/deals', (req, res) => {
 // WHY: Placeholder for deal detail page — route registered so links work even before the page file exists
 app.get('/admin/deals/:id', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-deal-detail.html'));
+});
+app.get('/admin/settings', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-settings.html'));
+});
+app.get('/accept-invite', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'accept-invite.html'));
 });
 
 // ── Start ───────────────────────────────────────────────────────
