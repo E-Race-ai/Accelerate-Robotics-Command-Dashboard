@@ -413,23 +413,23 @@ seedAdmin();
 // ── Seed role permissions ───────────────────────────────────────
 // WHY: Pre-populate default permissions so every role has a known baseline.
 // Admins can customize later; this avoids a blank permissions table on first boot.
+// Also backfills new modules into existing databases that were seeded before the module list grew.
 function seedRolePermissions() {
-  const count = db.prepare('SELECT COUNT(*) as c FROM role_permissions').get().c;
-  if (count > 0) return;
-  const modules = ['deals', 'prospects', 'assessments', 'fleet', 'investors', 'inquiries', 'settings'];
+  const { ALL_MODULES } = require('../services/permissions');
   const defaults = {
-    admin: { deals: 'edit', prospects: 'edit', assessments: 'edit', fleet: 'edit', investors: 'edit', inquiries: 'edit', settings: 'edit' },
-    module_owner: { deals: 'view', prospects: 'view', assessments: 'view', fleet: 'view', investors: 'view', inquiries: 'view', settings: 'none' },
-    viewer: { deals: 'view', prospects: 'view', assessments: 'view', fleet: 'view', investors: 'view', inquiries: 'view', settings: 'none' },
+    // WHY: admin gets full edit on everything; module_owner/viewer get view on toolkit pages, none on settings
+    admin: Object.fromEntries(ALL_MODULES.map(m => [m, 'edit'])),
+    module_owner: Object.fromEntries(ALL_MODULES.map(m => [m, m === 'settings' ? 'none' : 'view'])),
+    viewer: Object.fromEntries(ALL_MODULES.map(m => [m, m === 'settings' ? 'none' : 'view'])),
   };
-  const insert = db.prepare('INSERT INTO role_permissions (role, module, permission) VALUES (?, ?, ?)');
+  // WHY: Use INSERT OR IGNORE so new modules get seeded without overwriting admin-customized values
+  const insert = db.prepare('INSERT OR IGNORE INTO role_permissions (role, module, permission) VALUES (?, ?, ?)');
   const seed = db.transaction(() => {
     for (const [role, perms] of Object.entries(defaults)) {
-      for (const mod of modules) { insert.run(role, mod, perms[mod]); }
+      for (const mod of ALL_MODULES) { insert.run(role, mod, perms[mod]); }
     }
   });
   seed();
-  console.log('[db] Seeded default role permissions');
 }
 
 seedRolePermissions();

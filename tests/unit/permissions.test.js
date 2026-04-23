@@ -57,6 +57,6 @@ describe('Permission Resolution', () => {
     const perms = getAllPermissions(db, { role: 'viewer', id: 99 });
     expect(perms.deals).toBe('view');
     expect(perms.settings).toBe('none');
-    expect(Object.keys(perms)).toHaveLength(7);
+    expect(Object.keys(perms)).toHaveLength(15);
   });
 });

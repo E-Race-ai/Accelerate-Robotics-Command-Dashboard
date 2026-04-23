@@ -214,13 +214,8 @@
         </div>
         <div id="moduleCheckboxes" class="hidden">
           <label class="block text-sm font-medium text-gray-700 mb-2">Module Access (edit)</label>
-          <div class="grid grid-cols-2 gap-2">
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="deals"> Deals</label>
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="prospects"> Prospects</label>
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="assessments"> Assessments</label>
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="fleet"> Fleet</label>
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="investors"> Investors</label>
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="inquiries"> Inquiries</label>
+          <div class="grid grid-cols-2 gap-2" id="moduleCheckboxGrid">
+            <!-- WHY: Populated from MODULES array so it stays in sync with the permission system -->
           </div>
         </div>
         <p id="inviteError" class="text-red-600 text-sm font-medium hidden"></p>
@@ -234,10 +229,20 @@
 
   <script src="/js/admin-auth.js"></script>
   <script>
-const MODULES = ['deals', 'prospects', 'assessments', 'fleet', 'investors', 'inquiries', 'settings'];
+const MODULES = [
+  'deals', 'prospects', 'assessments', 'robot_command', 'robot_catalog',
+  'investors', 'national_rollout', 'financial_analysis', 'robots_dossier',
+  'service_van', 'elevator_sim', 'elevator_install', 'elevator_bom',
+  'inquiries', 'settings',
+];
 const MODULE_LABELS = {
-  deals: 'Deals', prospects: 'Prospects', assessments: 'Assessments',
-  fleet: 'Fleet', investors: 'Investors', inquiries: 'Inquiries', settings: 'Settings'
+  deals: 'Deal Pipeline', prospects: 'Prospects', assessments: 'Assessments',
+  robot_command: 'Robot Command', robot_catalog: 'Robot Catalog',
+  investors: 'Investor CRM', national_rollout: 'National Rollout',
+  financial_analysis: 'Financial Analysis', robots_dossier: 'Robots Dossier',
+  service_van: 'Service Van', elevator_sim: 'Elevator Sim',
+  elevator_install: 'Elevator Install', elevator_bom: 'Elevator BOM',
+  inquiries: 'Inquiries', settings: 'Settings',
 };
 const ROLE_LABELS = {
   super_admin: 'Super Admin', admin: 'Admin', module_owner: 'Module Owner', viewer: 'Viewer'
@@ -245,6 +250,12 @@ const ROLE_LABELS = {
 const EDITABLE_ROLES = ['admin', 'module_owner', 'viewer'];
 
 let currentUser = null;
+
+// WHY: Populate module checkboxes from the MODULES array so they stay in sync
+const checkboxGrid = document.getElementById('moduleCheckboxGrid');
+MODULES.filter(m => m !== 'settings').forEach(m => {
+  checkboxGrid.innerHTML += `<label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="${m}"> ${MODULE_LABELS[m]}</label>`;
+});
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
