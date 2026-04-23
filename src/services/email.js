@@ -1,7 +1,17 @@
 const { Resend } = require('resend');
 const db = require('../db/database');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// WHY: The Resend SDK throws if RESEND_API_KEY is missing, which crashes the
+// server on boot during local development. Lazily construct the client so the
+// app still runs without email configured — callers just get a logged warning
+// and the send becomes a no-op.
+let _resend = null;
+function getResend() {
+  if (_resend) return _resend;
+  if (!process.env.RESEND_API_KEY) return null;
+  _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 const EMAIL_FROM = process.env.EMAIL_FROM || 'notifications@acceleraterobotics.ai';
 
 /**
@@ -17,6 +27,12 @@ async function notifyNewInquiry(inquiry) {
   }
 
   const to = recipients.map(r => r.email);
+
+  const resend = getResend();
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set — skipping inquiry notification');
+    return;
+  }
 
   try {
     await resend.emails.send({
@@ -62,7 +78,8 @@ function escapeHtml(str) {
  * Fails silently (logs) so the invite POST succeeds even if Resend is misconfigured.
  */
 async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
-  if (!process.env.RESEND_API_KEY) {
+  const resend = getResend();
+  if (!resend) {
     console.warn('[email] RESEND_API_KEY not set — skipping invite email');
     return;
   }

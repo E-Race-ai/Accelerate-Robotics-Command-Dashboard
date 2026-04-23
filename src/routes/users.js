@@ -8,6 +8,8 @@ const { sendInviteEmail } = require('../services/email');
 
 const router = express.Router();
 
+const { normalizePermissionInput, INVALID_PERMS, VALID_LEVELS } = require('../services/permissions-input');
+
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000; // 24h — generous but bounded so stale tokens can't accumulate
 const BCRYPT_ROUNDS = 12;
 
@@ -26,7 +28,8 @@ router.get('/', async (req, res) => {
 
 // ── Invite user ────────────────────────────────────────────────
 router.post('/invite', async (req, res) => {
-  const { email, name, role, modulePermissions } = req.body || {};
+  const { email, name, role } = req.body || {};
+  const overrides = normalizePermissionInput(req.body);
 
   if (!email || !role) {
     return res.status(400).json({ error: 'email and role are required' });
@@ -37,6 +40,9 @@ router.post('/invite', async (req, res) => {
   const VALID_ROLES = ['admin', 'module_owner', 'viewer'];
   if (!VALID_ROLES.includes(role)) {
     return res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` });
+  }
+  if (overrides === INVALID_PERMS) {
+    return res.status(400).json({ error: 'Invalid modulePermissions payload' });
   }
 
   // WHY: Super admin is protected — cannot be invited, only bootstrapped via env var
@@ -67,17 +73,14 @@ router.post('/invite', async (req, res) => {
 
     const userRow = await db.one('SELECT id FROM admin_users WHERE email = ?', [email]);
 
-    // Apply module permission overrides if provided (for module_owner roles)
-    if (modulePermissions && typeof modulePermissions === 'object') {
-      await db.run('DELETE FROM user_permissions WHERE user_id = ?', [userRow.id]);
-      for (const [mod, perm] of Object.entries(modulePermissions)) {
-        if (!ALL_MODULES.includes(mod)) continue;
-        if (!['edit', 'view', 'none'].includes(perm)) continue;
-        await db.run(
-          'INSERT INTO user_permissions (user_id, module, permission) VALUES (?, ?, ?)',
-          [userRow.id, mod, perm],
-        );
-      }
+    // Replace per-user overrides wholesale — a re-invite should start from the matrix
+    // the super admin picked in the modal, not whatever was saved on a previous invite.
+    await db.run('DELETE FROM user_permissions WHERE user_id = ?', [userRow.id]);
+    for (const [mod, perm] of Object.entries(overrides)) {
+      await db.run(
+        'INSERT INTO user_permissions (user_id, module, permission) VALUES (?, ?, ?)',
+        [userRow.id, mod, perm],
+      );
     }
 
     const origin = `${req.protocol}://${req.get('host')}`;
@@ -89,6 +92,43 @@ router.post('/invite', async (req, res) => {
   } catch (err) {
     console.error('[users] invite error:', err);
     res.status(500).json({ error: 'Failed to create invite' });
+  }
+});
+
+// ── Resend invite (regenerate token + email) ───────────────────
+router.post('/:id/resend-invite', async (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+  const target = await db.one(
+    'SELECT id, email, name, role, status FROM admin_users WHERE id = ?',
+    [userId],
+  );
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  if (target.status === 'active') {
+    return res.status(409).json({ error: 'User is already active' });
+  }
+  if (target.role === 'super_admin') {
+    return res.status(403).json({ error: 'Cannot re-invite a super_admin' });
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + INVITE_TTL_MS).toISOString();
+
+  try {
+    await db.run(
+      `UPDATE admin_users SET invite_token = ?, invite_expires_at = ?, status = 'invited', invited_by = ?
+       WHERE id = ?`,
+      [token, expiresAt, req.admin.id, userId],
+    );
+
+    const origin = `${req.protocol}://${req.get('host')}`;
+    const inviteUrl = `${origin}/accept-invite?token=${token}`;
+    sendInviteEmail({ to: target.email, name: target.name, inviterEmail: req.admin.email, role: target.role, inviteUrl })
+      .catch((err) => console.error('[users] resend-invite email failed:', err.message));
+
+    res.json({ ok: true, inviteUrl });
+  } catch (err) {
+    console.error('[users] resend-invite error:', err);
+    res.status(500).json({ error: 'Failed to resend invite' });
   }
 });
 
@@ -151,10 +191,18 @@ router.get('/:id/permissions', async (req, res) => {
 // ── Update user's module permission overrides ──────────────────
 router.put('/:id/permissions', async (req, res) => {
   const userId = parseInt(req.params.id, 10);
-  const { overrides } = req.body || {};
-  if (!overrides || typeof overrides !== 'object') {
+  const raw = req.body?.overrides;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return res.status(400).json({ error: 'overrides object required' });
   }
+  // Filter down to valid pairs — same rules as the invite path.
+  const overrides = {};
+  for (const [mod, perm] of Object.entries(raw)) {
+    if (!ALL_MODULES.includes(mod)) continue;
+    if (!VALID_LEVELS.includes(perm)) continue;
+    overrides[mod] = perm;
+  }
+
   const target = await db.one('SELECT id, role FROM admin_users WHERE id = ?', [userId]);
   if (!target) return res.status(404).json({ error: 'User not found' });
   if (target.role === 'super_admin') {
@@ -164,8 +212,6 @@ router.put('/:id/permissions', async (req, res) => {
   await db.transaction(async (tx) => {
     await tx.run('DELETE FROM user_permissions WHERE user_id = ?', [userId]);
     for (const [mod, perm] of Object.entries(overrides)) {
-      if (!ALL_MODULES.includes(mod)) continue;
-      if (!['edit', 'view', 'none'].includes(perm)) continue;
       await tx.run(
         'INSERT INTO user_permissions (user_id, module, permission) VALUES (?, ?, ?)',
         [userId, mod, perm],
