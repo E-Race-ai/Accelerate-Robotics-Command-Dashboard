@@ -118,13 +118,15 @@ router.post('/accept-invite', async (req, res) => {
     [hash, name || null, row.id],
   );
 
-  // Auto-login: sign JWT so the user lands in the dashboard without a second login step.
-  const token = jwt.sign(
+  // Auto-login: sign JWT so the user lands in the dashboard without a second
+  // login step. Renamed from `token` to avoid colliding with the invite token
+  // destructured at the top of the handler.
+  const sessionToken = jwt.sign(
     { id: row.id, email: row.email, role: row.role || 'viewer' },
     JWT_SECRET,
     { expiresIn: '24h' },
   );
-  res.cookie('token', token, {
+  res.cookie('token', sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',

@@ -20,7 +20,30 @@ router.get('/permissions', async (req, res) => {
   res.json({ matrix, modules: ALL_MODULES, roles: EDITABLE_ROLES });
 });
 
-// ── Update role × module permission matrix ─────────────────────
+// ── Update a single cell of the role × module matrix ──────────
+// Frontend uses PATCH for point-edits from the permissions grid so one
+// dropdown change doesn't have to re-send the whole matrix.
+router.patch('/permissions', async (req, res) => {
+  const { role, module, permission } = req.body || {};
+  if (!EDITABLE_ROLES.includes(role)) {
+    return res.status(400).json({ error: `role must be one of: ${EDITABLE_ROLES.join(', ')}` });
+  }
+  if (!ALL_MODULES.includes(module)) {
+    return res.status(400).json({ error: 'Unknown module' });
+  }
+  if (!['edit', 'view', 'none'].includes(permission)) {
+    return res.status(400).json({ error: 'permission must be edit, view, or none' });
+  }
+  await db.run(
+    `INSERT INTO role_permissions (role, module, permission)
+     VALUES (?, ?, ?)
+     ON CONFLICT(role, module) DO UPDATE SET permission = excluded.permission`,
+    [role, module, permission],
+  );
+  res.json({ ok: true });
+});
+
+// ── Update role × module permission matrix (bulk) ──────────────
 router.put('/permissions', async (req, res) => {
   const { matrix } = req.body || {};
   if (!matrix || typeof matrix !== 'object') {

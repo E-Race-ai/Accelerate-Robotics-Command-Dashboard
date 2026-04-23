@@ -23,7 +23,13 @@ function createTestDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
-      role TEXT DEFAULT 'admin' CHECK(role IN ('admin', 'sales', 'ops', 'viewer')),
+      role TEXT DEFAULT 'admin' CHECK(role IN ('super_admin', 'admin', 'module_owner', 'viewer', 'sales', 'ops')),
+      name TEXT DEFAULT '',
+      invited_by INTEGER,
+      invite_token TEXT,
+      invite_expires_at TEXT,
+      status TEXT DEFAULT 'active',
+      last_login_at TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
