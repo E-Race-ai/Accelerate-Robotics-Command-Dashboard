@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Marketing — Accelerate Robotics Toolkit</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#0E1420;
+    --ink-2:#3A4352;
+    --paper:#F6F4EE;
+    --paper-2:#ECE8DB;
+    --line:rgba(14,20,32,.12);
+    --accent:#FF6A3D;
+    --accent-2:#13C2A8;
+    --signal:#FFD84D;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 40px 96px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:24px;padding-bottom:24px;border-bottom:1px solid var(--line);margin-bottom:48px}
+  .bc{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+  .bc a{color:var(--ink-2);text-decoration:none}
+  .bc a:hover{color:var(--ink)}
+  .bc .sep{opacity:.4;margin:0 8px}
+  .badge{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:4px 8px;border:1px solid var(--line);border-radius:999px;color:var(--ink-2)}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr;gap:48px;align-items:end;margin-bottom:56px}
+  h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(48px,6vw,84px);line-height:.95;letter-spacing:-0.015em;margin:0 0 12px}
+  h1 em{font-style:italic;color:var(--accent)}
+  .lede{font-size:17px;line-height:1.55;color:var(--ink-2);max-width:52ch;margin:0}
+  .meta-side{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:var(--ink-2)}
+  .meta-side b{color:var(--ink);display:block;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:10px;margin-bottom:4px}
+  .meta-side div+div{margin-top:14px}
+  /* Sections */
+  section{margin-bottom:72px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);display:flex;align-items:center;gap:10px;margin:0 0 18px}
+  .eyebrow::before{content:"";display:inline-block;width:14px;height:1px;background:var(--ink-2)}
+  h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:36px;letter-spacing:-0.01em;margin:0 0 24px;max-width:24ch}
+  .grid{display:grid;gap:20px}
+  .grid-2{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(3,1fr)}
+  .grid-4{grid-template-columns:repeat(4,1fr)}
+  @media (max-width:900px){.hero,.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+  /* Card */
+  .card{
+    position:relative;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:24px;
+    text-decoration:none;
+    color:inherit;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    min-height:220px;
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .card:hover{transform:translateY(-2px);box-shadow:0 18px 40px -24px rgba(14,20,32,.3);border-color:rgba(14,20,32,.25)}
+  .card[data-disabled="true"]{opacity:.55;pointer-events:none}
+  .card .thumb{
+    aspect-ratio:16/10;
+    border-radius:8px;
+    border:1px solid var(--line);
+    overflow:hidden;
+    background:var(--paper-2);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+  }
+  .card h3{font-family:'Instrument Serif',serif;font-weight:400;font-size:22px;margin:0;line-height:1.1;letter-spacing:-0.005em}
+  .card p{margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.5}
+  .card .foot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+  .status{display:inline-flex;align-items:center;gap:6px}
+  .status::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ink-2)}
+  .status.live::before{background:var(--accent-2)}
+  .status.draft::before{background:var(--signal)}
+  .status.placeholder::before{background:var(--line);border:1px solid var(--ink-2)}
+  .arrow{transition:transform .15s ease;display:inline-block}
+  .card:hover .arrow{transform:translate(3px,-3px)}
+  /* Featured card */
+  .featured{
+    grid-column:span 2;
+    background:linear-gradient(135deg,#0E1420 0%,#1A2233 100%);
+    color:#F6F4EE;
+    border-color:transparent;
+    min-height:260px;
+    padding:32px;
+  }
+  .featured h3{font-size:32px;color:#fff}
+  .featured p{color:rgba(246,244,238,.7);max-width:42ch}
+  .featured .foot{color:rgba(246,244,238,.6)}
+  .featured .thumb{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08)}
+  .featured:hover{box-shadow:0 30px 60px -30px rgba(14,20,32,.6)}
+  @media (max-width:900px){.featured{grid-column:span 1}}
+  /* Mini-orb thumbnail for featured */
+  .orb-thumb{display:flex;align-items:center;justify-content:center;padding:20px}
+  .orb{width:88px;height:88px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #FF9878 0%, var(--accent) 45%, #B8421F 100%);box-shadow:0 0 60px -10px var(--accent),inset -8px -8px 20px rgba(0,0,0,.25)}
+  /* Footer */
+  footer{border-top:1px solid var(--line);padding-top:24px;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-2);letter-spacing:.04em}
+  /* Back link */
+  .back{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2);text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .back:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <nav class="bc">
+      <a href="https://accelerate-robotics-command-dashboard.onrender.com/admin">Command Center</a>
+      <span class="sep">/</span>
+      <a href="https://accelerate-robotics-command-dashboard.onrender.com/admin#toolkit">Toolkit</a>
+      <span class="sep">/</span>
+      <span style="color:var(--ink)">Marketing</span>
+    </nav>
+    <span class="badge">v0.1 · Living document</span>
+  </div>
+
+  <div class="hero">
+    <div>
+      <div class="eyebrow">Toolkit · Marketing</div>
+      <h1>One brain. <em>Many bots.</em><br/>One brand to say it.</h1>
+    </div>
+    <div>
+      <p class="lede">The marketing hub for Accelerate Robotics — a new venture of Atlas Mobility. Start with the brand guidelines. Asset shelves fill in as we ship.</p>
+    </div>
+  </div>
+
+  <section>
+    <div class="eyebrow">Foundations</div>
+    <h2>Start here — the source of truth for how the brand looks, sounds, and scales.</h2>
+    <div class="grid grid-2">
+      <a href="brand-guidelines.html" class="card featured">
+        <div class="thumb orb-thumb"><div class="orb"></div></div>
+        <div>
+          <h3>Brand Guidelines</h3>
+          <p>Mission, voice, logo, color, typography, iconography, motion, UI tokens, co-branding rules. Live document — every decision is tweakable and persists on save.</p>
+        </div>
+        <div class="foot">
+          <span class="status live">Live · Draft 01</span>
+          <span class="arrow">↗</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Asset Shelves</div>
+    <h2>Placeholder shelves for collateral — will populate as the guidelines lock.</h2>
+    <div class="grid grid-3">
+
+      <a class="card" data-disabled="true">
+        <div class="thumb">
+          <svg width="90%" height="72%" viewBox="0 0 240 150" fill="none">
+            <rect x="4" y="4" width="232" height="142" rx="6" stroke="#0E1420" stroke-opacity=".25" stroke-dasharray="3 4"/>
+            <rect x="24" y="32" width="80" height="8" rx="2" fill="#0E1420" fill-opacity=".2"/>
+            <rect x="24" y="48" width="140" height="14" rx="2" fill="#0E1420" fill-opacity=".35"/>
+            <rect x="24" y="70" width="110" height="6" rx="2" fill="#0E1420" fill-opacity=".15"/>
+            <rect x="24" y="82" width="130" height="6" rx="2" fill="#0E1420" fill-opacity=".15"/>
+            <circle cx="200" cy="110" r="18" fill="#FF6A3D" fill-opacity=".4"/>
+          </svg>
+        </div>
+        <h3>Investor / Sales Deck</h3>
+        <p>16:9 master deck for investor and enterprise conversations — pulls tokens from guidelines.</p>
+        <div class="foot"><span class="status placeholder">Awaiting brand lock</span><span>01</span></div>
+      </a>
+
+      <a class="card" data-disabled="true">
+        <div class="thumb">
+          <svg width="72%" height="88%" viewBox="0 0 180 240" fill="none">
+            <rect x="4" y="4" width="172" height="232" rx="4" stroke="#0E1420" stroke-opacity=".25" stroke-dasharray="3 4"/>
+            <rect x="20" y="24" width="70" height="6" rx="1" fill="#0E1420" fill-opacity=".4"/>
+            <rect x="20" y="40" width="130" height="18" rx="2" fill="#0E1420" fill-opacity=".35"/>
+            <rect x="20" y="80" width="140" height="4" rx="1" fill="#0E1420" fill-opacity=".18"/>
+            <rect x="20" y="90" width="140" height="4" rx="1" fill="#0E1420" fill-opacity=".18"/>
+            <rect x="20" y="100" width="100" height="4" rx="1" fill="#0E1420" fill-opacity=".18"/>
+            <rect x="20" y="124" width="64" height="64" rx="4" fill="#13C2A8" fill-opacity=".25"/>
+            <rect x="96" y="124" width="64" height="64" rx="4" fill="#FF6A3D" fill-opacity=".25"/>
+          </svg>
+        </div>
+        <h3>Sales 1-Pager</h3>
+        <p>Printable overview for conference drops, RFP attachments, and on-site leave-behinds.</p>
+        <div class="foot"><span class="status placeholder">Awaiting brand lock</span><span>02</span></div>
+      </a>
+
+      <a class="card" data-disabled="true">
+        <div class="thumb">
+          <svg width="72%" height="80%" viewBox="0 0 200 200" fill="none">
+            <rect x="10" y="10" width="80" height="80" rx="4" fill="#0E1420" fill-opacity=".12"/>
+            <rect x="110" y="10" width="80" height="80" rx="4" fill="#FF6A3D" fill-opacity=".25"/>
+            <rect x="10" y="110" width="80" height="80" rx="4" fill="#13C2A8" fill-opacity=".25"/>
+            <rect x="110" y="110" width="80" height="80" rx="4" fill="#FFD84D" fill-opacity=".35"/>
+          </svg>
+        </div>
+        <h3>Social Templates</h3>
+        <p>LinkedIn, X, Instagram — announcement, case-study, and recruitment post layouts.</p>
+        <div class="foot"><span class="status placeholder">Awaiting brand lock</span><span>03</span></div>
+      </a>
+
+      <a class="card" data-disabled="true">
+        <div class="thumb">
+          <svg width="80%" height="70%" viewBox="0 0 240 160" fill="none">
+            <rect x="12" y="12" width="216" height="136" rx="6" fill="#0E1420" fill-opacity=".08"/>
+            <rect x="28" y="34" width="80" height="10" rx="2" fill="#0E1420" fill-opacity=".45"/>
+            <rect x="28" y="54" width="140" height="22" rx="2" fill="#0E1420" fill-opacity=".25"/>
+            <rect x="28" y="118" width="44" height="14" rx="7" fill="#FF6A3D" fill-opacity=".5"/>
+          </svg>
+        </div>
+        <h3>Email Templates</h3>
+        <p>Plain-text + HTML patterns for investor updates, newsletter, and outbound sales.</p>
+        <div class="foot"><span class="status placeholder">Awaiting brand lock</span><span>04</span></div>
+      </a>
+
+      <a class="card" data-disabled="true">
+        <div class="thumb">
+          <svg width="80%" height="70%" viewBox="0 0 240 160" fill="none">
+            <rect x="12" y="12" width="216" height="136" rx="6" stroke="#0E1420" stroke-opacity=".25" stroke-dasharray="3 4"/>
+            <path d="M40 100 Q 80 30 120 80 T 200 60" stroke="#FF6A3D" stroke-width="2" fill="none"/>
+            <circle cx="120" cy="80" r="4" fill="#FF6A3D"/>
+            <circle cx="200" cy="60" r="4" fill="#13C2A8"/>
+          </svg>
+        </div>
+        <h3>Pitch Video / Sizzle</h3>
+        <p>30/60/90-second cuts for top of funnel — storyboard lives against the motion principles.</p>
+        <div class="foot"><span class="status placeholder">Awaiting brand lock</span><span>05</span></div>
+      </a>
+
+      <a class="card" data-disabled="true">
+        <div class="thumb">
+          <svg width="70%" height="80%" viewBox="0 0 180 200" fill="none">
+            <rect x="16" y="32" width="148" height="140" rx="4" fill="#0E1420" fill-opacity=".1"/>
+            <circle cx="90" cy="102" r="36" stroke="#FF6A3D" stroke-width="2" fill="none"/>
+            <rect x="60" y="150" width="60" height="6" rx="1" fill="#0E1420" fill-opacity=".4"/>
+          </svg>
+        </div>
+        <h3>Trade Show Kit</h3>
+        <p>Booth graphics, pull-up banners, lanyards, demo signage. Post-brand-lock.</p>
+        <div class="foot"><span class="status placeholder">Awaiting brand lock</span><span>06</span></div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Reference</div>
+    <h2>Source material + governance — who owns what, when we revisit.</h2>
+    <div class="grid grid-3">
+      <div class="card" style="background:var(--paper-2);cursor:default">
+        <h3 style="font-size:18px">Parent brand</h3>
+        <p>Atlas Mobility is the parent. Accelerate Robotics inherits the core — tone, trustworthiness, clinical credibility — and layers on a more optimistic, forward-leaning personality for a platform audience.</p>
+        <div class="foot"><span>atlasmobility.com</span><span>↗</span></div>
+      </div>
+      <div class="card" style="background:var(--paper-2);cursor:default">
+        <h3 style="font-size:18px">Review cadence</h3>
+        <p>Draft 01 → team review (Nov) → Draft 02 locks color + logo → external designer hand-off (Dec) → v1.0 ships with brand launch.</p>
+        <div class="foot"><span>Living document</span><span>Q4 '26</span></div>
+      </div>
+      <div class="card" style="background:var(--paper-2);cursor:default">
+        <h3 style="font-size:18px">Owner</h3>
+        <p>Eric Race, Founder · Brand decisions funnel through here. Every token in the guidelines doc is tweakable — propose changes by editing live.</p>
+        <div class="foot"><span>Internal use</span><span>—</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Accelerate Robotics · a venture of Atlas Mobility</span>
+    <span>Miami, FL · © 2026</span>
+  </footer>
+</div>
+</body>
+</html>
