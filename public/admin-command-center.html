@@ -1077,7 +1077,11 @@ async function renderToolkitRosters() {
       av.className = 'ql-avatar' + (isOwner ? ' ql-owner' : '');
       av.style.background = m.color;
       av.textContent = m.initials;
-      av.title = `${m.name} · ${m.commits} commit${m.commits === 1 ? '' : 's'}${isOwner ? ' · owner' : ''}`;
+      // WHY: commits=0 means this was an override fallback, not a real git stat.
+      const commitPart = m.commits > 0
+        ? `${m.commits} commit${m.commits === 1 ? '' : 's'}`
+        : 'assigned';
+      av.title = `${m.name} · ${commitPart}${isOwner ? ' · owner' : ''}`;
       roster.appendChild(av);
     });
     if (overflow > 0) {
