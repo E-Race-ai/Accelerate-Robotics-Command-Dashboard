@@ -92,36 +92,47 @@ function isGitRepo(dir) {
   return fs.existsSync(path.join(dir, '.git'));
 }
 
-// Run `git log` on a set of paths inside a specific repo root. Returns an
-// author count map { email → { name, email, count } }, merging any results
-// with the accumulator. External-repo safety: silently no-op if the repo
-// doesn't exist on disk (production deploys won't have siblings).
-function addAuthorsFromRepo(acc, repoDir, paths) {
+// Run `git log` on a set of paths inside a specific repo root. Populates two
+// accumulators: one for author counts, one for recent commits. External-repo
+// safety: silently no-ops if the repo isn't on disk (prod deploys without
+// siblings).
+// WHY: %x01 = 0x01 field separator, unlikely to appear in commit messages.
+const COMMIT_FORMAT = '%H%x01%s%x01%aN%x01%aE%x01%at';
+
+function addGitDataFromRepo(authorAcc, commitAcc, repoDir, paths) {
   if (!isGitRepo(repoDir)) return;
   const existing = paths.filter(p => fs.existsSync(path.join(repoDir, p)));
   if (existing.length === 0) return;
   try {
-    const args = ['log', '--no-merges', '--format=%aN|%aE', '--', ...existing];
+    const args = ['log', '--no-merges', `--format=${COMMIT_FORMAT}`, '--', ...existing];
     const out = execFileSync('git', args, { cwd: repoDir, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
     out.split('\n').filter(Boolean).forEach(line => {
-      const idx = line.lastIndexOf('|');
-      if (idx < 0) return;
-      const name = line.slice(0, idx).trim();
-      const email = line.slice(idx + 1).trim().toLowerCase();
-      const prev = acc.get(email);
+      const [sha, subject, name, rawEmail, ts] = line.split('\x01');
+      if (!sha || !rawEmail) return;
+      const email = rawEmail.trim().toLowerCase();
+      // Author tally
+      const prev = authorAcc.get(email);
       if (prev) prev.count++;
-      else acc.set(email, { name, email, count: 1 });
+      else authorAcc.set(email, { name: (name || '').trim(), email, count: 1 });
+      // Recent commits
+      commitAcc.push({
+        sha: sha.slice(0, 7),
+        subject: (subject || '').trim(),
+        author: (name || '').trim(),
+        email,
+        ts: Number(ts) || 0,
+      });
     });
   } catch (err) {
     console.error(`git log failed in ${repoDir}:`, err.message);
   }
 }
 
-function authorsForModule(entries) {
-  const counts = new Map();
-  // Group plain-string paths (in this repo) together; run one git log per repo.
+function gitDataForModule(entries) {
+  const authorCounts = new Map();
+  const allCommits = [];
   const inRepoPaths = [];
-  const siblingGroups = new Map(); // repoName → paths[]
+  const siblingGroups = new Map();
   for (const e of entries) {
     if (typeof e === 'string') {
       inRepoPaths.push(e);
@@ -130,16 +141,22 @@ function authorsForModule(entries) {
       siblingGroups.get(e.repo).push(...e.paths);
     }
   }
-  if (inRepoPaths.length) addAuthorsFromRepo(counts, REPO_ROOT, inRepoPaths);
+  if (inRepoPaths.length) addGitDataFromRepo(authorCounts, allCommits, REPO_ROOT, inRepoPaths);
   for (const [repo, paths] of siblingGroups) {
-    const dir = path.join(SIBLING_ROOT, repo);
-    addAuthorsFromRepo(counts, dir, paths);
+    addGitDataFromRepo(authorCounts, allCommits, path.join(SIBLING_ROOT, repo), paths);
   }
-  // Drop hidden identities server-side so downstream logic (empty-check →
-  // override fallback) works correctly even if the bot account did all the work.
-  return Array.from(counts.values())
+  // WHY: Drop hidden identities server-side so downstream empty-check
+  // (→ override fallback) works when only bots committed.
+  const authors = Array.from(authorCounts.values())
     .filter(a => !HIDDEN_EMAILS.has(a.email))
     .sort((a, b) => b.count - a.count);
+  // Recent commits across all repos for this module: top 3 by timestamp,
+  // with bot commits filtered out too so the hover preview only shows real work.
+  const recent = allCommits
+    .filter(c => !HIDDEN_EMAILS.has(c.email))
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 3);
+  return { authors, recent };
 }
 
 router.get('/ownership', (_req, res) => {
@@ -148,13 +165,12 @@ router.get('/ownership', (_req, res) => {
   }
   const modules = {};
   for (const [mod, entries] of Object.entries(MODULE_FILES)) {
-    let authors = authorsForModule(entries);
-    // WHY: Fall back to explicit override if git log yields nothing (e.g. tool
-    // lives entirely at an external URL with no source files to attribute).
-    if (authors.length === 0 && MODULE_OVERRIDES[mod]) {
-      authors = MODULE_OVERRIDES[mod].map(a => ({ ...a, email: (a.email || '').toLowerCase() }));
+    const { authors, recent } = gitDataForModule(entries);
+    let finalAuthors = authors;
+    if (finalAuthors.length === 0 && MODULE_OVERRIDES[mod]) {
+      finalAuthors = MODULE_OVERRIDES[mod].map(a => ({ ...a, email: (a.email || '').toLowerCase() }));
     }
-    modules[mod] = authors;
+    modules[mod] = { authors: finalAuthors, recent };
   }
   cached = modules;
   cachedAt = Date.now();
