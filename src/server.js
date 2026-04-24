@@ -170,6 +170,30 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/tracker', trackerRoutes);
 app.use('/api/toolkit', toolkitRoutes);
 
+// ── Diagnostic: test Resend API key (admin-only, remove after debugging) ──
+app.get('/api/debug/resend-test', require('./middleware/auth').requireAuth, async (req, res) => {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return res.json({ error: 'RESEND_API_KEY not set' });
+  // WHY: Show first 8 chars so admin can verify the right key is loaded without exposing the full secret
+  const masked = key.slice(0, 8) + '...' + key.slice(-4);
+  try {
+    const { Resend } = require('resend');
+    const resend = new Resend(key.trim());
+    const result = await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'notifications@acceleraterobotics.ai',
+      to: [req.admin.email],
+      subject: 'Resend API Test — Accelerate Robotics',
+      html: '<p>If you received this, your Resend API key is working correctly.</p>',
+    });
+    if (result?.error) {
+      return res.json({ ok: false, key: masked, error: result.error });
+    }
+    res.json({ ok: true, key: masked, messageId: result?.data?.id });
+  } catch (err) {
+    res.json({ ok: false, key: masked, error: err.message });
+  }
+});
+
 // ── SPA fallback for admin routes ───────────────────────────────
 // WHY: /admin is the master command center — unified dashboard for all tools
 app.get('/admin', (req, res) => {

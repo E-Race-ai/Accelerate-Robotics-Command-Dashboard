@@ -8,8 +8,10 @@ const db = require('../db/database');
 let _resend = null;
 function getResend() {
   if (_resend) return _resend;
-  if (!process.env.RESEND_API_KEY) return null;
-  _resend = new Resend(process.env.RESEND_API_KEY);
+  // WHY: trim() guards against trailing whitespace/newlines pasted into Render env vars
+  const key = (process.env.RESEND_API_KEY || '').trim();
+  if (!key) return null;
+  _resend = new Resend(key);
   return _resend;
 }
 const EMAIL_FROM = process.env.EMAIL_FROM || 'notifications@acceleraterobotics.ai';
