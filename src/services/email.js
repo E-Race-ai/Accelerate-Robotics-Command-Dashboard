@@ -35,7 +35,7 @@ async function notifyNewInquiry(inquiry) {
   }
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: EMAIL_FROM,
       to,
       subject: `New Investment Inquiry from ${inquiry.name}`,
@@ -57,6 +57,13 @@ async function notifyNewInquiry(inquiry) {
         </div>
       `,
     });
+    // WHY: Resend SDK returns { data, error } instead of throwing on API failures
+    // (domain not verified, invalid from address, rate limit, etc.). Without this
+    // check, a rejected send looks like a successful one in logs.
+    if (result && result.error) {
+      console.error('[email] Notification rejected by Resend:', result.error.name, '-', result.error.message, `(from=${EMAIL_FROM})`);
+      return;
+    }
     console.log(`[email] Notification sent to ${to.length} recipient(s)`);
   } catch (err) {
     console.error('[email] Failed to send notification:', err.message);
@@ -90,7 +97,7 @@ async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
   }[role] || role;
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: EMAIL_FROM,
       to: [to],
       subject: `You're invited to Accelerate Robotics`,
@@ -106,6 +113,13 @@ async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
         </div>
       `,
     });
+    // WHY: Resend SDK returns { data, error } instead of throwing. A rejected
+    // send (e.g. unverified domain) would otherwise look like a success.
+    if (result && result.error) {
+      const detail = `${result.error.name}: ${result.error.message} (from=${EMAIL_FROM})`;
+      console.error('[email] Invite rejected by Resend:', detail);
+      throw new Error(`Resend rejected invite email — ${detail}`);
+    }
     console.log(`[email] Invite sent to ${to}`);
   } catch (err) {
     console.error('[email] Invite email failed:', err.message);
@@ -126,7 +140,7 @@ async function sendPasswordResetEmail({ to, name, resetUrl }) {
   }
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: EMAIL_FROM,
       to: [to],
       subject: `Reset your Accelerate Robotics password`,
@@ -143,7 +157,15 @@ async function sendPasswordResetEmail({ to, name, resetUrl }) {
         </div>
       `,
     });
-    console.log(`[email] Password reset email sent to ${to}`);
+    // WHY: Resend SDK returns { data, error } rather than throwing. Without
+    // this check, an API rejection (domain not verified, invalid from, rate
+    // limit) would be logged as a successful send.
+    if (result && result.error) {
+      const detail = `${result.error.name}: ${result.error.message} (from=${EMAIL_FROM})`;
+      console.error('[email] Password reset rejected by Resend:', detail);
+      throw new Error(`Resend rejected password reset email — ${detail}`);
+    }
+    console.log(`[email] Password reset email sent to ${to} (id=${result && result.data && result.data.id})`);
   } catch (err) {
     console.error('[email] Password reset email failed:', err.message);
     throw err;
