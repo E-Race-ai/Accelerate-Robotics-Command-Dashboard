@@ -24,6 +24,7 @@ const prospectRoutes = require('./routes/prospects');
 const userRoutes = require('./routes/users');
 const roleRoutes = require('./routes/roles');
 const trackerRoutes = require('./routes/tracker');
+const toolkitRoutes = require('./routes/toolkit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -167,6 +168,7 @@ app.use('/api/prospects', prospectRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/tracker', trackerRoutes);
+app.use('/api/toolkit', toolkitRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
 // WHY: /admin is the master command center — unified dashboard for all tools

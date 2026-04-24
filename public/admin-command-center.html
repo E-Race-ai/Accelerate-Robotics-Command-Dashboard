@@ -985,77 +985,106 @@ function applyTilePermissions(perms) {
 }
 
 // ── Toolkit owner + collaborator avatars ────────────────────────
-// WHY: Each tool has one owner (manages it) + N collaborators (work in it).
-// Stored here as a starting map; later we'll persist to the users table and
-// manage assignments from the admin UI. Keys match the card's data-module.
-const TEAM = {
-  er: { name: 'Eric Race',     role: 'CEO / Founder',              initials: 'ER', color: '#0891b2' },
-  cb: { name: 'Cory Barber',   role: 'Training & Implementation',  initials: 'CB', color: '#7c3aed' },
-  tr: { name: 'Tyler Rey',     role: 'Field Ops',                  initials: 'TR', color: '#ea580c' },
-  vh: { name: 'Vicki Huber',   role: 'CNO',                        initials: 'VH', color: '#059669' },
-  jl: { name: 'JB Leeming',    role: 'Sales',                      initials: 'JL', color: '#d97706' },
-  dg: { name: 'David Genske',  role: 'Product',                    initials: 'DG', color: '#dc2626' },
-  rh: { name: 'Richa Hussain', role: 'Quality & Engineering',      initials: 'RH', color: '#6366f1' },
+// WHY: Each card's owner + collabs are derived from real `git log` author
+// activity on the files that define the tool (see GET /api/toolkit/ownership
+// and src/routes/toolkit.js). Owner = author with the most non-merge commits
+// on the tool's files; collabs = next 2. Cache TTL: 1 hour server-side.
+
+// Email-keyed overrides: friendly name + initials + color. Use this when a
+// contributor's git name/email is messy or to merge multiple identities.
+// Set value to `null` to filter an identity out entirely (test accounts, bots).
+const GIT_ALIASES = {
+  'claude.e.race@atlasmobility.com':      { name: 'Eric Race',     initials: 'ER', color: '#0891b2' },
+  'ericrace@susie-iphone.localdomain':    { name: 'Eric Race',     initials: 'ER', color: '#0891b2' },
+  'claude.r.hussain@atlasmobility.com':   { name: 'Richa Hussain', initials: 'RH', color: '#6366f1' },
+  'claude.t.rey@atlasmobility.com':       { name: 'Tyler Rey',     initials: 'TR', color: '#ea580c' },
+  'claude.c.simon@atlasmobility.com':     { name: 'Claude Simon',  initials: 'CS', color: '#7c3aed' },
+  'acceleraterobotics@gmail.com':         null, // test / bot account, hide from avatars
 };
 
-// Map: card module → { owner: <teamKey>, collab: [<teamKey>, ...] }
-// Edit this to reassign. Owner manages; collabs do the work.
-const TOOLKIT_OWNERSHIP = {
-  deals:              { owner: 'jl', collab: ['er', 'tr'] },
-  prospects:          { owner: 'jl', collab: ['tr'] },
-  assessments:        { owner: 'tr', collab: ['cb', 'dg'] },
-  robot_command:      { owner: 'rh', collab: ['dg'] },
-  robot_catalog:      { owner: 'dg', collab: ['rh'] },
-  investors:          { owner: 'er', collab: [] },
-  national_rollout:   { owner: 'er', collab: ['jl'] },
-  financial_analysis: { owner: 'er', collab: [] },
-  robots_dossier:     { owner: 'dg', collab: ['rh'] },
-  service_van:        { owner: 'tr', collab: ['cb'] },
-  lidar_scanner:      { owner: 'dg', collab: ['rh', 'tr'] },
-  sensor_lab:         { owner: 'dg', collab: ['rh'] },
-  elevator_sim:       { owner: 'dg', collab: ['rh'] },
-  elevator_install:   { owner: 'tr', collab: ['cb'] },
-  elevator_bom:       { owner: 'dg', collab: ['rh'] },
-  inquiries:          { owner: 'jl', collab: ['er'] },
-  project_tracker:    { owner: 'er', collab: ['dg'] },
-  public_website:     { owner: 'dg', collab: ['er'] },
-};
+function _palettePick(s) {
+  const palette = ['#0891b2', '#7c3aed', '#ea580c', '#059669', '#d97706', '#dc2626', '#6366f1', '#db2777'];
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return palette[Math.abs(h) % palette.length];
+}
 
-function renderToolkitRosters() {
-  // WHY: Maximum 3 avatars visible per card (owner + 2 collabs). Overflow
-  // collapses to a "+N" chip so the card stays compact.
+function _initialsFromName(name) {
+  const clean = String(name || '').replace(/[^a-zA-Z\s-]/g, '').trim();
+  const parts = clean.split(/[\s-]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  if (parts[0]) return parts[0].slice(0, 2).toUpperCase();
+  return '??';
+}
+
+function _authorDisplay(a) {
+  const email = String(a.email || '').toLowerCase();
+  if (email in GIT_ALIASES) {
+    const alias = GIT_ALIASES[email];
+    if (alias === null) return null; // filtered out
+    return { name: alias.name, initials: alias.initials, color: alias.color, commits: a.count };
+  }
+  return {
+    name: a.name || email.split('@')[0] || 'Unknown',
+    initials: _initialsFromName(a.name || email),
+    color: _palettePick(email || a.name || ''),
+    commits: a.count,
+  };
+}
+
+async function renderToolkitRosters() {
+  let modules = {};
+  try {
+    const r = await fetch('/api/toolkit/ownership');
+    if (r.ok) {
+      const data = await r.json();
+      modules = data.modules || {};
+    }
+  } catch (e) {
+    console.warn('toolkit ownership fetch failed:', e);
+  }
+
   const MAX_VISIBLE = 3;
   document.querySelectorAll('.ql-card[data-module]').forEach(card => {
     const mod = card.dataset.module;
-    const assign = TOOLKIT_OWNERSHIP[mod];
-    if (!assign) return;
-    // Don't double-render if already populated
+    const raw = modules[mod] || [];
+    // 1) alias → friendly display, drop filtered identities
+    const mapped = raw.map(_authorDisplay).filter(Boolean);
+    // 2) merge entries sharing the same display name (same person, multiple
+    //    git emails like "E-Race-ai" + "Eric Race"). Sum commits.
+    const byName = new Map();
+    mapped.forEach(m => {
+      const existing = byName.get(m.name);
+      if (existing) existing.commits += m.commits;
+      else byName.set(m.name, { ...m });
+    });
+    // 3) re-sort by total commits desc so owner is the true top contributor
+    const authors = Array.from(byName.values()).sort((a, b) => b.commits - a.commits);
+    if (authors.length === 0) return;
     if (card.querySelector('.ql-roster')) return;
+
+    const visible = authors.slice(0, MAX_VISIBLE);
+    const overflow = authors.length - MAX_VISIBLE;
 
     const roster = document.createElement('div');
     roster.className = 'ql-roster';
-    const all = [];
-    if (assign.owner && TEAM[assign.owner]) all.push({ key: assign.owner, owner: true });
-    (assign.collab || []).forEach(k => { if (TEAM[k]) all.push({ key: k, owner: false }); });
 
-    const visible = all.slice(0, MAX_VISIBLE);
-    const overflow = all.length - MAX_VISIBLE;
-
-    // Append in reverse so flex-direction:row-reverse shows owner leftmost
-    [...visible].reverse().forEach(p => {
-      const m = TEAM[p.key];
+    // Flex is row-reverse, so appending the owner LAST puts them on the left.
+    [...visible].reverse().forEach((m, idx) => {
+      // Original index in `visible`: (visible.length - 1 - idx). Owner = 0.
+      const isOwner = (visible.length - 1 - idx) === 0;
       const av = document.createElement('div');
-      av.className = 'ql-avatar' + (p.owner ? ' ql-owner' : '');
+      av.className = 'ql-avatar' + (isOwner ? ' ql-owner' : '');
       av.style.background = m.color;
       av.textContent = m.initials;
-      av.title = `${m.name} · ${m.role}${p.owner ? ' (owner)' : ''}`;
+      av.title = `${m.name} · ${m.commits} commit${m.commits === 1 ? '' : 's'}${isOwner ? ' · owner' : ''}`;
       roster.appendChild(av);
     });
     if (overflow > 0) {
       const ov = document.createElement('div');
       ov.className = 'ql-avatar ql-overflow';
       ov.textContent = `+${overflow}`;
-      ov.title = all.slice(MAX_VISIBLE).map(p => TEAM[p.key].name).join(', ');
+      ov.title = authors.slice(MAX_VISIBLE).map(a => `${a.name} (${a.commits})`).join(', ');
       roster.appendChild(ov);
     }
     card.appendChild(roster);
