@@ -145,6 +145,7 @@ router.post('/accept-invite', async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body || {};
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    console.log('[auth] forgot-password: rejected — missing/invalid email format');
     // Still 200 so a bad-format email can't be distinguished from a missing one
     return res.json({ ok: true });
   }
@@ -154,9 +155,14 @@ router.post('/forgot-password', async (req, res) => {
       'SELECT id, email, name, status FROM admin_users WHERE email = ?',
       [email],
     );
-    // Only active users get a reset — invited users should accept the invite
-    // instead, and disabled users shouldn't be able to recover remotely.
-    if (user && user.status === 'active') {
+    // WHY: Per-branch logging (without leaking the email) so Render logs make
+    // it obvious why no email went out. Previously every outcome looked like a
+    // silent 200, which made diagnosing prod issues impossible.
+    if (!user) {
+      console.log('[auth] forgot-password: no matching account for submitted email');
+    } else if (user.status !== 'active') {
+      console.log(`[auth] forgot-password: account status=${user.status} — reset not allowed`);
+    } else {
       const token = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + RESET_TTL_MS).toISOString();
 
@@ -167,6 +173,7 @@ router.post('/forgot-password', async (req, res) => {
 
       const origin = `${req.protocol}://${req.get('host')}`;
       const resetUrl = `${origin}/reset-password?token=${token}`;
+      console.log(`[auth] forgot-password: token issued for user id=${user.id}, dispatching email`);
       sendPasswordResetEmail({ to: user.email, name: user.name, resetUrl })
         .catch((err) => console.error('[auth] password reset email failed:', err.message));
     }

@@ -23,6 +23,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Test helper `admin_users` schema now matches production (role CHECK includes `super_admin`, `module_owner`; status/invite columns present) so invite flows can be integration-tested.
 
 ### Fixed
+- Resend SDK returns `{ data, error }` instead of throwing on API rejections, so unverified-domain / invalid-from errors were being logged as "sent". All three email helpers (`notifyNewInquiry`, `sendInviteEmail`, `sendPasswordResetEmail`) now inspect the response and surface the real error, including the error name, message, and `from` address used. Forgot-password route also logs which branch it took (no account, wrong status, dispatched) so prod failures are diagnosable from Render logs.
 - Invite flow silently dropped per-user module overrides: frontend sent `modules: []` while backend expected `modulePermissions: {}`, so overrides were never written. Invites now write to `user_permissions` as intended.
 - Permissions tab was rendering empty: frontend read `/api/roles/permissions` as a flat array but the endpoint returned `{ matrix, modules, roles }`. Frontend now reads the `matrix` key.
 - Accept-invite route crashed the server on boot — `const token = ...` clashed with the destructured `token` from the request body. Renamed the session token.
