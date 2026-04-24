@@ -175,7 +175,7 @@ app.use('/api/toolkit', toolkitRoutes);
 // Does NOT send an email — only reports what key and EMAIL_FROM the server sees.
 app.get('/api/debug/resend-check', async (req, res) => {
   const key = (process.env.RESEND_API_KEY || '').trim();
-  const from = process.env.EMAIL_FROM || 'notifications@atlasmobility.com';
+  const from = process.env.EMAIL_FROM || 'notifications@acceleraterobotics.ai';
   if (!key) return res.json({ ok: false, key: '(not set)', from });
   const masked = key.slice(0, 8) + '...' + key.slice(-4);
   // WHY: Test the key by calling Resend's domain list endpoint — no email sent
