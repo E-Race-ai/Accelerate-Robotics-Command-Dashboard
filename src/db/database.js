@@ -372,6 +372,52 @@ async function initSchema() {
     await client.execute(sql);
   }
 
+  // ── Migrate stale CHECK constraint on role column ─────────────
+  // WHY: Early production databases have role CHECK('admin','sales','ops','viewer')
+  // which rejects 'module_owner' and 'super_admin'. SQLite can't ALTER a CHECK,
+  // so we rebuild the table if the old constraint is detected.
+  try {
+    // Probe: try inserting then rolling back a module_owner row
+    await client.execute("INSERT INTO admin_users (email, password_hash, role) VALUES ('__probe__', '', 'module_owner')");
+    await client.execute("DELETE FROM admin_users WHERE email = '__probe__'");
+  } catch (probeErr) {
+    if (/CHECK constraint failed/i.test(probeErr.message)) {
+      console.log('[db] Detected stale role CHECK constraint — rebuilding admin_users table');
+      // WHY: Discover which columns actually exist in the old table so the
+      // INSERT only references real columns — avoids "no such column" errors.
+      const colInfo = await client.execute("PRAGMA table_info(admin_users)");
+      const oldCols = new Set(colInfo.rows.map(r => r.name || r[1]));
+
+      await client.execute(`CREATE TABLE admin_users_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        role TEXT DEFAULT 'admin' CHECK(role IN ('super_admin', 'admin', 'module_owner', 'viewer', 'sales', 'ops')),
+        name TEXT DEFAULT '',
+        invited_by INTEGER,
+        invite_token TEXT,
+        invite_expires_at TEXT,
+        status TEXT DEFAULT 'active',
+        last_login_at TEXT,
+        reset_token TEXT,
+        reset_expires_at TEXT
+      )`);
+      // WHY: Only copy columns that exist in both old and new tables
+      const newCols = ['id', 'email', 'password_hash', 'created_at', 'role',
+        'name', 'invited_by', 'invite_token', 'invite_expires_at',
+        'status', 'last_login_at', 'reset_token', 'reset_expires_at'];
+      const shared = newCols.filter(c => oldCols.has(c));
+      const selectExprs = shared.map(c =>
+        c === 'role' ? `CASE WHEN role IN ('super_admin','admin','module_owner','viewer','sales','ops') THEN role ELSE 'admin' END` : c
+      );
+      await client.execute(`INSERT INTO admin_users_new (${shared.join(', ')}) SELECT ${selectExprs.join(', ')} FROM admin_users`);
+      await client.execute("DROP TABLE admin_users");
+      await client.execute("ALTER TABLE admin_users_new RENAME TO admin_users");
+      console.log('[db] admin_users table rebuilt with updated role CHECK constraint');
+    }
+  }
+
   // Additive columns — safe to try, catch duplicate-column errors.
   const additiveAlterIfMissing = async (sql) => {
     try {
