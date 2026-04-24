@@ -39,10 +39,19 @@ function switchTab(tab) {
 // ── Inquiries ───────────────────────────────────────────────────
 async function loadInquiries() {
   const url = currentFilter ? `/api/inquiries?status=${currentFilter}` : '/api/inquiries';
-  const res = await fetch(url);
-  if (!res.ok) return;
-  const data = await res.json();
-  renderInquiries(data);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error(`GET ${url} failed with ${res.status}`);
+      renderInquiries([]);
+      return;
+    }
+    const data = await res.json();
+    renderInquiries(data);
+  } catch (e) {
+    console.error('Failed to load inquiries:', e);
+    renderInquiries([]);
+  }
 }
 
 function filterInquiries(status) {
@@ -113,10 +122,19 @@ async function updateStatus(id, status) {
 
 // ── Recipients ──────────────────────────────────────────────────
 async function loadRecipients() {
-  const res = await fetch('/api/recipients');
-  if (!res.ok) return;
-  const data = await res.json();
-  renderRecipients(data);
+  try {
+    const res = await fetch('/api/recipients');
+    if (!res.ok) {
+      console.error(`GET /api/recipients failed with ${res.status}`);
+      renderRecipients([]);
+      return;
+    }
+    const data = await res.json();
+    renderRecipients(data);
+  } catch (e) {
+    console.error('Failed to load recipients:', e);
+    renderRecipients([]);
+  }
 }
 
 function renderRecipients(recipients) {
