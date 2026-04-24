@@ -22,7 +22,17 @@ const STAGE_COLORS = {
 // ── API ────────────────────────────────────────────────────────
 async function fetchDeals() {
   const res = await fetch('/api/deals');
-  if (!res.ok) throw new Error('Failed to fetch deals');
+  if (!res.ok) {
+    // WHY: 401 means the JWT cookie is missing or expired — redirect to login so the user can re-authenticate
+    if (res.status === 401) {
+      window.location.href = '/admin-login';
+      return;
+    }
+    console.error(`GET /api/deals failed with ${res.status}`);
+    deals = [];
+    render();
+    return;
+  }
   deals = await res.json();
   render();
 }
@@ -583,5 +593,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  await fetchDeals();
+  try {
+    await fetchDeals();
+  } catch (e) {
+    console.error('Failed to load deals:', e);
+    // WHY: Still call render() so the user sees empty columns + stats instead of a blank page
+    render();
+  }
 });

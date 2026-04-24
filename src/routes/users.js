@@ -85,8 +85,19 @@ router.post('/invite', async (req, res) => {
 
     const origin = `${req.protocol}://${req.get('host')}`;
     const inviteUrl = `${origin}/accept-invite?token=${token}`;
-    sendInviteEmail({ to: email, name, inviterEmail: req.admin.email, role, inviteUrl })
-      .catch((err) => console.error('[users] invite email failed:', err.message));
+
+    // WHY: Await the email send so we can tell the frontend if it failed.
+    // The invite record is already saved, so a retry via resend-invite works
+    // even if this first send fails.
+    try {
+      await sendInviteEmail({ to: email, name, inviterEmail: req.admin.email, role, inviteUrl });
+    } catch (emailErr) {
+      console.error('[users] invite email failed:', emailErr.message);
+      return res.status(502).json({
+        error: `Invite created but email failed to send: ${emailErr.message}`,
+        inviteUrl,
+      });
+    }
 
     res.status(201).json({ id: userRow.id, email, status: 'invited', inviteUrl });
   } catch (err) {
@@ -122,8 +133,16 @@ router.post('/:id/resend-invite', async (req, res) => {
 
     const origin = `${req.protocol}://${req.get('host')}`;
     const inviteUrl = `${origin}/accept-invite?token=${token}`;
-    sendInviteEmail({ to: target.email, name: target.name, inviterEmail: req.admin.email, role: target.role, inviteUrl })
-      .catch((err) => console.error('[users] resend-invite email failed:', err.message));
+
+    try {
+      await sendInviteEmail({ to: target.email, name: target.name, inviterEmail: req.admin.email, role: target.role, inviteUrl });
+    } catch (emailErr) {
+      console.error('[users] resend-invite email failed:', emailErr.message);
+      return res.status(502).json({
+        error: `Token refreshed but email failed to send: ${emailErr.message}`,
+        inviteUrl,
+      });
+    }
 
     res.json({ ok: true, inviteUrl });
   } catch (err) {
