@@ -22,7 +22,13 @@ const STAGE_COLORS = {
 // ── API ────────────────────────────────────────────────────────
 async function fetchDeals() {
   const res = await fetch('/api/deals');
-  if (!res.ok) throw new Error('Failed to fetch deals');
+  if (!res.ok) {
+    // WHY: Log the status so dev tools show whether it's a 401 (auth) or 500 (server) issue
+    console.error(`GET /api/deals failed with ${res.status}`);
+    deals = [];
+    render();
+    return;
+  }
   deals = await res.json();
   render();
 }
@@ -583,5 +589,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  await fetchDeals();
+  try {
+    await fetchDeals();
+  } catch (e) {
+    console.error('Failed to load deals:', e);
+    // WHY: Still call render() so the user sees empty columns + stats instead of a blank page
+    render();
+  }
 });
