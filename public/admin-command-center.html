@@ -900,6 +900,11 @@ function applyTilePermissions(perms) {
 async function refreshAll() {
   try {
     const res = await fetch('/api/deals');
+    // WHY: 401 means the JWT cookie is missing or expired — redirect to login
+    if (res.status === 401) {
+      window.location.href = '/admin-login';
+      return;
+    }
     if (!res.ok) throw new Error('Failed to fetch deals');
     deals = await res.json();
   } catch (e) {

@@ -23,7 +23,11 @@ const STAGE_COLORS = {
 async function fetchDeals() {
   const res = await fetch('/api/deals');
   if (!res.ok) {
-    // WHY: Log the status so dev tools show whether it's a 401 (auth) or 500 (server) issue
+    // WHY: 401 means the JWT cookie is missing or expired — redirect to login so the user can re-authenticate
+    if (res.status === 401) {
+      window.location.href = '/admin-login';
+      return;
+    }
     console.error(`GET /api/deals failed with ${res.status}`);
     deals = [];
     render();
