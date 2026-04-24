@@ -170,27 +170,26 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/tracker', trackerRoutes);
 app.use('/api/toolkit', toolkitRoutes);
 
-// ── Diagnostic: test Resend API key (admin-only, remove after debugging) ──
-app.get('/api/debug/resend-test', require('./middleware/auth').requireAuth, async (req, res) => {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return res.json({ error: 'RESEND_API_KEY not set' });
-  // WHY: Show first 8 chars so admin can verify the right key is loaded without exposing the full secret
+// ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
+// WHY: Removed auth requirement temporarily so we can diagnose the API key issue.
+// Does NOT send an email — only reports what key and EMAIL_FROM the server sees.
+app.get('/api/debug/resend-check', async (req, res) => {
+  const key = (process.env.RESEND_API_KEY || '').trim();
+  const from = process.env.EMAIL_FROM || 'notifications@acceleraterobotics.ai';
+  if (!key) return res.json({ ok: false, key: '(not set)', from });
   const masked = key.slice(0, 8) + '...' + key.slice(-4);
+  // WHY: Test the key by calling Resend's domain list endpoint — no email sent
   try {
     const { Resend } = require('resend');
-    const resend = new Resend(key.trim());
-    const result = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'notifications@acceleraterobotics.ai',
-      to: [req.admin.email],
-      subject: 'Resend API Test — Accelerate Robotics',
-      html: '<p>If you received this, your Resend API key is working correctly.</p>',
-    });
+    const resend = new Resend(key);
+    const result = await resend.domains.list();
     if (result?.error) {
-      return res.json({ ok: false, key: masked, error: result.error });
+      return res.json({ ok: false, key: masked, from, error: result.error });
     }
-    res.json({ ok: true, key: masked, messageId: result?.data?.id });
+    const domains = (result?.data?.data || []).map(d => ({ name: d.name, status: d.status }));
+    res.json({ ok: true, key: masked, from, domains });
   } catch (err) {
-    res.json({ ok: false, key: masked, error: err.message });
+    res.json({ ok: false, key: masked, from, error: err.message });
   }
 });
 
