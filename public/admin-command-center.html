@@ -89,6 +89,35 @@
       gap: 8px;
       transition: box-shadow 0.2s, transform 0.15s, border-color 0.2s;
       cursor: pointer;
+      position: relative; /* anchor for .ql-roster */
+    }
+    /* ── Owner + collaborator avatar stack ─────────────────── */
+    .ql-roster {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      flex-direction: row-reverse; /* owner on the left, z-index stack correct */
+      pointer-events: auto;
+    }
+    .ql-avatar {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #94a3b8; color: white;
+      font-size: 9.5px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid white;
+      margin-left: -6px; /* overlap */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      letter-spacing: 0.3px;
+      transition: transform 0.12s;
+    }
+    .ql-avatar:hover { transform: translateY(-1px) scale(1.12); z-index: 10; }
+    .ql-avatar.ql-owner {
+      box-shadow: 0 0 0 2px var(--ql-accent, #2563eb), 0 1px 3px rgba(0,0,0,0.15);
+      margin-left: 0; /* owner sits alone, no overlap */
+    }
+    .ql-avatar.ql-overflow {
+      background: #e5e7eb; color: #64748b; font-size: 10px;
     }
     .ql-card:hover {
       box-shadow: 0 6px 20px rgba(0,0,0,0.08);
@@ -708,7 +737,7 @@
           </a>
 
           <!-- LiDAR Scanner — wheel-stick building scanner toolkit -->
-          <a href="/pages/slam-lidar-scanner.html" class="ql-card" style="--ql-accent:#0055ff;">
+          <a href="/pages/slam-lidar-scanner.html" class="ql-card" data-module="lidar_scanner" style="--ql-accent:#0055ff;">
             <div class="ql-icon" style="background:#eef2ff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0055ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2v3M12 15v7M4.2 4.2l2.1 2.1M17.7 6.3l2.1-2.1M2 10h3M19 10h3"/><circle cx="17" cy="21" r="1.5"/></svg>
             </div>
@@ -717,7 +746,7 @@
           </a>
 
           <!-- Sensor Lab — BLE wearable playground (Minew B10 + future sensors) -->
-          <a href="/repos/b10-playground/index.html" class="ql-card" target="_blank" style="--ql-accent:#db2777;">
+          <a href="/repos/b10-playground/index.html" class="ql-card" data-module="sensor_lab" target="_blank" style="--ql-accent:#db2777;">
             <div class="ql-icon" style="background:#fdf2f8;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="4"/><circle cx="12" cy="14" r="1" fill="#db2777"/><path d="M6 7a9 9 0 0 1 12 0"/><path d="M8 9.5a5.5 5.5 0 0 1 8 0"/></svg>
             </div>
@@ -762,7 +791,7 @@
           </a>
 
           <!-- Public Website — globe icon -->
-          <a href="/" class="ql-card" style="--ql-accent:#64748b;">
+          <a href="/" class="ql-card" data-module="public_website" style="--ql-accent:#64748b;">
             <div class="ql-icon" style="background:#f8fafc;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4" ry="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
             </div>
@@ -942,6 +971,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Permission gating skipped:', e);
   }
 
+  renderToolkitRosters();
   refreshAll();
 });
 
@@ -951,6 +981,84 @@ function applyTilePermissions(perms) {
   document.querySelectorAll('.ql-card[data-module]').forEach(el => {
     const level = perms[el.dataset.module];
     if (level === 'none') el.style.display = 'none';
+  });
+}
+
+// ── Toolkit owner + collaborator avatars ────────────────────────
+// WHY: Each tool has one owner (manages it) + N collaborators (work in it).
+// Stored here as a starting map; later we'll persist to the users table and
+// manage assignments from the admin UI. Keys match the card's data-module.
+const TEAM = {
+  er: { name: 'Eric Race',     role: 'CEO / Founder',              initials: 'ER', color: '#0891b2' },
+  cb: { name: 'Cory Barber',   role: 'Training & Implementation',  initials: 'CB', color: '#7c3aed' },
+  tr: { name: 'Tyler Rey',     role: 'Field Ops',                  initials: 'TR', color: '#ea580c' },
+  vh: { name: 'Vicki Huber',   role: 'CNO',                        initials: 'VH', color: '#059669' },
+  jl: { name: 'JB Leeming',    role: 'Sales',                      initials: 'JL', color: '#d97706' },
+  dg: { name: 'David Genske',  role: 'Product',                    initials: 'DG', color: '#dc2626' },
+  rh: { name: 'Richa Hussain', role: 'Quality & Engineering',      initials: 'RH', color: '#6366f1' },
+};
+
+// Map: card module → { owner: <teamKey>, collab: [<teamKey>, ...] }
+// Edit this to reassign. Owner manages; collabs do the work.
+const TOOLKIT_OWNERSHIP = {
+  deals:              { owner: 'jl', collab: ['er', 'tr'] },
+  prospects:          { owner: 'jl', collab: ['tr'] },
+  assessments:        { owner: 'tr', collab: ['cb', 'dg'] },
+  robot_command:      { owner: 'rh', collab: ['dg'] },
+  robot_catalog:      { owner: 'dg', collab: ['rh'] },
+  investors:          { owner: 'er', collab: [] },
+  national_rollout:   { owner: 'er', collab: ['jl'] },
+  financial_analysis: { owner: 'er', collab: [] },
+  robots_dossier:     { owner: 'dg', collab: ['rh'] },
+  service_van:        { owner: 'tr', collab: ['cb'] },
+  lidar_scanner:      { owner: 'dg', collab: ['rh', 'tr'] },
+  sensor_lab:         { owner: 'dg', collab: ['rh'] },
+  elevator_sim:       { owner: 'dg', collab: ['rh'] },
+  elevator_install:   { owner: 'tr', collab: ['cb'] },
+  elevator_bom:       { owner: 'dg', collab: ['rh'] },
+  inquiries:          { owner: 'jl', collab: ['er'] },
+  project_tracker:    { owner: 'er', collab: ['dg'] },
+  public_website:     { owner: 'dg', collab: ['er'] },
+};
+
+function renderToolkitRosters() {
+  // WHY: Maximum 3 avatars visible per card (owner + 2 collabs). Overflow
+  // collapses to a "+N" chip so the card stays compact.
+  const MAX_VISIBLE = 3;
+  document.querySelectorAll('.ql-card[data-module]').forEach(card => {
+    const mod = card.dataset.module;
+    const assign = TOOLKIT_OWNERSHIP[mod];
+    if (!assign) return;
+    // Don't double-render if already populated
+    if (card.querySelector('.ql-roster')) return;
+
+    const roster = document.createElement('div');
+    roster.className = 'ql-roster';
+    const all = [];
+    if (assign.owner && TEAM[assign.owner]) all.push({ key: assign.owner, owner: true });
+    (assign.collab || []).forEach(k => { if (TEAM[k]) all.push({ key: k, owner: false }); });
+
+    const visible = all.slice(0, MAX_VISIBLE);
+    const overflow = all.length - MAX_VISIBLE;
+
+    // Append in reverse so flex-direction:row-reverse shows owner leftmost
+    [...visible].reverse().forEach(p => {
+      const m = TEAM[p.key];
+      const av = document.createElement('div');
+      av.className = 'ql-avatar' + (p.owner ? ' ql-owner' : '');
+      av.style.background = m.color;
+      av.textContent = m.initials;
+      av.title = `${m.name} · ${m.role}${p.owner ? ' (owner)' : ''}`;
+      roster.appendChild(av);
+    });
+    if (overflow > 0) {
+      const ov = document.createElement('div');
+      ov.className = 'ql-avatar ql-overflow';
+      ov.textContent = `+${overflow}`;
+      ov.title = all.slice(MAX_VISIBLE).map(p => TEAM[p.key].name).join(', ');
+      roster.appendChild(ov);
+    }
+    card.appendChild(roster);
   });
 }
 
