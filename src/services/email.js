@@ -5,14 +5,13 @@ const db = require('../db/database');
 // server on boot during local development. Lazily construct the client so the
 // app still runs without email configured — callers just get a logged warning
 // and the send becomes a no-op.
-let _resend = null;
+// WHY: No caching — always read the current env var so a key update
+// via Render dashboard takes effect after the next redeploy without
+// the stale cached client silently using the old (invalid) key.
 function getResend() {
-  if (_resend) return _resend;
-  // WHY: trim() guards against trailing whitespace/newlines pasted into Render env vars
   const key = (process.env.RESEND_API_KEY || '').trim();
   if (!key) return null;
-  _resend = new Resend(key);
-  return _resend;
+  return new Resend(key);
 }
 const EMAIL_FROM = process.env.EMAIL_FROM || 'notifications@acceleraterobotics.ai';
 
