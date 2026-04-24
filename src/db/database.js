@@ -351,22 +351,27 @@ async function initSchema() {
 
 // ── Seeds ───────────────────────────────────────────────────────
 async function seedAdmin() {
-  const email = process.env.ADMIN_EMAIL;
-  const password = process.env.ADMIN_PASSWORD;
-  if (!email || !password) return;
-
-  const existing = await one('SELECT id FROM admin_users WHERE email = ?', [email]);
-  if (existing) return;
+  // WHY: Seed all configured admin accounts on boot. ADMIN_EMAIL is the primary;
+  // ADMIN2_EMAIL is an optional second super admin (e.g. a co-founder or ops lead).
+  const admins = [
+    { email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD, name: 'Admin' },
+    { email: process.env.ADMIN2_EMAIL, password: process.env.ADMIN2_PASSWORD, name: 'Admin 2' },
+  ].filter(a => a.email && a.password);
 
   const BCRYPT_ROUNDS = 12;
-  const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
-  await run('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)', [email, hash]);
-  console.log(`[db] Seeded admin user: ${email}`);
+  for (const admin of admins) {
+    const existing = await one('SELECT id FROM admin_users WHERE email = ?', [admin.email]);
+    if (existing) continue;
 
-  const recipientExists = await one('SELECT id FROM notification_recipients WHERE email = ?', [email]);
-  if (!recipientExists) {
-    await run('INSERT INTO notification_recipients (email, name, active) VALUES (?, ?, 1)', [email, 'Admin']);
-    console.log(`[db] Added admin as notification recipient`);
+    const hash = bcrypt.hashSync(admin.password, BCRYPT_ROUNDS);
+    await run('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)', [admin.email, hash]);
+    console.log(`[db] Seeded admin user: ${admin.email}`);
+
+    const recipientExists = await one('SELECT id FROM notification_recipients WHERE email = ?', [admin.email]);
+    if (!recipientExists) {
+      await run('INSERT INTO notification_recipients (email, name, active) VALUES (?, ?, 1)', [admin.email, admin.name]);
+      console.log(`[db] Added ${admin.email} as notification recipient`);
+    }
   }
 }
 
