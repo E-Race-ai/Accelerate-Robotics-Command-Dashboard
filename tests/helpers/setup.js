@@ -30,6 +30,8 @@ function createTestDb() {
       invite_expires_at TEXT,
       status TEXT DEFAULT 'active',
       last_login_at TEXT,
+      reset_token TEXT,
+      reset_expires_at TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -269,6 +271,53 @@ function createTestDb() {
       module TEXT NOT NULL,
       permission TEXT NOT NULL CHECK(permission IN ('edit', 'view', 'none')),
       UNIQUE(user_id, module)
+    );
+
+    -- ── Project tracker ───────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS tracker_sprints (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tracker_people (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      initials TEXT NOT NULL,
+      full_name TEXT,
+      notes TEXT,
+      active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tracker_items (
+      id TEXT PRIMARY KEY,
+      sprint_id TEXT NOT NULL REFERENCES tracker_sprints(id) ON DELETE CASCADE,
+      parent_id TEXT REFERENCES tracker_items(id) ON DELETE CASCADE,
+      level TEXT NOT NULL CHECK(level IN ('project', 'task', 'subtask')),
+      name TEXT NOT NULL,
+      description TEXT,
+      owner_id INTEGER REFERENCES tracker_people(id),
+      color TEXT,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'not_started'
+        CHECK(status IN ('not_started', 'in_progress', 'blocked', 'complete')),
+      needs_verification INTEGER NOT NULL DEFAULT 0 CHECK(needs_verification IN (0, 1)),
+      verification_note TEXT,
+      is_milestone INTEGER NOT NULL DEFAULT 0 CHECK(is_milestone IN (0, 1)),
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tracker_item_support (
+      item_id TEXT NOT NULL REFERENCES tracker_items(id) ON DELETE CASCADE,
+      person_id INTEGER NOT NULL REFERENCES tracker_people(id) ON DELETE CASCADE,
+      PRIMARY KEY (item_id, person_id)
     );
   `);
 

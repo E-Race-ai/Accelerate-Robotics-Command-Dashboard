@@ -332,6 +332,12 @@ async function loadData() {
     fetch('/api/prospects?status=staged'),
   ]);
 
+  // WHY: 401 means the JWT cookie is missing or expired — redirect to login so the user can re-authenticate
+  if (prospectsRes.status === 401 || marketsRes.status === 401) {
+    window.location.href = '/admin-login';
+    return;
+  }
+
   PROSPECTS = prospectsRes.ok ? await prospectsRes.json() : [];
   MARKETS = marketsRes.ok ? await marketsRes.json() : [];
   STAGED_PROSPECTS = stagedRes.ok ? await stagedRes.json() : [];
@@ -952,7 +958,6 @@ function logout() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────
-// WHY: Auth disabled for local dev — skip the checkAuth guard so data always loads
 (async () => {
   try {
     setSort('keys'); // Default sort by keys descending

@@ -23,6 +23,8 @@ const marketRoutes = require('./routes/markets');
 const prospectRoutes = require('./routes/prospects');
 const userRoutes = require('./routes/users');
 const roleRoutes = require('./routes/roles');
+const trackerRoutes = require('./routes/tracker');
+const toolkitRoutes = require('./routes/toolkit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -80,6 +82,17 @@ const narrateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// WHY: 5 forgot-password attempts per IP per hour. Tight enough to stop
+// enumeration attempts and email-spam, generous enough for a user who
+// mistypes their email once or twice.
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many reset requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ── Static files ───────────────��────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
 // WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
@@ -101,6 +114,8 @@ app.use('/data', (req, res, next) => {
 // This solves the 404 problem where proposal pages only existed on Eric's machine.
 const HOTEL_REPOS_SIBLING = path.join(__dirname, '..', '..');
 const HOTEL_REPOS_BUNDLED = path.join(__dirname, '..', 'repos');
+// WHY: array name is historical ("hotelRepos") but this is really the list of
+// sibling repos mounted under /repos/. Toolkit items like b10-playground live here too.
 const hotelRepos = [
   'accelerate-thesis-hotel',
   'accelerate-moore-miami',
@@ -115,6 +130,7 @@ const hotelRepos = [
   'accelerate-hotel-template',
   'accelerate-carts',
   'accelerate-elevator',
+  'b10-playground',
 ];
 const fs = require('fs');
 for (const repo of hotelRepos) {
@@ -126,6 +142,9 @@ for (const repo of hotelRepos) {
 }
 
 // ── API routes ──────────────────────────────────────────────────
+// WHY: Rate-limit the public forgot-password endpoint before mounting the
+// broader auth routes, so it's impossible to route around the limiter.
+app.use('/api/auth/forgot-password', forgotPasswordLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/inquiries', (req, res, next) => {
   // WHY: Only rate-limit the public POST, not admin GET/PATCH
@@ -148,6 +167,8 @@ app.use('/api/markets', marketRoutes);
 app.use('/api/prospects', prospectRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/tracker', trackerRoutes);
+app.use('/api/toolkit', toolkitRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
 // WHY: /admin is the master command center — unified dashboard for all tools
@@ -168,11 +189,20 @@ app.get('/admin/deals', (req, res) => {
 app.get('/admin/deals/:id', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-deal-detail.html'));
 });
+app.get('/admin/project-tracker', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-project-tracker.html'));
+});
 app.get('/admin/settings', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-settings.html'));
 });
 app.get('/accept-invite', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'accept-invite.html'));
+});
+app.get('/forgot-password', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'forgot-password.html'));
+});
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html'));
 });
 
 // ── Start ───────────────────────────────────────────────────────

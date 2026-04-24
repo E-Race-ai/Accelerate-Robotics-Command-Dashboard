@@ -89,6 +89,82 @@
       gap: 8px;
       transition: box-shadow 0.2s, transform 0.15s, border-color 0.2s;
       cursor: pointer;
+      position: relative; /* anchor for .ql-roster */
+    }
+    /* ── Owner + collaborator avatar stack ─────────────────── */
+    .ql-roster {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      flex-direction: row-reverse; /* owner on the left, z-index stack correct */
+      pointer-events: auto;
+    }
+    .ql-avatar {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #94a3b8; color: white;
+      font-size: 9.5px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid white;
+      margin-left: -6px; /* overlap */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      letter-spacing: 0.3px;
+      transition: transform 0.12s;
+    }
+    .ql-avatar:hover { transform: translateY(-1px) scale(1.12); z-index: 10; }
+    .ql-avatar.ql-owner {
+      box-shadow: 0 0 0 2px var(--ql-accent, #2563eb), 0 1px 3px rgba(0,0,0,0.15);
+      margin-left: 0; /* owner sits alone, no overlap */
+    }
+    .ql-avatar.ql-overflow {
+      background: #e5e7eb; color: #64748b; font-size: 10px;
+    }
+    /* ── Recent-commits hover preview ─────────────────────── */
+    .ql-recent {
+      position: absolute;
+      top: calc(100% + 6px); left: 50%;
+      transform: translateX(-50%) translateY(-4px);
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 10px;
+      min-width: 240px; max-width: 300px;
+      box-shadow: 0 10px 24px rgba(12,18,32,0.12);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.12s ease, transform 0.12s ease;
+      z-index: 50;
+      text-align: left;
+      font-size: 11.5px; line-height: 1.45;
+    }
+    .ql-card:hover .ql-recent {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .ql-recent::before {
+      content: ''; position: absolute;
+      top: -6px; left: 50%; transform: translateX(-50%);
+      width: 10px; height: 10px;
+      background: white; border-top: 1px solid #e5e7eb; border-left: 1px solid #e5e7eb;
+      transform: translateX(-50%) rotate(45deg);
+    }
+    .ql-recent .ql-recent-label {
+      font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.8px;
+      color: #94a3b8; font-weight: 600; margin-bottom: 4px;
+    }
+    .ql-recent .ql-commit {
+      padding: 5px 0; border-bottom: 1px dashed #eef2f7;
+    }
+    .ql-recent .ql-commit:last-child { border-bottom: 0; }
+    .ql-recent .ql-commit-subject {
+      color: #0c1220; font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .ql-recent .ql-commit-meta {
+      color: #6c7689; font-size: 10.5px; margin-top: 2px;
+    }
+    .ql-recent .ql-commit-sha {
+      font-family: "SF Mono", Menlo, monospace; color: #94a3b8; font-size: 10px;
     }
     .ql-card:hover {
       box-shadow: 0 6px 20px rgba(0,0,0,0.08);
@@ -218,7 +294,32 @@
       padding: 3px 8px;
       border-radius: 6px;
       white-space: nowrap;
+      transition: transform 0.1s, box-shadow 0.15s, filter 0.15s;
     }
+    /* WHY: Links get interactive affordance; plain span chips remain static labels */
+    a.wf-tool-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(15,23,42,0.1);
+      filter: brightness(0.96);
+    }
+    /* Primary CTA button inside a step card — e.g. "Open Playbook →" on the Deploy step */
+    .wf-cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 10px;
+      padding: 7px 12px;
+      font-size: 0.72rem; font-weight: 700;
+      color: white; text-decoration: none;
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(22,163,74,0.25);
+      transition: transform 0.1s, box-shadow 0.15s;
+      align-self: flex-start;
+    }
+    .wf-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(22,163,74,0.35);
+    }
+    .wf-cta svg { width:12px; height:12px; }
     .wf-step-stripe {
       height: 3px;
       border-radius: 3px 3px 0 0;
@@ -540,7 +641,8 @@
         <!-- Step 5: Deploy -->
         <div class="wf-step">
           <div class="wf-step-stripe" style="background: linear-gradient(90deg, #16a34a, #22c55e);"></div>
-          <a href="/repos/accelerate-thesis-hotel/pages/playbook.html" class="wf-step-inner brand-wf-step">
+          <!-- WHY: Using div (not <a>) so the chips and CTA button inside can be their own links -->
+          <div class="wf-step-inner brand-wf-step">
             <div class="brand-wf-bar"><div class="brand-wf-bar-fill" style="width:100%;background:linear-gradient(90deg,#16a34a,#22c55e);"></div></div>
             <span class="wf-count" id="wf-count-deploy" style="color:#16a34a;">0</span>
             <span class="wf-step-num" style="color:#16a34a;">Step 5</span>
@@ -550,10 +652,14 @@
             <div class="wf-step-title">Deploy</div>
             <div class="wf-step-desc">Won deal, deployment playbook, fleet install + go-live</div>
             <div class="wf-step-tools">
-              <span class="wf-tool-chip" style="background:#f0fdf4;color:#166534;">Playbook</span>
+              <a href="/repos/accelerate-thesis-hotel/pages/playbook.html" class="wf-tool-chip" style="background:#f0fdf4;color:#166534;text-decoration:none;">Playbook</a>
               <span class="wf-tool-chip" style="background:#ecfdf5;color:#065f46;">Monitoring</span>
             </div>
-          </a>
+            <a href="/repos/accelerate-thesis-hotel/pages/playbook.html" class="wf-cta">
+              Open Playbook
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+          </div>
         </div>
 
       </div>
@@ -677,6 +783,24 @@
             <div class="ql-desc">Deployment loadout</div>
           </a>
 
+          <!-- LiDAR Scanner — wheel-stick building scanner toolkit -->
+          <a href="/pages/slam-lidar-scanner.html" class="ql-card" data-module="lidar_scanner" style="--ql-accent:#0055ff;">
+            <div class="ql-icon" style="background:#eef2ff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0055ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2v3M12 15v7M4.2 4.2l2.1 2.1M17.7 6.3l2.1-2.1M2 10h3M19 10h3"/><circle cx="17" cy="21" r="1.5"/></svg>
+            </div>
+            <div class="ql-title">LiDAR Scanner</div>
+            <div class="ql-desc">Wheel-stick SLAM kit</div>
+          </a>
+
+          <!-- Sensor Lab — BLE wearable playground (Minew B10 + future sensors) -->
+          <a href="/repos/b10-playground/index.html" class="ql-card" data-module="sensor_lab" target="_blank" style="--ql-accent:#db2777;">
+            <div class="ql-icon" style="background:#fdf2f8;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="4"/><circle cx="12" cy="14" r="1" fill="#db2777"/><path d="M6 7a9 9 0 0 1 12 0"/><path d="M8 9.5a5.5 5.5 0 0 1 8 0"/></svg>
+            </div>
+            <div class="ql-title">Sensor Lab</div>
+            <div class="ql-desc">BLE wearable playground</div>
+          </a>
+
           <!-- Elevator Simulator — circuit/button emulator -->
           <a href="/repos/accelerate-elevator/pages/button-emulator-sim.html" class="ql-card" data-module="elevator_sim" target="_blank" style="--ql-accent:#0284c7;">
             <div class="ql-icon" style="background:#e0f2fe;">
@@ -714,12 +838,21 @@
           </a>
 
           <!-- Public Website — globe icon -->
-          <a href="/" class="ql-card" style="--ql-accent:#64748b;">
+          <a href="/" class="ql-card" data-module="public_website" style="--ql-accent:#64748b;">
             <div class="ql-icon" style="background:#f8fafc;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4" ry="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
             </div>
             <div class="ql-title">Public Website</div>
             <div class="ql-desc">acceleraterobotics.com</div>
+          </a>
+
+          <!-- Project Tracker — calendar / Gantt icon -->
+          <a href="/admin/project-tracker" class="ql-card" data-module="project_tracker" style="--ql-accent:#f59e0b;">
+            <div class="ql-icon" style="background:#fffbeb;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><rect x="6" y="13" width="6" height="2" rx="1" fill="#f59e0b"/><rect x="9" y="16" width="8" height="2" rx="1" fill="#f59e0b"/></svg>
+            </div>
+            <div class="ql-title">Project Tracker</div>
+            <div class="ql-desc">Sprint-based workstream planner</div>
           </a>
 
         </div>
@@ -885,6 +1018,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Permission gating skipped:', e);
   }
 
+  renderToolkitRosters();
   refreshAll();
 });
 
@@ -897,9 +1031,168 @@ function applyTilePermissions(perms) {
   });
 }
 
+// ── Toolkit owner + collaborator avatars ────────────────────────
+// WHY: Each card's owner + collabs are derived from real `git log` author
+// activity on the files that define the tool (see GET /api/toolkit/ownership
+// and src/routes/toolkit.js). Owner = author with the most non-merge commits
+// on the tool's files; collabs = next 2. Cache TTL: 1 hour server-side.
+
+// Email-keyed overrides: friendly name + initials + color. Use this when a
+// contributor's git name/email is messy or to merge multiple identities.
+// Set value to `null` to filter an identity out entirely (test accounts, bots).
+const GIT_ALIASES = {
+  'claude.e.race@atlasmobility.com':      { name: 'Eric Race',     initials: 'ER', color: '#0891b2' },
+  'ericrace@susie-iphone.localdomain':    { name: 'Eric Race',     initials: 'ER', color: '#0891b2' },
+  'claude.r.hussain@atlasmobility.com':   { name: 'Richa Hussain', initials: 'RH', color: '#6366f1' },
+  'claude.t.rey@atlasmobility.com':       { name: 'Tyler Rey',     initials: 'TR', color: '#ea580c' },
+  'claude.c.simon@atlasmobility.com':     { name: 'Claude Simon',  initials: 'CS', color: '#7c3aed' },
+  'acceleraterobotics@gmail.com':         null, // test / bot account, hide from avatars
+};
+
+function _palettePick(s) {
+  const palette = ['#0891b2', '#7c3aed', '#ea580c', '#059669', '#d97706', '#dc2626', '#6366f1', '#db2777'];
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return palette[Math.abs(h) % palette.length];
+}
+
+function _initialsFromName(name) {
+  const clean = String(name || '').replace(/[^a-zA-Z\s-]/g, '').trim();
+  const parts = clean.split(/[\s-]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  if (parts[0]) return parts[0].slice(0, 2).toUpperCase();
+  return '??';
+}
+
+function _authorDisplay(a) {
+  const email = String(a.email || '').toLowerCase();
+  if (email in GIT_ALIASES) {
+    const alias = GIT_ALIASES[email];
+    if (alias === null) return null; // filtered out
+    return { name: alias.name, initials: alias.initials, color: alias.color, commits: a.count };
+  }
+  return {
+    name: a.name || email.split('@')[0] || 'Unknown',
+    initials: _initialsFromName(a.name || email),
+    color: _palettePick(email || a.name || ''),
+    commits: a.count,
+  };
+}
+
+function _relativeTime(unixSeconds) {
+  if (!unixSeconds) return '';
+  const now = Date.now() / 1000;
+  const diff = Math.max(0, now - unixSeconds);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 86400 * 30) return `${Math.floor(diff / (86400 * 7))}w ago`;
+  if (diff < 86400 * 365) return `${Math.floor(diff / (86400 * 30))}mo ago`;
+  return `${Math.floor(diff / (86400 * 365))}y ago`;
+}
+
+function _escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+async function renderToolkitRosters() {
+  let modules = {};
+  try {
+    const r = await fetch('/api/toolkit/ownership');
+    if (r.ok) {
+      const data = await r.json();
+      modules = data.modules || {};
+    }
+  } catch (e) {
+    console.warn('toolkit ownership fetch failed:', e);
+  }
+
+  const MAX_VISIBLE = 3;
+  document.querySelectorAll('.ql-card[data-module]').forEach(card => {
+    const mod = card.dataset.module;
+    // WHY: Endpoint now returns { authors, recent } per module (was a flat
+    // array before). Defensive fallback handles older caches / missing data.
+    const modData = modules[mod] || {};
+    const raw = Array.isArray(modData) ? modData : (modData.authors || []);
+    const recent = Array.isArray(modData) ? [] : (modData.recent || []);
+    // 1) alias → friendly display, drop filtered identities
+    const mapped = raw.map(_authorDisplay).filter(Boolean);
+    // 2) merge entries sharing the same display name (same person, multiple
+    //    git emails like "E-Race-ai" + "Eric Race"). Sum commits.
+    const byName = new Map();
+    mapped.forEach(m => {
+      const existing = byName.get(m.name);
+      if (existing) existing.commits += m.commits;
+      else byName.set(m.name, { ...m });
+    });
+    // 3) re-sort by total commits desc so owner is the true top contributor
+    const authors = Array.from(byName.values()).sort((a, b) => b.commits - a.commits);
+    if (authors.length === 0) return;
+    if (card.querySelector('.ql-roster')) return;
+
+    const visible = authors.slice(0, MAX_VISIBLE);
+    const overflow = authors.length - MAX_VISIBLE;
+
+    const roster = document.createElement('div');
+    roster.className = 'ql-roster';
+
+    // Flex is row-reverse, so appending the owner LAST puts them on the left.
+    [...visible].reverse().forEach((m, idx) => {
+      // Original index in `visible`: (visible.length - 1 - idx). Owner = 0.
+      const isOwner = (visible.length - 1 - idx) === 0;
+      const av = document.createElement('div');
+      av.className = 'ql-avatar' + (isOwner ? ' ql-owner' : '');
+      av.style.background = m.color;
+      av.textContent = m.initials;
+      // WHY: commits=0 means this was an override fallback, not a real git stat.
+      const commitPart = m.commits > 0
+        ? `${m.commits} commit${m.commits === 1 ? '' : 's'}`
+        : 'assigned';
+      av.title = `${m.name} · ${commitPart}${isOwner ? ' · owner' : ''}`;
+      roster.appendChild(av);
+    });
+    if (overflow > 0) {
+      const ov = document.createElement('div');
+      ov.className = 'ql-avatar ql-overflow';
+      ov.textContent = `+${overflow}`;
+      ov.title = authors.slice(MAX_VISIBLE).map(a => `${a.name} (${a.commits})`).join(', ');
+      roster.appendChild(ov);
+    }
+    card.appendChild(roster);
+
+    // Recent-commits hover popover. Skipped when there's no git history
+    // (override-only tools) — no point showing an empty preview.
+    if (recent.length > 0) {
+      const popover = document.createElement('div');
+      popover.className = 'ql-recent';
+      const rows = recent.map(c => {
+        const authorDisplay = _authorDisplay({ name: c.author, email: c.email, count: 1 });
+        const authorName = authorDisplay ? authorDisplay.name : (c.author || 'Unknown');
+        return `<div class="ql-commit">
+          <div class="ql-commit-subject">${_escapeHtml(c.subject || '(no message)')}</div>
+          <div class="ql-commit-meta">
+            <span class="ql-commit-sha">${_escapeHtml(c.sha)}</span>
+            · ${_escapeHtml(authorName)} · ${_escapeHtml(_relativeTime(c.ts))}
+          </div>
+        </div>`;
+      }).join('');
+      popover.innerHTML = `<div class="ql-recent-label">Recent activity</div>${rows}`;
+      card.appendChild(popover);
+    }
+  });
+}
+
 async function refreshAll() {
   try {
     const res = await fetch('/api/deals');
+    // WHY: 401 means the JWT cookie is missing or expired — redirect to login
+    if (res.status === 401) {
+      window.location.href = '/admin-login';
+      return;
+    }
     if (!res.ok) throw new Error('Failed to fetch deals');
     deals = await res.json();
   } catch (e) {

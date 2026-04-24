@@ -319,6 +319,53 @@ async function initSchema() {
       UNIQUE(user_id, module)
     )`,
     `CREATE INDEX IF NOT EXISTS idx_user_permissions_user ON user_permissions(user_id)`,
+
+    // ── Project tracker (sprint-based multi-project planner) ────────
+    `CREATE TABLE IF NOT EXISTS tracker_sprints (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS tracker_people (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      initials TEXT NOT NULL,
+      full_name TEXT,
+      notes TEXT,
+      active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    // WHY: Single table for projects + tasks + subtasks — they share 95% of columns.
+    // The level CHECK + parent_id FK enforce the 4-level hierarchy (sprint → project → task → subtask).
+    // parent_id level-matching is enforced in src/services/tracker-validation.js, not here.
+    `CREATE TABLE IF NOT EXISTS tracker_items (
+      id TEXT PRIMARY KEY,
+      sprint_id TEXT NOT NULL REFERENCES tracker_sprints(id) ON DELETE CASCADE,
+      parent_id TEXT REFERENCES tracker_items(id) ON DELETE CASCADE,
+      level TEXT NOT NULL CHECK(level IN ('project', 'task', 'subtask')),
+      name TEXT NOT NULL,
+      description TEXT,
+      owner_id INTEGER REFERENCES tracker_people(id),
+      color TEXT,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'not_started'
+        CHECK(status IN ('not_started', 'in_progress', 'blocked', 'complete')),
+      needs_verification INTEGER NOT NULL DEFAULT 0 CHECK(needs_verification IN (0, 1)),
+      verification_note TEXT,
+      is_milestone INTEGER NOT NULL DEFAULT 0 CHECK(is_milestone IN (0, 1)),
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS tracker_item_support (
+      item_id TEXT NOT NULL REFERENCES tracker_items(id) ON DELETE CASCADE,
+      person_id INTEGER NOT NULL REFERENCES tracker_people(id) ON DELETE CASCADE,
+      PRIMARY KEY (item_id, person_id)
+    )`,
   ];
 
   for (const sql of statements) {
@@ -341,28 +388,37 @@ async function initSchema() {
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN invite_expires_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN status TEXT DEFAULT 'active'");
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN last_login_at TEXT");
+  // WHY: Forgot-password flow. Separate from invite_token so an active user can
+  // reset their password without their status flipping back to 'invited'.
+  await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN reset_token TEXT");
+  await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN reset_expires_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE markets ADD COLUMN lat REAL");
   await additiveAlterIfMissing("ALTER TABLE markets ADD COLUMN lng REAL");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────
 async function seedAdmin() {
-  const email = process.env.ADMIN_EMAIL;
-  const password = process.env.ADMIN_PASSWORD;
-  if (!email || !password) return;
-
-  const existing = await one('SELECT id FROM admin_users WHERE email = ?', [email]);
-  if (existing) return;
+  // WHY: Seed all configured admin accounts on boot. ADMIN_EMAIL is the primary;
+  // ADMIN2_EMAIL is an optional second super admin (e.g. a co-founder or ops lead).
+  const admins = [
+    { email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD, name: 'Admin' },
+    { email: process.env.ADMIN2_EMAIL, password: process.env.ADMIN2_PASSWORD, name: 'Admin 2' },
+  ].filter(a => a.email && a.password);
 
   const BCRYPT_ROUNDS = 12;
-  const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
-  await run('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)', [email, hash]);
-  console.log(`[db] Seeded admin user: ${email}`);
+  for (const admin of admins) {
+    const existing = await one('SELECT id FROM admin_users WHERE email = ?', [admin.email]);
+    if (existing) continue;
 
-  const recipientExists = await one('SELECT id FROM notification_recipients WHERE email = ?', [email]);
-  if (!recipientExists) {
-    await run('INSERT INTO notification_recipients (email, name, active) VALUES (?, ?, 1)', [email, 'Admin']);
-    console.log(`[db] Added admin as notification recipient`);
+    const hash = bcrypt.hashSync(admin.password, BCRYPT_ROUNDS);
+    await run('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)', [admin.email, hash]);
+    console.log(`[db] Seeded admin user: ${admin.email}`);
+
+    const recipientExists = await one('SELECT id FROM notification_recipients WHERE email = ?', [admin.email]);
+    if (!recipientExists) {
+      await run('INSERT INTO notification_recipients (email, name, active) VALUES (?, ?, 1)', [admin.email, admin.name]);
+      console.log(`[db] Added ${admin.email} as notification recipient`);
+    }
   }
 }
 
@@ -425,6 +481,13 @@ const ready = (async () => {
   try {
     const { seedProspects } = require('./seed-prospects');
     await seedProspects({ client, one, all, run, transaction });
+  } catch (e) {
+    if (!e.message.includes('Cannot find module')) throw e;
+  }
+
+  try {
+    const { seedTracker } = require('./tracker-seed');
+    await seedTracker({ client, one, all, run, transaction });
   } catch (e) {
     if (!e.message.includes('Cannot find module')) throw e;
   }

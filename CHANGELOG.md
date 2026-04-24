@@ -15,6 +15,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `POST /api/users/:id/resend-invite` regenerates the invite token and re-sends the email. The Resend button on the Team list no longer 404s.
 - `PATCH /api/roles/permissions` — point-edit a single cell of the role × module matrix (frontend uses this from the Permissions tab).
 - Command Center toolkit tiles are gated by the logged-in user's permissions: tiles with `permission=none` are hidden on load.
+- Forgot-password flow: `/forgot-password` page emails a single-use, 1-hour reset link via `POST /api/auth/forgot-password`. `/reset-password?token=...` validates the token and lets the user set a new password (`POST /api/auth/reset-password`). "Forgot password?" link added to the login page. No enumeration — endpoint returns `{ok:true}` whether the email exists or not. Rate-limited to 5 requests per IP per hour.
+- **Project Tracker** (2026-04-23): New admin page at `/admin/project-tracker` — sprint-based planner with projects/tasks/subtasks, Gantt view with collapsible rows and same-parent drag-to-reorder (SortableJS), inline status/owner edits, side-panel drawer for full edits, Manage People modal. 14 REST endpoints under `/api/tracker` behind `requireAuth`. 4 new tables (`tracker_sprints`, `tracker_items` unified for 3 levels, `tracker_people`, `tracker_item_support`). Seeded idempotently with "Hotel Bots - Sprint 1" (10 projects, 2 tasks, 2 milestones) on first boot. Tile added to the Command Center grid.
 
 ### Changed
 - `CLAUDE.md` restructured to reference `.claude/rules/` and `docs/` instead of duplicating guidance.
@@ -22,6 +24,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Test helper `admin_users` schema now matches production (role CHECK includes `super_admin`, `module_owner`; status/invite columns present) so invite flows can be integration-tested.
 
 ### Fixed
+- Resend SDK returns `{ data, error }` instead of throwing on API rejections, so unverified-domain / invalid-from errors were being logged as "sent". All three email helpers (`notifyNewInquiry`, `sendInviteEmail`, `sendPasswordResetEmail`) now inspect the response and surface the real error, including the error name, message, and `from` address used. Forgot-password route also logs which branch it took (no account, wrong status, dispatched) so prod failures are diagnosable from Render logs.
 - Invite flow silently dropped per-user module overrides: frontend sent `modules: []` while backend expected `modulePermissions: {}`, so overrides were never written. Invites now write to `user_permissions` as intended.
 - Permissions tab was rendering empty: frontend read `/api/roles/permissions` as a flat array but the endpoint returned `{ matrix, modules, roles }`. Frontend now reads the `matrix` key.
 - Accept-invite route crashed the server on boot — `const token = ...` clashed with the destructured `token` from the request body. Renamed the session token.
