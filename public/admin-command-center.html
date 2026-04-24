@@ -119,6 +119,53 @@
     .ql-avatar.ql-overflow {
       background: #e5e7eb; color: #64748b; font-size: 10px;
     }
+    /* ── Recent-commits hover preview ─────────────────────── */
+    .ql-recent {
+      position: absolute;
+      top: calc(100% + 6px); left: 50%;
+      transform: translateX(-50%) translateY(-4px);
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 10px;
+      min-width: 240px; max-width: 300px;
+      box-shadow: 0 10px 24px rgba(12,18,32,0.12);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.12s ease, transform 0.12s ease;
+      z-index: 50;
+      text-align: left;
+      font-size: 11.5px; line-height: 1.45;
+    }
+    .ql-card:hover .ql-recent {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .ql-recent::before {
+      content: ''; position: absolute;
+      top: -6px; left: 50%; transform: translateX(-50%);
+      width: 10px; height: 10px;
+      background: white; border-top: 1px solid #e5e7eb; border-left: 1px solid #e5e7eb;
+      transform: translateX(-50%) rotate(45deg);
+    }
+    .ql-recent .ql-recent-label {
+      font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.8px;
+      color: #94a3b8; font-weight: 600; margin-bottom: 4px;
+    }
+    .ql-recent .ql-commit {
+      padding: 5px 0; border-bottom: 1px dashed #eef2f7;
+    }
+    .ql-recent .ql-commit:last-child { border-bottom: 0; }
+    .ql-recent .ql-commit-subject {
+      color: #0c1220; font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .ql-recent .ql-commit-meta {
+      color: #6c7689; font-size: 10.5px; margin-top: 2px;
+    }
+    .ql-recent .ql-commit-sha {
+      font-family: "SF Mono", Menlo, monospace; color: #94a3b8; font-size: 10px;
+    }
     .ql-card:hover {
       box-shadow: 0 6px 20px rgba(0,0,0,0.08);
       transform: translateY(-2px);
@@ -1032,6 +1079,25 @@ function _authorDisplay(a) {
   };
 }
 
+function _relativeTime(unixSeconds) {
+  if (!unixSeconds) return '';
+  const now = Date.now() / 1000;
+  const diff = Math.max(0, now - unixSeconds);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 86400 * 30) return `${Math.floor(diff / (86400 * 7))}w ago`;
+  if (diff < 86400 * 365) return `${Math.floor(diff / (86400 * 30))}mo ago`;
+  return `${Math.floor(diff / (86400 * 365))}y ago`;
+}
+
+function _escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
 async function renderToolkitRosters() {
   let modules = {};
   try {
@@ -1047,7 +1113,11 @@ async function renderToolkitRosters() {
   const MAX_VISIBLE = 3;
   document.querySelectorAll('.ql-card[data-module]').forEach(card => {
     const mod = card.dataset.module;
-    const raw = modules[mod] || [];
+    // WHY: Endpoint now returns { authors, recent } per module (was a flat
+    // array before). Defensive fallback handles older caches / missing data.
+    const modData = modules[mod] || {};
+    const raw = Array.isArray(modData) ? modData : (modData.authors || []);
+    const recent = Array.isArray(modData) ? [] : (modData.recent || []);
     // 1) alias → friendly display, drop filtered identities
     const mapped = raw.map(_authorDisplay).filter(Boolean);
     // 2) merge entries sharing the same display name (same person, multiple
@@ -1092,6 +1162,26 @@ async function renderToolkitRosters() {
       roster.appendChild(ov);
     }
     card.appendChild(roster);
+
+    // Recent-commits hover popover. Skipped when there's no git history
+    // (override-only tools) — no point showing an empty preview.
+    if (recent.length > 0) {
+      const popover = document.createElement('div');
+      popover.className = 'ql-recent';
+      const rows = recent.map(c => {
+        const authorDisplay = _authorDisplay({ name: c.author, email: c.email, count: 1 });
+        const authorName = authorDisplay ? authorDisplay.name : (c.author || 'Unknown');
+        return `<div class="ql-commit">
+          <div class="ql-commit-subject">${_escapeHtml(c.subject || '(no message)')}</div>
+          <div class="ql-commit-meta">
+            <span class="ql-commit-sha">${_escapeHtml(c.sha)}</span>
+            · ${_escapeHtml(authorName)} · ${_escapeHtml(_relativeTime(c.ts))}
+          </div>
+        </div>`;
+      }).join('');
+      popover.innerHTML = `<div class="ql-recent-label">Recent activity</div>${rows}`;
+      card.appendChild(popover);
+    }
   });
 }
 
