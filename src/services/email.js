@@ -87,8 +87,10 @@ function escapeHtml(str) {
 async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
   const resend = getResend();
   if (!resend) {
-    console.warn('[email] RESEND_API_KEY not set — skipping invite email');
-    return;
+    // WHY: Throw instead of silently returning so the invite endpoint can
+    // tell the admin that email is not configured — a silent no-op leaves
+    // them believing the invite was sent when it wasn't.
+    throw new Error('RESEND_API_KEY is not configured — cannot send invite email');
   }
   const roleLabel = {
     admin: 'Admin',
