@@ -113,6 +113,8 @@ app.use('/data', (req, res, next) => {
 // This solves the 404 problem where proposal pages only existed on Eric's machine.
 const HOTEL_REPOS_SIBLING = path.join(__dirname, '..', '..');
 const HOTEL_REPOS_BUNDLED = path.join(__dirname, '..', 'repos');
+// WHY: array name is historical ("hotelRepos") but this is really the list of
+// sibling repos mounted under /repos/. Toolkit items like b10-playground live here too.
 const hotelRepos = [
   'accelerate-thesis-hotel',
   'accelerate-moore-miami',
@@ -127,6 +129,7 @@ const hotelRepos = [
   'accelerate-hotel-template',
   'accelerate-carts',
   'accelerate-elevator',
+  'b10-playground',
 ];
 const fs = require('fs');
 for (const repo of hotelRepos) {
