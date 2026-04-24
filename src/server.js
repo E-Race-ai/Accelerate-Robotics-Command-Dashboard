@@ -23,6 +23,7 @@ const marketRoutes = require('./routes/markets');
 const prospectRoutes = require('./routes/prospects');
 const userRoutes = require('./routes/users');
 const roleRoutes = require('./routes/roles');
+const trackerRoutes = require('./routes/tracker');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -162,6 +163,7 @@ app.use('/api/markets', marketRoutes);
 app.use('/api/prospects', prospectRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/tracker', trackerRoutes);
 
 // ── SPA fallback for admin routes ───────────────────────────────
 // WHY: /admin is the master command center — unified dashboard for all tools
@@ -181,6 +183,9 @@ app.get('/admin/deals', (req, res) => {
 // WHY: Placeholder for deal detail page — route registered so links work even before the page file exists
 app.get('/admin/deals/:id', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-deal-detail.html'));
+});
+app.get('/admin/project-tracker', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-project-tracker.html'));
 });
 app.get('/admin/settings', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-settings.html'));
