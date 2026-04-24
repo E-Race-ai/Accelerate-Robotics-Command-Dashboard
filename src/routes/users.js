@@ -102,7 +102,9 @@ router.post('/invite', async (req, res) => {
     res.status(201).json({ id: userRow.id, email, status: 'invited', inviteUrl });
   } catch (err) {
     console.error('[users] invite error:', err);
-    res.status(500).json({ error: 'Failed to create invite' });
+    // WHY: Surface the actual error message so the admin can report it — the generic
+    // "Failed to create invite" gives zero debugging info from the browser.
+    res.status(500).json({ error: `Failed to create invite: ${err.message}` });
   }
 });
 
@@ -147,7 +149,7 @@ router.post('/:id/resend-invite', async (req, res) => {
     res.json({ ok: true, inviteUrl });
   } catch (err) {
     console.error('[users] resend-invite error:', err);
-    res.status(500).json({ error: 'Failed to resend invite' });
+    res.status(500).json({ error: `Failed to resend invite: ${err.message}` });
   }
 });
 
