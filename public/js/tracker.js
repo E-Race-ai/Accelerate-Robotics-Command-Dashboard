@@ -100,14 +100,34 @@ function positionFor(start, end, sprintStart, sprintEnd) {
   };
 }
 
+// WHY: Format an ISO yyyy-mm-dd as "M/D" (no zero-padding) using UTC so a
+// browser in any timezone shows the same calendar date as stored in the DB.
+function fmtMD(iso) {
+  const d = new Date(iso + 'T00:00:00Z');
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+}
+
+function addDaysIso(iso, days) {
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 function weekHeaders(sprintStart, sprintEnd) {
   // WHY: Up to 6 weeks renders as week columns; longer spans switch to a single span header.
   const totalDays = daysBetween(sprintStart, sprintEnd) + 1;
   if (totalDays <= 42) {
     const weeks = Math.max(1, Math.ceil(totalDays / 7));
-    return Array.from({ length: weeks }, (_, i) => `Week ${i + 1}`);
+    return Array.from({ length: weeks }, (_, i) => {
+      const start = addDaysIso(sprintStart, i * 7);
+      // WHY: Clip the final week's end to the sprint end so headers never advertise
+      // dates beyond the sprint (e.g., a 21-day sprint would otherwise show 5/13 – 5/19).
+      const rawEnd = addDaysIso(sprintStart, i * 7 + 6);
+      const end = rawEnd > sprintEnd ? sprintEnd : rawEnd;
+      return start === end ? fmtMD(start) : `${fmtMD(start)} – ${fmtMD(end)}`;
+    });
   }
-  return [`${sprintStart} → ${sprintEnd}`];
+  return [`${fmtMD(sprintStart)} – ${fmtMD(sprintEnd)}`];
 }
 
 // ── Gantt render ────────────────────────────────────────────
@@ -117,7 +137,7 @@ function renderGantt() {
   if (!s) { root.innerHTML = ''; return; }
 
   const headers = weekHeaders(s.start_date, s.end_date);
-  const headerCols = headers.map(h => `<div class="text-center">${escapeHtml(h)}</div>`).join('');
+  const headerCols = headers.map(h => `<div class="text-center whitespace-nowrap">${escapeHtml(h)}</div>`).join('');
 
   // WHY: Render nested .sortable-list > .item-wrap > .gantt-row structure so SortableJS
   //      can drag each item (and its descendants) as a unit. A project wrap contains its
