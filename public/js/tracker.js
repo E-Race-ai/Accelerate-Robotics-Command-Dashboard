@@ -113,21 +113,13 @@ function addDaysIso(iso, days) {
   return d.toISOString().slice(0, 10);
 }
 
-function weekHeaders(sprintStart, sprintEnd) {
-  // WHY: Up to 6 weeks renders as week columns; longer spans switch to a single span header.
+function dayHeaders(sprintStart, sprintEnd) {
+  // WHY: One column per day so the header dates align with the per-day gridlines drawn
+  // on each row's .gantt-right background. Long sprints (>60 days) fall back to a single
+  // span label to avoid an unreadably narrow grid.
   const totalDays = daysBetween(sprintStart, sprintEnd) + 1;
-  if (totalDays <= 42) {
-    const weeks = Math.max(1, Math.ceil(totalDays / 7));
-    return Array.from({ length: weeks }, (_, i) => {
-      const start = addDaysIso(sprintStart, i * 7);
-      // WHY: Clip the final week's end to the sprint end so headers never advertise
-      // dates beyond the sprint (e.g., a 21-day sprint would otherwise show 5/13 – 5/19).
-      const rawEnd = addDaysIso(sprintStart, i * 7 + 6);
-      const end = rawEnd > sprintEnd ? sprintEnd : rawEnd;
-      return start === end ? fmtMD(start) : `${fmtMD(start)} – ${fmtMD(end)}`;
-    });
-  }
-  return [`${fmtMD(sprintStart)} – ${fmtMD(sprintEnd)}`];
+  if (totalDays > 60) return [`${fmtMD(sprintStart)} – ${fmtMD(sprintEnd)}`];
+  return Array.from({ length: totalDays }, (_, i) => fmtMD(addDaysIso(sprintStart, i)));
 }
 
 // ── Gantt render ────────────────────────────────────────────
@@ -136,8 +128,10 @@ function renderGantt() {
   const s = state.currentSprint;
   if (!s) { root.innerHTML = ''; return; }
 
-  const headers = weekHeaders(s.start_date, s.end_date);
-  const headerCols = headers.map(h => `<div class="text-center whitespace-nowrap">${escapeHtml(h)}</div>`).join('');
+  const headers = dayHeaders(s.start_date, s.end_date);
+  // WHY: Set --day-count so .gantt-right's per-day gridline gradient matches the header columns.
+  const dayCount = daysBetween(s.start_date, s.end_date) + 1;
+  const headerCols = headers.map(h => `<div class="text-center whitespace-nowrap" style="font-size:0.65rem;">${escapeHtml(h)}</div>`).join('');
 
   // WHY: Render nested .sortable-list > .item-wrap > .gantt-row structure so SortableJS
   //      can drag each item (and its descendants) as a unit. A project wrap contains its
@@ -171,7 +165,7 @@ function renderGantt() {
   html.push(`</div>`); // projects list
 
   root.innerHTML = `
-    <div class="gantt">
+    <div class="gantt" style="--day-count:${dayCount};">
       <div class="gantt-header">
         <div>Name / Owner / Support / Status</div>
         <div style="display:grid; grid-template-columns: repeat(${headers.length}, 1fr);">${headerCols}</div>
