@@ -21,6 +21,12 @@
     .gantt-header, .gantt-row { display: grid; grid-template-columns: 600px 1fr; }
     .gantt-header > div { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 10px 14px; font-size: 0.72rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
     .gantt-row > div { border-bottom: 1px solid #f3f4f6; padding: 10px 14px; position: relative; }
+    /* WHY: The right cell hosts a CSS-grid of header day-cells AND, on rows, the bars +
+       repeating-linear-gradient gridlines. Bars/gridlines span the element's full padding-
+       box, so the header day-cells must too — otherwise a 14px asymmetric horizontal
+       padding pushes Monday labels left of the Monday gridlines/tints. Strip horizontal
+       padding from the right cell only; keep vertical padding for row height. */
+    .gantt-header > div:last-child, .gantt-row > .gantt-right { padding-left: 0; padding-right: 0; }
     /* Nested wrappers are pure structure; no border/padding of their own. */
     .sortable-list { display: block; }
     .item-wrap { background: white; }
