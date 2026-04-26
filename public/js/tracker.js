@@ -114,12 +114,18 @@ function addDaysIso(iso, days) {
 }
 
 function dayHeaders(sprintStart, sprintEnd) {
-  // WHY: One column per day so the header dates align with the per-day gridlines drawn
-  // on each row's .gantt-right background. Long sprints (>60 days) fall back to a single
-  // span label to avoid an unreadably narrow grid.
+  // WHY: One column per day so the header aligns with the per-day gridlines drawn on
+  // each row's .gantt-right background. Labels are shown only on Mondays and Fridays
+  // to avoid a wall of dates; other weekdays and weekend columns render blank but still
+  // hold their column width so the gridlines stay aligned. Long sprints (>60 days) fall
+  // back to a single span label to avoid an unreadably narrow grid.
   const totalDays = daysBetween(sprintStart, sprintEnd) + 1;
   if (totalDays > 60) return [`${fmtMD(sprintStart)} – ${fmtMD(sprintEnd)}`];
-  return Array.from({ length: totalDays }, (_, i) => fmtMD(addDaysIso(sprintStart, i)));
+  return Array.from({ length: totalDays }, (_, i) => {
+    const iso = addDaysIso(sprintStart, i);
+    const dow = new Date(iso + 'T00:00:00Z').getUTCDay(); // 0=Sun … 1=Mon … 5=Fri
+    return (dow === 1 || dow === 5) ? fmtMD(iso) : '';
+  });
 }
 
 // ── Gantt render ────────────────────────────────────────────
