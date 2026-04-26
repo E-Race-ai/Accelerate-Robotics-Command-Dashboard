@@ -369,6 +369,14 @@ function closeDrawer() {
 
 el('drawer-backdrop').addEventListener('click', closeDrawer);
 
+// WHY: <form id="drawer-form"> is a persistent element; only its innerHTML is swapped per render.
+// Attaching the submit listener inside renderDrawerForm() stacked one listener per open, causing
+// duplicate POSTs and queued alerts on save. Bind once here.
+el('drawer-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  await submitDrawer(e.currentTarget);
+});
+
 function renderDrawerForm() {
   const title = el('drawer-title');
   const form = el('drawer-form');
@@ -465,10 +473,6 @@ function renderDrawerForm() {
   `;
 
   el('drawer-cancel').addEventListener('click', closeDrawer);
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await submitDrawer(form);
-  });
   if (isEdit) {
     el('drawer-delete').addEventListener('click', async () => {
       if (!confirm(`Delete "${existing.name}"? This cascades to children.`)) return;
