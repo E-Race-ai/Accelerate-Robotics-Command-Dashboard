@@ -2717,66 +2717,138 @@ async function loadProjectHub() {
   }
 }
 
-// Pull the latest team_update activities and render them inline below the
-// post form. flashIds is a Set of activity IDs to briefly highlight (used
-// after a successful post so the user sees "their" item land).
+// Render the freshest activity inline below the hub post form. We previously
+// only matched team_update/standup/shoutout — but the rest of the stack
+// (collab claims, deal moves, assessments, feedback) writes meaningful
+// activity too, and excluding them made the stream look sparse. Now we
+// render any action with a sensible "<verb> <target>" line, falling back to
+// the action key when no specific renderer applies.
+const HUB_STREAM_LIMIT = 12;
+
 async function loadHubUpdatesStream(flashIds = new Set()) {
   const el = document.getElementById('hubUpdatesStream');
   if (!el) return;
 
   let rows = [];
   try {
-    // Pull a small page; the global activity feed at the bottom shows the full
-    // history with filters, so the hub stream just wants the freshest 5.
-    const r = await fetch('/api/activities?limit=80');
+    const r = await fetch('/api/activities?limit=120');
     if (r.ok) rows = await r.json();
   } catch { /* non-fatal */ }
 
-  // Filter to the actions we treat as "team updates" — keep this in sync with
-  // the POST endpoint's allow-list (team_update, standup, shoutout).
-  const updates = rows
-    .filter(r => r.action === 'team_update' || r.action === 'standup' || r.action === 'shoutout')
-    .slice(0, 5);
+  // No more filter by action — stream is the team's pulse, not just chat.
+  const updates = rows.slice(0, HUB_STREAM_LIMIT);
 
   if (updates.length === 0) {
     el.innerHTML = `
-      <div class="hub-stream-label">Recent updates</div>
+      <div class="hub-stream-label">Recent activity</div>
       <div class="hub-stream-empty">Nothing yet — be the first to post.</div>
     `;
     return;
   }
 
   el.innerHTML = `
-    <div class="hub-stream-label">Recent updates · last ${updates.length}</div>
-    ${updates.map(u => {
-      let body = '';
-      let itemRef = '';
-      try {
-        const d = u.detail ? JSON.parse(u.detail) : null;
-        if (d) {
-          body = d.body || '';
-          if (d.item_id && _hubSprintCache) {
-            // Look up the item name so we can show "→ Project X" instead of an opaque ID
-            const all = (_hubSprintCache.projects || []).flatMap(p => [p, ...(p.tasks || [])]);
-            const found = all.find(it => String(it.id) === String(d.item_id));
-            if (found) itemRef = found.name;
-          }
-        }
-      } catch { /* not JSON; fall through */ }
-      const actor = (u.actor || '?').split('@')[0];
-      const initials = _initials(u.actor);
-      const color = _colorFromString(u.actor || '?');
-      const fresh = flashIds.has(u.id) ? ' fresh' : '';
-      return `
-        <div class="hub-stream-item${fresh}">
-          <span class="hub-stream-avatar" style="background:${color};">${initials}</span>
-          <div class="hub-stream-body">
-            <span class="who">${escapeHtml(actor)}</span>${escapeHtml(body)}${itemRef ? `<span class="ref">→ ${escapeHtml(itemRef)}</span>` : ''}
-          </div>
-          <span class="hub-stream-time" title="${escapeHtml(u.created_at || '')}">${timeAgo(u.created_at)}</span>
-        </div>
-      `;
-    }).join('')}
+    <div class="hub-stream-label">Recent activity · last ${updates.length}</div>
+    ${updates.map(u => _hubStreamItemHtml(u, flashIds)).join('')}
+  `;
+}
+
+// Translate a single activity row into the stream's text. Different actions
+// produce different sentences — see the inline switch for each case.
+function _hubStreamItemHtml(u, flashIds) {
+  const actor = (u.actor || '?').split('@')[0];
+  const initials = _initials(u.actor);
+  const color = _colorFromString(u.actor || '?');
+  const fresh = flashIds.has(u.id) ? ' fresh' : '';
+
+  let detail = null;
+  try { if (u.detail) detail = JSON.parse(u.detail); } catch { /* not JSON */ }
+
+  // Resolve a tracker item name if a team_update tied to one
+  let trackerRefName = null;
+  if (detail && detail.item_id && _hubSprintCache) {
+    const all = (_hubSprintCache.projects || []).flatMap(p => [p, ...(p.tasks || [])]);
+    const found = all.find(it => String(it.id) === String(detail.item_id));
+    if (found) trackerRefName = found.name;
+  }
+
+  let bodyHtml = '';
+
+  switch (u.action) {
+    case 'team_update':
+    case 'standup':
+    case 'shoutout': {
+      const text = (detail && detail.body) || '';
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>${escapeHtml(text)}${trackerRefName ? `<span class="ref">→ ${escapeHtml(trackerRefName)}</span>` : ''}`;
+      break;
+    }
+    case 'collab_requested': {
+      const title = (detail && detail.title) || '';
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>posted a ticket${title ? `<span class="ref">→ ${escapeHtml(title)}</span>` : ''}`;
+      break;
+    }
+    case 'collab_claimed': {
+      const title = (detail && detail.title) || '';
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>claimed a ticket${title ? `<span class="ref">→ ${escapeHtml(title)}</span>` : ''}`;
+      break;
+    }
+    case 'collab_completed': {
+      const title = (detail && detail.title) || '';
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>landed a ticket${title ? `<span class="ref">→ ${escapeHtml(title)}</span>` : ''}`;
+      break;
+    }
+    case 'stage_changed': {
+      const dealName = u.deal_name || '';
+      const from = detail && detail.from;
+      const to = detail && detail.to;
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>moved ${dealName ? escapeHtml(dealName) + ' ' : ''}${from && to ? `from <b>${escapeHtml(from)}</b> to <b>${escapeHtml(to)}</b>` : 'to a new stage'}`;
+      break;
+    }
+    case 'deal_created': {
+      const dealName = u.deal_name || (detail && detail.name) || '';
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>created deal${dealName ? `<span class="ref">→ ${escapeHtml(dealName)}</span>` : ''}`;
+      break;
+    }
+    case 'deal_won': {
+      const dealName = u.deal_name || '';
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>won 🎉${dealName ? `<span class="ref">→ ${escapeHtml(dealName)}</span>` : ''}`;
+      break;
+    }
+    case 'assessment_started': {
+      const target = u.deal_name || (detail && (detail.title || detail.name)) || '';
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>started an assessment${target ? `<span class="ref">→ ${escapeHtml(target)}</span>` : ''}`;
+      break;
+    }
+    case 'bug_reported': {
+      const title = (detail && detail.title) || '';
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>reported a bug${title ? `<span class="ref">→ ${escapeHtml(title)}</span>` : ''}`;
+      break;
+    }
+    case 'feature_requested': {
+      const title = (detail && detail.title) || '';
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>requested a feature${title ? `<span class="ref">→ ${escapeHtml(title)}</span>` : ''}`;
+      break;
+    }
+    case 'prospect_added': {
+      const name = (detail && (detail.name || detail.title)) || '';
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>added a prospect${name ? `<span class="ref">→ ${escapeHtml(name)}</span>` : ''}`;
+      break;
+    }
+    case 'inquiry_received': {
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>submitted an inquiry`;
+      break;
+    }
+    default: {
+      // Unknown action — use the raw key so the row is still informative.
+      bodyHtml = `<span class="who">${escapeHtml(actor)}</span>${escapeHtml(u.action.replace(/_/g, ' '))}`;
+    }
+  }
+
+  return `
+    <div class="hub-stream-item${fresh}">
+      <span class="hub-stream-avatar" style="background:${color};">${initials}</span>
+      <div class="hub-stream-body">${bodyHtml}</div>
+      <span class="hub-stream-time" title="${escapeHtml(u.created_at || '')}">${timeAgo(u.created_at)}</span>
+    </div>
   `;
 }
 
