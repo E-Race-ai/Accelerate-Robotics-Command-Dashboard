@@ -195,6 +195,46 @@
       transform: translateY(-2px);
       border-color: var(--ql-accent, #2563eb);
     }
+    /* ── Activity LED ──────────────────────────────────────────
+       Tiny indicator at top-left of every toolkit tile that lights up when
+       the underlying module has had recent /api/activities events. Brighter
+       glow + pulse animation = more activity in the last 24h. */
+    .ql-led {
+      position: absolute;
+      top: 8px; left: 8px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #d4d8df;       /* off — soft gray dot, not jet black, so it reads as "idle" not "broken" */
+      box-shadow: inset 0 0 2px rgba(0,0,0,0.10);
+      transition: background 0.4s, box-shadow 0.4s;
+      pointer-events: none;      /* never steals clicks from the card */
+    }
+    .ql-led.low {
+      background: #ef4444;
+      box-shadow: 0 0 6px rgba(239,68,68,0.55), inset 0 0 2px rgba(0,0,0,0.10);
+    }
+    .ql-led.med {
+      background: #f59e0b;
+      box-shadow: 0 0 9px rgba(245,158,11,0.65), inset 0 0 2px rgba(0,0,0,0.10);
+    }
+    .ql-led.high {
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34,197,94,0.75), inset 0 0 2px rgba(0,0,0,0.10);
+      animation: ledPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes ledPulse {
+      0%, 100% { box-shadow: 0 0 12px rgba(34,197,94,0.75), inset 0 0 2px rgba(0,0,0,0.10); }
+      50%      { box-shadow: 0 0 18px rgba(34,197,94,1),    inset 0 0 2px rgba(0,0,0,0.10); }
+    }
+    /* Subtle ambient ring on the card itself when activity is high — makes
+       the whole tile feel "warm" without being noisy. */
+    .ql-card.activity-high {
+      border-color: rgba(34,197,94,0.35);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.18), 0 4px 14px rgba(34,197,94,0.10);
+    }
+    .ql-card.activity-med {
+      border-color: rgba(245,158,11,0.30);
+    }
     .ql-icon {
       width: 48px; height: 48px;
       border-radius: 12px;
@@ -1577,7 +1617,75 @@ async function refreshAll() {
   renderActivityFeed();
   renderMap();
   renderRegionalMaps();
+  renderToolkitActivityLeds();
   document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+// ── Toolkit activity LEDs ─────────────────────────────────────
+// Each .ql-card[data-module] gets a colored dot in its top-left corner.
+// Brighter / pulsing = more events on that module's slice of /api/activities
+// in the last 24h. Idle modules get a soft gray dot, never jet black, so the
+// row reads as "quiet" rather than "broken".
+const ACTION_TO_MODULES = {
+  // One action can light up multiple tiles when the work touches several modules.
+  inquiry_received:    ['inquiries'],
+  prospect_added:      ['prospects'],
+  deal_created:        ['deals'],
+  deal_updated:        ['deals'],
+  stage_changed:       ['deals'],
+  deal_won:            ['deals'],
+  assessment_started:  ['assessments'],
+  assessment_completed:['assessments'],
+  bug_reported:        ['feedback'],
+  feature_requested:   ['feedback'],
+  collab_requested:    ['collab'],
+  collab_claimed:      ['collab'],
+  collab_completed:    ['collab'],
+};
+
+async function renderToolkitActivityLeds() {
+  // Pull a wide window so the 24h slice has enough headroom for a busy day.
+  let acts = [];
+  try {
+    const r = await fetch('/api/activities?limit=200');
+    if (r.ok) acts = await r.json();
+  } catch { /* non-fatal — LEDs will all show as idle */ }
+
+  const cutoff = Date.now() - 24 * 3600 * 1000;
+  const counts = Object.create(null);
+  for (const a of acts) {
+    const t = a.created_at ? new Date(a.created_at + 'Z').getTime() : 0;
+    if (!t || t < cutoff) continue;
+    const modules = ACTION_TO_MODULES[a.action] || [];
+    for (const m of modules) counts[m] = (counts[m] || 0) + 1;
+  }
+
+  // Thresholds: low / med / high. Tuned for a small team — 3 events/day is
+  // already an active module; 6+ is "this is hot, look here first."
+  const cards = document.querySelectorAll('.ql-card[data-module]');
+  cards.forEach(card => {
+    const mod = card.dataset.module;
+    const n = counts[mod] || 0;
+    let level = '';
+    if      (n >= 6) level = 'high';
+    else if (n >= 3) level = 'med';
+    else if (n >= 1) level = 'low';
+
+    // Inject the LED span the first time we see a card; reuse on subsequent refreshes.
+    let led = card.querySelector(':scope > .ql-led');
+    if (!led) {
+      led = document.createElement('span');
+      led.className = 'ql-led';
+      card.prepend(led);
+    }
+    led.className = 'ql-led' + (level ? ' ' + level : '');
+    led.title = n === 0 ? 'No activity in last 24h'
+              : `${n} event${n === 1 ? '' : 's'} in last 24h`;
+
+    // Ambient card glow only on the brightest tier so the grid stays calm.
+    card.classList.toggle('activity-high', level === 'high');
+    card.classList.toggle('activity-med',  level === 'med');
+  });
 }
 
 // ── Stats row ───────────────────────────────────────────────────
