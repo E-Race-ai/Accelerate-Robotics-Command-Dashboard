@@ -25,6 +25,9 @@ const userRoutes = require('./routes/users');
 const roleRoutes = require('./routes/roles');
 const trackerRoutes = require('./routes/tracker');
 const toolkitRoutes = require('./routes/toolkit');
+const feedbackRoutes = require('./routes/feedback');
+const activityRoutes = require('./routes/activities');
+const collabRoutes = require('./routes/collab');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -169,6 +172,15 @@ app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/tracker', trackerRoutes);
 app.use('/api/toolkit', toolkitRoutes);
+// WHY: POST is public so end users can file bug reports without an account;
+// GET/PATCH require admin auth (gated inside the route module itself).
+// Rate-limit submissions to prevent screenshot-spam.
+app.use('/api/feedback', (req, res, next) => {
+  if (req.method === 'POST') return inquiryLimiter(req, res, next);
+  next();
+}, feedbackRoutes);
+app.use('/api/activities', activityRoutes);
+app.use('/api/collab', collabRoutes);
 
 // ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
 // WHY: Removed auth requirement temporarily so we can diagnose the API key issue.

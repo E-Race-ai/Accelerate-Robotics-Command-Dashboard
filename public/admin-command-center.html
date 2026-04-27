@@ -74,6 +74,44 @@
 
     /* WHY: .stat-pill styles removed — now using .brand-stat from brand.css */
 
+    /* ── Toolkit sort bar ─────────────────────────────────── */
+    .toolkit-sort {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .toolkit-sort .label {
+      font-size: 10px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      margin-right: 6px;
+    }
+    .toolkit-sort button {
+      background: white; border: 1px solid #e5e7eb;
+      border-radius: 999px; padding: 5px 12px;
+      font-size: 11.5px; font-weight: 600; color: #475569;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    .toolkit-sort button:hover {
+      background: #f8fafc; border-color: #cbd5e1; color: #0f172a;
+    }
+    .toolkit-sort button.active {
+      background: #0c1220; border-color: #0c1220; color: white;
+    }
+    .toolkit-sort .dir {
+      width: 28px; padding: 5px 0; font-family: 'JetBrains Mono', Menlo, monospace;
+      font-size: 13px;
+    }
+    /* WHY: Group dividers between toolkit rows when grouping by a key.
+       Anchored to the .ql-card via grid-column:1/-1 trickery. */
+    .toolkit-group-label {
+      grid-column: 1 / -1;
+      font-size: 10px; font-weight: 700; color: #64748b;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      padding: 4px 4px 0; margin-top: 2px;
+      border-top: 1px dashed #e5e7eb;
+    }
+    .toolkit-group-label:first-child { border-top: none; margin-top: 0; }
+
     /* ── Toolkit dashboard cards ────────────────────────── */
     .ql-card {
       background: white;
@@ -120,26 +158,12 @@
       background: #e5e7eb; color: #64748b; font-size: 10px;
     }
     /* ── Recent-commits hover preview ─────────────────────── */
-    .ql-recent {
-      position: absolute;
-      top: calc(100% + 6px); left: 50%;
-      transform: translateX(-50%) translateY(-4px);
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 8px 10px;
-      min-width: 240px; max-width: 300px;
-      box-shadow: 0 10px 24px rgba(12,18,32,0.12);
-      opacity: 0; pointer-events: none;
-      transition: opacity 0.12s ease, transform 0.12s ease;
-      z-index: 50;
-      text-align: left;
-      font-size: 11.5px; line-height: 1.45;
-    }
-    .ql-card:hover .ql-recent {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
+    /* WHY: Disabled. Popover dropped below the hovered card and visually
+       covered the icon of the card directly underneath it in the grid. The
+       avatar circles already convey author info, which is the primary value.
+       Keeping the markup so renderToolkitRosters() doesn't need a code change;
+       the popover element is still appended but never shown. */
+    .ql-recent { display: none !important; }
     .ql-recent::before {
       content: ''; position: absolute;
       top: -6px; left: 50%; transform: translateX(-50%);
@@ -354,7 +378,8 @@
     /* ── Activity feed ───────────────────────────────────── */
     .activity-item {
       display: flex;
-      gap: 12px;
+      align-items: center;
+      gap: 10px;
       padding: 10px 0;
       border-bottom: 1px solid #f3f4f6;
       font-size: 0.84rem;
@@ -363,8 +388,23 @@
     .activity-dot {
       width: 8px; height: 8px;
       border-radius: 50%;
-      margin-top: 6px;
       flex-shrink: 0;
+    }
+    /* Actor avatar — initials in a colored circle, hashed-stable per person */
+    .activity-avatar {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #94a3b8; color: white;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+      flex-shrink: 0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+    /* Lifecycle-lane pill: Outreach / Contract / Launch / 24-7 Active */
+    .activity-lane {
+      font-size: 0.62rem; font-weight: 700;
+      padding: 3px 8px; border-radius: 999px;
+      text-transform: uppercase; letter-spacing: 0.6px;
+      flex-shrink: 0; white-space: nowrap;
     }
     .activity-time {
       font-size: 0.72rem;
@@ -691,10 +731,20 @@
       <!-- ═══ Toolkit Dashboard ═══ -->
       <div class="mb-8 brand-reveal" data-delay="0.22">
         <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Toolkit</h3>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div class="toolkit-sort" id="toolkitSort" role="toolbar" aria-label="Sort toolkit">
+          <span class="label">Sort by</span>
+          <button data-sort="default" class="active" type="button">Default</button>
+          <button data-sort="name" type="button">A–Z</button>
+          <button data-sort="owner" type="button">Owner</button>
+          <button data-sort="dept" type="button">Department</button>
+          <button data-sort="topic" type="button">Topic</button>
+          <button data-sort="size" type="button">Size</button>
+          <button class="dir" id="toolkitSortDir" type="button" title="Toggle ascending/descending">↑</button>
+        </div>
+        <div id="toolkitGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
 
           <!-- Deal Pipeline — bar chart icon -->
-          <a href="/admin/deals" class="ql-card" data-module="deals" style="--ql-accent:#2563eb;">
+          <a href="/admin/deals" class="ql-card" data-module="deals" data-dept="sales" data-topic="deals" data-size="M" style="--ql-accent:#2563eb;">
             <div class="ql-icon" style="background:#eff6ff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>
             </div>
@@ -703,7 +753,7 @@
           </a>
 
           <!-- Prospects — crosshair/target icon -->
-          <a href="/pages/pipeline-prospects.html" class="ql-card" data-module="prospects" style="--ql-accent:#dc2626;">
+          <a href="/pages/pipeline-prospects.html" class="ql-card" data-module="prospects" data-dept="sales" data-topic="deals" data-size="M" style="--ql-accent:#dc2626;">
             <div class="ql-icon" style="background:#fef2f2;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="#dc2626"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
             </div>
@@ -712,7 +762,7 @@
           </a>
 
           <!-- Assessments — clipboard with checkmark -->
-          <a href="/pages/assessments.html" class="ql-card" data-module="assessments" style="--ql-accent:#d97706;">
+          <a href="/pages/assessments.html" class="ql-card" data-module="assessments" data-dept="ops" data-topic="deployment" data-size="M" style="--ql-accent:#d97706;">
             <div class="ql-icon" style="background:#fffbeb;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15l2 2 4-4"/></svg>
             </div>
@@ -721,7 +771,7 @@
           </a>
 
           <!-- Robot Command — terminal/command prompt -->
-          <a href="http://localhost:3100/#command" class="ql-card" data-module="robot_command" target="_blank" style="--ql-accent:#0891b2;">
+          <a href="http://localhost:3100/#command" class="ql-card" data-module="robot_command" data-dept="ops" data-topic="robots" data-size="L" target="_blank" style="--ql-accent:#0891b2;">
             <div class="ql-icon" style="background:#ecfeff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 9l4 3-4 3"/><line x1="12" y1="15" x2="18" y2="15"/></svg>
             </div>
@@ -730,7 +780,7 @@
           </a>
 
           <!-- Robot Catalog — robot/bot icon -->
-          <a href="/pages/robot-catalog.html" class="ql-card" data-module="robot_catalog" style="--ql-accent:#7c3aed;">
+          <a href="/pages/robot-catalog.html" class="ql-card" data-module="robot_catalog" data-dept="product" data-topic="robots" data-size="M" style="--ql-accent:#7c3aed;">
             <div class="ql-icon" style="background:#f5f3ff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="14" height="10" rx="2"/><circle cx="9.5" cy="13" r="1.5" fill="#7c3aed"/><circle cx="14.5" cy="13" r="1.5" fill="#7c3aed"/><path d="M12 3v5"/><circle cx="12" cy="3" r="1"/><path d="M3 12v2"/><path d="M21 12v2"/></svg>
             </div>
@@ -739,7 +789,7 @@
           </a>
 
           <!-- Investor CRM — trending up with dollar -->
-          <a href="/pages/investor-crm.html" class="ql-card" data-module="investors" style="--ql-accent:#16a34a;">
+          <a href="/pages/investor-crm.html" class="ql-card" data-module="investors" data-dept="finance" data-topic="fundraise" data-size="M" style="--ql-accent:#16a34a;">
             <div class="ql-icon" style="background:#f0fdf4;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
             </div>
@@ -748,7 +798,7 @@
           </a>
 
           <!-- National Rollout — US map pin / expansion -->
-          <a href="/pages/national-rollout-strategy.html" class="ql-card" data-module="national_rollout" style="--ql-accent:#e11d48;">
+          <a href="/pages/national-rollout-strategy.html" class="ql-card" data-module="national_rollout" data-dept="strategy" data-topic="markets" data-size="S" style="--ql-accent:#e11d48;">
             <div class="ql-icon" style="background:#fff1f2;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="3"/></svg>
             </div>
@@ -757,7 +807,7 @@
           </a>
 
           <!-- Financial Analysis — line chart -->
-          <a href="/financial-analysis.html" class="ql-card" data-module="financial_analysis" style="--ql-accent:#059669;">
+          <a href="/financial-analysis.html" class="ql-card" data-module="financial_analysis" data-dept="finance" data-topic="fundraise" data-size="S" style="--ql-accent:#059669;">
             <div class="ql-icon" style="background:#ecfdf5;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-6 4 4 5-8"/></svg>
             </div>
@@ -766,7 +816,7 @@
           </a>
 
           <!-- Robots Dossier — file/dossier icon -->
-          <a href="/repos/accelerate-carts/pages/robots-dossier.html" class="ql-card" data-module="robots_dossier" target="_blank" style="--ql-accent:#6366f1;">
+          <a href="/repos/accelerate-carts/pages/robots-dossier.html" class="ql-card" data-module="robots_dossier" data-dept="product" data-topic="robots" data-size="M" target="_blank" style="--ql-accent:#6366f1;">
             <div class="ql-icon" style="background:#eef2ff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
             </div>
@@ -775,7 +825,7 @@
           </a>
 
           <!-- Service Van — truck icon -->
-          <a href="/repos/accelerate-thesis-hotel/pages/service-van.html" class="ql-card" data-module="service_van" target="_blank" style="--ql-accent:#ea580c;">
+          <a href="/repos/accelerate-thesis-hotel/pages/service-van.html" class="ql-card" data-module="service_van" data-dept="ops" data-topic="deployment" data-size="S" target="_blank" style="--ql-accent:#ea580c;">
             <div class="ql-icon" style="background:#fff7ed;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="14" height="10" rx="1"/><path d="M15 10h4l3 4v2h-7V10z"/><circle cx="6" cy="18" r="2"/><circle cx="19" cy="18" r="2"/></svg>
             </div>
@@ -784,7 +834,7 @@
           </a>
 
           <!-- LiDAR Scanner — wheel-stick building scanner toolkit -->
-          <a href="/pages/slam-lidar-scanner.html" class="ql-card" data-module="lidar_scanner" style="--ql-accent:#0055ff;">
+          <a href="/pages/slam-lidar-scanner.html" class="ql-card" data-module="lidar_scanner" data-dept="engineering" data-topic="deployment" data-size="S" style="--ql-accent:#0055ff;">
             <div class="ql-icon" style="background:#eef2ff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0055ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2v3M12 15v7M4.2 4.2l2.1 2.1M17.7 6.3l2.1-2.1M2 10h3M19 10h3"/><circle cx="17" cy="21" r="1.5"/></svg>
             </div>
@@ -792,8 +842,17 @@
             <div class="ql-desc">Wheel-stick SLAM kit</div>
           </a>
 
+          <!-- Beam Bot Playground — telepresence drive + live feed (home-dashboard :3100) -->
+          <a href="http://localhost:3100/beam-feed.html" class="ql-card" data-module="beam_bot_playground" data-dept="engineering" data-topic="robots" data-size="S" target="_blank" style="--ql-accent:#22d3ee;">
+            <div class="ql-icon" style="background:#ecfeff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="9" rx="2"/><circle cx="10" cy="7.5" r="1.2" fill="#22d3ee"/><circle cx="14" cy="7.5" r="1.2" fill="#22d3ee"/><line x1="12" y1="12" x2="12" y2="17"/><circle cx="8" cy="20" r="2"/><circle cx="16" cy="20" r="2"/><line x1="10" y1="20" x2="14" y2="20"/></svg>
+            </div>
+            <div class="ql-title">Beam Bot Playground</div>
+            <div class="ql-desc">Live feed + drive controls</div>
+          </a>
+
           <!-- Sensor Lab — BLE wearable playground (Minew B10 + future sensors) -->
-          <a href="/repos/b10-playground/index.html" class="ql-card" data-module="sensor_lab" target="_blank" style="--ql-accent:#db2777;">
+          <a href="/repos/b10-playground/index.html" class="ql-card" data-module="sensor_lab" data-dept="engineering" data-topic="hardware" data-size="M" target="_blank" style="--ql-accent:#db2777;">
             <div class="ql-icon" style="background:#fdf2f8;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="4"/><circle cx="12" cy="14" r="1" fill="#db2777"/><path d="M6 7a9 9 0 0 1 12 0"/><path d="M8 9.5a5.5 5.5 0 0 1 8 0"/></svg>
             </div>
@@ -802,7 +861,7 @@
           </a>
 
           <!-- Elevator Simulator — circuit/button emulator -->
-          <a href="/repos/accelerate-elevator/pages/button-emulator-sim.html" class="ql-card" data-module="elevator_sim" target="_blank" style="--ql-accent:#0284c7;">
+          <a href="/repos/accelerate-elevator/pages/button-emulator-sim.html" class="ql-card" data-module="elevator_sim" data-dept="engineering" data-topic="elevator" data-size="S" target="_blank" style="--ql-accent:#0284c7;">
             <div class="ql-icon" style="background:#e0f2fe;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="8" r="2"/><line x1="12" y1="10" x2="12" y2="14"/><circle cx="12" cy="16" r="1.5" fill="#0284c7"/><line x1="8" y1="5" x2="8" y2="5.01"/><line x1="8" y1="8" x2="8" y2="8.01"/><line x1="8" y1="11" x2="8" y2="11.01"/></svg>
             </div>
@@ -811,7 +870,7 @@
           </a>
 
           <!-- Elevator Install Guide — wrench/install -->
-          <a href="/repos/accelerate-elevator/pages/install-guide.html" class="ql-card" data-module="elevator_install" target="_blank" style="--ql-accent:#7c3aed;">
+          <a href="/repos/accelerate-elevator/pages/install-guide.html" class="ql-card" data-module="elevator_install" data-dept="ops" data-topic="elevator" data-size="S" target="_blank" style="--ql-accent:#7c3aed;">
             <div class="ql-icon" style="background:#f5f3ff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
             </div>
@@ -820,7 +879,7 @@
           </a>
 
           <!-- Elevator BOM — parts list -->
-          <a href="/repos/accelerate-elevator/pages/bom-order-guide.html" class="ql-card" data-module="elevator_bom" target="_blank" style="--ql-accent:#ca8a04;">
+          <a href="/repos/accelerate-elevator/pages/bom-order-guide.html" class="ql-card" data-module="elevator_bom" data-dept="ops" data-topic="elevator" data-size="S" target="_blank" style="--ql-accent:#ca8a04;">
             <div class="ql-icon" style="background:#fefce8;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
             </div>
@@ -829,7 +888,7 @@
           </a>
 
           <!-- Inquiries — inbox/mail icon -->
-          <a href="/admin/inquiries" class="ql-card" data-module="inquiries" style="--ql-accent:#4f46e5;">
+          <a href="/admin/inquiries" class="ql-card" data-module="inquiries" data-dept="sales" data-topic="public" data-size="S" style="--ql-accent:#4f46e5;">
             <div class="ql-icon" style="background:#eef2ff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22 7 12 14 2 7"/></svg>
             </div>
@@ -838,7 +897,7 @@
           </a>
 
           <!-- Public Website — globe icon -->
-          <a href="/" class="ql-card" data-module="public_website" style="--ql-accent:#64748b;">
+          <a href="/" class="ql-card" data-module="public_website" data-dept="marketing" data-topic="public" data-size="M" style="--ql-accent:#64748b;">
             <div class="ql-icon" style="background:#f8fafc;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4" ry="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
             </div>
@@ -846,8 +905,26 @@
             <div class="ql-desc">acceleraterobotics.com</div>
           </a>
 
+          <!-- Collab Bulletin Board — cross-team help requests -->
+          <a href="/pages/collab.html" class="ql-card" data-module="collab" data-dept="ops" data-topic="internal" data-size="S" style="--ql-accent:#ea580c;">
+            <div class="ql-icon" style="background:#fff7ed;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="ql-title">Collab Board</div>
+            <div class="ql-desc">Tag a teammate · open requests</div>
+          </a>
+
+          <!-- Bug / Feature feedback — wrench + lightbulb icon -->
+          <a href="/pages/feedback.html" class="ql-card" data-module="feedback" data-dept="engineering" data-topic="internal" data-size="S" style="--ql-accent:#dc2626;">
+            <div class="ql-icon" style="background:#fef2f2;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M12 6V3M9 6L7 4M15 6l2-2M5 11H2M22 11h-3M5 16H2M22 16h-3"/></svg>
+            </div>
+            <div class="ql-title">Bug / Feature</div>
+            <div class="ql-desc">Report bugs · request features</div>
+          </a>
+
           <!-- Project Tracker — calendar / Gantt icon -->
-          <a href="/admin/project-tracker" class="ql-card" data-module="project_tracker" style="--ql-accent:#f59e0b;">
+          <a href="/admin/project-tracker" class="ql-card" data-module="project_tracker" data-dept="ops" data-topic="internal" data-size="S" style="--ql-accent:#f59e0b;">
             <div class="ql-icon" style="background:#fffbeb;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><rect x="6" y="13" width="6" height="2" rx="1" fill="#f59e0b"/><rect x="9" y="16" width="8" height="2" rx="1" fill="#f59e0b"/></svg>
             </div>
@@ -1182,8 +1259,114 @@ async function renderToolkitRosters() {
       popover.innerHTML = `<div class="ql-recent-label">Recent activity</div>${rows}`;
       card.appendChild(popover);
     }
+
+    // Cache the resolved owner display name on the card so the sort code
+    // doesn't have to hit the API again. authors[] is already sorted by
+    // commits desc, so authors[0] is the owner.
+    card.dataset.owner = authors[0]?.name || 'Unassigned';
+    card.dataset.commits = String(authors.reduce((sum, a) => sum + (a.commits || 0), 0));
+  });
+
+  // Once owners are populated, refresh sort if a non-default mode is active.
+  if (typeof applyToolkitSort === 'function') applyToolkitSort();
+}
+
+// ── Toolkit sort/group ────────────────────────────────────────
+// State: `current` is the active key, `dir` is 1 (asc) or -1 (desc).
+const toolkitSortState = { current: 'default', dir: 1 };
+
+function _sizeRank(s) {
+  // Map S/M/L to a numeric so sort orders like-with-like
+  return ({ S: 1, M: 2, L: 3 }[String(s || '').toUpperCase()] || 0);
+}
+
+function _cardKey(card, by) {
+  switch (by) {
+    case 'name':  return (card.querySelector('.ql-title')?.textContent || '').toLowerCase();
+    case 'owner': return (card.dataset.owner || 'zzzz').toLowerCase(); // unassigned to bottom
+    case 'dept':  return (card.dataset.dept || 'zzzz').toLowerCase();
+    case 'topic': return (card.dataset.topic || 'zzzz').toLowerCase();
+    case 'size':  return _sizeRank(card.dataset.size);
+    default:      return parseInt(card.dataset.originalIdx || '0', 10);
+  }
+}
+
+function applyToolkitSort() {
+  const grid = document.getElementById('toolkitGrid');
+  if (!grid) return;
+  const { current, dir } = toolkitSortState;
+
+  // Pull all cards (skip group labels from previous render)
+  const cards = Array.from(grid.querySelectorAll('.ql-card'));
+  // Stamp original index once so "default" can restore source order
+  cards.forEach((c, i) => {
+    if (c.dataset.originalIdx === undefined) c.dataset.originalIdx = String(i);
+  });
+
+  // Sort
+  const sorted = cards.slice().sort((a, b) => {
+    const ka = _cardKey(a, current);
+    const kb = _cardKey(b, current);
+    if (ka < kb) return -1 * dir;
+    if (ka > kb) return  1 * dir;
+    // Tie-breaker: original order (stable)
+    return parseInt(a.dataset.originalIdx, 10) - parseInt(b.dataset.originalIdx, 10);
+  });
+
+  // Wipe any prior group labels
+  grid.querySelectorAll('.toolkit-group-label').forEach(el => el.remove());
+
+  // For grouping modes, insert a section divider when the key changes.
+  const groupKeys = ['owner', 'dept', 'topic', 'size'];
+  const grouping = groupKeys.includes(current);
+  let lastKey = null;
+  const frag = document.createDocumentFragment();
+  for (const card of sorted) {
+    const k = _cardKey(card, current);
+    if (grouping && k !== lastKey) {
+      const label = document.createElement('div');
+      label.className = 'toolkit-group-label';
+      label.textContent = current === 'size'
+        ? ({ 1: 'Small', 2: 'Medium', 3: 'Large', 0: 'Unsized' }[k] || 'Unsized')
+        : (String(k).replace(/^\w/, c => c.toUpperCase()));
+      frag.appendChild(label);
+      lastKey = k;
+    }
+    frag.appendChild(card);
+  }
+  grid.appendChild(frag);
+}
+
+function initToolkitSort() {
+  const bar = document.getElementById('toolkitSort');
+  if (!bar) return;
+
+  bar.querySelectorAll('button[data-sort]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.sort;
+      // Clicking the active sort button toggles direction; otherwise switch
+      if (toolkitSortState.current === key) {
+        toolkitSortState.dir *= -1;
+      } else {
+        toolkitSortState.current = key;
+        toolkitSortState.dir = 1;
+      }
+      bar.querySelectorAll('button[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === key));
+      document.getElementById('toolkitSortDir').textContent = toolkitSortState.dir === 1 ? '↑' : '↓';
+      applyToolkitSort();
+    });
+  });
+
+  document.getElementById('toolkitSortDir').addEventListener('click', () => {
+    toolkitSortState.dir *= -1;
+    document.getElementById('toolkitSortDir').textContent = toolkitSortState.dir === 1 ? '↑' : '↓';
+    applyToolkitSort();
   });
 }
+
+// Boot the sort bar as soon as the DOM is parsed; renderToolkitRosters() runs
+// asynchronously and will re-apply once owner data arrives.
+document.addEventListener('DOMContentLoaded', initToolkitSort);
 
 async function refreshAll() {
   try {
@@ -1321,29 +1504,95 @@ function renderDealList() {
 }
 
 // ── Activity feed ───────────────────────────────────────────────
-function renderActivityFeed() {
-  // WHY: Build activity from deal data — last_activity fields
-  const activities = deals
-    .filter(d => d.last_activity_at)
-    .sort((a, b) => new Date(b.last_activity_at) - new Date(a.last_activity_at))
-    .slice(0, 12); // Last 12 activities
+// WHY: Reads from /api/activities (real action log) so each row shows the
+// actor, the action, and the target — not just "deal created." This is the
+// first slice of the air-traffic-control view; more writers (assessments,
+// feedback, prospects) will populate it as they're wired up.
 
-  if (activities.length === 0) {
+// Lifecycle lane mapping for action types: outreach → contract → launch → active.
+// Each lane has its own dot color so the feed reads at a glance.
+const ACTIVITY_LANES = {
+  // Outreach
+  'inquiry_received':   { lane: 'outreach', color: '#0ea5e9', label: 'submitted an inquiry on' },
+  'prospect_added':     { lane: 'outreach', color: '#0ea5e9', label: 'added prospect' },
+  // Contract
+  'deal_created':       { lane: 'contract', color: '#0055ff', label: 'created deal' },
+  'stage_changed':      { lane: 'contract', color: '#0055ff', label: 'moved' },
+  'assessment_started': { lane: 'contract', color: '#7c3aed', label: 'started assessment for' },
+  // Launch
+  'deal_won':           { lane: 'launch',   color: '#16a34a', label: 'won' },
+  // Active / 24-7
+  'bug_reported':       { lane: 'active',   color: '#dc2626', label: 'reported a bug' },
+  'feature_requested':  { lane: 'active',   color: '#7c3aed', label: 'requested a feature' },
+};
+const LANE_LABELS = {
+  outreach: 'Outreach',
+  contract: 'Contract',
+  launch:   'Launch',
+  active:   '24/7 Active',
+};
+
+function _initials(s) {
+  return String(s || '?')
+    .replace(/@.*/, '')           // strip email domain
+    .split(/[\s._-]+/).filter(Boolean)
+    .slice(0, 2)
+    .map(p => p[0].toUpperCase())
+    .join('') || '?';
+}
+
+function _colorFromString(s) {
+  // Stable hash → hue. Same actor always gets the same swatch.
+  let h = 0;
+  for (const c of String(s || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return `hsl(${h % 360}, 55%, 50%)`;
+}
+
+async function renderActivityFeed() {
+  let rows = [];
+  try {
+    const r = await fetch('/api/activities?limit=40');
+    if (r.ok) rows = await r.json();
+  } catch (e) {
+    console.warn('activity fetch failed:', e);
+  }
+
+  if (rows.length === 0) {
     document.getElementById('activityFeed').innerHTML =
       '<p class="text-sm text-gray-400 py-4">No recent activity</p>';
     return;
   }
 
-  document.getElementById('activityFeed').innerHTML = activities.map(d => {
-    const color = STAGE_COLORS[d.stage] || '#64748b';
-    const action = formatAction(d.last_activity_action);
-    const ago = timeAgo(d.last_activity_at);
+  document.getElementById('activityFeed').innerHTML = rows.map(r => {
+    const meta = ACTIVITY_LANES[r.action] || { lane: 'active', color: '#64748b', label: r.action };
+    const ago = timeAgo(r.created_at);
+
+    // Pull a useful target label from the joined deal name or the action's detail JSON
+    let target = r.deal_name || '';
+    let extra = '';
+    try {
+      const d = r.detail ? JSON.parse(r.detail) : null;
+      if (d) {
+        if (!target && d.name) target = d.name;
+        if (d.title) target = d.title;
+        if (d.from && d.to) extra = ` (${d.from} → ${d.to})`;
+        if (d.severity) extra = ` · ${d.severity}`;
+      }
+    } catch { /* detail wasn't JSON, ignore */ }
+
+    const actor = r.actor || 'system';
+    const initials = _initials(actor);
+    const avatarColor = _colorFromString(actor);
+
     return `
-      <div class="activity-item">
-        <span class="activity-dot" style="background:${color}"></span>
+      <div class="activity-item" title="${escapeHtml(actor)}">
+        <span class="activity-avatar" style="background:${avatarColor};">${initials}</span>
+        <span class="activity-lane" style="background:${meta.color}1a;color:${meta.color};">${LANE_LABELS[meta.lane]}</span>
         <div style="flex:1;min-width:0;">
-          <span style="font-weight:600;color:#111827;">${escapeHtml(d.name)}</span>
-          <span style="color:#6b7280;"> — ${action}</span>
+          <span style="font-weight:600;color:#111827;">${escapeHtml(actor.split('@')[0])}</span>
+          <span style="color:#6b7280;"> ${escapeHtml(meta.label)}</span>
+          ${target ? `<span style="font-weight:600;color:#111827;"> ${escapeHtml(target)}</span>` : ''}
+          ${extra ? `<span style="color:#9ca3af;font-size:0.78rem;">${escapeHtml(extra)}</span>` : ''}
         </div>
         <span class="activity-time">${ago}</span>
       </div>
