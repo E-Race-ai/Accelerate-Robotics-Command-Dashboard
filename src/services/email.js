@@ -5,12 +5,13 @@ const db = require('../db/database');
 // server on boot during local development. Lazily construct the client so the
 // app still runs without email configured — callers just get a logged warning
 // and the send becomes a no-op.
-let _resend = null;
+// WHY: No caching — always read the current env var so a key update
+// via Render dashboard takes effect after the next redeploy without
+// the stale cached client silently using the old (invalid) key.
 function getResend() {
-  if (_resend) return _resend;
-  if (!process.env.RESEND_API_KEY) return null;
-  _resend = new Resend(process.env.RESEND_API_KEY);
-  return _resend;
+  const key = (process.env.RESEND_API_KEY || '').trim();
+  if (!key) return null;
+  return new Resend(key);
 }
 const EMAIL_FROM = process.env.EMAIL_FROM || 'notifications@acceleraterobotics.ai';
 
@@ -87,8 +88,10 @@ function escapeHtml(str) {
 async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
   const resend = getResend();
   if (!resend) {
-    console.warn('[email] RESEND_API_KEY not set — skipping invite email');
-    return;
+    // WHY: Throw instead of silently returning so the invite endpoint can
+    // tell the admin that email is not configured — a silent no-op leaves
+    // them believing the invite was sent when it wasn't.
+    throw new Error('RESEND_API_KEY is not configured — cannot send invite email');
   }
   const roleLabel = {
     admin: 'Admin',

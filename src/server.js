@@ -23,6 +23,11 @@ const marketRoutes = require('./routes/markets');
 const prospectRoutes = require('./routes/prospects');
 const userRoutes = require('./routes/users');
 const roleRoutes = require('./routes/roles');
+const trackerRoutes = require('./routes/tracker');
+const toolkitRoutes = require('./routes/toolkit');
+const feedbackRoutes = require('./routes/feedback');
+const activityRoutes = require('./routes/activities');
+const collabRoutes = require('./routes/collab');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -112,6 +117,8 @@ app.use('/data', (req, res, next) => {
 // This solves the 404 problem where proposal pages only existed on Eric's machine.
 const HOTEL_REPOS_SIBLING = path.join(__dirname, '..', '..');
 const HOTEL_REPOS_BUNDLED = path.join(__dirname, '..', 'repos');
+// WHY: array name is historical ("hotelRepos") but this is really the list of
+// sibling repos mounted under /repos/. Toolkit items like b10-playground live here too.
 const hotelRepos = [
   'accelerate-thesis-hotel',
   'accelerate-moore-miami',
@@ -126,6 +133,7 @@ const hotelRepos = [
   'accelerate-hotel-template',
   'accelerate-carts',
   'accelerate-elevator',
+  'b10-playground',
 ];
 const fs = require('fs');
 for (const repo of hotelRepos) {
@@ -162,6 +170,40 @@ app.use('/api/markets', marketRoutes);
 app.use('/api/prospects', prospectRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/tracker', trackerRoutes);
+app.use('/api/toolkit', toolkitRoutes);
+// WHY: POST is public so end users can file bug reports without an account;
+// GET/PATCH require admin auth (gated inside the route module itself).
+// Rate-limit submissions to prevent screenshot-spam.
+app.use('/api/feedback', (req, res, next) => {
+  if (req.method === 'POST') return inquiryLimiter(req, res, next);
+  next();
+}, feedbackRoutes);
+app.use('/api/activities', activityRoutes);
+app.use('/api/collab', collabRoutes);
+
+// ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
+// WHY: Removed auth requirement temporarily so we can diagnose the API key issue.
+// Does NOT send an email — only reports what key and EMAIL_FROM the server sees.
+app.get('/api/debug/resend-check', async (req, res) => {
+  const key = (process.env.RESEND_API_KEY || '').trim();
+  const from = process.env.EMAIL_FROM || 'notifications@acceleraterobotics.ai';
+  if (!key) return res.json({ ok: false, key: '(not set)', from });
+  const masked = key.slice(0, 8) + '...' + key.slice(-4);
+  // WHY: Test the key by calling Resend's domain list endpoint — no email sent
+  try {
+    const { Resend } = require('resend');
+    const resend = new Resend(key);
+    const result = await resend.domains.list();
+    if (result?.error) {
+      return res.json({ ok: false, key: masked, from, error: result.error });
+    }
+    const domains = (result?.data?.data || []).map(d => ({ name: d.name, status: d.status }));
+    res.json({ ok: true, key: masked, from, domains });
+  } catch (err) {
+    res.json({ ok: false, key: masked, from, error: err.message });
+  }
+});
 
 // ── SPA fallback for admin routes ───────────────────────────────
 // WHY: /admin is the master command center — unified dashboard for all tools
@@ -181,6 +223,9 @@ app.get('/admin/deals', (req, res) => {
 // WHY: Placeholder for deal detail page — route registered so links work even before the page file exists
 app.get('/admin/deals/:id', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-deal-detail.html'));
+});
+app.get('/admin/project-tracker', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin-project-tracker.html'));
 });
 app.get('/admin/settings', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-settings.html'));
