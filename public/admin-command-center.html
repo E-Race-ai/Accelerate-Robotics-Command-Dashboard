@@ -353,6 +353,86 @@
       white-space: nowrap;
     }
     .hub-pairings-empty { color: #cbd5e1; font-size: 0.78rem; }
+    /* ── Community Help Board (embedded mini-collab) ─────────── */
+    .cb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .cb-loading, .cb-empty {
+      grid-column: 1 / -1;
+      padding: 22px; text-align: center; color: #94a3b8; font-size: 13px;
+      background: white; border: 1px dashed #e5e7eb; border-radius: 12px;
+    }
+    .cb-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 14px;
+      display: flex; flex-direction: column; gap: 8px;
+      transition: transform 0.12s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .cb-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+      border-color: #fcd34d;
+    }
+    .cb-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+    .cb-tag {
+      font-size: 9.5px; font-weight: 700; padding: 2px 7px;
+      border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .cb-tag.t-feature     { background: #eef2ff; color: #4338ca; }
+    .cb-tag.t-tool        { background: #ecfeff; color: #0e7490; }
+    .cb-tag.t-integration { background: #f0fdf4; color: #166534; }
+    .cb-tag.t-doc         { background: #fef3c7; color: #92400e; }
+    .cb-tag.t-design      { background: #fdf2f8; color: #be185d; }
+    .cb-tag.t-other       { background: #f1f5f9; color: #475569; }
+    .cb-tag.p-urgent      { background: #fee2e2; color: #991b1b; box-shadow: 0 0 0 1px #fca5a5; }
+    .cb-tag.p-high        { background: #fff1f2; color: #be123c; }
+    .cb-tag.p-medium      { background: #fffbeb; color: #92400e; }
+    .cb-tag.p-low         { background: #f1f5f9; color: #475569; }
+    .cb-title {
+      font-size: 0.92rem; font-weight: 700; color: #0f172a;
+      line-height: 1.3;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .cb-desc {
+      font-size: 0.78rem; color: #64748b; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .cb-meta {
+      font-size: 0.7rem; color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: auto;
+      display: flex; gap: 6px; align-items: center;
+    }
+    .cb-meta strong { color: #475569; font-weight: 700; }
+    .cb-claim {
+      width: 100%;
+      padding: 7px 10px;
+      background: linear-gradient(135deg, #ea580c, #f59e0b);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px; font-weight: 700;
+      cursor: pointer;
+      transition: filter 0.12s, transform 0.08s;
+    }
+    .cb-claim:hover { filter: brightness(1.05); }
+    .cb-claim:active { transform: translateY(1px); }
+    .cb-claim:disabled { opacity: 0.55; cursor: wait; }
+    .cb-new-btn {
+      background: linear-gradient(135deg, #ea580c, #f59e0b);
+      color: white; padding: 6px 14px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; text-decoration: none;
+      box-shadow: 0 2px 8px rgba(234,88,12,0.20);
+      transition: transform 0.08s, box-shadow 0.15s;
+    }
+    .cb-new-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(234,88,12,0.30); }
     .hub-status-pill {
       font-size: 0.65rem; padding: 2px 8px; border-radius: 999px;
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
@@ -1197,6 +1277,23 @@
 
       </div>
 
+      <!-- ═══ Community Help Board (embedded slice of /pages/collab.html) ═══ -->
+      <div class="mb-8 brand-reveal" data-delay="0.18" id="communityBoard">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">How Can I Help My Community?</h3>
+            <div class="text-xs text-gray-500 mt-1">Open requests from teammates · claim one to chip in</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <a href="/pages/collab.html#new" class="cb-new-btn">+ Post a request</a>
+            <a href="/pages/collab.html" class="text-xs font-medium text-orange-600 hover:underline">Open full board →</a>
+          </div>
+        </div>
+        <div class="cb-grid" id="communityBoardGrid">
+          <div class="cb-loading">Loading open requests…</div>
+        </div>
+      </div>
+
       <!-- ═══ Deal Map ═══ -->
       <div class="mb-8 brand-reveal" data-delay="0.2">
         <div class="flex items-center justify-between mb-3">
@@ -1912,6 +2009,97 @@ function initToolkitSort() {
 // asynchronously and will re-apply once owner data arrives.
 document.addEventListener('DOMContentLoaded', initToolkitSort);
 
+// ── Community Help Board (embedded mini-collab) ──────────────
+// Pulls open requests from /api/collab and renders the top 4 inline so the
+// command center surfaces "what does my team need help with right now?"
+// without forcing a navigation. Claim button calls PATCH /api/collab/:id and
+// then re-fetches; the full /pages/collab.html stays the editing/triage surface.
+const COMMUNITY_BOARD_LIMIT = 4;
+
+async function loadCommunityBoard() {
+  const grid = document.getElementById('communityBoardGrid');
+  if (!grid) return;
+
+  let rows = [];
+  try {
+    const r = await fetch('/api/collab?status=open');
+    if (r.ok) rows = await r.json();
+  } catch { /* non-fatal — keeps the loading state */ }
+
+  if (rows.length === 0) {
+    grid.innerHTML = `
+      <div class="cb-empty">
+        🎉 No open asks right now. <a href="/pages/collab.html#new" style="color:#ea580c;font-weight:600;">Post one →</a>
+      </div>
+    `;
+    return;
+  }
+
+  // Server already orders by priority then created_at, so slice the first N.
+  const top = rows.slice(0, COMMUNITY_BOARD_LIMIT);
+
+  grid.innerHTML = top.map(req => {
+    const ago = timeAgo(req.created_at);
+    const targetLine = req.target_user
+      ? `→ tagged <strong>${escapeHtml(req.target_user.split('@')[0])}</strong>`
+      : `→ open to anyone`;
+    const requesterName = (req.requester_name || req.requester_email || 'someone')
+      .toString().split('@')[0];
+    return `
+      <article class="cb-card" data-id="${escapeHtml(req.id)}">
+        <div class="cb-tags">
+          <span class="cb-tag t-${escapeHtml(req.type)}">${escapeHtml(req.type)}</span>
+          <span class="cb-tag p-${escapeHtml(req.priority)}">${escapeHtml(req.priority)}</span>
+        </div>
+        <div class="cb-title">${escapeHtml(req.title)}</div>
+        <div class="cb-desc">${escapeHtml(req.description)}</div>
+        <div class="cb-meta">
+          <span><strong>${escapeHtml(requesterName)}</strong> · ${ago}</span>
+          <span style="color:#cbd5e1;">·</span>
+          <span>${targetLine}</span>
+        </div>
+        <button class="cb-claim" data-action="claim" data-id="${escapeHtml(req.id)}">I'll help</button>
+      </article>
+    `;
+  }).join('');
+}
+
+// One delegated click handler — claim button → PATCH /api/collab/:id { claim:true }
+function _wireCommunityBoard() {
+  const grid = document.getElementById('communityBoardGrid');
+  if (!grid || grid.dataset.wired) return;
+  grid.dataset.wired = '1';
+  grid.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button.cb-claim');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    btn.disabled = true;
+    btn.textContent = 'Claiming…';
+    try {
+      const r = await fetch(`/api/collab/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claim: true }),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${r.status}`);
+      }
+      // Refresh the embedded board (the claim flips the request out of "open")
+      // and the activity feed so the claim shows up in the air-traffic view.
+      await loadCommunityBoard();
+      renderActivityFeed();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = "I'll help";
+      console.warn('[community board] claim failed:', err);
+    }
+  });
+}
+_wireCommunityBoard();
+// Refresh every 60s so newly-posted requests surface without a manual reload.
+setInterval(loadCommunityBoard, 60000);
+
 // ── Project Hub ───────────────────────────────────────────────
 // Embedded sprint table + post-update form. The full /admin/project-tracker
 // page is the editing surface; this is the read-mostly coordination view.
@@ -2347,6 +2535,7 @@ async function refreshAll() {
   renderToolkitActivityLeds();
   loadProjectHub();
   loadHubUpdatesStream();
+  loadCommunityBoard();
   document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
