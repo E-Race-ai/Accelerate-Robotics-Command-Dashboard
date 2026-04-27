@@ -808,6 +808,22 @@
     .stat-delta.down { background: rgba(239,68,68,0.12); color: #dc2626; }
     .stat-delta.flat { background: rgba(148,163,184,0.12); color: #64748b; }
     .brand-stat { position: relative; }
+    /* Stat tiles are now anchors — give them clickable affordance without
+       changing the visual baseline of the existing brand-stat layout. */
+    a.stat-link {
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.12s, box-shadow 0.15s, border-color 0.15s;
+      cursor: pointer;
+    }
+    a.stat-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+    }
+    a.stat-link:focus-visible {
+      outline: 2px solid #0055ff;
+      outline-offset: 2px;
+    }
 
     /* ── Regional micro maps ────────────────────────────────── */
     .region-grid {
@@ -2389,26 +2405,29 @@ function renderStats() {
     return out;
   })();
 
+  // Each tile links to its most relevant drill-down view. Stage-filtered
+  // deals URLs use ?stage= which admin-deals.html can pick up later if/when
+  // we add URL-param filtering; today the link still works (lands on kanban).
   const stats = [
-    { val: total,            lbl: 'Pipeline',  prefix: '', suffix: '', spark: sparkPipeline,  color: '#0055ff' },
-    { val: leads,            lbl: 'Leads',     prefix: '', suffix: '', spark: sparkLeads,     color: '#0891b2' },
-    { val: qualified,        lbl: 'Qualified', prefix: '', suffix: '', spark: sparkQualified, color: '#7c3aed' },
-    { val: proposed,         lbl: 'Proposed',  prefix: '', suffix: '', spark: sparkProposed,  color: '#d97706' },
-    { val: won,              lbl: 'Won',       prefix: '', suffix: '', spark: sparkWon,       color: '#16a34a' },
-    { val: PROSPECTS.length, lbl: 'Prospects', prefix: '', suffix: '', spark: sparkProspects, color: '#0ea5e9' },
-    { val: mrrDisplay.val,   lbl: 'MRR',       prefix: mrrDisplay.prefix, suffix: mrrDisplay.suffix, spark: sparkMRR, color: '#16a34a' },
+    { val: total,            lbl: 'Pipeline',  prefix: '', suffix: '', spark: sparkPipeline,  color: '#0055ff', href: '/admin/deals' },
+    { val: leads,            lbl: 'Leads',     prefix: '', suffix: '', spark: sparkLeads,     color: '#0891b2', href: '/admin/deals?stage=lead' },
+    { val: qualified,        lbl: 'Qualified', prefix: '', suffix: '', spark: sparkQualified, color: '#7c3aed', href: '/admin/deals?stage=qualified' },
+    { val: proposed,         lbl: 'Proposed',  prefix: '', suffix: '', spark: sparkProposed,  color: '#d97706', href: '/admin/deals?stage=proposed' },
+    { val: won,              lbl: 'Won',       prefix: '', suffix: '', spark: sparkWon,       color: '#16a34a', href: '/admin/deals?stage=won' },
+    { val: PROSPECTS.length, lbl: 'Prospects', prefix: '', suffix: '', spark: sparkProspects, color: '#0ea5e9', href: '/pages/pipeline-prospects.html' },
+    { val: mrrDisplay.val,   lbl: 'MRR',       prefix: mrrDisplay.prefix, suffix: mrrDisplay.suffix, spark: sparkMRR, color: '#16a34a', href: '/financial-analysis.html' },
   ];
 
   document.getElementById('statsRow').innerHTML = stats.map((s, i) => {
     const delay = (0.1 + i * 0.05).toFixed(2);
     const delta = _wowDelta(s.spark);
     return `
-    <div class="brand-stat brand-reveal" data-delay="${delay}">
+    <a class="brand-stat brand-reveal stat-link" data-delay="${delay}" href="${escapeHtml(s.href)}" title="View ${escapeHtml(s.lbl)} →">
       <span class="stat-delta ${delta.kind}" title="last 7d vs prior 7d">${_arrow(delta.kind)} ${escapeHtml(delta.txt)}</span>
       <div class="brand-stat-val" data-counter="${s.val}" data-prefix="${s.prefix}" data-suffix="${s.suffix}">0</div>
       <div class="brand-stat-lbl">${s.lbl}</div>
       ${_sparklineSvg(s.spark, s.color)}
-    </div>`;
+    </a>`;
   }).join('');
 
   initCounters();
