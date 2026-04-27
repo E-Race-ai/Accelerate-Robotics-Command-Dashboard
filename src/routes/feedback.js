@@ -85,6 +85,29 @@ router.post('/', upload.array('screenshots', MAX_SCREENSHOTS), async (req, res) 
       );
     }
 
+    // WHY: Cross-post every feedback submission into the improvement_requests
+    // table so all bugs and feature requests appear on the Improvement Request
+    // tracking board with an IR-### number. Best-effort — failure here must
+    // not fail the user-facing submit.
+    try {
+      const categoryMap = { bug: 'workflow', feature: 'workflow' };
+      const priorityMap = { critical: 'critical', high: 'high', medium: 'medium', low: 'low' };
+      await db.run(
+        `INSERT INTO improvement_requests (title, description, category, priority, user_name, user_email)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          String(title).trim(),
+          String(description).trim(),
+          categoryMap[type] || 'other',
+          priorityMap[sev] || 'medium',
+          user_name ? String(user_name).slice(0, 100) : null,
+          user_email ? String(user_email).slice(0, 200) : null,
+        ],
+      );
+    } catch (crossErr) {
+      console.warn('[feedback] improvement cross-post failed (non-fatal):', crossErr.message);
+    }
+
     // Log to the activities feed so submissions show up in the Command
     // Center's air-traffic-control view. Best-effort — failure to log should
     // not fail the user-facing submit.
