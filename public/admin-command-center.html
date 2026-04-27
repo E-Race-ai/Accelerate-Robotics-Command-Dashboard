@@ -433,6 +433,156 @@
       transition: transform 0.08s, box-shadow 0.15s;
     }
     .cb-new-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(234,88,12,0.30); }
+    /* ── Air Traffic Control board (embedded on dashboard) ─── */
+    .atc-stats {
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      padding: 14px 18px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+    }
+    .atc-stat {
+      display: flex; flex-direction: column; align-items: flex-start;
+      padding-right: 14px;
+      border-right: 1px solid #eef2f7;
+      min-width: 84px;
+    }
+    .atc-stat:last-of-type { border-right: none; }
+    .atc-stat-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .atc-stat-label {
+      font-size: 0.68rem; color: #64748b; text-transform: uppercase;
+      letter-spacing: 0.6px; margin-top: 4px; font-weight: 600;
+    }
+    .atc-stat.urgent .atc-stat-num { color: #dc2626; }
+    .atc-stat.warn   .atc-stat-num { color: #d97706; }
+    .atc-stat.ok     .atc-stat-num { color: #16a34a; }
+    .atc-live-dot {
+      font-size: 0.7rem; font-weight: 700; color: #16a34a;
+      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.6px;
+      animation: atcLivePulse 2s ease-in-out infinite;
+    }
+    @keyframes atcLivePulse {
+      0%, 100% { opacity: 0.55; }
+      50%      { opacity: 1; }
+    }
+    .atc-board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 1100px) { .atc-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 640px)  { .atc-board { grid-template-columns: 1fr; } }
+    .atc-lane {
+      display: flex; flex-direction: column;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      min-height: 240px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .atc-lane.drop-target {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      box-shadow: inset 0 0 0 2px rgba(59,130,246,0.20);
+    }
+    .atc-lane-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; justify-content: space-between;
+      border-top-left-radius: 12px; border-top-right-radius: 12px;
+      font-size: 0.78rem; font-weight: 700;
+      color: white; letter-spacing: 0.4px;
+    }
+    .atc-lane-open    { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .atc-lane-claimed { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+    .atc-lane-active  { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+    .atc-lane-done    { background: linear-gradient(90deg, #16a34a, #4ade80); }
+    .atc-lane-count {
+      background: rgba(255,255,255,0.22);
+      padding: 1px 9px; border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    }
+    .atc-lane-body {
+      flex: 1; padding: 10px;
+      display: flex; flex-direction: column; gap: 8px;
+      overflow-y: auto; max-height: 60vh;
+    }
+    .atc-lane-empty {
+      padding: 20px 10px; text-align: center;
+      color: #cbd5e1; font-size: 0.78rem; font-style: italic;
+    }
+    .atc-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-left: 3px solid transparent;
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 6px;
+      cursor: grab;
+      transition: transform 0.1s, box-shadow 0.15s, border-color 0.15s, opacity 0.15s;
+    }
+    .atc-card:hover { box-shadow: 0 4px 12px rgba(15,23,42,0.08); transform: translateY(-1px); }
+    .atc-card:active { cursor: grabbing; }
+    .atc-card.dragging { opacity: 0.4; }
+    .atc-card[data-priority="urgent"] {
+      border-left-color: #dc2626;
+      box-shadow: 0 0 0 1px rgba(220,38,38,0.18);
+      animation: atcUrgentPulse 2.6s ease-in-out infinite;
+    }
+    @keyframes atcUrgentPulse {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(220,38,38,0.18); }
+      50%      { box-shadow: 0 0 0 2px rgba(220,38,38,0.40), 0 0 14px rgba(220,38,38,0.18); }
+    }
+    .atc-card[data-priority="high"]   { border-left-color: #f59e0b; }
+    .atc-card[data-priority="medium"] { border-left-color: #94a3b8; }
+    .atc-card[data-priority="low"]    { border-left-color: #cbd5e1; }
+    .atc-card-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+    .atc-card-tags .pill {
+      font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+      text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+    }
+    .atc-card-tags .pill.type-feature     { background: #eef2ff; color: #4f46e5; }
+    .atc-card-tags .pill.type-tool        { background: #ecfeff; color: #0e7490; }
+    .atc-card-tags .pill.type-integration { background: #f0fdf4; color: #166534; }
+    .atc-card-tags .pill.type-doc         { background: #fef3c7; color: #92400e; }
+    .atc-card-tags .pill.type-design      { background: #fdf2f8; color: #be185d; }
+    .atc-card-tags .pill.type-other       { background: #f1f5f9; color: #475569; }
+    .atc-card-tags .pill.prio-urgent      { background: #fee2e2; color: #991b1b; box-shadow: 0 0 0 1px #fca5a5; }
+    .atc-card-tags .pill.prio-high        { background: #fff1f2; color: #be123c; }
+    .atc-card-tags .pill.prio-medium      { background: #fffbeb; color: #92400e; }
+    .atc-card-tags .pill.prio-low         { background: #f1f5f9; color: #475569; }
+    .atc-card-title {
+      font-size: 0.85rem; font-weight: 700; color: #0f172a; line-height: 1.3;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .atc-card-meta {
+      font-size: 0.68rem; color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+      display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
+    }
+    .atc-card-meta strong { color: #475569; font-weight: 700; font-family: inherit; }
+    .atc-card-due { color: #d97706; }
+    .atc-card-due.overdue { color: #b91c1c; font-weight: 700; }
+    .atc-card-actions { display: flex; gap: 6px; margin-top: 4px; }
+    .atc-card-btn {
+      flex: 1; font-size: 11px; font-weight: 700;
+      padding: 5px 8px; border-radius: 6px;
+      background: white; color: #475569;
+      border: 1px solid #e5e7eb;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .atc-card-btn:hover { background: #0c1220; color: white; border-color: #0c1220; }
+    .atc-card-btn.primary { background: #0055ff; color: white; border-color: #0055ff; }
+    .atc-card-btn.primary:hover { background: #003ecc; border-color: #003ecc; }
+    .atc-card-btn.success { background: #16a34a; color: white; border-color: #16a34a; }
+    .atc-card-btn.success:hover { background: #108037; border-color: #108037; }
     /* ── Dashboard quick-nav (sticky jump strip) ─────────────── */
     .dashboard-quicknav {
       position: sticky;
@@ -1340,19 +1490,74 @@
       </div>
 
       <!-- ═══ Community Help Board (embedded slice of /pages/collab.html) ═══ -->
+      <!-- ═══ Air Traffic Control — full ticket board, embedded on home ═══ -->
       <div class="mb-8 brand-reveal" data-delay="0.18" id="communityBoard">
         <div class="flex items-center justify-between mb-3">
           <div>
-            <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">How Can I Help My Community?</h3>
-            <div class="text-xs text-gray-500 mt-1">Open requests from teammates · claim one to chip in</div>
+            <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Air Traffic Control</h3>
+            <div class="text-xs text-gray-500 mt-1">Live status board for service tickets — drag a card between lanes to update status</div>
           </div>
           <div style="display:flex;gap:10px;align-items:center;">
-            <a href="/pages/collab.html#new" class="cb-new-btn">+ Post a request</a>
+            <span class="atc-live-dot" title="Auto-refreshes every 20s">● LIVE</span>
+            <a href="/pages/collab.html#new" class="cb-new-btn">+ New Ticket</a>
             <a href="/pages/collab.html" class="text-xs font-medium text-orange-600 hover:underline">Open full board →</a>
           </div>
         </div>
-        <div class="cb-grid" id="communityBoardGrid">
-          <div class="cb-loading">Loading open requests…</div>
+
+        <!-- ATC stats strip -->
+        <div class="atc-stats" id="atcDashStats" style="margin-bottom:14px;">
+          <div class="atc-stat">
+            <span class="atc-stat-num" id="atcDash-total">0</span>
+            <span class="atc-stat-label">total active</span>
+          </div>
+          <div class="atc-stat urgent">
+            <span class="atc-stat-num" id="atcDash-urgent">0</span>
+            <span class="atc-stat-label">🚨 urgent</span>
+          </div>
+          <div class="atc-stat warn">
+            <span class="atc-stat-num" id="atcDash-overdue">0</span>
+            <span class="atc-stat-label">⏱ past due</span>
+          </div>
+          <div class="atc-stat ok">
+            <span class="atc-stat-num" id="atcDash-done24">0</span>
+            <span class="atc-stat-label">✅ landed today</span>
+          </div>
+          <div class="atc-stat">
+            <span class="atc-stat-num" id="atcDash-oldest">—</span>
+            <span class="atc-stat-label">oldest open</span>
+          </div>
+        </div>
+
+        <!-- 4-lane kanban; cards are draggable, lane bodies are drop targets -->
+        <div class="atc-board" id="atcDashBoard">
+          <div class="atc-lane" data-status="open">
+            <div class="atc-lane-head atc-lane-open">
+              <span class="atc-lane-name">📥 Inbound</span>
+              <span class="atc-lane-count" id="atcDash-count-open">0</span>
+            </div>
+            <div class="atc-lane-body" data-status="open" id="atcDash-lane-open"></div>
+          </div>
+          <div class="atc-lane" data-status="claimed">
+            <div class="atc-lane-head atc-lane-claimed">
+              <span class="atc-lane-name">🤝 Claimed</span>
+              <span class="atc-lane-count" id="atcDash-count-claimed">0</span>
+            </div>
+            <div class="atc-lane-body" data-status="claimed" id="atcDash-lane-claimed"></div>
+          </div>
+          <div class="atc-lane" data-status="in_progress">
+            <div class="atc-lane-head atc-lane-active">
+              <span class="atc-lane-name">✈ In Flight</span>
+              <span class="atc-lane-count" id="atcDash-count-in_progress">0</span>
+            </div>
+            <div class="atc-lane-body" data-status="in_progress" id="atcDash-lane-in_progress"></div>
+          </div>
+          <div class="atc-lane" data-status="done">
+            <div class="atc-lane-head atc-lane-done">
+              <span class="atc-lane-name">🛬 Landed</span>
+              <span class="atc-lane-count" id="atcDash-count-done">0</span>
+            </div>
+            <div class="atc-lane-body" data-status="done" id="atcDash-lane-done"></div>
+          </div>
         </div>
       </div>
 
@@ -2109,96 +2314,193 @@ function _initDashboardQuicknav() {
 }
 _initDashboardQuicknav();
 
-// ── Community Help Board (embedded mini-collab) ──────────────
-// Pulls open requests from /api/collab and renders the top 4 inline so the
-// command center surfaces "what does my team need help with right now?"
-// without forcing a navigation. Claim button calls PATCH /api/collab/:id and
-// then re-fetches; the full /pages/collab.html stays the editing/triage surface.
-const COMMUNITY_BOARD_LIMIT = 4;
+// ── Air Traffic Control board (embedded full version on dashboard) ──
+// Full 4-lane kanban with drag-drop, mirrors /pages/collab.html. Post-update
+// modal stays on the standalone page; here we focus on triage + status moves.
+const ATC_DASH_LANES = ['open', 'claimed', 'in_progress', 'done'];
+const ATC_DASH_EMPTY = {
+  open:        'No incoming tickets',
+  claimed:     'Nothing in the holding pattern',
+  in_progress: 'No tickets in flight',
+  done:        'Nothing has landed yet',
+};
+let _atcDashRequests = [];
 
 async function loadCommunityBoard() {
-  const grid = document.getElementById('communityBoardGrid');
-  if (!grid) return;
-
-  let rows = [];
   try {
-    const r = await fetch('/api/collab?status=open');
-    if (r.ok) rows = await r.json();
-  } catch { /* non-fatal — keeps the loading state */ }
-
-  if (rows.length === 0) {
-    grid.innerHTML = `
-      <div class="cb-empty">
-        🎉 No open asks right now. <a href="/pages/collab.html#new" style="color:#ea580c;font-weight:600;">Post one →</a>
-      </div>
-    `;
-    return;
-  }
-
-  // Server already orders by priority then created_at, so slice the first N.
-  const top = rows.slice(0, COMMUNITY_BOARD_LIMIT);
-
-  grid.innerHTML = top.map(req => {
-    const ago = timeAgo(req.created_at);
-    const targetLine = req.target_user
-      ? `→ tagged <strong>${escapeHtml(req.target_user.split('@')[0])}</strong>`
-      : `→ open to anyone`;
-    const requesterName = (req.requester_name || req.requester_email || 'someone')
-      .toString().split('@')[0];
-    return `
-      <article class="cb-card" data-id="${escapeHtml(req.id)}">
-        <div class="cb-tags">
-          <span class="cb-tag t-${escapeHtml(req.type)}">${escapeHtml(req.type)}</span>
-          <span class="cb-tag p-${escapeHtml(req.priority)}">${escapeHtml(req.priority)}</span>
-        </div>
-        <div class="cb-title">${escapeHtml(req.title)}</div>
-        <div class="cb-desc">${escapeHtml(req.description)}</div>
-        <div class="cb-meta">
-          <span><strong>${escapeHtml(requesterName)}</strong> · ${ago}</span>
-          <span style="color:#cbd5e1;">·</span>
-          <span>${targetLine}</span>
-        </div>
-        <button class="cb-claim" data-action="claim" data-id="${escapeHtml(req.id)}">I'll help</button>
-      </article>
-    `;
-  }).join('');
+    const r = await fetch('/api/collab');
+    if (r.ok) _atcDashRequests = await r.json();
+  } catch { /* non-fatal */ }
+  _renderATCDash();
 }
 
-// One delegated click handler — claim button → PATCH /api/collab/:id { claim:true }
-function _wireCommunityBoard() {
-  const grid = document.getElementById('communityBoardGrid');
-  if (!grid || grid.dataset.wired) return;
-  grid.dataset.wired = '1';
-  grid.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button.cb-claim');
+function _renderATCDash() {
+  const buckets = { open: [], claimed: [], in_progress: [], done: [] };
+  for (const r of _atcDashRequests) {
+    if (buckets[r.status]) buckets[r.status].push(r);
+  }
+  for (const status of ATC_DASH_LANES) {
+    const body = document.getElementById(`atcDash-lane-${status}`);
+    const countEl = document.getElementById(`atcDash-count-${status}`);
+    if (countEl) countEl.textContent = buckets[status].length;
+    if (!body) continue;
+    const items = [...buckets[status]].sort((a, b) =>
+      new Date((b.created_at||'') + 'Z') - new Date((a.created_at||'') + 'Z')
+    );
+    body.innerHTML = items.length === 0
+      ? `<div class="atc-lane-empty">${ATC_DASH_EMPTY[status]}</div>`
+      : items.map(_atcDashCardHtml).join('');
+  }
+  _renderATCDashStats(buckets);
+}
+
+function _atcDashCardHtml(req) {
+  const ago = timeAgo(req.created_at);
+  const requester = (req.requester_name || req.requester_email || '?').toString().split('@')[0];
+  const target = req.target_user ? req.target_user.split('@')[0] : null;
+  const claimedBy = req.claimed_by ? req.claimed_by.split('@')[0] : null;
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = req.due_date && req.due_date < today && req.status !== 'done';
+
+  let actionHtml = '';
+  if (req.status === 'open') {
+    actionHtml = `<button class="atc-card-btn primary" data-action="claim" data-id="${req.id}">Claim</button>`;
+  } else if (req.status === 'claimed') {
+    actionHtml = `<button class="atc-card-btn" data-action="status" data-id="${req.id}" data-value="in_progress">Start</button>`;
+  } else if (req.status === 'in_progress') {
+    actionHtml = `<button class="atc-card-btn success" data-action="status" data-id="${req.id}" data-value="done">Land</button>`;
+  }
+
+  return `
+    <article class="atc-card" draggable="true" data-id="${req.id}" data-priority="${escapeHtml(req.priority)}">
+      <div class="atc-card-tags">
+        <span class="pill type-${escapeHtml(req.type)}">${escapeHtml(req.type)}</span>
+        <span class="pill prio-${escapeHtml(req.priority)}">${escapeHtml(req.priority)}</span>
+      </div>
+      <div class="atc-card-title">${escapeHtml(req.title)}</div>
+      <div class="atc-card-meta">
+        <span><strong>${escapeHtml(requester)}</strong> · ${ago}</span>
+        ${target ? `<span>· → <strong>${escapeHtml(target)}</strong></span>` : ''}
+        ${claimedBy ? `<span>· 🤝 <strong>${escapeHtml(claimedBy)}</strong></span>` : ''}
+        ${req.due_date ? `<span class="atc-card-due ${overdue ? 'overdue' : ''}">· ⏱ ${escapeHtml(req.due_date)}</span>` : ''}
+      </div>
+      ${actionHtml ? `<div class="atc-card-actions">${actionHtml}</div>` : ''}
+    </article>
+  `;
+}
+
+function _renderATCDashStats(buckets) {
+  const total = buckets.open.length + buckets.claimed.length + buckets.in_progress.length;
+  const urgent = _atcDashRequests.filter(r => r.priority === 'urgent' && r.status !== 'done').length;
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = _atcDashRequests.filter(r => r.due_date && r.due_date < today && r.status !== 'done').length;
+  const dayMs = 86400000;
+  const done24 = buckets.done.filter(r =>
+    r.resolved_at && (Date.now() - new Date(r.resolved_at + 'Z').getTime()) < dayMs
+  ).length;
+  let oldestText = '—';
+  if (buckets.open.length > 0) {
+    const oldest = buckets.open.reduce((acc, r) => {
+      const t = new Date((r.created_at||'') + 'Z').getTime();
+      return (!acc || t < acc) ? t : acc;
+    }, 0);
+    const days = Math.floor((Date.now() - oldest) / dayMs);
+    oldestText = days === 0 ? '<1d' : `${days}d`;
+  }
+  document.getElementById('atcDash-total').textContent = total;
+  document.getElementById('atcDash-urgent').textContent = urgent;
+  document.getElementById('atcDash-overdue').textContent = overdue;
+  document.getElementById('atcDash-done24').textContent = done24;
+  document.getElementById('atcDash-oldest').textContent = oldestText;
+}
+
+// Wire click + drag-drop once on the dashboard ATC board.
+function _wireATCDashBoard() {
+  const board = document.getElementById('atcDashBoard');
+  if (!board || board.dataset.wired) return;
+  board.dataset.wired = '1';
+
+  // Card action buttons → PATCH /api/collab/:id
+  board.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const id = btn.dataset.id;
+    const action = btn.dataset.action;
+    const body = action === 'claim' ? { claim: true } : { status: btn.dataset.value };
     btn.disabled = true;
-    btn.textContent = 'Claiming…';
     try {
       const r = await fetch(`/api/collab/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ claim: true }),
+        body: JSON.stringify(body),
       });
       if (!r.ok) {
-        const data = await r.json().catch(() => ({}));
-        throw new Error(data.error || `HTTP ${r.status}`);
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
       }
-      // Refresh the embedded board (the claim flips the request out of "open")
-      // and the activity feed so the claim shows up in the air-traffic view.
       await loadCommunityBoard();
       renderActivityFeed();
     } catch (err) {
       btn.disabled = false;
-      btn.textContent = "I'll help";
-      console.warn('[community board] claim failed:', err);
+      console.warn('[ATC dash] action failed:', err);
+    }
+  });
+
+  // HTML5 drag-and-drop between lanes
+  board.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.atc-card');
+    if (!card) return;
+    e.dataTransfer.setData('text/plain', card.dataset.id);
+    e.dataTransfer.effectAllowed = 'move';
+    card.classList.add('dragging');
+  });
+  board.addEventListener('dragend', (e) => {
+    const card = e.target.closest('.atc-card');
+    if (card) card.classList.remove('dragging');
+    document.querySelectorAll('#atcDashBoard .atc-lane.drop-target').forEach(l => l.classList.remove('drop-target'));
+  });
+  board.addEventListener('dragover', (e) => {
+    const lane = e.target.closest('.atc-lane');
+    if (!lane) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('#atcDashBoard .atc-lane.drop-target').forEach(l => l.classList.remove('drop-target'));
+    lane.classList.add('drop-target');
+  });
+  board.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const lane = e.target.closest('.atc-lane');
+    document.querySelectorAll('#atcDashBoard .atc-lane.drop-target').forEach(l => l.classList.remove('drop-target'));
+    if (!lane) return;
+    const id = e.dataTransfer.getData('text/plain');
+    const newStatus = lane.dataset.status;
+    if (!id || !ATC_DASH_LANES.includes(newStatus)) return;
+    const item = _atcDashRequests.find(r => String(r.id) === String(id));
+    if (!item || item.status === newStatus) return;
+    try {
+      const body = (item.status === 'open' && newStatus === 'claimed')
+        ? { claim: true }
+        : { status: newStatus };
+      const r = await fetch(`/api/collab/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      await loadCommunityBoard();
+      renderActivityFeed();
+    } catch (err) {
+      console.warn('[ATC dash] move failed:', err);
     }
   });
 }
-_wireCommunityBoard();
-// Refresh every 60s so newly-posted requests surface without a manual reload.
-setInterval(loadCommunityBoard, 60000);
+_wireATCDashBoard();
+// Auto-refresh every 20s — matches the standalone /pages/collab.html cadence
+// and reinforces the "live" feel of the LIVE dot in the header.
+setInterval(loadCommunityBoard, 20000);
 
 // ── Project Hub ───────────────────────────────────────────────
 // Embedded sprint table + post-update form. The full /admin/project-tracker
