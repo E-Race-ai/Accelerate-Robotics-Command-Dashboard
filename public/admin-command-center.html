@@ -411,6 +411,91 @@
       color: #9ca3af;
       white-space: nowrap;
     }
+    /* ── Activity feed v2: filters, time groups, expandable rows ── */
+    .activity-toolbar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .activity-chip {
+      background: #f1f5f9; border: 1px solid transparent;
+      padding: 5px 11px; border-radius: 999px;
+      font-size: 11.5px; font-weight: 600; color: #475569; cursor: pointer;
+      transition: all 0.12s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .activity-chip:hover { background: #e2e8f0; }
+    .activity-chip.active {
+      background: #0c1220; color: white; border-color: #0c1220;
+    }
+    .activity-chip .num {
+      font-size: 10px; padding: 1px 6px; border-radius: 999px;
+      background: rgba(255,255,255,0.18); font-family: 'JetBrains Mono', monospace;
+    }
+    .activity-chip:not(.active) .num { background: rgba(15,23,42,0.06); color: #475569; }
+    .activity-search {
+      flex: 1; min-width: 160px;
+      padding: 5px 11px; border-radius: 999px;
+      border: 1px solid #e5e7eb; background: white;
+      font-size: 12px; color: #0f172a;
+    }
+    .activity-search:focus {
+      outline: none; border-color: #0055ff; box-shadow: 0 0 0 3px rgba(0,85,255,0.08);
+    }
+    .activity-group-label {
+      font-family: 'JetBrains Mono', Menlo, monospace;
+      font-size: 10.5px; font-weight: 700; color: #64748b;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      padding: 14px 0 6px; border-bottom: 1px solid #f3f4f6;
+      margin-bottom: 4px;
+    }
+    .activity-group-label:first-child { padding-top: 4px; }
+    /* Activity row enhancements */
+    .activity-item {
+      cursor: pointer; user-select: none;
+    }
+    .activity-item:hover { background: #f9fafb; }
+    .activity-row-main { display: contents; }
+    /* Stage-change pill pair: from → to with colored backgrounds */
+    .stage-pair {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.7rem; margin-left: 4px;
+    }
+    .stage-pair .pill {
+      padding: 2px 7px; border-radius: 5px;
+      font-weight: 600; font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.2px;
+    }
+    .stage-pair .arrow { color: #cbd5e1; font-size: 0.85rem; }
+    /* Inline expansion panel — appears when a row is clicked */
+    .activity-expand {
+      grid-column: 1/-1; padding: 8px 12px 14px 50px;
+      font-size: 0.78rem; color: #475569; line-height: 1.5;
+      background: #f8fafc; border-radius: 0 0 8px 8px;
+      border-top: 1px dashed #e5e7eb;
+      display: none;
+    }
+    .activity-item.open + .activity-expand { display: block; }
+    .activity-expand .field-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+      font-weight: 700; color: #94a3b8; text-transform: uppercase;
+      letter-spacing: 1px; margin-right: 6px;
+    }
+    .activity-expand pre {
+      background: white; padding: 8px 10px; border-radius: 6px;
+      font-size: 11px; max-height: 240px; overflow: auto;
+      border: 1px solid #e5e7eb; margin-top: 4px;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .activity-expand .quick-link {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: #0055ff; font-weight: 600; text-decoration: none;
+      margin-top: 6px;
+    }
+    .activity-expand .quick-link:hover { text-decoration: underline; }
+    .activity-empty {
+      text-align: center; padding: 28px 8px; color: #94a3b8;
+      font-size: 13px;
+    }
 
     /* ── Regional micro maps ────────────────────────────────── */
     .region-grid {
@@ -960,7 +1045,18 @@
       <!-- ═══ Bottom row: Activity Feed ═══ -->
       <div class="brand-reveal" data-delay="0.25">
         <div class="bg-white rounded-2xl shadow-sm p-6">
-          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Recent Activity</h3>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Recent Activity</h3>
+            <span class="text-xs text-gray-400" id="activityCount"></span>
+          </div>
+          <div class="activity-toolbar" id="activityToolbar">
+            <button class="activity-chip active" data-lane="all">All <span class="num" id="lane-count-all">0</span></button>
+            <button class="activity-chip" data-lane="outreach">Outreach <span class="num" id="lane-count-outreach">0</span></button>
+            <button class="activity-chip" data-lane="contract">Contract <span class="num" id="lane-count-contract">0</span></button>
+            <button class="activity-chip" data-lane="launch">Launch <span class="num" id="lane-count-launch">0</span></button>
+            <button class="activity-chip" data-lane="active">24/7 <span class="num" id="lane-count-active">0</span></button>
+            <input type="search" class="activity-search" id="activitySearch" placeholder="Search actor, deal, or text…">
+          </div>
           <div id="activityFeed">
             <p class="text-sm text-gray-400 py-4">Loading activity...</p>
           </div>
@@ -1559,57 +1655,195 @@ function _colorFromString(s) {
   return `hsl(${h % 360}, 55%, 50%)`;
 }
 
+// Stage display colors — match the deal-stage palette used elsewhere on the page
+// so a from→to pair reads at a glance ("we moved from yellow to green").
+const STAGE_PILL_COLORS = {
+  lead:        { bg: '#f1f5f9', fg: '#475569' },
+  qualified:   { bg: '#ecfeff', fg: '#0e7490' },
+  site_walk:   { bg: '#f5f3ff', fg: '#6d28d9' },
+  configured: { bg: '#eef2ff', fg: '#4338ca' },
+  proposed:    { bg: '#fffbeb', fg: '#92400e' },
+  negotiation: { bg: '#fef3c7', fg: '#854d0e' },
+  won:         { bg: '#dcfce7', fg: '#166534' },
+  deploying:   { bg: '#d1fae5', fg: '#065f46' },
+  active:      { bg: '#a7f3d0', fg: '#065f46' },
+  lost:        { bg: '#fee2e2', fg: '#991b1b' },
+};
+
+// In-memory state for the feed so filter/search re-renders without re-fetching.
+let _activityRows = [];
+let _activityLane = 'all';
+let _activityQuery = '';
+
+// Bucket a row into a time group. Same calendar-day = "Today",
+// previous calendar-day = "Yesterday", within 7 days = "This week", else "Earlier".
+function _bucketActivity(iso) {
+  if (!iso) return 'Earlier';
+  const t = new Date(iso + 'Z');
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday.getTime() - 86400000);
+  if (t >= startOfToday) return 'Today';
+  if (t >= startOfYesterday) return 'Yesterday';
+  if (now - t < 7 * 86400000) return 'This week';
+  return 'Earlier';
+}
+
+function _stagePill(stage) {
+  const c = STAGE_PILL_COLORS[stage] || { bg: '#f1f5f9', fg: '#475569' };
+  return `<span class="pill" style="background:${c.bg};color:${c.fg};">${escapeHtml(stage)}</span>`;
+}
+
 async function renderActivityFeed() {
-  let rows = [];
   try {
-    const r = await fetch('/api/activities?limit=40');
-    if (r.ok) rows = await r.json();
+    const r = await fetch('/api/activities?limit=120');
+    if (r.ok) _activityRows = await r.json();
   } catch (e) {
     console.warn('activity fetch failed:', e);
   }
+  // Update lane counts (always all rows, ignores search)
+  const counts = { all: _activityRows.length, outreach: 0, contract: 0, launch: 0, active: 0 };
+  _activityRows.forEach(r => {
+    const meta = ACTIVITY_LANES[r.action] || { lane: 'active' };
+    counts[meta.lane]++;
+  });
+  Object.entries(counts).forEach(([k, v]) => {
+    const el = document.getElementById(`lane-count-${k}`);
+    if (el) el.textContent = v;
+  });
+  document.getElementById('activityCount').textContent =
+    `${_activityRows.length} event${_activityRows.length === 1 ? '' : 's'} · auto-refreshing`;
+  _drawActivity();
+}
 
-  if (rows.length === 0) {
-    document.getElementById('activityFeed').innerHTML =
-      '<p class="text-sm text-gray-400 py-4">No recent activity</p>';
+// Re-renders from in-memory _activityRows, applying lane + search filters.
+function _drawActivity() {
+  const container = document.getElementById('activityFeed');
+  if (!container) return;
+
+  const q = _activityQuery.trim().toLowerCase();
+  const filtered = _activityRows.filter(r => {
+    const meta = ACTIVITY_LANES[r.action] || { lane: 'active' };
+    if (_activityLane !== 'all' && meta.lane !== _activityLane) return false;
+    if (!q) return true;
+    // Search across actor, action label, deal name, and detail JSON
+    const hay = [r.actor, r.action, r.deal_name, r.detail].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="activity-empty">${_activityRows.length === 0 ? 'No recent activity' : 'No events match these filters.'}</div>`;
     return;
   }
 
-  document.getElementById('activityFeed').innerHTML = rows.map(r => {
-    const meta = ACTIVITY_LANES[r.action] || { lane: 'active', color: '#64748b', label: r.action };
-    const ago = timeAgo(r.created_at);
+  // Group by time bucket; preserve original chronological order within each
+  const groups = { 'Today': [], 'Yesterday': [], 'This week': [], 'Earlier': [] };
+  for (const r of filtered) groups[_bucketActivity(r.created_at)].push(r);
 
-    // Pull a useful target label from the joined deal name or the action's detail JSON
-    let target = r.deal_name || '';
-    let extra = '';
-    try {
-      const d = r.detail ? JSON.parse(r.detail) : null;
-      if (d) {
-        if (!target && d.name) target = d.name;
-        if (d.title) target = d.title;
-        if (d.from && d.to) extra = ` (${d.from} → ${d.to})`;
-        if (d.severity) extra = ` · ${d.severity}`;
-      }
-    } catch { /* detail wasn't JSON, ignore */ }
-
-    const actor = r.actor || 'system';
-    const initials = _initials(actor);
-    const avatarColor = _colorFromString(actor);
-
-    return `
-      <div class="activity-item" title="${escapeHtml(actor)}">
-        <span class="activity-avatar" style="background:${avatarColor};">${initials}</span>
-        <span class="activity-lane" style="background:${meta.color}1a;color:${meta.color};">${LANE_LABELS[meta.lane]}</span>
-        <div style="flex:1;min-width:0;">
-          <span style="font-weight:600;color:#111827;">${escapeHtml(actor.split('@')[0])}</span>
-          <span style="color:#6b7280;"> ${escapeHtml(meta.label)}</span>
-          ${target ? `<span style="font-weight:600;color:#111827;"> ${escapeHtml(target)}</span>` : ''}
-          ${extra ? `<span style="color:#9ca3af;font-size:0.78rem;">${escapeHtml(extra)}</span>` : ''}
-        </div>
-        <span class="activity-time">${ago}</span>
-      </div>
-    `;
-  }).join('');
+  let html = '';
+  for (const label of ['Today', 'Yesterday', 'This week', 'Earlier']) {
+    const items = groups[label];
+    if (!items.length) continue;
+    html += `<div class="activity-group-label">${label} <span style="color:#cbd5e1;">· ${items.length}</span></div>`;
+    html += items.map(_renderActivityRow).join('');
+  }
+  container.innerHTML = html;
 }
+
+function _renderActivityRow(r) {
+  const meta = ACTIVITY_LANES[r.action] || { lane: 'active', color: '#64748b', label: r.action };
+  const ago = timeAgo(r.created_at);
+
+  // Pull a useful target label and structured extra info from detail JSON
+  let target = r.deal_name || '';
+  let extraHtml = '';
+  let detailObj = null;
+  try {
+    if (r.detail) {
+      detailObj = JSON.parse(r.detail);
+      if (detailObj) {
+        if (!target && detailObj.name) target = detailObj.name;
+        if (detailObj.title) target = detailObj.title;
+        // Stage move: render colored from → to pills instead of plain text
+        if (detailObj.from && detailObj.to) {
+          extraHtml = `<span class="stage-pair">${_stagePill(detailObj.from)}<span class="arrow">→</span>${_stagePill(detailObj.to)}</span>`;
+        } else if (detailObj.severity) {
+          extraHtml = `<span style="color:#9ca3af;font-size:0.78rem;"> · ${escapeHtml(detailObj.severity)}</span>`;
+        }
+      }
+    }
+  } catch { /* not JSON, ignore */ }
+
+  const actor = r.actor || 'system';
+  const initials = _initials(actor);
+  const avatarColor = _colorFromString(actor);
+
+  // Build the inline detail panel content (revealed on row click)
+  const expandParts = [];
+  expandParts.push(`<div><span class="field-label">action</span> ${escapeHtml(r.action)}</div>`);
+  expandParts.push(`<div><span class="field-label">when</span> ${escapeHtml(r.created_at || '?')} <span style="color:#cbd5e1;">·</span> <span style="color:#94a3b8;">${ago}</span></div>`);
+  if (r.deal_id) {
+    expandParts.push(`<a class="quick-link" href="/admin/deals?id=${encodeURIComponent(r.deal_id)}">Open deal ${escapeHtml(r.deal_id)} →</a>`);
+  }
+  if (detailObj) {
+    expandParts.push(`<div style="margin-top:6px;"><span class="field-label">details</span><pre>${escapeHtml(JSON.stringify(detailObj, null, 2))}</pre></div>`);
+  } else if (r.detail) {
+    expandParts.push(`<div><span class="field-label">details</span> ${escapeHtml(r.detail)}</div>`);
+  }
+
+  return `
+    <div class="activity-item" data-id="${escapeHtml(r.id)}" title="Click for details">
+      <span class="activity-avatar" style="background:${avatarColor};">${initials}</span>
+      <span class="activity-lane" style="background:${meta.color}1a;color:${meta.color};">${LANE_LABELS[meta.lane]}</span>
+      <div style="flex:1;min-width:0;">
+        <span style="font-weight:600;color:#111827;">${escapeHtml(actor.split('@')[0])}</span>
+        <span style="color:#6b7280;"> ${escapeHtml(meta.label)}</span>
+        ${target ? `<span style="font-weight:600;color:#111827;"> ${escapeHtml(target)}</span>` : ''}
+        ${extraHtml}
+      </div>
+      <span class="activity-time" title="${escapeHtml(r.created_at || '')}">${ago}</span>
+    </div>
+    <div class="activity-expand">${expandParts.join('')}</div>
+  `;
+}
+
+// Wire up filter chips, search, and click-to-expand.
+// Idempotent — runs on first paint; renderActivityFeed re-renders the feed
+// HTML but the toolbar handlers stay attached to their persistent buttons.
+function _wireActivityFeedControls() {
+  const toolbar = document.getElementById('activityToolbar');
+  if (toolbar && !toolbar.dataset.wired) {
+    toolbar.dataset.wired = '1';
+    toolbar.addEventListener('click', (e) => {
+      const chip = e.target.closest('.activity-chip');
+      if (!chip) return;
+      toolbar.querySelectorAll('.activity-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      _activityLane = chip.dataset.lane || 'all';
+      _drawActivity();
+    });
+    document.getElementById('activitySearch').addEventListener('input', (e) => {
+      _activityQuery = e.target.value;
+      _drawActivity();
+    });
+  }
+  // Click-to-expand on any rendered row (delegated, survives re-renders)
+  const feed = document.getElementById('activityFeed');
+  if (feed && !feed.dataset.wired) {
+    feed.dataset.wired = '1';
+    feed.addEventListener('click', (e) => {
+      // Don't toggle if user clicked an actual link inside the expansion
+      if (e.target.closest('.quick-link') || e.target.closest('a')) return;
+      const row = e.target.closest('.activity-item');
+      if (!row) return;
+      row.classList.toggle('open');
+    });
+  }
+}
+_wireActivityFeedControls();
+// Lightweight live refresh — re-fetch the feed every 30s.
+// 30s balances "feels alive" with not flooding the API on idle tabs.
+setInterval(renderActivityFeed, 30000);
 
 function formatAction(action) {
   const map = {
