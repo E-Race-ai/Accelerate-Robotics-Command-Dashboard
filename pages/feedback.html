@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bug Fix · Feature Request — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',system-ui,sans-serif; color:var(--text); min-height:100vh;
+    background:
+      radial-gradient(ellipse 70% 50% at 20% 25%, rgba(124,58,237,0.10), transparent),
+      radial-gradient(ellipse 60% 50% at 80% 30%, rgba(220,38,38,0.07), transparent),
+      linear-gradient(180deg, #f5f6fb 0%, #f7f8fc 100%);
+    background-attachment:fixed;
+    line-height:1.55;
+  }
+  h1, h2, h3 { font-family:'Space Grotesk', 'Inter', sans-serif; letter-spacing:-0.01em; }
+  .mono { font-family:'JetBrains Mono', Menlo, monospace; }
+
+  .page { max-width:760px; margin:0 auto; padding:32px 24px 96px; }
+
+  .topbar {
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:18px; flex-wrap:wrap;
+  }
+  .back-link {
+    display:inline-flex; align-items:center; gap:6px; font-size:0.82rem;
+    color:var(--text-dim); text-decoration:none;
+  }
+  .back-link:hover { color:var(--blue); }
+
+  /* Hero */
+  .eyebrow {
+    font-family:'JetBrains Mono', monospace; font-size:0.7rem; font-weight:700;
+    color:#7c3aed; text-transform:uppercase; letter-spacing:2px; margin-bottom:10px;
+  }
+  h1 { font-size:2.2rem; font-weight:800; line-height:1.1; margin-bottom:10px; }
+  h1 .accent {
+    background:linear-gradient(135deg, #7c3aed, #dc2626);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  .lede { font-size:1rem; color:var(--text-dim); max-width:560px; margin-bottom:28px; }
+
+  /* Form panel */
+  form.panel {
+    background:white; border:1px solid var(--border); border-radius:16px;
+    padding:28px; box-shadow:0 4px 18px rgba(15,23,42,0.05);
+    display:flex; flex-direction:column; gap:20px;
+  }
+
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field label {
+    font-size:0.78rem; font-weight:700; color:#0f172a;
+    letter-spacing:0.2px;
+  }
+  .field .hint { font-size:0.72rem; color:var(--text-faint); margin-top:-2px; }
+  .field input[type=text],
+  .field input[type=email],
+  .field textarea,
+  .field select {
+    width:100%; padding:11px 14px;
+    border:1.5px solid var(--border); border-radius:10px;
+    font-family:inherit; font-size:0.92rem; color:var(--text);
+    background:#fafbfd; transition:border-color 0.15s, background 0.15s;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline:none; border-color:var(--blue); background:white;
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+  }
+  .field textarea { min-height:130px; resize:vertical; line-height:1.5; }
+
+  /* Type pills */
+  .type-row { display:flex; gap:10px; }
+  .type-pill {
+    flex:1; cursor:pointer; padding:14px 16px;
+    border:1.5px solid var(--border); border-radius:12px;
+    background:white; transition:all 0.15s;
+    display:flex; align-items:center; gap:10px;
+  }
+  .type-pill input { display:none; }
+  .type-pill .icon {
+    width:34px; height:34px; border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .type-pill .meta { flex:1; }
+  .type-pill .name { font-weight:700; font-size:0.92rem; }
+  .type-pill .desc { font-size:0.72rem; color:var(--text-dim); }
+  .type-pill.bug .icon { background:#fef2f2; color:#dc2626; }
+  .type-pill.feature .icon { background:#f5f3ff; color:#7c3aed; }
+  .type-pill:hover { border-color:#cbd5e1; transform:translateY(-1px); }
+  .type-pill.bug.checked { border-color:#dc2626; background:#fef9f9; box-shadow:0 4px 14px rgba(220,38,38,0.12); }
+  .type-pill.feature.checked { border-color:#7c3aed; background:#fbfaff; box-shadow:0 4px 14px rgba(124,58,237,0.12); }
+  .type-pill .icon svg { width:20px; height:20px; }
+
+  /* Two-column row */
+  .row-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width: 600px) { .row-2 { grid-template-columns:1fr; } }
+
+  /* Drop zone */
+  .dropzone {
+    border:2px dashed #cbd5e1; border-radius:12px;
+    padding:24px; text-align:center;
+    background:#fafbfd; transition:all 0.15s;
+    cursor:pointer; position:relative;
+  }
+  .dropzone:hover, .dropzone.over {
+    border-color:var(--blue); background:#f0f7ff;
+  }
+  .dropzone .icon { font-size:1.6rem; margin-bottom:6px; opacity:0.6; }
+  .dropzone .title { font-weight:700; font-size:0.9rem; color:#0f172a; }
+  .dropzone .sub { font-size:0.78rem; color:var(--text-dim); margin-top:2px; }
+  .dropzone input[type=file] { display:none; }
+
+  .thumbs {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));
+    gap:10px; margin-top:14px;
+  }
+  .thumb {
+    position:relative; border:1px solid var(--border);
+    border-radius:10px; overflow:hidden; background:#f8f9fb;
+    aspect-ratio:4/3;
+  }
+  .thumb img { width:100%; height:100%; object-fit:cover; }
+  .thumb .meta {
+    position:absolute; bottom:0; left:0; right:0;
+    background:linear-gradient(0deg, rgba(0,0,0,0.6), transparent);
+    color:white; font-size:0.65rem; padding:8px 6px 5px;
+    font-family:'JetBrains Mono', monospace; letter-spacing:0.4px;
+  }
+  .thumb button.remove {
+    position:absolute; top:5px; right:5px;
+    width:22px; height:22px; border-radius:50%;
+    background:rgba(0,0,0,0.7); color:white; border:none;
+    cursor:pointer; font-size:14px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .thumb button.remove:hover { background:#dc2626; }
+
+  /* Submit */
+  .actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .btn {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:12px 22px; border-radius:10px;
+    font-size:0.9rem; font-weight:700;
+    text-decoration:none; cursor:pointer; border:none;
+    transition:transform 0.1s, box-shadow 0.15s;
+  }
+  .btn-primary {
+    background:linear-gradient(135deg, var(--blue), var(--cyan)); color:white;
+    box-shadow:0 4px 14px rgba(0,85,255,0.25);
+  }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,85,255,0.35); }
+  .btn-primary:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+  .btn-ghost {
+    background:white; color:var(--text); border:1.5px solid var(--border);
+  }
+  .btn-ghost:hover { border-color:var(--blue); color:var(--blue); }
+
+  /* Status messages */
+  .status {
+    padding:14px 16px; border-radius:10px;
+    font-size:0.88rem;
+    display:none;
+  }
+  .status.error { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; display:block; }
+  .status.success { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; display:block; }
+
+  .success-card {
+    background:white; border:1.5px solid #16a34a; border-radius:16px;
+    padding:32px; text-align:center;
+    box-shadow:0 8px 24px rgba(22,163,74,0.18);
+  }
+  .success-card .check {
+    width:54px; height:54px; border-radius:50%;
+    background:linear-gradient(135deg, #16a34a, #22c55e); color:white;
+    display:inline-flex; align-items:center; justify-content:center;
+    margin-bottom:14px;
+  }
+  .success-card h2 { font-size:1.4rem; font-weight:800; margin-bottom:6px; }
+  .success-card p { color:var(--text-dim); font-size:0.92rem; }
+  .success-card .id-tag {
+    display:inline-block; margin-top:14px; padding:6px 12px;
+    background:#f0fdf4; color:#166534; border-radius:999px;
+    font-family:'JetBrains Mono', monospace; font-size:0.78rem; font-weight:600;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <a href="/admin" class="back-link">← Command Center</a>
+  </div>
+
+  <div class="eyebrow">Toolkit · Feedback</div>
+  <h1>Report a <span class="accent">Bug</span> or Request a <span class="accent">Feature</span></h1>
+  <p class="lede">Tell us what broke, or describe what you wish the app did. Drag in screenshots, paste from clipboard, or attach files. The team gets every submission.</p>
+
+  <div class="status" id="status"></div>
+
+  <form id="feedbackForm" class="panel" enctype="multipart/form-data">
+
+    <!-- Type -->
+    <div class="field">
+      <label>What is this?</label>
+      <div class="type-row">
+        <label class="type-pill bug checked">
+          <input type="radio" name="type" value="bug" checked>
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M12 6V3M9 6L7 4M15 6l2-2M5 11H2M22 11h-3M5 16H2M22 16h-3M5 21l2-2M19 21l-2-2"/></svg>
+          </div>
+          <div class="meta">
+            <div class="name">Bug</div>
+            <div class="desc">Something is broken</div>
+          </div>
+        </label>
+        <label class="type-pill feature">
+          <input type="radio" name="type" value="feature">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.39 7.36H22l-6.18 4.49L18.18 22 12 17.27 5.82 22l2.36-8.15L2 9.36h7.61L12 2z"/></svg>
+          </div>
+          <div class="meta">
+            <div class="name">Feature Request</div>
+            <div class="desc">Something to improve</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div class="field">
+      <label for="f-title">Title</label>
+      <input type="text" id="f-title" name="title" required maxlength="200" placeholder="One-line summary, e.g. 'Site walk photo upload spinner never resolves'">
+    </div>
+
+    <!-- Description -->
+    <div class="field">
+      <label for="f-description">Description</label>
+      <span class="hint">For bugs: what did you expect to happen? What actually happened? Steps to reproduce.</span>
+      <textarea id="f-description" name="description" required maxlength="10000" placeholder="The more detail the better. What page were you on, what did you click, what time did this happen?"></textarea>
+    </div>
+
+    <!-- Severity + page URL -->
+    <div class="row-2">
+      <div class="field">
+        <label for="f-severity">Severity</label>
+        <select id="f-severity" name="severity">
+          <option value="">— Optional —</option>
+          <option value="low">Low — minor / cosmetic</option>
+          <option value="medium" selected>Medium — annoying but workable</option>
+          <option value="high">High — blocks a workflow</option>
+          <option value="critical">Critical — production down</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-page-url">Page URL</label>
+        <input type="text" id="f-page-url" name="page_url" placeholder="(auto-filled from referrer)">
+      </div>
+    </div>
+
+    <!-- Reporter info -->
+    <div class="row-2">
+      <div class="field">
+        <label for="f-name">Your name</label>
+        <input type="text" id="f-name" name="user_name" maxlength="100" placeholder="Optional">
+      </div>
+      <div class="field">
+        <label for="f-email">Your email</label>
+        <input type="email" id="f-email" name="user_email" maxlength="200" placeholder="So we can follow up">
+      </div>
+    </div>
+
+    <!-- Screenshots -->
+    <div class="field">
+      <label>Screenshots</label>
+      <span class="hint">Drag & drop, click to browse, or just paste from clipboard (Cmd-V). Up to 6 images, 8MB each.</span>
+      <label class="dropzone" id="dropzone">
+        <input type="file" id="f-files" name="screenshots" accept="image/png,image/jpeg,image/gif,image/webp" multiple>
+        <div class="icon">📎</div>
+        <div class="title">Drop images here or click to choose</div>
+        <div class="sub" id="dropsub">PNG · JPEG · GIF · WebP &nbsp;·&nbsp; up to 6 files</div>
+      </label>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+
+    <!-- Submit -->
+    <div class="actions">
+      <button type="submit" class="btn btn-primary" id="submitBtn">
+        <span id="submitLabel">Submit report</span>
+      </button>
+      <button type="reset" class="btn btn-ghost" id="resetBtn">Clear</button>
+    </div>
+  </form>
+
+  <!-- Success state, hidden until submit -->
+  <div id="successCard" style="display:none;" class="success-card">
+    <div class="check">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2>Thanks — we got it</h2>
+    <p id="successMsg">Your report has been logged. The team will triage shortly.</p>
+    <div class="id-tag" id="successId"></div>
+    <div style="margin-top:18px;">
+      <button class="btn btn-ghost" onclick="window.location.reload()">Submit another</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Type pill toggling ─────────────────────────────────────
+  const pills = document.querySelectorAll('.type-pill');
+  pills.forEach(p => p.addEventListener('click', () => {
+    pills.forEach(x => x.classList.remove('checked'));
+    p.classList.add('checked');
+    p.querySelector('input').checked = true;
+  }));
+
+  // ── Auto-fill page URL from referrer ───────────────────────
+  const pageUrlInput = document.getElementById('f-page-url');
+  if (document.referrer && !pageUrlInput.value) {
+    pageUrlInput.value = document.referrer;
+  }
+
+  // ── Files state — manage manually so we support paste + drop ──
+  /** @type {File[]} */
+  const filesQueue = [];
+  const MAX_FILES = 6;
+  const MAX_BYTES = 8 * 1024 * 1024;
+
+  const fileInput = document.getElementById('f-files');
+  const dropzone = document.getElementById('dropzone');
+  const thumbs = document.getElementById('thumbs');
+  const dropsub = document.getElementById('dropsub');
+
+  function rerenderThumbs() {
+    thumbs.innerHTML = '';
+    filesQueue.forEach((f, idx) => {
+      const url = URL.createObjectURL(f);
+      const div = document.createElement('div');
+      div.className = 'thumb';
+      div.innerHTML = `
+        <img src="${url}" alt="${f.name || 'screenshot'}">
+        <button type="button" class="remove" data-idx="${idx}" title="Remove">×</button>
+        <div class="meta">${(f.size / 1024).toFixed(0)} KB</div>
+      `;
+      thumbs.appendChild(div);
+    });
+    dropsub.textContent = `${filesQueue.length} of ${MAX_FILES} attached`;
+  }
+
+  thumbs.addEventListener('click', (e) => {
+    const btn = e.target.closest('button.remove');
+    if (!btn) return;
+    e.preventDefault();
+    filesQueue.splice(parseInt(btn.dataset.idx, 10), 1);
+    rerenderThumbs();
+  });
+
+  function addFiles(list) {
+    for (const f of list) {
+      if (filesQueue.length >= MAX_FILES) break;
+      if (!f.type.startsWith('image/')) continue;
+      if (f.size > MAX_BYTES) {
+        showStatus(`'${f.name || 'file'}' is over 8MB and was skipped.`, 'error');
+        continue;
+      }
+      filesQueue.push(f);
+    }
+    rerenderThumbs();
+  }
+
+  // Hidden file input
+  fileInput.addEventListener('change', (e) => {
+    addFiles(e.target.files);
+    fileInput.value = '';
+  });
+
+  // Drag & drop
+  ['dragenter', 'dragover'].forEach(ev =>
+    dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.add('over'); })
+  );
+  ['dragleave', 'drop'].forEach(ev =>
+    dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.remove('over'); })
+  );
+  dropzone.addEventListener('drop', (e) => {
+    if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files);
+  });
+
+  // Paste-from-clipboard — works anywhere on the page
+  // WHY: end users frequently take a screenshot and Cmd-V into a text field;
+  // we want that paste to attach as an image even outside the dropzone.
+  window.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items || [];
+    const imgs = [];
+    for (const item of items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) imgs.push(file);
+      }
+    }
+    if (imgs.length) {
+      e.preventDefault();
+      addFiles(imgs);
+    }
+  });
+
+  // ── Status messages ────────────────────────────────────────
+  function showStatus(msg, kind) {
+    const el = document.getElementById('status');
+    el.className = 'status ' + (kind || '');
+    el.textContent = msg;
+  }
+
+  // ── Submit ─────────────────────────────────────────────────
+  const form = document.getElementById('feedbackForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const submitLabel = document.getElementById('submitLabel');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showStatus('', '');
+    submitBtn.disabled = true;
+    submitLabel.textContent = 'Submitting…';
+
+    const fd = new FormData();
+    fd.append('type', form.type.value);
+    fd.append('title', document.getElementById('f-title').value);
+    fd.append('description', document.getElementById('f-description').value);
+    fd.append('severity', document.getElementById('f-severity').value);
+    fd.append('page_url', document.getElementById('f-page-url').value);
+    fd.append('user_name', document.getElementById('f-name').value);
+    fd.append('user_email', document.getElementById('f-email').value);
+    filesQueue.forEach(f => fd.append('screenshots', f, f.name || 'paste.png'));
+
+    try {
+      const r = await fetch('/api/feedback', { method: 'POST', body: fd });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+
+      // Hide form, show success
+      form.style.display = 'none';
+      const ok = document.getElementById('successCard');
+      ok.style.display = 'block';
+      const idTag = document.getElementById('successId');
+      idTag.textContent = `#${data.id}` + (data.screenshots ? ` · ${data.screenshots} screenshot${data.screenshots === 1 ? '' : 's'} attached` : '');
+    } catch (err) {
+      showStatus('Could not submit: ' + err.message, 'error');
+      submitBtn.disabled = false;
+      submitLabel.textContent = 'Submit report';
+    }
+  });
+
+  // Reset clears the file queue too
+  form.addEventListener('reset', () => {
+    filesQueue.length = 0;
+    rerenderThumbs();
+    showStatus('', '');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collab Bulletin Board — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',system-ui,sans-serif; color:var(--text); min-height:100vh;
+    background:
+      radial-gradient(ellipse 60% 50% at 25% 20%, rgba(245,158,11,0.10), transparent),
+      radial-gradient(ellipse 60% 40% at 75% 30%, rgba(0,200,255,0.08), transparent),
+      linear-gradient(180deg, #f5f6fb 0%, #f7f8fc 100%);
+    background-attachment:fixed;
+    line-height:1.5;
+  }
+  h1, h2, h3 { font-family:'Space Grotesk', 'Inter', sans-serif; letter-spacing:-0.01em; }
+  .mono { font-family:'JetBrains Mono', Menlo, monospace; }
+
+  .page { max-width:1280px; margin:0 auto; padding:32px 24px 96px; }
+
+  .topbar {
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:18px; flex-wrap:wrap;
+  }
+  .back-link {
+    display:inline-flex; align-items:center; gap:6px; font-size:0.82rem;
+    color:var(--text-dim); text-decoration:none;
+  }
+  .back-link:hover { color:var(--blue); }
+
+  .eyebrow {
+    font-family:'JetBrains Mono', monospace; font-size:0.7rem; font-weight:700;
+    color:#ea580c; text-transform:uppercase; letter-spacing:2px; margin-bottom:10px;
+  }
+  h1 { font-size:2rem; font-weight:800; line-height:1.1; margin-bottom:8px; }
+  h1 .accent {
+    background:linear-gradient(135deg, #ea580c, #f59e0b);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  .lede { font-size:0.95rem; color:var(--text-dim); max-width:720px; margin-bottom:24px; }
+
+  /* Top bar */
+  .toolbar {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin-bottom:20px;
+  }
+  .tab {
+    background:white; border:1px solid var(--border);
+    padding:7px 14px; border-radius:999px;
+    font-size:12.5px; font-weight:600; color:#475569; cursor:pointer;
+    transition:all 0.15s;
+  }
+  .tab:hover { background:#f8fafc; border-color:#cbd5e1; }
+  .tab.active { background:#0c1220; color:white; border-color:#0c1220; }
+  .tab .count {
+    margin-left:6px; padding:1px 7px; border-radius:999px;
+    background:rgba(255,255,255,0.18); font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+  }
+  .tab:not(.active) .count { background:#eef2f7; color:#64748b; }
+  .grow { flex:1; }
+  .new-btn {
+    background:linear-gradient(135deg, #ea580c, #f59e0b); color:white;
+    border:none; padding:9px 18px; border-radius:10px;
+    font-size:13px; font-weight:700; cursor:pointer;
+    box-shadow:0 4px 14px rgba(234,88,12,0.25);
+    transition:transform 0.1s, box-shadow 0.15s;
+  }
+  .new-btn:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(234,88,12,0.35); }
+
+  /* Card grid */
+  .board {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));
+    gap:14px;
+  }
+  .req-card {
+    background:white; border:1px solid var(--border); border-radius:14px;
+    padding:18px; display:flex; flex-direction:column; gap:8px;
+    box-shadow:0 1px 3px rgba(15,23,42,0.04);
+    transition:transform 0.12s, box-shadow 0.15s;
+    position:relative;
+  }
+  .req-card:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(15,23,42,0.08); }
+
+  .req-head { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .pill {
+    font-size:10px; font-weight:700; padding:3px 9px;
+    border-radius:999px; text-transform:uppercase; letter-spacing:0.6px;
+    white-space:nowrap;
+  }
+  .pill.type-feature      { background:#eef2ff; color:#4f46e5; }
+  .pill.type-tool         { background:#ecfeff; color:#0e7490; }
+  .pill.type-integration  { background:#f0fdf4; color:#166534; }
+  .pill.type-doc          { background:#fef3c7; color:#92400e; }
+  .pill.type-design       { background:#fdf2f8; color:#be185d; }
+  .pill.type-other        { background:#f1f5f9; color:#475569; }
+  .pill.prio-low          { background:#f1f5f9; color:#475569; }
+  .pill.prio-medium       { background:#fffbeb; color:#92400e; }
+  .pill.prio-high         { background:#fff1f2; color:#be123c; }
+  .pill.prio-urgent       { background:#fee2e2; color:#991b1b; box-shadow:0 0 0 1px #fca5a5; }
+  .pill.status-open       { background:#fef3c7; color:#92400e; }
+  .pill.status-claimed    { background:#dbeafe; color:#1e40af; }
+  .pill.status-in_progress{ background:#e0e7ff; color:#3730a3; }
+  .pill.status-done       { background:#dcfce7; color:#166534; }
+  .pill.status-archived   { background:#f1f5f9; color:#475569; }
+
+  .req-card h3 {
+    font-size:1rem; line-height:1.25; color:#0f172a;
+    margin-top:2px;
+  }
+  .req-card .desc {
+    font-size:0.85rem; color:#475569; line-height:1.45;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .req-meta {
+    display:flex; flex-direction:column; gap:5px;
+    font-size:0.75rem; color:#64748b;
+    margin-top:4px;
+  }
+  .req-meta .row { display:flex; align-items:center; gap:6px; }
+  .req-meta .row strong { color:#0f172a; font-weight:600; }
+  .skill-chip {
+    display:inline-block; background:#fef3c7; color:#92400e;
+    font-size:10.5px; font-weight:600; padding:2px 7px;
+    border-radius:5px; margin-right:4px;
+  }
+  .req-actions {
+    display:flex; gap:6px; margin-top:8px; padding-top:8px;
+    border-top:1px dashed var(--border);
+  }
+  .req-actions button {
+    flex:1; padding:7px 10px; border:1px solid var(--border);
+    background:white; border-radius:8px;
+    font-size:12px; font-weight:600; color:#0f172a;
+    cursor:pointer; transition:all 0.15s;
+  }
+  .req-actions button:hover { border-color:#0055ff; color:#0055ff; }
+  .req-actions button.primary {
+    background:#0055ff; color:white; border-color:#0055ff;
+  }
+  .req-actions button.primary:hover { background:#0040cc; border-color:#0040cc; }
+  .req-actions button.success {
+    background:#16a34a; color:white; border-color:#16a34a;
+  }
+  .req-actions button.success:hover { background:#108037; border-color:#108037; }
+
+  .empty {
+    grid-column:1/-1; padding:40px;
+    text-align:center; color:#94a3b8;
+    border:2px dashed #e5e7eb; border-radius:14px;
+    background:rgba(255,255,255,0.5);
+  }
+
+  /* Modal */
+  .modal-bg {
+    position:fixed; inset:0; background:rgba(15,23,42,0.5);
+    display:none; align-items:center; justify-content:center;
+    z-index:50; padding:20px;
+  }
+  .modal-bg.show { display:flex; }
+  .modal {
+    background:white; border-radius:16px;
+    width:100%; max-width:580px; max-height:90vh;
+    overflow-y:auto; padding:28px;
+    box-shadow:0 20px 50px rgba(15,23,42,0.25);
+  }
+  .modal h2 { font-size:1.3rem; font-weight:800; margin-bottom:18px; }
+  .field { display:flex; flex-direction:column; gap:5px; margin-bottom:16px; }
+  .field label { font-size:0.78rem; font-weight:700; color:#0f172a; }
+  .field .hint { font-size:0.72rem; color:#94a3b8; margin-top:-2px; }
+  .field input, .field textarea, .field select {
+    width:100%; padding:10px 13px;
+    border:1.5px solid var(--border); border-radius:9px;
+    font-family:inherit; font-size:0.9rem; background:#fafbfd;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline:none; border-color:var(--blue); background:white;
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+  }
+  .field textarea { min-height:110px; resize:vertical; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width: 520px) { .field-row { grid-template-columns:1fr; } }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
+  .modal-actions button {
+    padding:10px 18px; border-radius:9px; font-size:13px; font-weight:700;
+    cursor:pointer; border:1.5px solid var(--border); background:white;
+    transition:all 0.15s;
+  }
+  .modal-actions button.primary {
+    background:linear-gradient(135deg, #ea580c, #f59e0b); color:white; border-color:transparent;
+  }
+  .modal-actions button.primary:disabled { opacity:0.5; cursor:not-allowed; }
+
+  .status-msg {
+    padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:12px; display:none;
+  }
+  .status-msg.error { display:block; background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <a href="/admin" class="back-link">← Command Center</a>
+  </div>
+
+  <div class="eyebrow">Toolkit · Collaboration</div>
+  <h1><span class="accent">Collab</span> Bulletin Board</h1>
+  <p class="lede">Need a teammate to build a feature, add a tool, wire an integration, or write a doc? Post it here. Tag a specific person if you know who's right, or leave it open and someone will claim it.</p>
+
+  <div class="toolbar">
+    <button class="tab active" data-status="open">Open <span class="count" id="count-open">0</span></button>
+    <button class="tab" data-status="claimed">Claimed <span class="count" id="count-claimed">0</span></button>
+    <button class="tab" data-status="in_progress">In Progress <span class="count" id="count-in_progress">0</span></button>
+    <button class="tab" data-status="done">Done <span class="count" id="count-done">0</span></button>
+    <button class="tab" data-status="all">All</button>
+    <span class="grow"></span>
+    <button class="new-btn" id="newBtn">+ New Request</button>
+  </div>
+
+  <div class="board" id="board"></div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2>New Collaboration Request</h2>
+    <div class="status-msg" id="modalErr"></div>
+    <form id="newForm">
+      <div class="field-row">
+        <div class="field">
+          <label for="m-type">Type</label>
+          <select id="m-type" name="type" required>
+            <option value="feature">Feature</option>
+            <option value="tool">Tool</option>
+            <option value="integration">Integration</option>
+            <option value="doc">Doc / Writeup</option>
+            <option value="design">Design</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="m-priority">Priority</label>
+          <select id="m-priority" name="priority">
+            <option value="low">Low — nice-to-have</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent — blocking work</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="m-title">Title</label>
+        <input type="text" id="m-title" required maxlength="200" placeholder="e.g. 'Hook the SLAM scanner output into the deployment playbook'">
+      </div>
+      <div class="field">
+        <label for="m-description">Details</label>
+        <span class="hint">What needs to happen, why it matters, any starting links.</span>
+        <textarea id="m-description" required maxlength="10000"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="m-skills">Skills needed <span style="color:#94a3b8;font-weight:500;">(optional)</span></label>
+          <input type="text" id="m-skills" placeholder="e.g. ROS, Figma, Stripe, copywriting">
+        </div>
+        <div class="field">
+          <label for="m-target">Tag a person <span style="color:#94a3b8;font-weight:500;">(optional)</span></label>
+          <select id="m-target">
+            <option value="">— Open to the team —</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="m-due">Due date <span style="color:#94a3b8;font-weight:500;">(optional)</span></label>
+        <input type="date" id="m-due">
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="cancelBtn">Cancel</button>
+        <button type="submit" class="primary" id="saveBtn">Post Request</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function timeAgo(iso) {
+    if (!iso) return '';
+    const ms = Date.now() - new Date(iso + 'Z').getTime();
+    const sec = Math.floor(ms / 1000);
+    if (sec < 60) return 'just now';
+    if (sec < 3600) return `${Math.floor(sec/60)}m ago`;
+    if (sec < 86400) return `${Math.floor(sec/3600)}h ago`;
+    return `${Math.floor(sec/86400)}d ago`;
+  }
+
+  let allRequests = [];
+  let activeStatus = 'open';
+
+  async function loadTeam() {
+    try {
+      const r = await fetch('/api/collab/team');
+      if (!r.ok) return;
+      const team = await r.json();
+      const sel = $('#m-target');
+      team.forEach(p => {
+        const o = document.createElement('option');
+        o.value = p.email;
+        o.textContent = p.name ? `${p.name} (${p.email})` : p.email;
+        sel.appendChild(o);
+      });
+    } catch (e) { /* non-fatal */ }
+  }
+
+  async function loadRequests() {
+    try {
+      const r = await fetch('/api/collab');
+      if (!r.ok) throw new Error('fetch failed');
+      allRequests = await r.json();
+      renderTabs();
+      renderBoard();
+    } catch (e) {
+      $('#board').innerHTML = `<div class="empty">Could not load requests: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function renderTabs() {
+    const counts = { open:0, claimed:0, in_progress:0, done:0 };
+    allRequests.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+    Object.entries(counts).forEach(([k, v]) => {
+      const el = document.getElementById(`count-${k}`);
+      if (el) el.textContent = v;
+    });
+  }
+
+  function renderBoard() {
+    const filtered = activeStatus === 'all'
+      ? allRequests
+      : allRequests.filter(r => r.status === activeStatus);
+
+    if (filtered.length === 0) {
+      $('#board').innerHTML = `<div class="empty">No ${activeStatus === 'all' ? '' : activeStatus + ' '}requests yet. ${activeStatus === 'open' ? 'Click "+ New Request" to post one.' : ''}</div>`;
+      return;
+    }
+
+    $('#board').innerHTML = filtered.map(req => {
+      const skills = (req.skills || '').split(',').map(s => s.trim()).filter(Boolean);
+      const target = req.target_user
+        ? `<div class="row">→ tagged <strong>${escapeHtml(req.target_user.split('@')[0])}</strong></div>`
+        : `<div class="row">→ open to the team</div>`;
+      const claimedRow = req.claimed_by
+        ? `<div class="row">✓ claimed by <strong>${escapeHtml(req.claimed_by.split('@')[0])}</strong></div>`
+        : '';
+      const dueRow = req.due_date
+        ? `<div class="row">⏱ due ${escapeHtml(req.due_date)}</div>`
+        : '';
+
+      // Show different action buttons depending on status
+      let actions = '';
+      if (req.status === 'open') {
+        actions = `<button class="primary" data-action="claim" data-id="${req.id}">Claim</button>`;
+      } else if (req.status === 'claimed') {
+        actions = `<button data-action="status" data-id="${req.id}" data-value="in_progress">Start work</button>`;
+      } else if (req.status === 'in_progress') {
+        actions = `<button class="success" data-action="status" data-id="${req.id}" data-value="done">Mark Done</button>`;
+      }
+
+      return `
+        <article class="req-card">
+          <div class="req-head">
+            <span class="pill type-${req.type}">${req.type}</span>
+            <span class="pill prio-${req.priority}">${req.priority}</span>
+            <span class="pill status-${req.status}">${req.status.replace('_', ' ')}</span>
+          </div>
+          <h3>${escapeHtml(req.title)}</h3>
+          <div class="desc">${escapeHtml(req.description)}</div>
+          ${skills.length ? `<div>${skills.map(s => `<span class="skill-chip">${escapeHtml(s)}</span>`).join('')}</div>` : ''}
+          <div class="req-meta">
+            <div class="row">posted by <strong>${escapeHtml((req.requester_name || req.requester_email || '?').split('@')[0])}</strong> · ${timeAgo(req.created_at)}</div>
+            ${target}
+            ${claimedRow}
+            ${dueRow}
+          </div>
+          ${actions ? `<div class="req-actions">${actions}</div>` : ''}
+        </article>
+      `;
+    }).join('');
+  }
+
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeStatus = tab.dataset.status;
+      renderBoard();
+    });
+  });
+
+  // Card action buttons (claim, status change) — delegated
+  $('#board').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
+    const body = action === 'claim'
+      ? { claim: true }
+      : { status: btn.dataset.value };
+    btn.disabled = true;
+    try {
+      const r = await fetch(`/api/collab/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      await loadRequests();
+    } catch (err) {
+      alert('Failed: ' + err.message);
+      btn.disabled = false;
+    }
+  });
+
+  // Modal open/close
+  $('#newBtn').addEventListener('click', () => $('#modalBg').classList.add('show'));
+  $('#cancelBtn').addEventListener('click', () => $('#modalBg').classList.remove('show'));
+  $('#modalBg').addEventListener('click', (e) => { if (e.target === $('#modalBg')) $('#modalBg').classList.remove('show'); });
+
+  // Submit
+  $('#newForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = $('#modalErr');
+    errEl.classList.remove('error');
+    errEl.textContent = '';
+    const saveBtn = $('#saveBtn');
+    saveBtn.disabled = true;
+
+    const body = {
+      type: $('#m-type').value,
+      priority: $('#m-priority').value,
+      title: $('#m-title').value,
+      description: $('#m-description').value,
+      skills: $('#m-skills').value,
+      target_user: $('#m-target').value,
+      due_date: $('#m-due').value || null,
+    };
+    try {
+      const r = await fetch('/api/collab', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      $('#modalBg').classList.remove('show');
+      $('#newForm').reset();
+      await loadRequests();
+    } catch (err) {
+      errEl.classList.add('error');
+      errEl.textContent = 'Could not post: ' + err.message;
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+
+  loadTeam();
+  loadRequests();
+</script>
+</body>
+</html>

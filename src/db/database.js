@@ -366,6 +366,56 @@ async function initSchema() {
       person_id INTEGER NOT NULL REFERENCES tracker_people(id) ON DELETE CASCADE,
       PRIMARY KEY (item_id, person_id)
     )`,
+    // ── Bug reports + feature requests from end users (toolkit feedback form)
+    `CREATE TABLE IF NOT EXISTS feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL CHECK(type IN ('bug', 'feature')),
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      severity TEXT CHECK(severity IN ('low', 'medium', 'high', 'critical')),
+      page_url TEXT,
+      user_email TEXT,
+      user_name TEXT,
+      status TEXT NOT NULL DEFAULT 'new'
+        CHECK(status IN ('new', 'triaged', 'in_progress', 'resolved', 'wontfix')),
+      created_at TEXT DEFAULT (datetime('now')),
+      resolved_at TEXT
+    )`,
+    // Screenshots are stored as BLOBs (same pattern as assessment_photos) so a
+    // bug report is fully self-contained — no external file storage to manage.
+    `CREATE TABLE IF NOT EXISTS feedback_screenshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      feedback_id INTEGER NOT NULL REFERENCES feedback(id) ON DELETE CASCADE,
+      filename TEXT,
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      data BLOB NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_feedback_status_created ON feedback(status, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_feedback_screenshots_feedback ON feedback_screenshots(feedback_id)`,
+    // ── Collab Bulletin Board: cross-team help requests
+    // Type covers what kind of help is being asked for; target_user is set
+    // when one specific person is being tagged, NULL = open call to the team.
+    `CREATE TABLE IF NOT EXISTS collab_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL CHECK(type IN ('feature', 'tool', 'integration', 'doc', 'design', 'other')),
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      skills TEXT,
+      requester_email TEXT,
+      requester_name TEXT,
+      target_user TEXT,
+      priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high', 'urgent')),
+      status TEXT NOT NULL DEFAULT 'open'
+        CHECK(status IN ('open', 'claimed', 'in_progress', 'done', 'archived')),
+      claimed_by TEXT,
+      claimed_at TEXT,
+      due_date TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      resolved_at TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_collab_status_created ON collab_requests(status, created_at DESC)`,
   ];
 
   for (const sql of statements) {
