@@ -551,16 +551,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('adminEmail').textContent = user.email;
   }
 
-  // WHY: Read stage filter from URL — Deploy tab links to ?stage=won&stage=deploying&stage=active
-  const urlStages = new URLSearchParams(window.location.search).getAll('stage');
+  // WHY: Read stage filter from URL — used by the Deploy tab as well as the
+  // Command Center stat tiles + bottleneck callouts that link to ?stage=lead,
+  // ?stage=proposed, etc. We adapt the heading to whatever stages were passed
+  // instead of hard-coding "Deployments" for every filter.
+  const urlStages = new URLSearchParams(window.location.search).getAll('stage')
+    .filter(s => STAGES.includes(s));
   if (urlStages.length > 0) {
     stageFilter = urlStages;
-    view = 'table'; // WHY: Table view is better for filtered stage views — shows all deals in one list
-    // Update page heading to reflect the filter
+    view = 'table'; // Table view reads better for a flat filtered list
     const heading = document.querySelector('h1.headline');
-    if (heading) heading.textContent = 'Deployments';
     const subtitle = document.querySelector('h1.headline + p');
-    if (subtitle) subtitle.textContent = 'Won deals, active deployments, and go-live tracking';
+    // Specific aliases for known multi-stage groupings; otherwise derive
+    // from the stage labels.
+    const isDeployBundle = urlStages.length >= 2
+      && urlStages.includes('won') && urlStages.includes('deploying') && urlStages.includes('active');
+    if (isDeployBundle) {
+      if (heading) heading.textContent = 'Deployments';
+      if (subtitle) subtitle.textContent = 'Won deals, active deployments, and go-live tracking';
+    } else if (urlStages.length === 1) {
+      const label = STAGE_LABELS[urlStages[0]] || urlStages[0];
+      if (heading) heading.textContent = `${label} deals`;
+      if (subtitle) subtitle.textContent = `All deals currently in the ${label.toLowerCase()} stage`;
+    } else {
+      const labels = urlStages.map(s => STAGE_LABELS[s] || s).join(' · ');
+      if (heading) heading.textContent = `Filtered: ${labels}`;
+      if (subtitle) subtitle.textContent = `Deals across ${urlStages.length} stages`;
+    }
   }
 
   // WHY: Register event listeners BEFORE async data loading so they're
