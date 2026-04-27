@@ -561,7 +561,13 @@ async function seedRolePermissions() {
 // ── Bootstrap on import ─────────────────────────────────────────
 // WHY: server.js must `await require('./db/database').ready` before app.listen() so that
 // routes never race schema init / seeds.
-const ready = (async () => {
+// WHY: integration tests use better-sqlite3 directly (see tests/helpers/setup.js) and
+// don't need the libsql client's schema/seed bootstrap. Skipping under vitest avoids
+// parallel workers racing on the same `file::memory:` path and producing unhandled
+// "no such table: deals" rejections during seedDeals.
+const isTestEnv = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+
+const ready = isTestEnv ? Promise.resolve() : (async () => {
   await initSchema();
   await seedAdmin();
   await bootstrapAdminRoles();
