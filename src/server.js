@@ -180,7 +180,13 @@ app.use('/api/feedback', (req, res, next) => {
   if (req.method === 'POST') return inquiryLimiter(req, res, next);
   next();
 }, feedbackRoutes);
-app.use('/api/activities', activityRoutes);
+// WHY: POST /api/activities is public via softAuth so any team member can post
+// a Project Hub update without needing a JWT (matches feedback/collab pattern).
+// Rate-limit POSTs to keep a runaway script from flooding the feed.
+app.use('/api/activities', (req, res, next) => {
+  if (req.method === 'POST' && req.path === '/') return inquiryLimiter(req, res, next);
+  next();
+}, activityRoutes);
 // WHY: POST is public so toolkit users can file collab requests without
 // being logged in (the route uses softAuth — logged-in users still get
 // attribution). Rate-limit submissions to prevent spam.

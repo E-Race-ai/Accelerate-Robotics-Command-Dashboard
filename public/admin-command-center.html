@@ -235,6 +235,107 @@
     .ql-card.activity-med {
       border-color: rgba(245,158,11,0.30);
     }
+    /* ── Project Hub layout ──────────────────────────────────── */
+    .hub-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 920px) { .hub-grid { grid-template-columns: 1fr; } }
+    .hub-panel {
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+      padding: 18px 20px;
+      border: 1px solid #eef2f7;
+    }
+    .hub-loading { color: #94a3b8; font-size: 0.85rem; padding: 12px 0; }
+    .hub-section-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+      color: #64748b; text-transform: uppercase; letter-spacing: 1.4px;
+      margin-bottom: 12px;
+    }
+    /* Sprint card — name, dates, count summary */
+    .hub-sprint-head {
+      display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .hub-sprint-name {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 800;
+      font-size: 1.15rem; color: #0f172a;
+    }
+    .hub-sprint-dates {
+      font-size: 0.78rem; color: #64748b; font-family: 'JetBrains Mono', monospace;
+    }
+    .hub-counts { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .hub-count {
+      font-size: 0.72rem; padding: 4px 10px; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 6px; font-weight: 600;
+    }
+    .hub-count .n { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+    .hub-count.not_started { background: #f1f5f9; color: #475569; }
+    .hub-count.in_progress { background: #dbeafe; color: #1e40af; }
+    .hub-count.blocked    { background: #fee2e2; color: #991b1b; }
+    .hub-count.complete   { background: #dcfce7; color: #166534; }
+    /* Item rows */
+    .hub-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 10px; align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 0.85rem;
+    }
+    .hub-item:last-child { border-bottom: none; }
+    .hub-item-name { color: #0f172a; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hub-item-name.parent { font-weight: 700; }
+    .hub-item-name.child { padding-left: 14px; color: #475569; }
+    .hub-owner {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #cbd5e1; color: white; font-size: 9.5px; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center;
+      letter-spacing: 0.3px;
+    }
+    .hub-status-pill {
+      font-size: 0.65rem; padding: 2px 8px; border-radius: 999px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .hub-status-pill.not_started { background: #f1f5f9; color: #475569; }
+    .hub-status-pill.in_progress { background: #dbeafe; color: #1e40af; }
+    .hub-status-pill.blocked    { background: #fee2e2; color: #991b1b; }
+    .hub-status-pill.complete   { background: #dcfce7; color: #166534; }
+    .hub-due { font-size: 0.7rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+    .hub-due.overdue { color: #b91c1c; font-weight: 700; }
+    /* Post-update form */
+    .hub-update form {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .hub-update input[type=text],
+    .hub-update textarea,
+    .hub-update select {
+      width: 100%; padding: 9px 12px;
+      border: 1.5px solid #e5e7eb; border-radius: 9px;
+      font-family: inherit; font-size: 0.86rem; background: #fafbfd;
+      color: #0f172a;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .hub-update textarea { min-height: 84px; resize: vertical; line-height: 1.45; }
+    .hub-update input:focus, .hub-update textarea:focus, .hub-update select:focus {
+      outline: none; border-color: #0055ff; background: white;
+      box-shadow: 0 0 0 3px rgba(0,85,255,0.08);
+    }
+    .hub-update-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .hub-status { font-size: 0.78rem; color: #16a34a; min-height: 1em; }
+    .hub-status.err { color: #b91c1c; }
+    .hub-post-btn {
+      background: linear-gradient(135deg, #0055ff, #0891b2); color: white;
+      border: none; padding: 8px 18px; border-radius: 9px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,85,255,0.20);
+      transition: transform 0.1s, box-shadow 0.15s;
+    }
+    .hub-post-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,85,255,0.30); }
+    .hub-post-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .ql-icon {
       width: 48px; height: 48px;
       border-radius: 12px;
@@ -948,6 +1049,33 @@
         </div>
       </div>
 
+      <!-- ═══ Project Hub — sprint board + post-update form ═══ -->
+      <div class="mb-8 brand-reveal" data-delay="0.23" id="projectHub">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Project Hub</h3>
+          <a href="/admin/project-tracker" class="text-xs font-medium text-amber-600 hover:underline">Open Full Tracker →</a>
+        </div>
+        <div class="hub-grid">
+          <div class="hub-panel" id="hubSprint">
+            <div class="hub-loading">Loading sprint…</div>
+          </div>
+          <div class="hub-panel hub-update">
+            <div class="hub-section-label">Post a quick update</div>
+            <form id="hubUpdateForm">
+              <input type="text" id="hubName" placeholder="Your name (optional if you're logged in)" maxlength="100">
+              <textarea id="hubBody" placeholder="What did you ship today? What's blocked? Where do you need help?" maxlength="2000" required></textarea>
+              <select id="hubItemRef">
+                <option value="">— Not tied to a specific item —</option>
+              </select>
+              <div class="hub-update-actions">
+                <span class="hub-status" id="hubStatus"></span>
+                <button type="submit" class="hub-post-btn">Post update</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
       <!-- ═══ Toolkit Dashboard (moved below the maps) ═══ -->
       <div class="mb-8 brand-reveal" data-delay="0.24" id="toolkitSection">
         <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Toolkit</h3>
@@ -1597,6 +1725,165 @@ function initToolkitSort() {
 // asynchronously and will re-apply once owner data arrives.
 document.addEventListener('DOMContentLoaded', initToolkitSort);
 
+// ── Project Hub ───────────────────────────────────────────────
+// Embedded sprint table + post-update form. The full /admin/project-tracker
+// page is the editing surface; this is the read-mostly coordination view.
+let _hubSprintCache = null;
+
+function _pickActiveSprint(sprints) {
+  if (!sprints || !sprints.length) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  // Prefer a sprint whose date range contains today; fall back to most recent.
+  const containing = sprints.find(s => s.start_date <= today && today <= s.end_date);
+  return containing || sprints[0];
+}
+
+function _hubInitials(person) {
+  if (!person) return '?';
+  return (person.initials || person.full_name || '?').slice(0, 2).toUpperCase();
+}
+
+function _hubDueClass(endDate, status) {
+  if (!endDate || status === 'complete') return '';
+  const today = new Date().toISOString().slice(0, 10);
+  return endDate < today ? 'overdue' : '';
+}
+
+async function loadProjectHub() {
+  const panel = document.getElementById('hubSprint');
+  if (!panel) return;
+
+  let sprintList = [];
+  try {
+    const r = await fetch('/api/tracker/sprints');
+    if (r.ok) sprintList = await r.json();
+  } catch { /* non-fatal */ }
+
+  const active = _pickActiveSprint(sprintList);
+  if (!active) {
+    panel.innerHTML = `<div class="hub-loading">No sprints yet. <a href="/admin/project-tracker" style="color:#0055ff;font-weight:600;">Create one →</a></div>`;
+    return;
+  }
+
+  let detail = null;
+  try {
+    const r = await fetch(`/api/tracker/sprints/${encodeURIComponent(active.id)}`);
+    if (r.ok) detail = await r.json();
+  } catch { /* non-fatal */ }
+  if (!detail) {
+    panel.innerHTML = `<div class="hub-loading">Sprint loaded but couldn't fetch items.</div>`;
+    return;
+  }
+  _hubSprintCache = detail;
+
+  // Flatten projects + their tasks; subtasks roll into their task's name briefly.
+  const flatItems = [];
+  for (const p of detail.projects || []) {
+    flatItems.push({ ...p, _depth: 0 });
+    for (const t of p.tasks || []) flatItems.push({ ...t, _depth: 1 });
+  }
+  const counts = { not_started: 0, in_progress: 0, blocked: 0, complete: 0 };
+  for (const it of flatItems) counts[it.status] = (counts[it.status] || 0) + 1;
+
+  // People lookup for owner avatars
+  const peopleById = new Map((detail.people || []).map(p => [p.id, p]));
+
+  // Limit list to ~14 rows so the panel stays glanceable;
+  // user clicks "Open Full Tracker →" header link if they want everything.
+  const visible = flatItems.slice(0, 14);
+
+  panel.innerHTML = `
+    <div class="hub-section-label">Active sprint</div>
+    <div class="hub-sprint-head">
+      <span class="hub-sprint-name">${escapeHtml(detail.name)}</span>
+      <span class="hub-sprint-dates">${escapeHtml(detail.start_date)} → ${escapeHtml(detail.end_date)}</span>
+    </div>
+    <div class="hub-counts">
+      <span class="hub-count not_started"><span class="n">${counts.not_started || 0}</span> not started</span>
+      <span class="hub-count in_progress"><span class="n">${counts.in_progress || 0}</span> in progress</span>
+      <span class="hub-count blocked"><span class="n">${counts.blocked || 0}</span> blocked</span>
+      <span class="hub-count complete"><span class="n">${counts.complete || 0}</span> complete</span>
+    </div>
+    ${visible.length === 0
+      ? `<div class="hub-loading">No items in this sprint yet.</div>`
+      : visible.map(it => {
+          const owner = peopleById.get(it.owner_id);
+          const ownerInitials = owner ? _hubInitials(owner) : '—';
+          const ownerColor = owner ? '#475569' : '#cbd5e1';
+          const dueClass = _hubDueClass(it.end_date, it.status);
+          return `
+            <div class="hub-item">
+              <span class="hub-owner" style="background:${ownerColor};" title="${escapeHtml(owner ? (owner.full_name || owner.initials) : 'unassigned')}">${ownerInitials}</span>
+              <span class="hub-item-name ${it._depth === 0 ? 'parent' : 'child'}">${escapeHtml(it.name)}</span>
+              <span class="hub-status-pill ${it.status}">${it.status.replace('_', ' ')}</span>
+              <span class="hub-due ${dueClass}" title="due ${escapeHtml(it.end_date || '')}">${it.end_date ? escapeHtml(it.end_date.slice(5)) : '—'}</span>
+            </div>
+          `;
+        }).join('')}
+    ${flatItems.length > visible.length
+      ? `<div style="text-align:center;padding-top:10px;"><a href="/admin/project-tracker" style="color:#0055ff;font-size:0.78rem;font-weight:600;text-decoration:none;">+${flatItems.length - visible.length} more · Open full tracker →</a></div>`
+      : ''}
+  `;
+
+  // Populate the "tied to" dropdown so updates can reference an item.
+  const ref = document.getElementById('hubItemRef');
+  if (ref) {
+    ref.innerHTML = '<option value="">— Not tied to a specific item —</option>'
+      + flatItems.map(it => `<option value="${escapeHtml(it.id)}">${'  '.repeat(it._depth)}${escapeHtml(it.name)}</option>`).join('');
+  }
+}
+
+// Wire submit handler once
+function _wireHubUpdateForm() {
+  const form = document.getElementById('hubUpdateForm');
+  if (!form || form.dataset.wired) return;
+  form.dataset.wired = '1';
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = document.getElementById('hubStatus');
+    status.classList.remove('err');
+    status.textContent = '';
+
+    const body = document.getElementById('hubBody').value.trim();
+    if (!body) return;
+    const name = document.getElementById('hubName').value.trim();
+    const itemId = document.getElementById('hubItemRef').value || null;
+
+    const btn = form.querySelector('.hub-post-btn');
+    btn.disabled = true;
+
+    try {
+      const r = await fetch('/api/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'team_update',
+          body,
+          actor: name || undefined,
+          item_id: itemId || undefined,
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      status.textContent = '✓ Posted to the activity feed';
+      document.getElementById('hubBody').value = '';
+      // Refresh activity feed so the user sees their update appear immediately
+      renderActivityFeed();
+      // Clear the success message after a beat so it doesn't linger
+      setTimeout(() => { if (status.textContent.startsWith('✓')) status.textContent = ''; }, 4000);
+    } catch (err) {
+      status.classList.add('err');
+      status.textContent = 'Could not post: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+_wireHubUpdateForm();
+// Hub refreshes every 60s — sprint data changes far less than activity, so 1min is plenty.
+setInterval(loadProjectHub, 60000);
+
 async function refreshAll() {
   try {
     const res = await fetch('/api/deals');
@@ -1618,6 +1905,7 @@ async function refreshAll() {
   renderMap();
   renderRegionalMaps();
   renderToolkitActivityLeds();
+  loadProjectHub();
   document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
