@@ -336,6 +336,53 @@
     }
     .hub-post-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,85,255,0.30); }
     .hub-post-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    /* Inline stream of the last few team_update activities — gives the post
+       form an immediate "I see what I posted, I see what they posted" loop. */
+    .hub-updates-stream {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px dashed #e5e7eb;
+    }
+    .hub-stream-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px; font-weight: 700; letter-spacing: 1.4px;
+      color: #94a3b8; text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .hub-stream-empty { font-size: 0.78rem; color: #cbd5e1; padding: 4px 0; }
+    .hub-stream-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 9px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 0.82rem;
+      align-items: start;
+    }
+    .hub-stream-item:last-child { border-bottom: none; }
+    .hub-stream-avatar {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: #94a3b8; color: white;
+      font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .hub-stream-body { color: #0f172a; line-height: 1.4; min-width: 0; word-wrap: break-word; }
+    .hub-stream-body .who { font-weight: 700; color: #0f172a; margin-right: 4px; }
+    .hub-stream-body .ref {
+      display: inline-block; font-size: 0.7rem;
+      background: #f5f3ff; color: #6d28d9;
+      padding: 1px 7px; border-radius: 5px;
+      margin-left: 6px; font-family: 'JetBrains Mono', monospace;
+    }
+    .hub-stream-time { font-size: 0.7rem; color: #94a3b8; white-space: nowrap; }
+    /* Highlight the user's just-posted update for a moment so it feels like
+       the form actually did something. */
+    @keyframes hubFlash {
+      0%   { background: rgba(0,85,255,0.12); }
+      100% { background: transparent; }
+    }
+    .hub-stream-item.fresh { animation: hubFlash 1.6s ease-out; }
     .ql-icon {
       width: 48px; height: 48px;
       border-radius: 12px;
@@ -1072,6 +1119,10 @@
                 <button type="submit" class="hub-post-btn">Post update</button>
               </div>
             </form>
+            <div class="hub-updates-stream" id="hubUpdatesStream">
+              <div class="hub-stream-label">Recent updates</div>
+              <div class="hub-stream-empty">Nothing yet — be the first to post.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1833,6 +1884,69 @@ async function loadProjectHub() {
   }
 }
 
+// Pull the latest team_update activities and render them inline below the
+// post form. flashIds is a Set of activity IDs to briefly highlight (used
+// after a successful post so the user sees "their" item land).
+async function loadHubUpdatesStream(flashIds = new Set()) {
+  const el = document.getElementById('hubUpdatesStream');
+  if (!el) return;
+
+  let rows = [];
+  try {
+    // Pull a small page; the global activity feed at the bottom shows the full
+    // history with filters, so the hub stream just wants the freshest 5.
+    const r = await fetch('/api/activities?limit=80');
+    if (r.ok) rows = await r.json();
+  } catch { /* non-fatal */ }
+
+  // Filter to the actions we treat as "team updates" — keep this in sync with
+  // the POST endpoint's allow-list (team_update, standup, shoutout).
+  const updates = rows
+    .filter(r => r.action === 'team_update' || r.action === 'standup' || r.action === 'shoutout')
+    .slice(0, 5);
+
+  if (updates.length === 0) {
+    el.innerHTML = `
+      <div class="hub-stream-label">Recent updates</div>
+      <div class="hub-stream-empty">Nothing yet — be the first to post.</div>
+    `;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="hub-stream-label">Recent updates · last ${updates.length}</div>
+    ${updates.map(u => {
+      let body = '';
+      let itemRef = '';
+      try {
+        const d = u.detail ? JSON.parse(u.detail) : null;
+        if (d) {
+          body = d.body || '';
+          if (d.item_id && _hubSprintCache) {
+            // Look up the item name so we can show "→ Project X" instead of an opaque ID
+            const all = (_hubSprintCache.projects || []).flatMap(p => [p, ...(p.tasks || [])]);
+            const found = all.find(it => String(it.id) === String(d.item_id));
+            if (found) itemRef = found.name;
+          }
+        }
+      } catch { /* not JSON; fall through */ }
+      const actor = (u.actor || '?').split('@')[0];
+      const initials = _initials(u.actor);
+      const color = _colorFromString(u.actor || '?');
+      const fresh = flashIds.has(u.id) ? ' fresh' : '';
+      return `
+        <div class="hub-stream-item${fresh}">
+          <span class="hub-stream-avatar" style="background:${color};">${initials}</span>
+          <div class="hub-stream-body">
+            <span class="who">${escapeHtml(actor)}</span>${escapeHtml(body)}${itemRef ? `<span class="ref">→ ${escapeHtml(itemRef)}</span>` : ''}
+          </div>
+          <span class="hub-stream-time" title="${escapeHtml(u.created_at || '')}">${timeAgo(u.created_at)}</span>
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
 // Wire submit handler once
 function _wireHubUpdateForm() {
   const form = document.getElementById('hubUpdateForm');
@@ -1868,9 +1982,15 @@ function _wireHubUpdateForm() {
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
       status.textContent = '✓ Posted to the activity feed';
       document.getElementById('hubBody').value = '';
-      // Refresh activity feed so the user sees their update appear immediately
+      // Refresh activity feed AND the inline hub stream. We re-fetch then look
+      // for the freshest team_update; that's almost certainly the one we just
+      // posted, so we flash-highlight it for instant feedback.
       renderActivityFeed();
-      // Clear the success message after a beat so it doesn't linger
+      try {
+        const peek = await fetch('/api/activities?limit=10').then(r => r.ok ? r.json() : []);
+        const fresh = peek.find(p => p.action === 'team_update');
+        await loadHubUpdatesStream(fresh ? new Set([fresh.id]) : new Set());
+      } catch { /* non-fatal — stream will still refresh on next poll */ }
       setTimeout(() => { if (status.textContent.startsWith('✓')) status.textContent = ''; }, 4000);
     } catch (err) {
       status.classList.add('err');
@@ -1906,6 +2026,7 @@ async function refreshAll() {
   renderRegionalMaps();
   renderToolkitActivityLeds();
   loadProjectHub();
+  loadHubUpdatesStream();
   document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
