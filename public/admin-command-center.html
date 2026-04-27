@@ -299,6 +299,19 @@
     .hub-status-pill {
       font-size: 0.65rem; padding: 2px 8px; border-radius: 999px;
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+      cursor: pointer; user-select: none;
+      border: 1px solid transparent;
+      transition: filter 0.12s, transform 0.08s, border-color 0.12s;
+    }
+    .hub-status-pill:hover { filter: brightness(0.94); border-color: rgba(15,23,42,0.10); }
+    .hub-status-pill:active { transform: translateY(1px); }
+    .hub-status-pill.is-saving {
+      opacity: 0.55; cursor: wait;
+      animation: hubSaving 0.9s ease-in-out infinite;
+    }
+    @keyframes hubSaving {
+      0%, 100% { opacity: 0.55; }
+      50%      { opacity: 0.95; }
     }
     .hub-status-pill.not_started { background: #f1f5f9; color: #475569; }
     .hub-status-pill.in_progress { background: #dbeafe; color: #1e40af; }
@@ -1932,7 +1945,7 @@ async function loadProjectHub() {
             <div class="hub-item">
               <span class="hub-owner" style="background:${ownerColor};" title="${escapeHtml(owner ? (owner.full_name || owner.initials) : 'unassigned')}">${ownerInitials}</span>
               <span class="hub-item-name ${it._depth === 0 ? 'parent' : 'child'}">${escapeHtml(it.name)}</span>
-              <span class="hub-status-pill ${it.status}">${it.status.replace('_', ' ')}</span>
+              ${_hubStatusPillHtml(it.id, it.status)}
               <span class="hub-due ${dueClass}" title="due ${escapeHtml(it.end_date || '')}">${it.end_date ? escapeHtml(it.end_date.slice(5)) : '—'}</span>
             </div>
           `;
@@ -1941,6 +1954,9 @@ async function loadProjectHub() {
       ? `<div style="text-align:center;padding-top:10px;"><a href="/admin/project-tracker" style="color:#0055ff;font-size:0.78rem;font-weight:600;text-decoration:none;">+${flatItems.length - visible.length} more · Open full tracker →</a></div>`
       : ''}
   `;
+
+  // Wire delegated click→cycle on status pills (idempotent — no-op after first call)
+  _wireHubStatusCycle();
 
   // Populate the "tied to" dropdown so updates can reference an item.
   const ref = document.getElementById('hubItemRef');
@@ -2011,6 +2027,82 @@ async function loadHubUpdatesStream(flashIds = new Set()) {
       `;
     }).join('')}
   `;
+}
+
+// Cycle order matches a typical work motion: nothing happening → started →
+// hit a wall → done. Clicking past 'complete' resets to 'not_started' so a
+// misclick is recoverable in one more click.
+const HUB_STATUS_CYCLE = ['not_started', 'in_progress', 'blocked', 'complete'];
+const HUB_STATUS_LABELS = {
+  not_started: 'not started', in_progress: 'in progress',
+  blocked: 'blocked', complete: 'complete',
+};
+
+function _nextHubStatus(current) {
+  const i = HUB_STATUS_CYCLE.indexOf(current);
+  return HUB_STATUS_CYCLE[(i + 1) % HUB_STATUS_CYCLE.length];
+}
+
+// Render the pill with a data-id + data-status so the delegated click handler
+// knows which item to PATCH. Replaces the static span we used to emit.
+function _hubStatusPillHtml(itemId, status) {
+  return `<span class="hub-status-pill ${status}" data-id="${escapeHtml(itemId)}" data-status="${escapeHtml(status)}" title="Click to cycle status">${escapeHtml(HUB_STATUS_LABELS[status] || status)}</span>`;
+}
+
+// Single delegated click handler on #hubSprint — survives renders and avoids
+// adding listeners per row.
+function _wireHubStatusCycle() {
+  const panel = document.getElementById('hubSprint');
+  if (!panel || panel.dataset.cycleWired) return;
+  panel.dataset.cycleWired = '1';
+  panel.addEventListener('click', async (e) => {
+    const pill = e.target.closest('.hub-status-pill');
+    if (!pill || pill.classList.contains('is-saving')) return;
+    const id = pill.dataset.id;
+    const cur = pill.dataset.status;
+    const next = _nextHubStatus(cur);
+    if (!id || !next) return;
+
+    // Optimistic UI: swap classes + label so the click feels instant
+    pill.className = `hub-status-pill ${next} is-saving`;
+    pill.dataset.status = next;
+    pill.textContent = HUB_STATUS_LABELS[next];
+
+    try {
+      const r = await fetch(`/api/tracker/items/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${r.status}`);
+      }
+      // Log a team-visible activity so the change surfaces in the activity feed
+      // (tracker.updateItem doesn't write to activities directly).
+      try {
+        await fetch('/api/activities', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'team_update',
+            body: `marked an item as ${HUB_STATUS_LABELS[next]}`,
+            item_id: id,
+          }),
+        });
+      } catch { /* non-fatal */ }
+      pill.classList.remove('is-saving');
+      // Refresh the activity stream and main feed so everyone sees the change
+      renderActivityFeed();
+      loadHubUpdatesStream();
+    } catch (err) {
+      console.warn('[hub] status update failed:', err);
+      // Revert UI
+      pill.className = `hub-status-pill ${cur}`;
+      pill.dataset.status = cur;
+      pill.textContent = HUB_STATUS_LABELS[cur] || cur;
+    }
+  });
 }
 
 // Wire submit handler once
