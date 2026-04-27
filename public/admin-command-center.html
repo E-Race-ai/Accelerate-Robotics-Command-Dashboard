@@ -496,6 +496,83 @@
       text-align: center; padding: 28px 8px; color: #94a3b8;
       font-size: 13px;
     }
+    /* ── Sales Velocity hero ──────────────────────────────────── */
+    .velocity-hero {
+      background:
+        radial-gradient(ellipse 80% 100% at 0% 0%, rgba(0,85,255,0.10), transparent 60%),
+        radial-gradient(ellipse 60% 100% at 100% 0%, rgba(22,163,74,0.08), transparent 60%),
+        linear-gradient(180deg, #0c1220 0%, #1e293b 100%);
+      color: white;
+      border-radius: 16px;
+      padding: 18px 22px;
+      box-shadow: 0 4px 18px rgba(15,23,42,0.10);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+    }
+    @media (max-width: 720px) { .velocity-hero { grid-template-columns: 1fr; } }
+    .vh-eyebrow {
+      font-family: 'JetBrains Mono', Menlo, monospace;
+      font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px;
+      color: rgba(255,255,255,0.45); text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .vh-headline {
+      display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .vh-mrr {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 800;
+      font-size: 1.8rem; letter-spacing: -0.02em; line-height: 1;
+      background: linear-gradient(135deg, #38bdf8, #34d399);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .vh-mrr-sub {
+      font-size: 0.78rem; color: rgba(255,255,255,0.65);
+    }
+    .vh-delta {
+      font-size: 0.78rem; font-weight: 700;
+      padding: 3px 9px; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .vh-delta.up   { background: rgba(34,197,94,0.18); color: #4ade80; }
+    .vh-delta.down { background: rgba(239,68,68,0.18); color: #f87171; }
+    .vh-delta.flat { background: rgba(148,163,184,0.18); color: #cbd5e1; }
+    .vh-breakdown {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      font-size: 0.78rem; color: rgba(255,255,255,0.78);
+    }
+    .vh-breakdown b { color: white; font-weight: 700; }
+    .vh-breakdown .sep { color: rgba(255,255,255,0.25); }
+    .vh-projection {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 0.82rem;
+      min-width: 220px;
+    }
+    .vh-projection .label {
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+      font-weight: 700; letter-spacing: 1.4px; color: rgba(255,255,255,0.45);
+      text-transform: uppercase; display: block; margin-bottom: 4px;
+    }
+    .vh-projection .body { color: white; line-height: 1.45; }
+    .vh-projection b { color: #34d399; font-weight: 700; }
+    /* ── Per-tile sparklines + deltas (replaces decorative bars) ─── */
+    .stat-spark { width: 100%; height: 22px; margin-top: 6px; display: block; }
+    .stat-delta {
+      position: absolute; top: 8px; right: 10px;
+      font-size: 0.62rem; font-weight: 700;
+      padding: 1px 6px; border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3px;
+    }
+    .stat-delta.up   { background: rgba(34,197,94,0.12); color: #16a34a; }
+    .stat-delta.down { background: rgba(239,68,68,0.12); color: #dc2626; }
+    .stat-delta.flat { background: rgba(148,163,184,0.12); color: #64748b; }
+    .brand-stat { position: relative; }
 
     /* ── Regional micro maps ────────────────────────────────── */
     .region-grid {
@@ -670,6 +747,11 @@
           <span class="text-xs text-gray-400" id="lastRefresh"></span>
           <button onclick="refreshAll()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-gray-500 hover:bg-gray-50 border border-gray-200 transition">Refresh</button>
         </div>
+      </div>
+
+      <!-- ═══ Sales Velocity hero (composite of speed / force / conversion) ═══ -->
+      <div class="velocity-hero brand-reveal mb-4" data-delay="0.05" id="velocityHero">
+        <!-- Populated by renderVelocityHero -->
       </div>
 
       <!-- Stats row -->
@@ -1499,6 +1581,150 @@ async function refreshAll() {
 }
 
 // ── Stats row ───────────────────────────────────────────────────
+// Helpers for daily binning + tiny SVG sparklines based on real timestamps,
+// not the decorative bars we used to hard-code.
+const SPARK_WINDOW_DAYS = 14; // Two weeks reads as a recent trend without
+                              // washing out the chart with too many empty days.
+
+function _dailyCounts(timestamps, days = SPARK_WINDOW_DAYS) {
+  const out = new Array(days).fill(0);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  for (const t of timestamps) {
+    if (!t) continue;
+    const d = new Date(t + (t.includes('Z') || t.includes('+') ? '' : 'Z'));
+    if (isNaN(d)) continue;
+    const dayDiff = Math.floor((startOfToday - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+    if (dayDiff >= 0 && dayDiff < days) out[days - 1 - dayDiff]++;
+  }
+  return out;
+}
+
+// Render a tiny SVG bar chart given a numeric series and a single accent color.
+// Falls back to a flat baseline if every value is zero so the row doesn't collapse.
+function _sparklineSvg(values, color) {
+  const w = 100, h = 22, gap = 1;
+  const max = Math.max(1, ...values);
+  const barW = (w - gap * (values.length - 1)) / values.length;
+  const bars = values.map((v, i) => {
+    const bh = Math.max(1, (v / max) * (h - 2));
+    const x = i * (barW + gap);
+    const y = h - bh;
+    return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barW.toFixed(2)}" height="${bh.toFixed(2)}" rx="0.6" fill="${color}" opacity="${v === 0 ? 0.18 : 1}"/>`;
+  }).join('');
+  return `<svg class="stat-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${bars}</svg>`;
+}
+
+// Compare last-7-day count to prior-7-day count → returns {pct, kind}
+function _wowDelta(values) {
+  const half = Math.floor(values.length / 2);
+  const recent = values.slice(half).reduce((a, b) => a + b, 0);
+  const prior  = values.slice(0, half).reduce((a, b) => a + b, 0);
+  if (prior === 0 && recent === 0) return { pct: 0, kind: 'flat', txt: '·' };
+  if (prior === 0) return { pct: 100, kind: 'up', txt: 'new' };
+  const pct = Math.round(((recent - prior) / prior) * 100);
+  return {
+    pct,
+    kind: pct > 5 ? 'up' : pct < -5 ? 'down' : 'flat',
+    txt: pct === 0 ? '·' : (pct > 0 ? `+${pct}%` : `${pct}%`),
+  };
+}
+
+function _arrow(kind) {
+  return kind === 'up' ? '↗' : kind === 'down' ? '↘' : '→';
+}
+
+function _formatMoney(n) {
+  if (!n) return '$0';
+  if (n >= 1000) return `$${(n / 1000).toFixed(1)}K`;
+  return `$${Math.round(n)}`;
+}
+
+// ── Sales Velocity hero ────────────────────────────────────────
+// "Velocity" = projected MRR added in next 30d, based on the close rate
+// observed over the last 90d. Plus weekly Force/Speed/Conversion breakdown.
+async function renderVelocityHero() {
+  const hero = document.getElementById('velocityHero');
+  if (!hero) return;
+
+  const now = Date.now();
+  const day = 86400000;
+
+  // 1. Active MRR (already-won contribution)
+  const activeMRR = deals
+    .filter(d => ['won','deploying','active'].includes(d.stage) && d.value_monthly)
+    .reduce((s, d) => s + Number(d.value_monthly), 0);
+
+  // 2. Project MRR added in next 30d from close-rate × current proposed pipeline
+  // WHY: This is intentionally simple — proposed MRR × historical win-rate, scaled.
+  // A more sophisticated forecast can come later; the point here is direction +
+  // gut sense of pace, not accounting accuracy.
+  const proposedMRR = deals
+    .filter(d => ['proposed','negotiation'].includes(d.stage) && d.value_monthly)
+    .reduce((s, d) => s + Number(d.value_monthly), 0);
+  const closedDeals = deals.filter(d => ['won','deploying','active'].includes(d.stage));
+  const lostDeals   = deals.filter(d => d.stage === 'lost');
+  const winRate = (closedDeals.length + lostDeals.length) > 0
+    ? closedDeals.length / (closedDeals.length + lostDeals.length)
+    : 0.4; // Sensible default for cold-start when no history exists yet.
+  const projectedMRR = proposedMRR * winRate;
+
+  // 3. Force = activities/wk this week vs last week
+  let activities = [];
+  try {
+    const r = await fetch('/api/activities?limit=200');
+    if (r.ok) activities = await r.json();
+  } catch { /* non-fatal */ }
+  const acts7  = activities.filter(a => now - new Date((a.created_at||'') + 'Z').getTime() < 7  * day).length;
+  const acts14 = activities.filter(a => now - new Date((a.created_at||'') + 'Z').getTime() < 14 * day).length;
+  const forceDelta = _wowDelta([acts14 - acts7, acts7]);
+
+  // 4. Speed = stage_changed events this week
+  const stageChanges7 = activities
+    .filter(a => a.action === 'stage_changed' && now - new Date((a.created_at||'') + 'Z').getTime() < 7 * day)
+    .length;
+
+  // 5. Days-to-next-sale projection from velocity of recent closes
+  const winsLast30 = closedDeals
+    .filter(d => d.closed_at && now - new Date(d.closed_at + 'Z').getTime() < 30 * day)
+    .length;
+  const daysToNext = winsLast30 > 0 ? Math.round(30 / winsLast30) : null;
+
+  // Pick a delta on projected MRR using prior-period proxy: if there's no
+  // historical projection data, we fall back to flat — better than fake numbers.
+  const mrrDelta = winsLast30 > 0
+    ? { kind: 'up',   txt: `${winsLast30} won in 30d`, pct: 0 }
+    : { kind: 'flat', txt: 'no closes in 30d',         pct: 0 };
+
+  hero.innerHTML = `
+    <div>
+      <div class="vh-eyebrow">Sales Velocity · past 30 days</div>
+      <div class="vh-headline">
+        <span class="vh-mrr">${_formatMoney(activeMRR + projectedMRR)}</span>
+        <span class="vh-mrr-sub">projected MRR / 30d (active <b style="color:#cbd5e1;font-weight:700;">${_formatMoney(activeMRR)}</b> + pipeline-weighted <b style="color:#cbd5e1;font-weight:700;">${_formatMoney(projectedMRR)}</b>)</span>
+        <span class="vh-delta ${mrrDelta.kind}">${_arrow(mrrDelta.kind)} ${escapeHtml(mrrDelta.txt)}</span>
+      </div>
+      <div class="vh-breakdown">
+        <span><b>Force</b> · ${acts7}/wk <span class="vh-delta ${forceDelta.kind}" style="margin-left:4px;">${_arrow(forceDelta.kind)} ${escapeHtml(forceDelta.txt)}</span></span>
+        <span class="sep">·</span>
+        <span><b>Speed</b> · ${stageChanges7} stage moves/wk</span>
+        <span class="sep">·</span>
+        <span><b>Conversion</b> · ${Math.round(winRate * 100)}% win-rate</span>
+        <span class="sep">·</span>
+        <span><b>Pipeline</b> · ${_formatMoney(proposedMRR)} proposed</span>
+      </div>
+    </div>
+    <div class="vh-projection">
+      <span class="label">Next milestone</span>
+      <div class="body">
+        ${daysToNext != null
+          ? `Next sale projected in <b>~${daysToNext} day${daysToNext === 1 ? '' : 's'}</b> at current pace.`
+          : `No closes in last 30d — <b>focus on advancing proposed deals</b> to start the clock.`}
+      </div>
+    </div>
+  `;
+}
+
 function renderStats() {
   const active = deals.filter(d => !['lost'].includes(d.stage));
   const total = active.length;
@@ -1511,42 +1737,58 @@ function renderStats() {
     .filter(d => ['won','deploying','active'].includes(d.stage) && d.value_monthly)
     .reduce((sum, d) => sum + Number(d.value_monthly), 0);
 
-  // WHY: MRR is a dollar value — split into prefix/suffix for the counter animation.
-  // Values under 1000 display raw; over 1000 display as "XK" shorthand.
   const mrrDisplay = totalMRR >= 1000
     ? { val: (totalMRR / 1000).toFixed(1), prefix: '$', suffix: 'K' }
     : { val: totalMRR, prefix: '$', suffix: '' };
 
+  // Real per-tile sparkline data: when did each grouping's deals get created?
+  const sparkPipeline   = _dailyCounts(active.map(d => d.created_at));
+  const sparkLeads      = _dailyCounts(deals.filter(d => d.stage === 'lead').map(d => d.created_at));
+  const sparkQualified  = _dailyCounts(deals.filter(d => ['qualified','site_walk','configured'].includes(d.stage)).map(d => d.created_at));
+  const sparkProposed   = _dailyCounts(deals.filter(d => ['proposed','negotiation'].includes(d.stage)).map(d => d.created_at));
+  const sparkWon        = _dailyCounts(deals.filter(d => ['won','deploying','active'].includes(d.stage)).map(d => d.closed_at || d.created_at));
+  const sparkProspects  = _dailyCounts([]); // No created_at on the static PROSPECTS list — flat by design
+  // MRR sparkline = cumulative MRR at end of each day in the window
+  const sparkMRR = (() => {
+    const out = new Array(SPARK_WINDOW_DAYS).fill(0);
+    const wonDeals = deals.filter(d => ['won','deploying','active'].includes(d.stage) && d.value_monthly);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    for (let i = 0; i < SPARK_WINDOW_DAYS; i++) {
+      const dayEnd = new Date(startOfToday.getTime() + (i - SPARK_WINDOW_DAYS + 1) * 86400000 + 86400000);
+      out[i] = wonDeals
+        .filter(d => d.closed_at && new Date(d.closed_at + 'Z') < dayEnd)
+        .reduce((s, d) => s + Number(d.value_monthly || 0), 0);
+    }
+    return out;
+  })();
+
   const stats = [
-    { val: total, lbl: 'Pipeline', prefix: '', suffix: '' },
-    { val: leads, lbl: 'Leads', prefix: '', suffix: '' },
-    { val: qualified, lbl: 'Qualified', prefix: '', suffix: '' },
-    { val: proposed, lbl: 'Proposed', prefix: '', suffix: '' },
-    { val: won, lbl: 'Won', prefix: '', suffix: '' },
-    { val: PROSPECTS.length, lbl: 'Prospects', prefix: '', suffix: '' },
-    { val: mrrDisplay.val, lbl: 'MRR', prefix: mrrDisplay.prefix, suffix: mrrDisplay.suffix },
+    { val: total,            lbl: 'Pipeline',  prefix: '', suffix: '', spark: sparkPipeline,  color: '#0055ff' },
+    { val: leads,            lbl: 'Leads',     prefix: '', suffix: '', spark: sparkLeads,     color: '#0891b2' },
+    { val: qualified,        lbl: 'Qualified', prefix: '', suffix: '', spark: sparkQualified, color: '#7c3aed' },
+    { val: proposed,         lbl: 'Proposed',  prefix: '', suffix: '', spark: sparkProposed,  color: '#d97706' },
+    { val: won,              lbl: 'Won',       prefix: '', suffix: '', spark: sparkWon,       color: '#16a34a' },
+    { val: PROSPECTS.length, lbl: 'Prospects', prefix: '', suffix: '', spark: sparkProspects, color: '#0ea5e9' },
+    { val: mrrDisplay.val,   lbl: 'MRR',       prefix: mrrDisplay.prefix, suffix: mrrDisplay.suffix, spark: sparkMRR, color: '#16a34a' },
   ];
 
   document.getElementById('statsRow').innerHTML = stats.map((s, i) => {
     const delay = (0.1 + i * 0.05).toFixed(2);
+    const delta = _wowDelta(s.spark);
     return `
     <div class="brand-stat brand-reveal" data-delay="${delay}">
+      <span class="stat-delta ${delta.kind}" title="last 7d vs prior 7d">${_arrow(delta.kind)} ${escapeHtml(delta.txt)}</span>
       <div class="brand-stat-val" data-counter="${s.val}" data-prefix="${s.prefix}" data-suffix="${s.suffix}">0</div>
       <div class="brand-stat-lbl">${s.lbl}</div>
-      <div class="brand-stat-sparkline">
-        <div class="bar" style="height:8px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.4 + i * 0.08}s;"></div>
-        <div class="bar" style="height:14px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.5 + i * 0.08}s;"></div>
-        <div class="bar" style="height:10px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.6 + i * 0.08}s;"></div>
-        <div class="bar" style="height:18px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.7 + i * 0.08}s;"></div>
-        <div class="bar" style="height:12px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.8 + i * 0.08}s;"></div>
-        <div class="bar" style="height:22px; background:linear-gradient(180deg,var(--blue),var(--cyan)); animation-delay:${0.9 + i * 0.08}s;"></div>
-      </div>
+      ${_sparklineSvg(s.spark, s.color)}
     </div>`;
   }).join('');
 
-  // WHY: Re-init counters after dynamic render — brand.js auto-init runs on DOMContentLoaded
-  // which fires before deals are fetched, so we must trigger counters manually here.
   initCounters();
+  // Velocity hero pulls from /api/activities, runs after stats so the page
+  // paints quickly with deal data first.
+  renderVelocityHero();
   initRevealAnimations();
 }
 
