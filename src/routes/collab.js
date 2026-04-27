@@ -5,7 +5,7 @@
 
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, softAuth } = require('../middleware/auth');
 const { generateId } = require('../services/id-generator');
 
 const router = express.Router();
@@ -26,11 +26,16 @@ async function logActivity(actor, action, detail) {
   }
 }
 
-// ── POST / — Create request (auth required, since it's an internal board) ──
-router.post('/', requireAuth, async (req, res) => {
+// ── POST / — Create request (public so toolkit users without admin auth can post) ──
+// WHY: Originally gated with requireAuth, which 401'd in production for users
+// whose JWT had expired (or who never had one). Form field for identity is the
+// requester_name/_email pair. If the user is logged in (softAuth attaches
+// req.admin), their identity wins over body fields.
+router.post('/', softAuth, async (req, res) => {
   const {
     type, title, description, skills,
     target_user, priority, due_date,
+    requester_name, requester_email,
   } = req.body || {};
 
   if (!ALLOWED_TYPE.has(type)) {
@@ -50,6 +55,13 @@ router.post('/', requireAuth, async (req, res) => {
   }
   const prio = priority && ALLOWED_PRIORITY.has(priority) ? priority : 'medium';
 
+  // Logged-in user takes precedence over form-supplied identity.
+  const reqEmail = (req.admin && req.admin.email)
+    || (requester_email ? String(requester_email).slice(0, 200) : null);
+  const reqName = (req.admin && req.admin.name)
+    || (requester_name ? String(requester_name).slice(0, 100) : null);
+  const actor = reqEmail || reqName || 'anonymous';
+
   try {
     const r = await db.run(
       `INSERT INTO collab_requests
@@ -60,15 +72,15 @@ router.post('/', requireAuth, async (req, res) => {
         String(title).trim(),
         String(description).trim(),
         skills ? String(skills).slice(0, 300) : null,
-        req.admin.email,
-        req.admin.name || null,
+        reqEmail,
+        reqName,
         target_user ? String(target_user).slice(0, 200) : null,
         prio,
         due_date || null,
       ],
     );
 
-    await logActivity(req.admin.email, 'collab_requested', {
+    await logActivity(actor, 'collab_requested', {
       collab_id: r.lastInsertRowid,
       title: String(title).trim(),
       type,

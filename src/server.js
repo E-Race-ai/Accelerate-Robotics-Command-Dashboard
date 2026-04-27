@@ -180,7 +180,13 @@ app.use('/api/feedback', (req, res, next) => {
   next();
 }, feedbackRoutes);
 app.use('/api/activities', activityRoutes);
-app.use('/api/collab', collabRoutes);
+// WHY: POST is public so toolkit users can file collab requests without
+// being logged in (the route uses softAuth — logged-in users still get
+// attribution). Rate-limit submissions to prevent spam.
+app.use('/api/collab', (req, res, next) => {
+  if (req.method === 'POST' && req.path === '/') return inquiryLimiter(req, res, next);
+  next();
+}, collabRoutes);
 
 // ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
 // WHY: Removed auth requirement temporarily so we can diagnose the API key issue.
