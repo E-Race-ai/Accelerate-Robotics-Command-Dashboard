@@ -749,6 +749,53 @@
     }
     .vh-projection .body { color: white; line-height: 1.45; }
     .vh-projection b { color: #34d399; font-weight: 700; }
+    /* ── Bottleneck callout (under velocity hero) ───────────── */
+    .bottleneck-row {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .bottleneck-callout {
+      flex: 1 1 220px;
+      display: flex; align-items: center; gap: 10px;
+      background: #fffbeb;
+      border: 1px solid rgba(245,158,11,0.30);
+      border-left: 3px solid #f59e0b;
+      border-radius: 10px;
+      padding: 10px 14px;
+      text-decoration: none;
+      transition: transform 0.1s, box-shadow 0.15s;
+      cursor: pointer;
+      color: inherit;
+    }
+    .bottleneck-callout:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245,158,11,0.18);
+      border-color: rgba(245,158,11,0.55);
+    }
+    .bottleneck-callout.severity-red {
+      background: #fef2f2;
+      border-color: rgba(239,68,68,0.30);
+      border-left-color: #ef4444;
+    }
+    .bottleneck-callout.severity-red:hover {
+      box-shadow: 0 4px 12px rgba(239,68,68,0.18);
+      border-color: rgba(239,68,68,0.55);
+    }
+    .bottleneck-icon {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(245,158,11,0.18); color: #92400e;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+    .bottleneck-callout.severity-red .bottleneck-icon {
+      background: rgba(239,68,68,0.18); color: #991b1b;
+    }
+    .bottleneck-text { font-size: 0.82rem; color: #0f172a; line-height: 1.35; }
+    .bottleneck-text b { font-weight: 700; }
+    .bottleneck-meta {
+      font-size: 0.7rem; color: #64748b; margin-top: 2px;
+      font-family: 'JetBrains Mono', monospace;
+    }
     /* ── Per-tile sparklines + deltas (replaces decorative bars) ─── */
     .stat-spark { width: 100%; height: 22px; margin-top: 6px; display: block; }
     .stat-delta {
@@ -941,6 +988,9 @@
       <div class="velocity-hero brand-reveal mb-4" data-delay="0.05" id="velocityHero">
         <!-- Populated by renderVelocityHero -->
       </div>
+
+      <!-- Bottleneck callout — surfaces deals that haven't moved in 14+ days. -->
+      <div class="bottleneck-row" id="bottleneckRow" style="display:none;"></div>
 
       <!-- Stats row -->
       <div class="flex gap-3 flex-wrap mb-8 brand-reveal" data-delay="0.1" id="statsRow">
@@ -2019,6 +2069,7 @@ async function refreshAll() {
     deals = [];
   }
   renderStats();
+  renderBottleneckCallouts();
   renderWorkflowCounts();
   renderDealList();
   renderActivityFeed();
@@ -2240,6 +2291,64 @@ async function renderVelocityHero() {
       </div>
     </div>
   `;
+}
+
+// ── Bottleneck callout ────────────────────────────────────────
+// A deal is "stuck" if it sits in a non-terminal stage and updated_at is
+// older than the threshold. Threshold tuned for hospitality-sector cycles
+// where 14 days without contact tends to mean the deal is drifting.
+const BOTTLENECK_DAYS = 14;
+const BOTTLENECK_RED_DAYS = 30; // 30+ days flips to red severity
+
+const STUCK_STAGE_LABELS = {
+  lead: 'Lead', qualified: 'Qualified', site_walk: 'Site Walk',
+  configured: 'Configured', proposed: 'Proposed', negotiation: 'Negotiation',
+};
+
+function renderBottleneckCallouts() {
+  const row = document.getElementById('bottleneckRow');
+  if (!row) return;
+
+  const now = Date.now();
+  const threshold = BOTTLENECK_DAYS * 86400 * 1000;
+
+  // Bucket stuck deals by current stage
+  const buckets = {};
+  for (const d of deals) {
+    if (!STUCK_STAGE_LABELS[d.stage]) continue;
+    const last = d.updated_at ? new Date(d.updated_at + 'Z').getTime() : 0;
+    if (!last) continue;
+    const ageMs = now - last;
+    if (ageMs < threshold) continue;
+    if (!buckets[d.stage]) buckets[d.stage] = [];
+    buckets[d.stage].push({ ...d, _ageDays: Math.floor(ageMs / 86400000) });
+  }
+
+  const stages = Object.keys(buckets);
+  if (stages.length === 0) {
+    row.style.display = 'none';
+    row.innerHTML = '';
+    return;
+  }
+
+  row.style.display = 'flex';
+  // Show up to 3 stage callouts; each links to /admin/deals filtered by stage.
+  row.innerHTML = stages.slice(0, 3).map(stage => {
+    const list = buckets[stage];
+    const oldest = Math.max(...list.map(d => d._ageDays));
+    const severity = oldest >= BOTTLENECK_RED_DAYS ? 'severity-red' : '';
+    const label = STUCK_STAGE_LABELS[stage];
+    const count = list.length;
+    return `
+      <a class="bottleneck-callout ${severity}" href="/admin/deals?stage=${encodeURIComponent(stage)}" title="View ${escapeHtml(label)} deals">
+        <span class="bottleneck-icon">${severity ? '🔴' : '🟡'}</span>
+        <div>
+          <div class="bottleneck-text"><b>${count}</b> deal${count === 1 ? '' : 's'} stuck in <b>${escapeHtml(label)}</b> for ${BOTTLENECK_DAYS}+ days</div>
+          <div class="bottleneck-meta">oldest ${oldest}d · ${list.slice(0, 2).map(d => escapeHtml(d.name || '')).filter(Boolean).join(' · ')}${list.length > 2 ? ` · +${list.length - 2} more` : ''}</div>
+        </div>
+      </a>
+    `;
+  }).join('');
 }
 
 function renderStats() {
