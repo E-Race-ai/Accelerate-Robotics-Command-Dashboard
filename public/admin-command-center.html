@@ -353,6 +353,77 @@
       white-space: nowrap;
     }
     .hub-pairings-empty { color: #cbd5e1; font-size: 0.78rem; }
+    /* ── Team Sync Hub — merged sprint + activity layout ─────── */
+    /* Sprint pane is roomier than the activity pane on wide screens because
+       the activity rows are dense and the sprint rows have more meta. */
+    .hub-merged { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+    @media (max-width: 1100px) { .hub-merged { grid-template-columns: 1fr; } }
+    .hub-activity { display: flex; flex-direction: column; gap: 10px; padding-bottom: 18px; }
+    .hub-activity-head {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    /* Activity stream max-height inside the hub keeps the page from
+       ballooning when there are hundreds of events. The user can scroll
+       inside the pane. */
+    .hub-activity #activityFeed { max-height: 540px; overflow-y: auto; }
+    /* Meeting Mode toggle in the hub header */
+    .meeting-mode-strip {
+      display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+      padding: 3px 4px;
+      background: #f1f5f9; border: 1px solid #e5e7eb;
+      border-radius: 999px;
+    }
+    .mm-label {
+      font-size: 9.5px; font-weight: 700; color: #64748b;
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 0 8px;
+    }
+    .mm-btn {
+      background: transparent; border: 1px solid transparent;
+      padding: 4px 11px; border-radius: 999px;
+      font-size: 11.5px; font-weight: 600; color: #475569; cursor: pointer;
+      transition: all 0.12s;
+    }
+    .mm-btn:hover { background: white; color: #0f172a; }
+    .mm-btn.active {
+      background: #0c1220; color: white;
+    }
+    /* Wider post-update row spans both panes */
+    .hub-update-wide {
+      margin-top: 14px;
+    }
+    .hub-update-row {
+      display: grid; grid-template-columns: 1fr 1.2fr;
+      gap: 10px;
+    }
+    @media (max-width: 720px) { .hub-update-row { grid-template-columns: 1fr; } }
+    .hub-update-wide form { gap: 10px; }
+    /* Milestone callouts inside the sprint pane — surface tracker items
+       flagged is_milestone=true so the meeting opens with "what's the
+       next forcing function on the calendar." */
+    .hub-milestones {
+      margin: 12px 0 14px;
+      padding: 10px 12px;
+      background: linear-gradient(90deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02));
+      border: 1px solid rgba(245,158,11,0.20);
+      border-left: 3px solid #f59e0b;
+      border-radius: 10px;
+    }
+    .hub-milestones-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+      font-weight: 700; letter-spacing: 1.4px; color: #92400e;
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    .hub-milestone-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 0; font-size: 0.82rem; color: #0f172a;
+    }
+    .hub-milestone-row .ms-icon { color: #d97706; font-weight: 700; }
+    .hub-milestone-row .ms-when {
+      margin-left: auto; font-size: 0.7rem; color: #92400e;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .hub-milestone-row .ms-when.overdue { color: #b91c1c; font-weight: 700; }
     /* ── Community Help Board (embedded mini-collab) ─────────── */
     .cb-grid {
       display: grid;
@@ -1357,9 +1428,8 @@
         <a href="#communityBoard"   data-target="communityBoard">Community</a>
         <a href="#dealMap"          data-target="dealMap">Map</a>
         <a href="#regionalMaps"     data-target="regionalMaps">Regions</a>
-        <a href="#projectHub"       data-target="projectHub">Hub</a>
+        <a href="#projectHub"       data-target="projectHub">Team Sync</a>
         <a href="#toolkitSection"   data-target="toolkitSection">Toolkit</a>
-        <a href="#activityFeedSection" data-target="activityFeedSection">Activity</a>
       </nav>
 
       <!-- ═══ Sales Velocity hero (composite of speed / force / conversion) ═══ -->
@@ -1596,34 +1666,73 @@
         </div>
       </div>
 
-      <!-- ═══ Project Hub — sprint board + post-update form ═══ -->
+      <!-- ═══ Team Sync Hub — unified sprint + activity + post-update ═══ -->
+      <!-- WHY: Designed as the focal point of the Monday/Friday team meeting.
+           Left pane shows the active sprint (with milestone callouts); right
+           pane shows the full activity stream that used to live at the bottom
+           of the page (with lane filter chips + search). Post-update form is
+           a single full-width row underneath both panes. Meeting Mode toggles
+           the activity stream to "since Friday" or "since Monday" so the team
+           can recap the week or kick off the new one. -->
       <div class="mb-8 brand-reveal" data-delay="0.23" id="projectHub">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Project Hub</h3>
-          <a href="/admin/project-tracker" class="text-xs font-medium text-amber-600 hover:underline">Open Full Tracker →</a>
+          <div>
+            <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Team Sync Hub</h3>
+            <div class="text-xs text-gray-500 mt-1">Monday standup · Friday recap · everything happening across departments in one place</div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="meeting-mode-strip" id="meetingModeStrip" role="toolbar" aria-label="Meeting mode">
+              <span class="mm-label">View</span>
+              <button class="mm-btn active" data-mode="all" type="button">All</button>
+              <button class="mm-btn" data-mode="today" type="button">Today</button>
+              <button class="mm-btn" data-mode="since-monday" type="button">Since Mon</button>
+              <button class="mm-btn" data-mode="since-friday" type="button">Since Fri</button>
+            </div>
+            <a href="/admin/project-tracker" class="text-xs font-medium text-amber-600 hover:underline">Open Full Tracker →</a>
+          </div>
         </div>
-        <div class="hub-grid">
+
+        <!-- Two-pane main row: sprint LEFT, activity stream RIGHT -->
+        <div class="hub-grid hub-merged">
           <div class="hub-panel" id="hubSprint">
             <div class="hub-loading">Loading sprint…</div>
           </div>
-          <div class="hub-panel hub-update">
-            <div class="hub-section-label">Post a quick update</div>
-            <form id="hubUpdateForm">
+
+          <div class="hub-panel hub-activity">
+            <div class="hub-activity-head">
+              <span class="hub-section-label" style="margin-bottom:0;">Activity stream</span>
+              <span class="text-xs text-gray-400" id="activityCount"></span>
+            </div>
+            <div class="activity-toolbar" id="activityToolbar">
+              <button class="activity-chip active" data-lane="all">All <span class="num" id="lane-count-all">0</span></button>
+              <button class="activity-chip" data-lane="outreach">Outreach <span class="num" id="lane-count-outreach">0</span></button>
+              <button class="activity-chip" data-lane="contract">Contract <span class="num" id="lane-count-contract">0</span></button>
+              <button class="activity-chip" data-lane="launch">Launch <span class="num" id="lane-count-launch">0</span></button>
+              <button class="activity-chip" data-lane="active">24/7 <span class="num" id="lane-count-active">0</span></button>
+              <input type="search" class="activity-search" id="activitySearch" placeholder="Search actor, deal, or text…">
+            </div>
+            <div id="activityFeed">
+              <p class="text-sm text-gray-400 py-4">Loading activity...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Post-update row spans the full width below both panes. -->
+        <div class="hub-panel hub-update hub-update-wide">
+          <div class="hub-section-label">Post a quick update</div>
+          <form id="hubUpdateForm">
+            <div class="hub-update-row">
               <input type="text" id="hubName" placeholder="Your name (optional if you're logged in)" maxlength="100">
-              <textarea id="hubBody" placeholder="What did you ship today? What's blocked? Where do you need help?" maxlength="2000" required></textarea>
               <select id="hubItemRef">
                 <option value="">— Not tied to a specific item —</option>
               </select>
-              <div class="hub-update-actions">
-                <span class="hub-status" id="hubStatus"></span>
-                <button type="submit" class="hub-post-btn">Post update</button>
-              </div>
-            </form>
-            <div class="hub-updates-stream" id="hubUpdatesStream">
-              <div class="hub-stream-label">Recent updates</div>
-              <div class="hub-stream-empty">Nothing yet — be the first to post.</div>
             </div>
-          </div>
+            <textarea id="hubBody" placeholder="What did you ship? What's blocked? What do you need from the team?" maxlength="2000" required></textarea>
+            <div class="hub-update-actions">
+              <span class="hub-status" id="hubStatus"></span>
+              <button type="submit" class="hub-post-btn">Post update</button>
+            </div>
+          </form>
         </div>
       </div>
 
@@ -1843,26 +1952,9 @@
         </div>
       </div>
 
-      <!-- ═══ Bottom row: Activity Feed ═══ -->
-      <div class="brand-reveal" data-delay="0.25" id="activityFeedSection">
-        <div class="bg-white rounded-2xl shadow-sm p-6">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Recent Activity</h3>
-            <span class="text-xs text-gray-400" id="activityCount"></span>
-          </div>
-          <div class="activity-toolbar" id="activityToolbar">
-            <button class="activity-chip active" data-lane="all">All <span class="num" id="lane-count-all">0</span></button>
-            <button class="activity-chip" data-lane="outreach">Outreach <span class="num" id="lane-count-outreach">0</span></button>
-            <button class="activity-chip" data-lane="contract">Contract <span class="num" id="lane-count-contract">0</span></button>
-            <button class="activity-chip" data-lane="launch">Launch <span class="num" id="lane-count-launch">0</span></button>
-            <button class="activity-chip" data-lane="active">24/7 <span class="num" id="lane-count-active">0</span></button>
-            <input type="search" class="activity-search" id="activitySearch" placeholder="Search actor, deal, or text…">
-          </div>
-          <div id="activityFeed">
-            <p class="text-sm text-gray-400 py-4">Loading activity...</p>
-          </div>
-        </div>
-      </div>
+      <!-- WHY: The standalone "Recent Activity" section that used to live here
+           was merged into the Team Sync Hub above so the meeting has one
+           comprehensive view. The Hub's right pane is the activity stream now. -->
     </main>
   </div>
 
@@ -2582,6 +2674,31 @@ function _hubItemRowHtml(it, peopleById) {
   `;
 }
 
+// Surface tracker items flagged is_milestone=true so the team meeting opens
+// with "what's the next forcing function on the calendar." Sorted by due date,
+// limited to the soonest 3. Hides entirely when no milestones exist.
+function _hubMilestonesHtml(flatItems) {
+  const milestones = flatItems
+    .filter(it => it.is_milestone === 1 && it.status !== 'complete')
+    .sort((a, b) => (a.end_date || '9999-12-31').localeCompare(b.end_date || '9999-12-31'))
+    .slice(0, 3);
+  if (milestones.length === 0) return '';
+  const today = new Date().toISOString().slice(0, 10);
+  return `<div class="hub-milestones">
+    <div class="hub-milestones-label">Upcoming milestones</div>
+    ${milestones.map(it => {
+      const overdue = it.end_date && it.end_date < today;
+      return `
+        <div class="hub-milestone-row">
+          <span class="ms-icon">◆</span>
+          <span>${escapeHtml(it.name)}</span>
+          <span class="ms-when ${overdue ? 'overdue' : ''}">${it.end_date ? escapeHtml(it.end_date) : '—'}</span>
+        </div>
+      `;
+    }).join('')}
+  </div>`;
+}
+
 // Surface "who's working with whom" — for each unordered pair of people who
 // share at least one item (as owner+support OR both in support), how many
 // items they share. Top 5 pairs render as a compact list under the sprint table.
@@ -2697,6 +2814,7 @@ async function loadProjectHub() {
       <span class="hub-count blocked"><span class="n">${counts.blocked || 0}</span> blocked</span>
       <span class="hub-count complete"><span class="n">${counts.complete || 0}</span> complete</span>
     </div>
+    ${_hubMilestonesHtml(flatItems)}
     ${visible.length === 0
       ? `<div class="hub-loading">No items in this sprint yet.</div>`
       : visible.map(it => _hubItemRowHtml(it, peopleById)).join('')}
@@ -2915,9 +3033,8 @@ function _wireHubStatusCycle() {
         });
       } catch { /* non-fatal */ }
       pill.classList.remove('is-saving');
-      // Refresh the activity stream and main feed so everyone sees the change
+      // Refresh the unified activity stream so everyone sees the change.
       renderActivityFeed();
-      loadHubUpdatesStream();
     } catch (err) {
       console.warn('[hub] status update failed:', err);
       // Revert UI
@@ -2961,17 +3078,10 @@ function _wireHubUpdateForm() {
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-      status.textContent = '✓ Posted to the activity feed';
+      status.textContent = '✓ Posted to the activity stream';
       document.getElementById('hubBody').value = '';
-      // Refresh activity feed AND the inline hub stream. We re-fetch then look
-      // for the freshest team_update; that's almost certainly the one we just
-      // posted, so we flash-highlight it for instant feedback.
+      // Refresh the activity stream so the user sees their post land.
       renderActivityFeed();
-      try {
-        const peek = await fetch('/api/activities?limit=10').then(r => r.ok ? r.json() : []);
-        const fresh = peek.find(p => p.action === 'team_update');
-        await loadHubUpdatesStream(fresh ? new Set([fresh.id]) : new Set());
-      } catch { /* non-fatal — stream will still refresh on next poll */ }
       setTimeout(() => { if (status.textContent.startsWith('✓')) status.textContent = ''; }, 4000);
     } catch (err) {
       status.classList.add('err');
@@ -3008,7 +3118,6 @@ async function refreshAll() {
   renderRegionalMaps();
   renderToolkitActivityLeds();
   loadProjectHub();
-  loadHubUpdatesStream();
   loadCommunityBoard();
   document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
@@ -3477,6 +3586,37 @@ const STAGE_PILL_COLORS = {
 let _activityRows = [];
 let _activityLane = 'all';
 let _activityQuery = '';
+// Meeting Mode time-cutoff filter — focuses the activity stream on the
+// window the team cares about during their Monday standup / Friday recap.
+let _activityMode = 'all'; // 'all' | 'today' | 'since-monday' | 'since-friday'
+
+// Returns the cutoff timestamp (ms since epoch) for the given mode, or 0
+// when the mode is "all" (no filter).
+function _meetingModeCutoff(mode) {
+  if (mode === 'all') return 0;
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (mode === 'today') return startOfToday.getTime();
+
+  // Walk back to the most recent Monday (or today if today IS Monday).
+  // JS getDay(): 0=Sunday, 1=Monday, ..., 5=Friday, 6=Saturday.
+  if (mode === 'since-monday') {
+    const dow = startOfToday.getDay();
+    const daysBack = (dow === 0) ? 6 : (dow - 1); // Sunday → 6 days back, else dow-1
+    return startOfToday.getTime() - daysBack * 86400000;
+  }
+  if (mode === 'since-friday') {
+    const dow = startOfToday.getDay();
+    // Most recent Friday: if today is Fri, that's today's start. Else walk back.
+    let daysBack;
+    if (dow === 5) daysBack = 0;            // Friday
+    else if (dow === 6) daysBack = 1;       // Saturday
+    else if (dow === 0) daysBack = 2;       // Sunday
+    else daysBack = dow + 2;                // Mon=3, Tue=4, Wed=5, Thu=6
+    return startOfToday.getTime() - daysBack * 86400000;
+  }
+  return 0;
+}
 
 // Bucket a row into a time group. Same calendar-day = "Today",
 // previous calendar-day = "Yesterday", within 7 days = "This week", else "Earlier".
@@ -3519,15 +3659,21 @@ async function renderActivityFeed() {
   _drawActivity();
 }
 
-// Re-renders from in-memory _activityRows, applying lane + search filters.
+// Re-renders from in-memory _activityRows, applying lane + search +
+// meeting-mode time-cutoff filters.
 function _drawActivity() {
   const container = document.getElementById('activityFeed');
   if (!container) return;
 
   const q = _activityQuery.trim().toLowerCase();
+  const cutoff = _meetingModeCutoff(_activityMode);
   const filtered = _activityRows.filter(r => {
     const meta = ACTIVITY_LANES[r.action] || { lane: 'active' };
     if (_activityLane !== 'all' && meta.lane !== _activityLane) return false;
+    if (cutoff > 0) {
+      const t = r.created_at ? new Date(r.created_at + 'Z').getTime() : 0;
+      if (!t || t < cutoff) return false;
+    }
     if (!q) return true;
     // Search across actor, action label, deal name, and detail JSON
     const hay = [r.actor, r.action, r.deal_name, r.detail].filter(Boolean).join(' ').toLowerCase();
@@ -3627,6 +3773,19 @@ function _wireActivityFeedControls() {
     });
     document.getElementById('activitySearch').addEventListener('input', (e) => {
       _activityQuery = e.target.value;
+      _drawActivity();
+    });
+  }
+  // Meeting Mode chips — clicking changes the time cutoff for the activity stream.
+  const mm = document.getElementById('meetingModeStrip');
+  if (mm && !mm.dataset.wired) {
+    mm.dataset.wired = '1';
+    mm.addEventListener('click', (e) => {
+      const btn = e.target.closest('.mm-btn');
+      if (!btn) return;
+      mm.querySelectorAll('.mm-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _activityMode = btn.dataset.mode || 'all';
       _drawActivity();
     });
   }
