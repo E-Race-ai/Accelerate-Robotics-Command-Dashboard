@@ -296,6 +296,63 @@
       display: inline-flex; align-items: center; justify-content: center;
       letter-spacing: 0.3px;
     }
+    /* Stacked avatars on each item: owner first, support after, overlapping
+       like the toolkit roster pattern. Owner gets a colored ring so it stays
+       legible as the primary; support people are unringed and slightly smaller. */
+    .hub-people {
+      display: inline-flex; flex-direction: row-reverse;
+      align-items: center;
+      pointer-events: auto;
+    }
+    .hub-people .hub-owner {
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px #0c1220, 0 1px 2px rgba(15,23,42,0.20);
+      margin-left: 0;
+      transition: transform 0.1s;
+    }
+    .hub-support {
+      width: 19px; height: 19px; border-radius: 50%;
+      background: #94a3b8; color: white;
+      font-size: 8.5px; font-weight: 700; letter-spacing: 0.3px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 2px solid white;
+      margin-left: -7px; /* overlap to feel like a stack */
+      box-shadow: 0 1px 2px rgba(0,0,0,0.10);
+      transition: transform 0.1s;
+    }
+    .hub-support.overflow {
+      background: #e5e7eb; color: #475569; font-size: 9px;
+    }
+    .hub-people .hub-owner:hover, .hub-support:hover {
+      transform: translateY(-1px) scale(1.1); z-index: 10;
+    }
+    /* "Working together" pairings panel — surfaces who's collaborating */
+    .hub-pairings {
+      margin-top: 16px; padding-top: 12px;
+      border-top: 1px dashed #e5e7eb;
+    }
+    .hub-pairing-list { display: flex; flex-direction: column; gap: 7px; }
+    .hub-pairing {
+      display: grid; grid-template-columns: auto 1fr auto;
+      gap: 10px; align-items: center;
+      font-size: 0.78rem; color: #475569;
+    }
+    .hub-pairing .pair-stack {
+      display: inline-flex; flex-direction: row-reverse;
+      align-items: center;
+    }
+    .hub-pairing .pair-stack .hub-support {
+      width: 22px; height: 22px; font-size: 9px;
+    }
+    .hub-pairing .pair-text { color: #0f172a; min-width: 0; }
+    .hub-pairing .pair-text b { font-weight: 700; }
+    .hub-pairing .pair-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; color: #64748b;
+      background: #f1f5f9; padding: 2px 7px; border-radius: 999px;
+      white-space: nowrap;
+    }
+    .hub-pairings-empty { color: #cbd5e1; font-size: 0.78rem; }
     .hub-status-pill {
       font-size: 0.65rem; padding: 2px 8px; border-radius: 999px;
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
@@ -1879,6 +1936,122 @@ function _hubDueClass(endDate, status) {
   return endDate < today ? 'overdue' : '';
 }
 
+// Stable swatch per person — same person always gets the same colored avatar
+// across the page, makes scanning collaborators easier.
+function _hubPersonColor(person) {
+  if (!person) return '#cbd5e1';
+  // Fall back through identifiers since some people only have initials.
+  const key = person.full_name || person.initials || String(person.id || '');
+  if (!key) return '#cbd5e1';
+  let h = 0;
+  for (const c of key) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return `hsl(${h % 360}, 48%, 46%)`;
+}
+
+// Render the avatar stack (owner ringed, support after, max 3 visible + "+N")
+// for a single hub item. peopleById is the lookup we already build in loadProjectHub.
+function _hubPeopleStackHtml(item, peopleById) {
+  const owner = peopleById.get(item.owner_id);
+  const ownerColor = _hubPersonColor(owner);
+  const ownerInitials = owner ? _hubInitials(owner) : '—';
+  const supportIds = (item.support_ids || []).filter(id => id !== item.owner_id);
+  const supportPeople = supportIds.map(id => peopleById.get(id)).filter(Boolean);
+  const visible = supportPeople.slice(0, 3);
+  const overflow = supportPeople.length - visible.length;
+
+  // row-reverse + margin-left: -7 in CSS makes the visual order owner → s1 → s2 → s3 → +N
+  // even though we render them right-to-left in markup. Build the support stack first,
+  // owner is appended last (lowest z-index).
+  const supportHtml = visible.map(p => {
+    const c = _hubPersonColor(p);
+    return `<span class="hub-support" style="background:${c};" title="${escapeHtml(p.full_name || p.initials)} · supporting">${_hubInitials(p)}</span>`;
+  }).join('');
+  const overflowHtml = overflow > 0
+    ? `<span class="hub-support overflow" title="${overflow} more supporting">+${overflow}</span>`
+    : '';
+
+  // Stack order in markup is right-to-left because of flex row-reverse — so we put
+  // the OVERFLOW first (visually rightmost) and OWNER last (visually leftmost).
+  return `<span class="hub-people">
+    ${overflowHtml}
+    ${supportHtml}
+    <span class="hub-owner" style="background:${ownerColor};" title="${escapeHtml(owner ? (owner.full_name || owner.initials) + ' · owner' : 'unassigned')}">${ownerInitials}</span>
+  </span>`;
+}
+
+// Build one full hub-item row using the new stacked avatar helper.
+function _hubItemRowHtml(it, peopleById) {
+  const dueClass = _hubDueClass(it.end_date, it.status);
+  return `
+    <div class="hub-item">
+      ${_hubPeopleStackHtml(it, peopleById)}
+      <span class="hub-item-name ${it._depth === 0 ? 'parent' : 'child'}">${escapeHtml(it.name)}</span>
+      ${_hubStatusPillHtml(it.id, it.status)}
+      <span class="hub-due ${dueClass}" title="due ${escapeHtml(it.end_date || '')}">${it.end_date ? escapeHtml(it.end_date.slice(5)) : '—'}</span>
+    </div>
+  `;
+}
+
+// Surface "who's working with whom" — for each unordered pair of people who
+// share at least one item (as owner+support OR both in support), how many
+// items they share. Top 5 pairs render as a compact list under the sprint table.
+function _hubPairingsHtml(flatItems, peopleById) {
+  const pairs = new Map(); // key="aId|bId" (sorted) → { a, b, items: [name…] }
+  for (const it of flatItems) {
+    const ids = new Set();
+    if (it.owner_id) ids.add(it.owner_id);
+    for (const sid of (it.support_ids || [])) ids.add(sid);
+    const arr = [...ids];
+    if (arr.length < 2) continue; // solo work — not a pairing
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        const a = arr[i], b = arr[j];
+        const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+        if (!pairs.has(key)) pairs.set(key, { aId: Math.min(a, b), bId: Math.max(a, b), items: [] });
+        pairs.get(key).items.push(it.name);
+      }
+    }
+  }
+
+  if (pairs.size === 0) {
+    return `<div class="hub-pairings">
+      <div class="hub-section-label">Working together</div>
+      <div class="hub-pairings-empty">No active pairings yet — assign support people on tracker items to surface them here.</div>
+    </div>`;
+  }
+
+  // Sort by item count desc, take top 5 to keep the panel compact
+  const top = [...pairs.values()].sort((x, y) => y.items.length - x.items.length).slice(0, 5);
+
+  const rows = top.map(p => {
+    const personA = peopleById.get(p.aId);
+    const personB = peopleById.get(p.bId);
+    const cA = _hubPersonColor(personA);
+    const cB = _hubPersonColor(personB);
+    const nameA = personA ? (personA.full_name || personA.initials) : '?';
+    const nameB = personB ? (personB.full_name || personB.initials) : '?';
+    const initA = personA ? _hubInitials(personA) : '?';
+    const initB = personB ? _hubInitials(personB) : '?';
+    const sample = p.items.slice(0, 2).map(escapeHtml).join(' · ');
+    const more = p.items.length > 2 ? ` · +${p.items.length - 2}` : '';
+    return `
+      <div class="hub-pairing">
+        <span class="pair-stack">
+          <span class="hub-support" style="background:${cB};" title="${escapeHtml(nameB)}">${initB}</span>
+          <span class="hub-support" style="background:${cA};" title="${escapeHtml(nameA)}">${initA}</span>
+        </span>
+        <span class="pair-text"><b>${escapeHtml(nameA)}</b> · <b>${escapeHtml(nameB)}</b><br><span style="color:#94a3b8;font-size:0.72rem;">${sample}${more}</span></span>
+        <span class="pair-count">${p.items.length} item${p.items.length === 1 ? '' : 's'}</span>
+      </div>
+    `;
+  }).join('');
+
+  return `<div class="hub-pairings">
+    <div class="hub-section-label">Working together · top ${top.length}</div>
+    <div class="hub-pairing-list">${rows}</div>
+  </div>`;
+}
+
 async function loadProjectHub() {
   const panel = document.getElementById('hubSprint');
   if (!panel) return;
@@ -1936,23 +2109,11 @@ async function loadProjectHub() {
     </div>
     ${visible.length === 0
       ? `<div class="hub-loading">No items in this sprint yet.</div>`
-      : visible.map(it => {
-          const owner = peopleById.get(it.owner_id);
-          const ownerInitials = owner ? _hubInitials(owner) : '—';
-          const ownerColor = owner ? '#475569' : '#cbd5e1';
-          const dueClass = _hubDueClass(it.end_date, it.status);
-          return `
-            <div class="hub-item">
-              <span class="hub-owner" style="background:${ownerColor};" title="${escapeHtml(owner ? (owner.full_name || owner.initials) : 'unassigned')}">${ownerInitials}</span>
-              <span class="hub-item-name ${it._depth === 0 ? 'parent' : 'child'}">${escapeHtml(it.name)}</span>
-              ${_hubStatusPillHtml(it.id, it.status)}
-              <span class="hub-due ${dueClass}" title="due ${escapeHtml(it.end_date || '')}">${it.end_date ? escapeHtml(it.end_date.slice(5)) : '—'}</span>
-            </div>
-          `;
-        }).join('')}
+      : visible.map(it => _hubItemRowHtml(it, peopleById)).join('')}
     ${flatItems.length > visible.length
       ? `<div style="text-align:center;padding-top:10px;"><a href="/admin/project-tracker" style="color:#0055ff;font-size:0.78rem;font-weight:600;text-decoration:none;">+${flatItems.length - visible.length} more · Open full tracker →</a></div>`
       : ''}
+    ${_hubPairingsHtml(flatItems, peopleById)}
   `;
 
   // Wire delegated click→cycle on status pills (idempotent — no-op after first call)
