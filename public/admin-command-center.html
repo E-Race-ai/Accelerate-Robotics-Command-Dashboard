@@ -931,7 +931,23 @@
       border-radius: 6px;
       white-space: nowrap;
       transition: transform 0.1s, box-shadow 0.15s, filter 0.15s;
+      display: inline-flex; align-items: center; gap: 6px;
     }
+    /* Tiny count badge inside each chip — same accent as the chip text but
+       at full opacity so the number reads at a glance. */
+    .wf-tool-chip .chip-count {
+      font-family: 'JetBrains Mono', Menlo, monospace;
+      font-size: 9.5px; font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.55);
+      color: inherit;
+      letter-spacing: 0.2px;
+      min-width: 16px; text-align: center;
+    }
+    /* Hide the badge for chips that have no count source. The HTML sets
+       data-chip-count on chips that should show one; the rest stay clean. */
+    .wf-tool-chip:not([data-chip-count]) .chip-count { display: none; }
     /* WHY: Links get interactive affordance; plain span chips remain static labels */
     a.wf-tool-chip:hover {
       transform: translateY(-1px);
@@ -1465,8 +1481,8 @@
             <div class="wf-step-title">Prospect</div>
             <div class="wf-step-desc">Identify target, create deal in pipeline, assign owner</div>
             <div class="wf-step-tools">
-              <a href="/admin/deals" class="wf-tool-chip" style="background:#f1f5f9;color:#475569;text-decoration:none;">Deal Pipeline</a>
-              <a href="/pages/pipeline-prospects.html" class="wf-tool-chip" style="background:#fdf4ff;color:#86198f;text-decoration:none;">Prospects</a>
+              <a href="/admin/deals" class="wf-tool-chip" data-chip-count="active-deals" style="background:#f1f5f9;color:#475569;text-decoration:none;">Deal Pipeline<span class="chip-count">0</span></a>
+              <a href="/pages/pipeline-prospects.html" class="wf-tool-chip" data-chip-count="prospects" style="background:#fdf4ff;color:#86198f;text-decoration:none;">Prospects<span class="chip-count">0</span></a>
             </div>
           </div>
           <div class="wf-arrow"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 4l8 6-8 6V4z" fill="#cbd5e1"/></svg></div>
@@ -1486,8 +1502,8 @@
             <div class="wf-step-title">V1 Proposal</div>
             <div class="wf-step-desc">Fleet design + archetype-based proposal from public data</div>
             <div class="wf-step-tools">
-              <a href="/pages/fleet-designer.html" class="wf-tool-chip" style="background:#ecfeff;color:#0e7490;text-decoration:none;">Fleet Designer</a>
-              <a href="/pages/proposal.html" class="wf-tool-chip" style="background:#f0fdf4;color:#166534;text-decoration:none;">Proposal Builder</a>
+              <a href="/pages/fleet-designer.html" class="wf-tool-chip" data-chip-count="fleet-designed" style="background:#ecfeff;color:#0e7490;text-decoration:none;">Fleet Designer<span class="chip-count">0</span></a>
+              <a href="/pages/proposal.html" class="wf-tool-chip" data-chip-count="proposed-deals" style="background:#f0fdf4;color:#166534;text-decoration:none;">Proposal Builder<span class="chip-count">0</span></a>
             </div>
           </div>
           <div class="wf-arrow"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 4l8 6-8 6V4z" fill="#cbd5e1"/></svg></div>
@@ -1507,7 +1523,7 @@
             <div class="wf-step-title">Assessment</div>
             <div class="wf-step-desc">On-site or digital facility assessment with iPad toolkit</div>
             <div class="wf-step-tools">
-              <a href="/pages/assessments.html" class="wf-tool-chip" style="background:#f5f3ff;color:#6d28d9;text-decoration:none;">Site Walk</a>
+              <a href="/pages/assessments.html" class="wf-tool-chip" data-chip-count="assessments" style="background:#f5f3ff;color:#6d28d9;text-decoration:none;">Site Walk<span class="chip-count">0</span></a>
               <a href="/pages/assessment.html" class="wf-tool-chip" style="background:#fdf4ff;color:#86198f;text-decoration:none;">+ New Assessment</a>
             </div>
           </div>
@@ -1528,9 +1544,9 @@
             <div class="wf-step-title">V2 Proposal + Pipeline</div>
             <div class="wf-step-desc">Refined proposal with assessment data, pipeline tracking, deal progression + negotiation</div>
             <div class="wf-step-tools">
-              <a href="/pages/proposal.html" class="wf-tool-chip" style="background:#fffbeb;color:#92400e;text-decoration:none;">Custom Proposal</a>
+              <a href="/pages/proposal.html" class="wf-tool-chip" data-chip-count="proposed-deals" style="background:#fffbeb;color:#92400e;text-decoration:none;">Custom Proposal<span class="chip-count">0</span></a>
               <a href="/financial-analysis.html" class="wf-tool-chip" style="background:#fef3c7;color:#78350f;text-decoration:none;">ROI Model</a>
-              <a href="/admin/deals" class="wf-tool-chip" style="background:#fff7ed;color:#9a3412;text-decoration:none;">Deal Tracking</a>
+              <a href="/admin/deals" class="wf-tool-chip" data-chip-count="active-deals" style="background:#fff7ed;color:#9a3412;text-decoration:none;">Deal Tracking<span class="chip-count">0</span></a>
             </div>
           </div>
           <div class="wf-arrow"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 4l8 6-8 6V4z" fill="#cbd5e1"/></svg></div>
@@ -1550,8 +1566,8 @@
             <div class="wf-step-title">Deploy</div>
             <div class="wf-step-desc">Won deal, deployment playbook, fleet install + go-live</div>
             <div class="wf-step-tools">
-              <a href="/repos/accelerate-thesis-hotel/pages/playbook.html" class="wf-tool-chip" style="background:#f0fdf4;color:#166534;text-decoration:none;">Playbook</a>
-              <a href="http://localhost:3100/" target="_blank" rel="noopener" class="wf-tool-chip" style="background:#ecfdf5;color:#065f46;text-decoration:none;">Monitoring</a>
+              <a href="/repos/accelerate-thesis-hotel/pages/playbook.html" class="wf-tool-chip" data-chip-count="deploying" style="background:#f0fdf4;color:#166534;text-decoration:none;">Playbook<span class="chip-count">0</span></a>
+              <a href="http://localhost:3100/" target="_blank" rel="noopener" class="wf-tool-chip" data-chip-count="deploying" style="background:#ecfdf5;color:#065f46;text-decoration:none;">Monitoring<span class="chip-count">0</span></a>
             </div>
             <a href="/repos/accelerate-thesis-hotel/pages/playbook.html" class="wf-cta">
               Open Playbook
@@ -3468,6 +3484,19 @@ function renderStats() {
 // ── Workflow step counts ────────────────────────────────────────
 // WHY: Maps deal pipeline stages to the 5-step sales workflow so the command
 // center shows how many deals are in each workflow phase at a glance.
+// Also populates the per-chip count badges so each tool shortcut doubles
+// as a status indicator (e.g. "Deal Pipeline · 9", "Prospects · 66").
+let _wfAssessmentsCount = 0;
+
+async function _fetchAssessmentsCount() {
+  try {
+    const r = await fetch('/api/assessments');
+    if (!r.ok) return;
+    const rows = await r.json();
+    _wfAssessmentsCount = Array.isArray(rows) ? rows.length : 0;
+  } catch { /* non-fatal — chip just shows last known count or 0 */ }
+}
+
 function renderWorkflowCounts() {
   const prospect = deals.filter(d => d.stage === 'lead').length;
   const v1 = deals.filter(d => ['qualified'].includes(d.stage)).length;
@@ -3481,7 +3510,37 @@ function renderWorkflowCounts() {
   set('wf-count-assess', assess);
   set('wf-count-v2', v2);
   set('wf-count-deploy', deploy);
+
+  // Per-chip counts — sourced from the same `deals` array that's already
+  // loaded plus a one-time assessments fetch on page load. Each source name
+  // here corresponds to a data-chip-count value in the markup.
+  const activeDeals = deals.filter(d => d.stage !== 'lost').length;
+  const fleetDesigned = deals.filter(d => d.value_monthly && Number(d.value_monthly) > 0).length;
+  const proposedDeals = deals.filter(d => ['proposed', 'negotiation'].includes(d.stage)).length;
+  const deploying = deals.filter(d => ['won', 'deploying', 'active'].includes(d.stage)).length;
+
+  const counts = {
+    'active-deals':   activeDeals,
+    'prospects':      (typeof PROSPECTS !== 'undefined' ? PROSPECTS.length : 0),
+    'fleet-designed': fleetDesigned,
+    'proposed-deals': proposedDeals,
+    'assessments':    _wfAssessmentsCount,
+    'deploying':      deploying,
+  };
+
+  document.querySelectorAll('.wf-tool-chip[data-chip-count]').forEach(chip => {
+    const source = chip.dataset.chipCount;
+    const val = counts[source];
+    if (val == null) return;
+    const badge = chip.querySelector('.chip-count');
+    if (badge) badge.textContent = val;
+  });
 }
+
+// Pull assessments once on first paint; subsequent renderWorkflowCounts calls
+// reuse the cached value. Cheap to refresh on page load — saves a request per
+// refresh tick.
+_fetchAssessmentsCount().then(() => renderWorkflowCounts());
 
 // ── Deal list (sidebar) ─────────────────────────────────────────
 function renderDealList() {
