@@ -433,6 +433,56 @@
       transition: transform 0.08s, box-shadow 0.15s;
     }
     .cb-new-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(234,88,12,0.30); }
+    /* ── Dashboard quick-nav (sticky jump strip) ─────────────── */
+    .dashboard-quicknav {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex; gap: 4px;
+      padding: 8px 4px;
+      margin-bottom: 16px;
+      background: rgba(248, 250, 252, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid #e5e7eb;
+      overflow-x: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .dashboard-quicknav::-webkit-scrollbar { display: none; }
+    .dashboard-quicknav a {
+      flex-shrink: 0;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #64748b;
+      padding: 5px 12px;
+      border-radius: 999px;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: all 0.12s;
+      border: 1px solid transparent;
+    }
+    .dashboard-quicknav a:hover {
+      background: #ffffff;
+      color: #0f172a;
+      border-color: #e5e7eb;
+    }
+    .dashboard-quicknav a.is-current {
+      background: #0c1220;
+      color: white;
+    }
+    /* WHY: section anchors need scroll-margin so when the sticky nav lands
+       on a target, the heading isn't hidden underneath the strip. */
+    [id="velocityHero"],
+    [id="workflowPipeline"],
+    [id="communityBoard"],
+    [id="dealMap"],
+    [id="regionalMaps"],
+    [id="projectHub"],
+    [id="toolkitSection"],
+    [id="activityFeedSection"] {
+      scroll-margin-top: 64px;
+    }
     .hub-status-pill {
       font-size: 0.65rem; padding: 2px 8px; border-radius: 999px;
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
@@ -1142,13 +1192,25 @@
 
     <main class="max-w-[1400px] mx-auto px-6 py-8">
       <!-- Title row -->
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center justify-between mb-3">
         <h1 class="headline text-2xl font-bold text-gray-900">Command Center</h1>
         <div class="flex items-center gap-2">
           <span class="text-xs text-gray-400" id="lastRefresh"></span>
           <button onclick="refreshAll()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-gray-500 hover:bg-gray-50 border border-gray-200 transition">Refresh</button>
         </div>
       </div>
+
+      <!-- Quick-nav: sticky jumplist so the 10+ sections feel one click away -->
+      <nav class="dashboard-quicknav" id="dashboardQuicknav" aria-label="Jump to section">
+        <a href="#velocityHero"     data-target="velocityHero">Velocity</a>
+        <a href="#workflowPipeline" data-target="workflowPipeline">Pipeline</a>
+        <a href="#communityBoard"   data-target="communityBoard">Community</a>
+        <a href="#dealMap"          data-target="dealMap">Map</a>
+        <a href="#regionalMaps"     data-target="regionalMaps">Regions</a>
+        <a href="#projectHub"       data-target="projectHub">Hub</a>
+        <a href="#toolkitSection"   data-target="toolkitSection">Toolkit</a>
+        <a href="#activityFeedSection" data-target="activityFeedSection">Activity</a>
+      </nav>
 
       <!-- ═══ Sales Velocity hero (composite of speed / force / conversion) ═══ -->
       <div class="velocity-hero brand-reveal mb-4" data-delay="0.05" id="velocityHero">
@@ -1295,7 +1357,7 @@
       </div>
 
       <!-- ═══ Deal Map ═══ -->
-      <div class="mb-8 brand-reveal" data-delay="0.2">
+      <div class="mb-8 brand-reveal" data-delay="0.2" id="dealMap">
         <div class="flex items-center justify-between mb-3">
           <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Deal Map</h3>
           <div style="display:flex;align-items:center;gap:14px;">
@@ -1319,7 +1381,7 @@
       </div>
 
       <!-- ═══ Regional Micro Maps (moved up so both maps live together) ═══ -->
-      <div class="brand-reveal mb-8" data-delay="0.21">
+      <div class="brand-reveal mb-8" data-delay="0.21" id="regionalMaps">
         <div class="flex items-center justify-between mb-4">
           <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Regional Focus Areas</h3>
           <a href="/pages/pipeline-prospects.html" class="text-xs font-medium text-blue-600 hover:underline">View All Prospects &rarr;</a>
@@ -1577,7 +1639,7 @@
       </div>
 
       <!-- ═══ Bottom row: Activity Feed ═══ -->
-      <div class="brand-reveal" data-delay="0.25">
+      <div class="brand-reveal" data-delay="0.25" id="activityFeedSection">
         <div class="bg-white rounded-2xl shadow-sm p-6">
           <div class="flex items-center justify-between mb-3">
             <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Recent Activity</h3>
@@ -2008,6 +2070,44 @@ function initToolkitSort() {
 // Boot the sort bar as soon as the DOM is parsed; renderToolkitRosters() runs
 // asynchronously and will re-apply once owner data arrives.
 document.addEventListener('DOMContentLoaded', initToolkitSort);
+
+// ── Dashboard quick-nav scroll-spy ────────────────────────────
+// Highlights the link of whichever section is currently centered in the
+// viewport. IntersectionObserver gives us this for "free" with no scroll-
+// listener thrashing — we just track which targets are intersecting and
+// pick the topmost one.
+function _initDashboardQuicknav() {
+  const nav = document.getElementById('dashboardQuicknav');
+  if (!nav) return;
+  const links = Array.from(nav.querySelectorAll('a[data-target]'));
+  const targets = links
+    .map(a => ({ link: a, el: document.getElementById(a.dataset.target) }))
+    .filter(t => t.el);
+  if (targets.length === 0) return;
+
+  // Track which sections are currently visible in the viewport. On any
+  // change, pick the highest-on-screen visible section as the "current."
+  const visibleIds = new Set();
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) visibleIds.add(e.target.id);
+      else visibleIds.delete(e.target.id);
+    }
+    // Find the first target (in document order) that's visible
+    let currentId = null;
+    for (const t of targets) {
+      if (visibleIds.has(t.el.id)) { currentId = t.el.id; break; }
+    }
+    links.forEach(a => a.classList.toggle('is-current', a.dataset.target === currentId));
+  }, {
+    // Treat the upper third of the viewport as the "active" zone; sections
+    // become current as their top crosses ~33% from the top.
+    rootMargin: '-12% 0px -55% 0px',
+    threshold: 0,
+  });
+  for (const t of targets) io.observe(t.el);
+}
+_initDashboardQuicknav();
 
 // ── Community Help Board (embedded mini-collab) ──────────────
 // Pulls open requests from /api/collab and renders the top 4 inline so the
