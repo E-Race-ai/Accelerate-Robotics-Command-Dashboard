@@ -416,6 +416,26 @@ async function initSchema() {
       resolved_at TEXT
     )`,
     `CREATE INDEX IF NOT EXISTS idx_collab_status_created ON collab_requests(status, created_at DESC)`,
+    // ── Improvement Requests — public submit + public tracking board
+    // WHY: Separate from feedback (bug/feature) so improvement ideas have their
+    // own pipeline with request numbers, categories, and a public tracking view.
+    `CREATE TABLE IF NOT EXISTS improvement_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'other'
+        CHECK(category IN ('ui', 'workflow', 'performance', 'integration', 'documentation', 'other')),
+      priority TEXT NOT NULL DEFAULT 'medium'
+        CHECK(priority IN ('low', 'medium', 'high', 'critical')),
+      user_name TEXT,
+      user_email TEXT,
+      assigned_to TEXT,
+      status TEXT NOT NULL DEFAULT 'new'
+        CHECK(status IN ('new', 'under_review', 'planned', 'in_progress', 'completed', 'declined')),
+      created_at TEXT DEFAULT (datetime('now')),
+      resolved_at TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_improvement_status_created ON improvement_requests(status, created_at DESC)`,
   ];
 
   for (const sql of statements) {
@@ -490,6 +510,8 @@ async function initSchema() {
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN reset_expires_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE markets ADD COLUMN lat REAL");
   await additiveAlterIfMissing("ALTER TABLE markets ADD COLUMN lng REAL");
+  // WHY: Allow assigning improvement requests to portal users
+  await additiveAlterIfMissing("ALTER TABLE improvement_requests ADD COLUMN assigned_to TEXT");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────

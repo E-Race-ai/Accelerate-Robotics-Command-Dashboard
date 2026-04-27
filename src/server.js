@@ -28,6 +28,7 @@ const toolkitRoutes = require('./routes/toolkit');
 const feedbackRoutes = require('./routes/feedback');
 const activityRoutes = require('./routes/activities');
 const collabRoutes = require('./routes/collab');
+const improvementRoutes = require('./routes/improvement-requests');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -187,6 +188,14 @@ app.use('/api/collab', (req, res, next) => {
   if (req.method === 'POST' && req.path === '/') return inquiryLimiter(req, res, next);
   next();
 }, collabRoutes);
+// WHY: POST is public so any user can submit improvement requests without an account;
+// GET is also public so all users can track request status.
+// PATCH requires admin auth (gated inside the route module).
+// Rate-limit submissions to prevent spam.
+app.use('/api/improvement-requests', (req, res, next) => {
+  if (req.method === 'POST') return inquiryLimiter(req, res, next);
+  next();
+}, improvementRoutes);
 
 // ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
 // WHY: Removed auth requirement temporarily so we can diagnose the API key issue.
