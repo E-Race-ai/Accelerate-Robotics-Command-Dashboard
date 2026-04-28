@@ -59,6 +59,75 @@ async function updateDealStage(id, stage) {
   await fetchDeals();
 }
 
+// ── Dormant flag + Next-meeting scheduler (board #8) ──────────
+// Soft-pause a deal without moving it out of the pipeline, and schedule
+// the next follow-up so it surfaces on the kanban card.
+async function toggleDormant(id, makeDormant) {
+  await fetch(`/api/deals/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_dormant: makeDormant ? 1 : 0 }),
+  });
+  await fetchDeals();
+}
+
+async function setNextMeeting(id, isoOrNull) {
+  await fetch(`/api/deals/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    // Empty value clears the meeting; the API treats '' as null.
+    body: JSON.stringify({ next_meeting_at: isoOrNull || '' }),
+  });
+  await fetchDeals();
+}
+
+// WHY: Format "Tue Apr 30 · 2:30 PM" — short enough to fit in a card chip,
+// human enough to scan without converting from raw ISO in your head.
+function formatMeetingDate(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const dayPart = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const timePart = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${dayPart} · ${timePart}`;
+}
+
+// Convert ISO from API → value attribute for <input type="datetime-local">,
+// which expects "YYYY-MM-DDTHH:MM" with no seconds and no timezone.
+function isoToDatetimeLocalValue(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Toggle the inline datetime-local input next to the Schedule button.
+// Native picker needs an explicit click on the input to open in most
+// browsers, so we both reveal it and call .showPicker() where available.
+function openMeetingPicker(btn, dealId) {
+  // The input is the next sibling of the Schedule button in the card-actions row.
+  const input = btn.parentElement?.querySelector(`.card-meeting-input[data-deal-id="${dealId}"]`);
+  if (!input) return;
+  input.classList.toggle('is-open');
+  if (input.classList.contains('is-open')) {
+    // showPicker() is the modern API for triggering the native picker
+    // programmatically. Fall back to focus() in browsers that don't have it.
+    try { input.showPicker?.(); } catch (e) { /* not supported, no-op */ }
+    input.focus();
+  }
+}
+
+function onMeetingInputChange(input) {
+  const dealId = input.dataset.dealId;
+  if (!dealId) return;
+  // Convert the local-time string back to a UTC ISO so the server stores
+  // a single canonical timestamp.
+  const v = input.value;
+  if (!v) { setNextMeeting(dealId, null); return; }
+  const iso = new Date(v).toISOString();
+  setNextMeeting(dealId, iso);
+}
+
 // WHY: Called from kanban card "Move to..." dropdown — wraps updateDealStage with reset on cancel
 async function moveDeal(id, newStage) {
   if (!newStage) return; // User selected the placeholder "Move to..." option
@@ -189,11 +258,19 @@ function renderKanban(filtered) {
             const actorShort = d.last_activity_actor ? d.last_activity_actor.split('@')[0] : '';
             const actLabel = ACTION_LABELS[d.last_activity_action] || '';
 
+            // Next-meeting chip state. Tag past meetings red and "soon"
+            // (within 24h) amber so the urgency reads at a glance.
+            const meetMs = d.next_meeting_at ? Date.parse(d.next_meeting_at) : null;
+            const meetIsPast = meetMs && meetMs < Date.now();
+            const meetIsSoon = meetMs && !meetIsPast && (meetMs - Date.now()) < 24 * 60 * 60 * 1000;
+            const meetClass = meetIsPast ? 'is-past' : meetIsSoon ? 'is-soon' : '';
+            const isDormant = !!Number(d.is_dormant);
+
             return `
-            <div class="deal-card brand-deal-card">
+            <div class="deal-card brand-deal-card${isDormant ? ' is-dormant' : ''}">
               <div class="brand-deal-stripe" style="background:linear-gradient(180deg, ${STAGE_COLORS[stage]}, ${STAGE_COLORS[stage]}88);"></div>
               <a href="/admin/deals/${d.id}#overview" style="text-decoration:none;color:inherit;">
-                <div class="brand-deal-name">${escapeHtml(d.name)}</div>
+                <div class="brand-deal-name">${escapeHtml(d.name)}${isDormant ? '<span class="deal-dormant-badge">💤 Dormant</span>' : ''}</div>
                 ${d.facility_brand ? `<div class="deal-brand-tag">${escapeHtml(d.facility_brand)}${d.facility_operator && d.facility_operator !== d.facility_brand ? ' · ' + escapeHtml(d.facility_operator) : ''}</div>` : ''}
                 <div class="brand-deal-meta">
                   ${escapeHtml(d.facility_type || '')}${d.facility_type && (d.city || d.state) ? ' · ' : ''}${escapeHtml(d.city || '')}${d.state ? ', ' + escapeHtml(d.state) : ''}
@@ -240,6 +317,12 @@ function renderKanban(filtered) {
                   ${d.last_activity_at ? `<span>· ${timeAgo(d.last_activity_at)}</span>` : ''}
                 </div>` : ''}
 
+                ${d.next_meeting_at ? `
+                <div class="deal-meeting-chip ${meetClass}" title="${meetIsPast ? 'Meeting is in the past' : meetIsSoon ? 'Within 24 hours' : 'Upcoming meeting'}${d.next_meeting_note ? ' — ' + escapeHtml(d.next_meeting_note) : ''}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span>${escapeHtml(formatMeetingDate(d.next_meeting_at))}</span>
+                </div>` : ''}
+
                 <div class="deal-owner">${escapeHtml(d.owner || 'Unassigned')}</div>
               </a>
               <div class="card-actions" onclick="event.stopPropagation()">
@@ -248,6 +331,12 @@ function renderKanban(filtered) {
                   <option value="">Move to...</option>
                   ${moveOptions}
                 </select>
+                <button type="button" class="card-action icon-btn ${d.next_meeting_at ? 'is-active' : ''}" title="Schedule next meeting" onclick="openMeetingPicker(this, '${d.id}')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Schedule
+                </button>
+                <input type="datetime-local" class="card-meeting-input" data-deal-id="${d.id}" value="${escapeHtml(isoToDatetimeLocalValue(d.next_meeting_at))}" onchange="onMeetingInputChange(this)">
+                <button type="button" class="card-action icon-btn ${isDormant ? 'is-active' : ''}" title="${isDormant ? 'Reactivate' : 'Mark dormant — pause without losing'}" onclick="toggleDormant('${d.id}', ${isDormant ? 'false' : 'true'})">${isDormant ? '▶ Reactivate' : '💤 Dormant'}</button>
                 <button class="card-action danger" onclick="deleteDeal('${d.id}', '${escapeHtml(d.name).replace(/'/g, "\\'")}')">Delete</button>
               </div>
             </div>`;
