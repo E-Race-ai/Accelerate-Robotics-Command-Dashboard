@@ -2680,8 +2680,38 @@ function _cardKey(card, by) {
     case 'dept':  return (card.dataset.dept || 'zzzz').toLowerCase();
     case 'topic': return (card.dataset.topic || 'zzzz').toLowerCase();
     case 'size':  return _sizeRank(card.dataset.size);
-    default:      return parseInt(card.dataset.originalIdx || '0', 10);
+    // 'default' is now a curated grouping: Sales → Ops → Engineering →
+    // Product → Finance → Strategy → Marketing → other. Within each dept
+    // tiles fall back to topic, then A–Z. The numeric prefix below is the
+    // sort key that achieves this when used like a normal string sort.
+    default:      return _groupedSortKey(card);
   }
+}
+
+// Curated department order — what a sales-led org meets to talk about, in
+// roughly the order they'd open the dashboard. Tiles with a department not
+// in this list fall to the bottom (under "other").
+const TOOLKIT_DEPT_ORDER = ['sales', 'ops', 'engineering', 'product', 'finance', 'strategy', 'marketing'];
+const TOOLKIT_DEPT_LABEL = {
+  sales:       'Sales',
+  ops:         'Operations',
+  engineering: 'Engineering',
+  product:     'Product',
+  finance:     'Finance',
+  strategy:    'Strategy',
+  marketing:   'Marketing',
+  other:       'Other',
+};
+
+function _groupedSortKey(card) {
+  const dept = (card.dataset.dept || 'other').toLowerCase();
+  const idx = TOOLKIT_DEPT_ORDER.indexOf(dept);
+  // 0-padded department rank so the string sort orders dept groups correctly,
+  // then topic + name as tie-breakers within each group.
+  const rank = (idx >= 0 ? idx : 99).toString().padStart(2, '0');
+  const topic = (card.dataset.topic || 'zzz').toLowerCase();
+  const name = (card.querySelector('.ql-title')?.textContent || '').toLowerCase();
+  return `${rank}|${topic}|${name}`;
 }
 
 function applyToolkitSort() {
@@ -2709,21 +2739,29 @@ function applyToolkitSort() {
   // Wipe any prior group labels
   grid.querySelectorAll('.toolkit-group-label').forEach(el => el.remove());
 
-  // For grouping modes, insert a section divider when the key changes.
-  const groupKeys = ['owner', 'dept', 'topic', 'size'];
+  // Group labels — "default" groups by department using the curated label
+  // map, other modes use their own keys.
+  const groupKeys = ['default', 'owner', 'dept', 'topic', 'size'];
   const grouping = groupKeys.includes(current);
-  let lastKey = null;
+  let lastLabel = null;
   const frag = document.createDocumentFragment();
   for (const card of sorted) {
-    const k = _cardKey(card, current);
-    if (grouping && k !== lastKey) {
+    let labelText = null;
+    if (current === 'default') {
+      const dept = (card.dataset.dept || 'other').toLowerCase();
+      labelText = TOOLKIT_DEPT_LABEL[dept] || (dept.charAt(0).toUpperCase() + dept.slice(1));
+    } else if (grouping) {
+      const k = _cardKey(card, current);
+      labelText = current === 'size'
+        ? ({ 1: 'Small', 2: 'Medium', 3: 'Large', 0: 'Unsized' }[k] || 'Unsized')
+        : String(k).replace(/^\w/, c => c.toUpperCase());
+    }
+    if (labelText && labelText !== lastLabel) {
       const label = document.createElement('div');
       label.className = 'toolkit-group-label';
-      label.textContent = current === 'size'
-        ? ({ 1: 'Small', 2: 'Medium', 3: 'Large', 0: 'Unsized' }[k] || 'Unsized')
-        : (String(k).replace(/^\w/, c => c.toUpperCase()));
+      label.textContent = labelText;
       frag.appendChild(label);
-      lastKey = k;
+      lastLabel = labelText;
     }
     frag.appendChild(card);
   }
