@@ -166,6 +166,29 @@
   .atc-card[data-priority="high"]   { border-left-color: #f59e0b; }
   .atc-card[data-priority="medium"] { border-left-color: #94a3b8; }
   .atc-card[data-priority="low"]    { border-left-color: #cbd5e1; }
+  /* ── Security hazard styling — overrides priority colors so security
+     tickets always read as hazard, regardless of how the submitter set priority.
+     The diagonal stripes evoke a workplace hazard barricade and are very hard
+     to miss in a feed of normal-looking cards. */
+  .atc-card[data-security="1"] {
+    border: 1px solid #b45309;
+    border-left: 6px solid #b45309;
+    background:
+      repeating-linear-gradient(135deg,
+        rgba(245,158,11,0.06) 0 8px,
+        rgba(245,158,11,0)    8px 16px),
+      #fffbeb;
+    box-shadow: 0 0 0 1px rgba(180,83,9,0.18);
+    animation: none;
+  }
+  .atc-card[data-security="1"] .atc-card-title { color: #7c2d12; }
+  .atc-pill-security {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: #b45309; color: #fff;
+    padding: 2px 7px; border-radius: 10px;
+    font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
   .atc-card-tags { display: flex; gap: 4px; flex-wrap: wrap; }
   .atc-card-title {
     font-size: 0.85rem; font-weight: 700; color: #0f172a; line-height: 1.3;
@@ -479,6 +502,13 @@
         <label for="m-due">Due date <span style="color:#94a3b8;font-weight:500;">(optional)</span></label>
         <input type="date" id="m-due">
       </div>
+      <div class="field" style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin-top:6px;">
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer;">
+          <input type="checkbox" id="m-security" style="width:18px;height:18px;accent-color:#b45309;">
+          <span>⚠️ Security issue</span>
+        </label>
+        <span class="hint" style="display:block;margin-top:4px;color:#92400e;">Mark this if it touches authentication, data leakage, dependencies, infra security, or anything the technical team should pick up urgently. Auto-flagged for keywords like XSS, CSP, RCE, no-sandbox, etc.</span>
+      </div>
       <div class="modal-actions">
         <button type="button" id="cancelBtn">Cancel</button>
         <button type="submit" class="primary" id="saveBtn">Post Request</button>
@@ -587,9 +617,11 @@
       actionHtml = `<button class="atc-card-btn success" data-action="status" data-id="${req.id}" data-value="done">Land</button>`;
     }
 
+    const sec = req.is_security ? 1 : 0;
     return `
-      <article class="atc-card" draggable="true" data-id="${req.id}" data-priority="${escapeHtml(req.priority)}">
+      <article class="atc-card" draggable="true" data-id="${req.id}" data-priority="${escapeHtml(req.priority)}" data-security="${sec}">
         <div class="atc-card-tags">
+          ${sec ? '<span class="atc-pill-security" title="Security issue — needs technical attention">⚠️ Security</span>' : ''}
           <span class="pill type-${escapeHtml(req.type)}">${escapeHtml(req.type)}</span>
           <span class="pill prio-${escapeHtml(req.priority)}">${escapeHtml(req.priority)}</span>
         </div>
@@ -737,6 +769,7 @@
       skills: $('#m-skills').value,
       target_user: $('#m-target').value,
       due_date: $('#m-due').value || null,
+      is_security: $('#m-security').checked,
     };
     try {
       const r = await fetch('/api/collab', {
