@@ -542,6 +542,31 @@
       transition: transform 0.15s;
     }
     .hub-pairings.open .hub-section-label::after { transform: rotate(90deg); }
+    /* ── Maps tabs ──────────────────────────────────────────── */
+    .map-tabs {
+      display: flex; gap: 4px;
+      padding: 3px;
+      background: #f1f5f9; border: 1px solid #e5e7eb;
+      border-radius: 999px;
+    }
+    .map-tab {
+      background: transparent; border: 1px solid transparent;
+      padding: 5px 14px; border-radius: 999px;
+      font-size: 12.5px; font-weight: 700; color: #475569; cursor: pointer;
+      transition: all 0.12s;
+      font-family: 'Space Grotesk', sans-serif;
+      letter-spacing: 0.02em;
+    }
+    .map-tab:hover { background: white; color: #0f172a; }
+    .map-tab.active {
+      background: #0c1220; color: white;
+    }
+    .map-controls {
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .map-tab-panel-controls {
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
     /* ── Community Help Board (embedded mini-collab) ─────────── */
     .cb-grid {
       display: grid;
@@ -1765,38 +1790,52 @@
         </div>
       </div>
 
-      <!-- ═══ Deal Map ═══ -->
+      <!-- ═══ Maps — tabbed widget consolidating Deal Map + Regional ═══ -->
+      <!-- WHY: Two map sections back-to-back was ~1300px of vertical real
+           estate. Tabs let users flip between the US-wide Deal Map and the
+           Regional Focus grids without scrolling, halving the section's
+           footprint. Right-side controls update based on the active tab. -->
       <div class="mb-8 brand-reveal" data-delay="0.2" id="dealMap">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Deal Map</h3>
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div class="map-legend" style="display:flex;gap:12px;flex-wrap:wrap;">
-              <div class="map-legend-item"><span class="map-legend-dot" style="background:#64748b"></span>Lead</div>
-              <div class="map-legend-item"><span class="map-legend-dot" style="background:#0891b2"></span>Qualified</div>
-              <div class="map-legend-item"><span class="map-legend-dot" style="background:#7c3aed"></span>Site Walk</div>
-              <div class="map-legend-item"><span class="map-legend-dot" style="background:#d97706"></span>Proposed</div>
-              <div class="map-legend-item"><span class="map-legend-dot" style="background:#16a34a"></span>Won/Active</div>
-              <div class="map-legend-item"><span class="map-legend-dot" style="background:rgba(99,102,241,0.18);border:2px solid #6366f1;"></span>Market</div>
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-3">
+          <div class="map-tabs" role="tablist" aria-label="Map view">
+            <button class="map-tab active" data-tab="us" type="button" role="tab" aria-selected="true">🇺🇸 US Deal Map</button>
+            <button class="map-tab" data-tab="regional" type="button" role="tab" aria-selected="false">📍 Regional Focus</button>
+          </div>
+          <div class="map-controls" id="mapControls">
+            <!-- Deal Map controls (active by default) -->
+            <div class="map-tab-panel-controls" data-tab="us">
+              <div class="map-legend" style="display:flex;gap:10px;flex-wrap:wrap;">
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#64748b"></span>Lead</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#0891b2"></span>Qualified</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#7c3aed"></span>Site Walk</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#d97706"></span>Proposed</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:#16a34a"></span>Won/Active</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="background:rgba(99,102,241,0.18);border:2px solid #6366f1;"></span>Market</div>
+              </div>
+              <button onclick="toggleMapFullscreen()" id="mapFullscreenBtn" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;color:#475569;font-family:'Space Grotesk',sans-serif;letter-spacing:.03em;text-transform:uppercase;" title="Toggle fullscreen">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                Expand
+              </button>
             </div>
-            <button onclick="toggleMapFullscreen()" id="mapFullscreenBtn" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;color:#475569;font-family:'Space Grotesk',sans-serif;letter-spacing:.03em;text-transform:uppercase;" title="Toggle fullscreen">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-              Expand
-            </button>
+            <!-- Regional Maps controls (hidden until active) -->
+            <div class="map-tab-panel-controls" data-tab="regional" style="display:none;">
+              <a href="/pages/pipeline-prospects.html" class="text-xs font-medium text-blue-600 hover:underline">View All Prospects &rarr;</a>
+            </div>
           </div>
         </div>
-        <div id="mapContainer" class="bg-white rounded-2xl shadow-sm overflow-hidden" style="height: 600px; position: relative; transition: height 0.3s ease;">
-          <div id="cc-map" style="height: 100%; width: 100%;"></div>
-        </div>
-      </div>
 
-      <!-- ═══ Regional Micro Maps (moved up so both maps live together) ═══ -->
-      <div class="brand-reveal mb-8" data-delay="0.21" id="regionalMaps">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Regional Focus Areas</h3>
-          <a href="/pages/pipeline-prospects.html" class="text-xs font-medium text-blue-600 hover:underline">View All Prospects &rarr;</a>
+        <!-- US Deal Map panel -->
+        <div class="map-tab-panel" data-tab="us">
+          <div id="mapContainer" class="bg-white rounded-2xl shadow-sm overflow-hidden" style="height: 600px; position: relative; transition: height 0.3s ease;">
+            <div id="cc-map" style="height: 100%; width: 100%;"></div>
+          </div>
         </div>
-        <div class="region-grid" id="regionGrid">
-          <!-- Populated by JS -->
+
+        <!-- Regional Focus panel — hidden until tab is selected -->
+        <div class="map-tab-panel" data-tab="regional" id="regionalMaps" style="display:none;">
+          <div class="region-grid" id="regionGrid">
+            <!-- Populated by JS -->
+          </div>
         </div>
       </div>
 
@@ -2553,6 +2592,37 @@ function _initDashboardQuicknav() {
   for (const t of targets) io.observe(t.el);
 }
 _initDashboardQuicknav();
+
+// ── Maps tab switch ───────────────────────────────────────────
+// Toggle between US Deal Map and Regional Focus panels in the consolidated
+// map widget. Each tab swaps the visible panel and the right-side controls,
+// then nudges Leaflet to recalculate tiles when the US map becomes visible
+// again (it can mis-render if the container was hidden during init).
+function _initMapTabs() {
+  const tabs = document.querySelectorAll('#dealMap .map-tab');
+  if (tabs.length === 0) return;
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      tabs.forEach(t => {
+        const on = t.dataset.tab === target;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      document.querySelectorAll('#dealMap .map-tab-panel').forEach(p => {
+        p.style.display = p.dataset.tab === target ? '' : 'none';
+      });
+      document.querySelectorAll('#dealMap .map-tab-panel-controls').forEach(p => {
+        p.style.display = p.dataset.tab === target ? '' : 'none';
+      });
+      // Leaflet needs a nudge when its container goes from hidden → visible
+      if (target === 'us' && typeof ccMap !== 'undefined' && ccMap) {
+        setTimeout(() => ccMap.invalidateSize(), 50);
+      }
+    });
+  });
+}
+_initMapTabs();
 
 // ── Air Traffic Control board (embedded full version on dashboard) ──
 // Full 4-lane kanban with drag-drop, mirrors /pages/collab.html. Post-update
