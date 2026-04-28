@@ -94,13 +94,22 @@ router.patch('/:id', requireAuth, requireRole('admin', 'sales'), async (req, res
   const existing = await db.one('SELECT * FROM deals WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Deal not found' });
 
-  const { name, stage, owner, source, value_monthly, value_total, close_probability, notes, facility_id } = req.body;
+  const { name, stage, owner, source, value_monthly, value_total, close_probability, notes, facility_id,
+    is_dormant, next_meeting_at, next_meeting_note } = req.body;
 
   if (stage && !VALID_STAGES.includes(stage)) {
     return res.status(400).json({ error: `Stage must be one of: ${VALID_STAGES.join(', ')}` });
   }
   if (source && !VALID_SOURCES.includes(source)) {
     return res.status(400).json({ error: `Source must be one of: ${VALID_SOURCES.join(', ')}` });
+  }
+  // WHY: Reject obviously-malformed dates so we don't silently store garbage
+  // that breaks the kanban scheduler chip later.
+  if (next_meeting_at !== undefined && next_meeting_at !== null && next_meeting_at !== '') {
+    const t = Date.parse(next_meeting_at);
+    if (Number.isNaN(t)) {
+      return res.status(400).json({ error: 'next_meeting_at must be a valid ISO date or null' });
+    }
   }
 
   const updates = {};
@@ -113,6 +122,16 @@ router.patch('/:id', requireAuth, requireRole('admin', 'sales'), async (req, res
   if (close_probability !== undefined) updates.close_probability = close_probability;
   if (notes !== undefined) updates.notes = notes;
   if (facility_id !== undefined) updates.facility_id = facility_id;
+  // WHY: Coerce dormant to 0/1 so JSON booleans, "0"/"1" strings, and ints all
+  // map to the integer the column expects.
+  if (is_dormant !== undefined) updates.is_dormant = is_dormant ? 1 : 0;
+  if (next_meeting_at !== undefined) {
+    // Empty string from a cleared <input type="datetime-local"> means "unset."
+    updates.next_meeting_at = next_meeting_at === '' ? null : next_meeting_at;
+  }
+  if (next_meeting_note !== undefined) {
+    updates.next_meeting_note = next_meeting_note === '' ? null : next_meeting_note;
+  }
 
   // WHY: Auto-set closed_at when deal reaches a closing stage
   if (stage && CLOSING_STAGES.includes(stage) && !existing.closed_at) {
