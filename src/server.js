@@ -264,7 +264,16 @@ app.get('/reset-password', (req, res) => {
 // ── Start ───────────────────────────────────────────────────────
 // WHY: Await schema init + seeds before binding the port so routes never race against an unready DB.
 db.ready
-  .then(() => {
+  .then(async () => {
+    // Sweep stale collab tickets on boot — anything open + idle for 30+ days
+    // is auto-archived so the daily board doesn't accumulate dead weight.
+    // Failure is logged, not fatal — board still works without the sweep.
+    try {
+      const { archived } = await collabRoutes.sweepStaleTickets();
+      if (archived > 0) console.log(`[collab] auto-archived ${archived} stale ticket(s) on boot`);
+    } catch (e) {
+      console.warn('[collab] stale-ticket sweep failed on boot:', e.message);
+    }
     app.listen(PORT, () => {
       console.log(`[server] Accelerate Robotics running at http://localhost:${PORT}`);
     });

@@ -5,7 +5,7 @@
 
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth, softAuth } = require('../middleware/auth');
+const { requireAuth, softAuth, requireRole } = require('../middleware/auth');
 const { generateId } = require('../services/id-generator');
 
 const router = express.Router();
@@ -201,6 +201,66 @@ router.patch('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ── DELETE /:id — Hard delete (super_admin / admin only) ────
+// WHY: Most "delete" cases are handled by archiving (PATCH status=archived).
+// Hard delete is reserved for spam, test rows, or rows that absolutely should
+// not appear in audit trails — gated to the two top roles to avoid accidents.
+router.delete('/:id', requireAuth, requireRole('super_admin', 'admin'), async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const existing = await db.one('SELECT id, title FROM collab_requests WHERE id = ?', [id]);
+    if (!existing) return res.status(404).json({ error: 'not found' });
+    await db.run('DELETE FROM collab_requests WHERE id = ?', [id]);
+    await logActivity(req.admin.email, 'collab_deleted', { collab_id: id, title: existing.title });
+    res.json({ ok: true, id });
+  } catch (e) {
+    console.error('[collab] delete failed:', e);
+    res.status(500).json({ error: 'Failed to delete request' });
+  }
+});
+
+// ── POST /sweep-stale — auto-archive any open ticket idle for STALE_DAYS ──
+// WHY: Tickets that nobody has touched in a month are clutter. Pulled out as
+// a manual endpoint so it's easy to test; also called automatically on server
+// boot via sweepStale() below. Returns the count archived so the caller can
+// surface "X stale tickets archived" in the UI.
+const STALE_DAYS = 30; // 30d = a full sprint cycle. If no one touches a ticket in a month, it's not happening.
+async function sweepStaleTickets() {
+  const cutoff = `datetime('now', '-${STALE_DAYS} days')`;
+  const candidates = await db.all(
+    `SELECT id, title FROM collab_requests
+     WHERE status IN ('open', 'claimed', 'in_progress')
+       AND COALESCE(updated_at, created_at) < ${cutoff}`,
+  );
+  if (!candidates.length) return { archived: 0, ids: [] };
+  await db.run(
+    `UPDATE collab_requests
+     SET status = 'archived',
+         archived_at = datetime('now'),
+         resolved_at = COALESCE(resolved_at, datetime('now')),
+         updated_at = datetime('now')
+     WHERE status IN ('open', 'claimed', 'in_progress')
+       AND COALESCE(updated_at, created_at) < ${cutoff}`,
+  );
+  for (const row of candidates) {
+    await logActivity('system', 'collab_auto_archived', {
+      collab_id: row.id, title: row.title, idle_days: STALE_DAYS,
+    });
+  }
+  return { archived: candidates.length, ids: candidates.map(r => r.id) };
+}
+
+router.post('/sweep-stale', requireAuth, requireRole('super_admin', 'admin'), async (_req, res) => {
+  try {
+    const result = await sweepStaleTickets();
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error('[collab] sweep failed:', e);
+    res.status(500).json({ error: 'Sweep failed' });
+  }
+});
+
 // ── GET /team — list of admin users (for "tag a person" dropdown) ──
 router.get('/team', requireAuth, async (_req, res) => {
   try {
@@ -216,3 +276,4 @@ router.get('/team', requireAuth, async (_req, res) => {
 });
 
 module.exports = router;
+module.exports.sweepStaleTickets = sweepStaleTickets;
