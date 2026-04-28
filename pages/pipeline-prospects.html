@@ -412,6 +412,17 @@ function openAddMarketForm() {
   const form = document.getElementById('addMarketForm');
   form.classList.remove('hidden');
 
+  // WHY: Reset form fields each open so a previous abandoned entry doesn't leak in.
+  // Especially the AI Research checkbox — without this, reopening with a stale-checked
+  // box leaves the count selector hidden (onchange only fires on user-driven changes).
+  document.getElementById('mktName').value = '';
+  document.getElementById('mktNotes').value = '';
+  document.getElementById('mktClusterNew').value = '';
+  document.getElementById('mktClusterNew').classList.add('hidden');
+  const researchCb = document.getElementById('mktResearch');
+  researchCb.checked = false;
+  document.getElementById('mktResearchCount').classList.add('hidden');
+
   // Populate cluster dropdown
   const sel = document.getElementById('mktCluster');
   const clusters = [...new Set(MARKETS.map(m => m.cluster).filter(Boolean))];
@@ -426,7 +437,7 @@ function openAddMarketForm() {
 
   // WHY: Use onchange instead of addEventListener to prevent stacking
   // when the form is opened/closed repeatedly
-  document.getElementById('mktResearch').onchange = e => {
+  researchCb.onchange = e => {
     document.getElementById('mktResearchCount').classList.toggle('hidden', !e.target.checked);
   };
   sel.onchange = () => {
