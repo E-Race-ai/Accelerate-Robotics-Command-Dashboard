@@ -766,6 +766,14 @@
     .atc-card-tags .pill.type-doc         { background: #fef3c7; color: #92400e; }
     .atc-card-tags .pill.type-design      { background: #fdf2f8; color: #be185d; }
     .atc-card-tags .pill.type-other       { background: #f1f5f9; color: #475569; }
+    /* Bug type from the Bug/Feature form — red accent so it stands out */
+    .atc-card-tags .pill.type-bug         { background: #fef2f2; color: #b91c1c; }
+    /* Source badge (🐛 / ✨) when a card came from the Bug/Feature form */
+    .atc-card-source {
+      font-size: 12px; line-height: 1;
+      padding: 1px 0; margin-right: 1px;
+      cursor: help;
+    }
     .atc-card-tags .pill.prio-urgent      { background: #fee2e2; color: #991b1b; box-shadow: 0 0 0 1px #fca5a5; }
     .atc-card-tags .pill.prio-high        { background: #fff1f2; color: #be123c; }
     .atc-card-tags .pill.prio-medium      { background: #fffbeb; color: #92400e; }
@@ -2636,11 +2644,74 @@ const ATC_DASH_EMPTY = {
 };
 let _atcDashRequests = [];
 
+// Map feedback statuses → ATC lanes. Both directions.
+const FEEDBACK_TO_LANE = {
+  new: 'open',
+  triaged: 'claimed',
+  in_progress: 'in_progress',
+  resolved: 'done',
+  wontfix: 'done',
+};
+const LANE_TO_FEEDBACK = {
+  open: 'new',
+  claimed: 'triaged',
+  in_progress: 'in_progress',
+  done: 'resolved',
+};
+// Bug/feature severity → ATC priority. Critical maps to urgent so it pulses
+// the same way collab urgent does.
+const SEVERITY_TO_PRIORITY = { critical: 'urgent', high: 'high', medium: 'medium', low: 'low' };
+
+// Normalize a /api/feedback row to the same shape the ATC renderer expects
+// from /api/collab rows. _source: 'feedback' lets the action handler decide
+// which endpoint to PATCH on a status change or claim.
+function _normalizeFeedbackForATC(f) {
+  return {
+    id: 'fb-' + f.id,         // namespace so collab and feedback IDs can't collide
+    _source: 'feedback',
+    _rawId: f.id,
+    _rawStatus: f.status,
+    type: f.type,             // 'bug' or 'feature'
+    title: f.title,
+    description: f.description,
+    priority: SEVERITY_TO_PRIORITY[f.severity] || 'medium',
+    status: FEEDBACK_TO_LANE[f.status] || 'open',
+    requester_name: f.user_name,
+    requester_email: f.user_email,
+    target_user: null,
+    claimed_by: null,
+    due_date: null,
+    created_at: f.created_at,
+    resolved_at: f.resolved_at,
+  };
+}
+
 async function loadCommunityBoard() {
-  try {
-    const r = await fetch('/api/collab');
-    if (r.ok) _atcDashRequests = await r.json();
-  } catch { /* non-fatal */ }
+  // Fetch both sources in parallel — the ATC board now reflects every
+  // inbound ask, whether it came from the Collab modal (cross-team) or the
+  // Bug/Feature form (anyone).
+  const [collabRes, feedbackRes] = await Promise.all([
+    fetch('/api/collab').catch(() => null),
+    fetch('/api/feedback').catch(() => null),
+  ]);
+
+  let collabRows = [];
+  if (collabRes && collabRes.ok) {
+    try { collabRows = await collabRes.json(); } catch { collabRows = []; }
+  }
+  // Tag collab rows so the action handler knows which API to call.
+  collabRows = (Array.isArray(collabRows) ? collabRows : [])
+    .map(r => ({ ...r, _source: 'collab', id: String(r.id), _rawId: r.id }));
+
+  let feedbackRows = [];
+  if (feedbackRes && feedbackRes.ok) {
+    try {
+      const raw = await feedbackRes.json();
+      feedbackRows = (Array.isArray(raw) ? raw : []).map(_normalizeFeedbackForATC);
+    } catch { feedbackRows = []; }
+  }
+
+  _atcDashRequests = [...collabRows, ...feedbackRows];
   _renderATCDash();
 }
 
@@ -2671,19 +2742,33 @@ function _atcDashCardHtml(req) {
   const claimedBy = req.claimed_by ? req.claimed_by.split('@')[0] : null;
   const today = new Date().toISOString().slice(0, 10);
   const overdue = req.due_date && req.due_date < today && req.status !== 'done';
+  const isFeedback = req._source === 'feedback';
 
+  // Action button — feedback "claim" doesn't exist server-side, so we map
+  // it to a triage status change instead.
   let actionHtml = '';
   if (req.status === 'open') {
-    actionHtml = `<button class="atc-card-btn primary" data-action="claim" data-id="${req.id}">Claim</button>`;
+    actionHtml = isFeedback
+      ? `<button class="atc-card-btn primary" data-action="status" data-id="${req.id}" data-value="claimed">Triage</button>`
+      : `<button class="atc-card-btn primary" data-action="claim" data-id="${req.id}">Claim</button>`;
   } else if (req.status === 'claimed') {
     actionHtml = `<button class="atc-card-btn" data-action="status" data-id="${req.id}" data-value="in_progress">Start</button>`;
   } else if (req.status === 'in_progress') {
     actionHtml = `<button class="atc-card-btn success" data-action="status" data-id="${req.id}" data-value="done">Land</button>`;
   }
 
+  // Source badge — small icon so the lane reads at a glance whether a card
+  // came from the Bug/Feature form or the Collab modal.
+  const sourceBadge = isFeedback
+    ? (req.type === 'bug'
+        ? '<span class="atc-card-source bug" title="Bug report from Bug/Feature form">🐛</span>'
+        : '<span class="atc-card-source feature" title="Feature request from Bug/Feature form">✨</span>')
+    : '';
+
   return `
-    <article class="atc-card" draggable="true" data-id="${req.id}" data-priority="${escapeHtml(req.priority)}">
+    <article class="atc-card" draggable="true" data-id="${escapeHtml(req.id)}" data-priority="${escapeHtml(req.priority)}">
       <div class="atc-card-tags">
+        ${sourceBadge}
         <span class="pill type-${escapeHtml(req.type)}">${escapeHtml(req.type)}</span>
         <span class="pill prio-${escapeHtml(req.priority)}">${escapeHtml(req.priority)}</span>
       </div>
@@ -2730,24 +2815,19 @@ function _wireATCDashBoard() {
   if (!board || board.dataset.wired) return;
   board.dataset.wired = '1';
 
-  // Card action buttons → PATCH /api/collab/:id
+  // Card action buttons — route to the right API based on the source
+  // (collab vs feedback). Feedback "claim" is mapped to status='triaged'
+  // in the card renderer, so the action button on a feedback card always
+  // sends a status update; collab cards use the original {claim:true}.
   board.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const id = btn.dataset.id;
-    const action = btn.dataset.action;
-    const body = action === 'claim' ? { claim: true } : { status: btn.dataset.value };
+    const item = _atcDashRequests.find(r => String(r.id) === String(id));
+    if (!item) return;
     btn.disabled = true;
     try {
-      const r = await fetch(`/api/collab/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${r.status}`);
-      }
+      await _atcPatch(item, btn.dataset.action === 'claim' ? { claim: true } : { laneStatus: btn.dataset.value });
       await loadCommunityBoard();
       renderActivityFeed();
     } catch (err) {
@@ -2788,24 +2868,51 @@ function _wireATCDashBoard() {
     const item = _atcDashRequests.find(r => String(r.id) === String(id));
     if (!item || item.status === newStatus) return;
     try {
-      const body = (item.status === 'open' && newStatus === 'claimed')
-        ? { claim: true }
-        : { status: newStatus };
-      const r = await fetch(`/api/collab/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${r.status}`);
-      }
+      // Open → Claimed via drag is shorthand for "claim" on collab; for
+      // feedback there's no claim, so the laneStatus path triages it.
+      const claimAlias = (item._source !== 'feedback' && item.status === 'open' && newStatus === 'claimed');
+      await _atcPatch(item, claimAlias ? { claim: true } : { laneStatus: newStatus });
       await loadCommunityBoard();
       renderActivityFeed();
     } catch (err) {
       console.warn('[ATC dash] move failed:', err);
     }
   });
+}
+
+// One PATCH wrapper for both data sources — keeps the click + drop handlers
+// agnostic of which API is involved. `op` is { claim: true } for collab-only
+// claims, or { laneStatus: '<lane>' } for any cross-lane move (we map the
+// lane to the source's native status enum).
+async function _atcPatch(item, op) {
+  if (item._source === 'feedback') {
+    // Feedback never accepts {claim:true}; convert to the closest status.
+    const lane = op.laneStatus || (op.claim ? 'claimed' : null);
+    if (!lane) throw new Error('no status to apply');
+    const status = LANE_TO_FEEDBACK[lane] || 'new';
+    const r = await fetch(`/api/feedback/${encodeURIComponent(item._rawId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${r.status}`);
+    }
+    return;
+  }
+  // Default: collab. {claim:true} stays as-is; {laneStatus} maps directly
+  // since collab's status enum already matches the lane keys.
+  const body = op.claim ? { claim: true } : { status: op.laneStatus };
+  const r = await fetch(`/api/collab/${encodeURIComponent(item._rawId || item.id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${r.status}`);
+  }
 }
 _wireATCDashBoard();
 // Auto-refresh every 20s — matches the standalone /pages/collab.html cadence
