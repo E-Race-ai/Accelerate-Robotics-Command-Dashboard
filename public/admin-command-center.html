@@ -637,14 +637,53 @@
       border-color: #c7d2fe;
       box-shadow: 0 2px 8px rgba(67,56,202,0.10);
     }
+    /* Number circle doubles as a team-health stoplight. Color is computed
+       per-topic from live data (stuck deals, urgent tickets, sprint blockers,
+       toolkit LED density, etc.) so the agenda lights up the meeting's
+       danger zones at a glance — like a control-tower control panel. */
     .agenda-num {
       width: 22px; height: 22px; border-radius: 50%;
-      background: #4338ca; color: white;
+      background: #94a3b8; color: white;
       font-size: 11px; font-weight: 700;
       display: inline-flex; align-items: center; justify-content: center;
       flex-shrink: 0;
+      transition: background 0.3s, box-shadow 0.3s;
+      cursor: help;
     }
     .agenda-num::before { content: counter(agenda); }
+    .agenda-num.health-green {
+      background: #16a34a;
+      box-shadow: 0 0 8px rgba(34,197,94,0.55), inset 0 0 2px rgba(0,0,0,0.10);
+    }
+    .agenda-num.health-yellow {
+      background: #f59e0b;
+      box-shadow: 0 0 8px rgba(245,158,11,0.55), inset 0 0 2px rgba(0,0,0,0.10);
+    }
+    .agenda-num.health-red {
+      background: #dc2626;
+      box-shadow: 0 0 10px rgba(239,68,68,0.65), inset 0 0 2px rgba(0,0,0,0.10);
+      animation: agendaRedPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes agendaRedPulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(239,68,68,0.65), inset 0 0 2px rgba(0,0,0,0.10); }
+      50%      { box-shadow: 0 0 18px rgba(239,68,68,1), inset 0 0 2px rgba(0,0,0,0.10); }
+    }
+    .agenda-num.health-neutral {
+      background: #4338ca;
+    }
+    /* Legend below the agenda tabs explaining what each light means */
+    .agenda-legend {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.7rem; color: #64748b;
+      margin-top: -2px; margin-bottom: 8px;
+    }
+    .agenda-legend-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; margin-right: 4px; vertical-align: middle;
+    }
+    .agenda-legend-dot.green  { background: #16a34a; box-shadow: 0 0 4px rgba(34,197,94,0.6); }
+    .agenda-legend-dot.yellow { background: #f59e0b; box-shadow: 0 0 4px rgba(245,158,11,0.6); }
+    .agenda-legend-dot.red    { background: #dc2626; box-shadow: 0 0 4px rgba(239,68,68,0.6); }
     .agenda-text { min-width: 0; }
     .agenda-text-title {
       font-size: 0.84rem; font-weight: 700; color: #0f172a;
@@ -1519,6 +1558,34 @@
       outline: 2px solid #0055ff;
       outline-offset: 2px;
     }
+    /* Per-tile health dot — replaces the "↗ new" delta that was the same
+       on every tile. Position it where the delta lived. Color is computed
+       per-stat from live data. */
+    .stat-light {
+      position: absolute; top: 8px; right: 10px;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #d4d8df;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .stat-light.green  { background: #16a34a; box-shadow: 0 0 7px rgba(34,197,94,0.6); }
+    .stat-light.yellow { background: #f59e0b; box-shadow: 0 0 7px rgba(245,158,11,0.6); }
+    .stat-light.red    { background: #dc2626; box-shadow: 0 0 9px rgba(239,68,68,0.7); animation: statLightPulse 2.4s ease-in-out infinite; }
+    @keyframes statLightPulse {
+      0%, 100% { box-shadow: 0 0 9px rgba(239,68,68,0.7); }
+      50%      { box-shadow: 0 0 16px rgba(239,68,68,1); }
+    }
+    /* One-line insight under the label — replaces the cryptic sparkline
+       with plain English: "3 stuck >14d", "first close in 30d", etc. */
+    .stat-insight {
+      font-size: 0.66rem;
+      color: #64748b;
+      line-height: 1.35;
+      margin-top: 6px;
+      min-height: 1em;
+      letter-spacing: 0.1px;
+    }
+    .stat-insight.urgent { color: #b91c1c; font-weight: 600; }
+    .stat-insight.good   { color: #15803d; font-weight: 600; }
 
     /* ── Regional micro maps ────────────────────────────────── */
     .region-grid {
@@ -4130,60 +4197,88 @@ function renderStats() {
   const leads = deals.filter(d => d.stage === 'lead').length;
   const qualified = deals.filter(d => ['qualified','site_walk','configured'].includes(d.stage)).length;
   const proposed = deals.filter(d => ['proposed','negotiation'].includes(d.stage)).length;
-  const won = deals.filter(d => ['won','deploying','active'].includes(d.stage)).length;
+  const wonList = deals.filter(d => ['won','deploying','active'].includes(d.stage));
+  const won = wonList.length;
 
-  const totalMRR = deals
-    .filter(d => ['won','deploying','active'].includes(d.stage) && d.value_monthly)
+  const totalMRR = wonList
+    .filter(d => d.value_monthly)
     .reduce((sum, d) => sum + Number(d.value_monthly), 0);
 
   const mrrDisplay = totalMRR >= 1000
     ? { val: (totalMRR / 1000).toFixed(1), prefix: '$', suffix: 'K' }
     : { val: totalMRR, prefix: '$', suffix: '' };
 
-  // Real per-tile sparkline data: when did each grouping's deals get created?
-  const sparkPipeline   = _dailyCounts(active.map(d => d.created_at));
-  const sparkLeads      = _dailyCounts(deals.filter(d => d.stage === 'lead').map(d => d.created_at));
-  const sparkQualified  = _dailyCounts(deals.filter(d => ['qualified','site_walk','configured'].includes(d.stage)).map(d => d.created_at));
-  const sparkProposed   = _dailyCounts(deals.filter(d => ['proposed','negotiation'].includes(d.stage)).map(d => d.created_at));
-  const sparkWon        = _dailyCounts(deals.filter(d => ['won','deploying','active'].includes(d.stage)).map(d => d.closed_at || d.created_at));
-  const sparkProspects  = _dailyCounts([]); // No created_at on the static PROSPECTS list — flat by design
-  // MRR sparkline = cumulative MRR at end of each day in the window
-  const sparkMRR = (() => {
-    const out = new Array(SPARK_WINDOW_DAYS).fill(0);
-    const wonDeals = deals.filter(d => ['won','deploying','active'].includes(d.stage) && d.value_monthly);
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    for (let i = 0; i < SPARK_WINDOW_DAYS; i++) {
-      const dayEnd = new Date(startOfToday.getTime() + (i - SPARK_WINDOW_DAYS + 1) * 86400000 + 86400000);
-      out[i] = wonDeals
-        .filter(d => d.closed_at && new Date(d.closed_at + 'Z') < dayEnd)
-        .reduce((s, d) => s + Number(d.value_monthly || 0), 0);
-    }
-    return out;
-  })();
+  // Health context — used by both stat tiles and the agenda stoplights so
+  // we compute it once. Stat tiles get a green/yellow/red light based on
+  // domain rules below; agenda items consume the same numbers.
+  const ctx = _statHealthContext();
 
-  // Each tile links to its most relevant drill-down view. Stage-filtered
-  // deals URLs use ?stage= which admin-deals.html can pick up later if/when
-  // we add URL-param filtering; today the link still works (lands on kanban).
+  // Per-stat domain rules return { light, insight }. Each insight is plain
+  // English derived from real numbers — no more identical "↗ new" labels.
+  const statHealth = {
+    Pipeline: () => {
+      if (total === 0) return { light: 'red', insight: 'Empty pipeline — add prospects' };
+      if (ctx.stuckDeals > 2) return { light: 'red', insight: `${ctx.stuckDeals} deals stuck >14d` };
+      if (ctx.stuckDeals > 0) return { light: 'yellow', insight: `${ctx.stuckDeals} stuck >14d` };
+      return { light: 'green', insight: `${total} active, all moving` };
+    },
+    Leads: () => {
+      if (leads === 0) return { light: 'red', insight: 'No leads in pipeline' };
+      if (leads <= 2) return { light: 'yellow', insight: 'Top of funnel thin' };
+      return { light: 'green', insight: `${leads} fresh leads` };
+    },
+    Qualified: () => {
+      if (qualified === 0) return { light: 'red', insight: 'Nothing qualified — push leads forward' };
+      if (qualified === 1) return { light: 'yellow', insight: 'Only 1 qualified' };
+      return { light: 'green', insight: `${qualified} qualifying` };
+    },
+    Proposed: () => {
+      if (proposed === 0) return { light: 'red', insight: 'No proposals out' };
+      if (ctx.oldestProposedDays >= 21) return { light: 'red', insight: `Oldest proposal ${ctx.oldestProposedDays}d — escalate` };
+      if (ctx.oldestProposedDays >= 14) return { light: 'yellow', insight: `Oldest proposal ${ctx.oldestProposedDays}d` };
+      return { light: 'green', insight: `${proposed} in negotiation` };
+    },
+    Won: () => {
+      if (won === 0) return { light: 'red', insight: 'No wins yet — focus close' };
+      if (ctx.daysSinceLastClose === null) return { light: 'green', insight: `${won} won` };
+      if (ctx.daysSinceLastClose > 60) return { light: 'red', insight: `${ctx.daysSinceLastClose}d since last close` };
+      if (ctx.daysSinceLastClose > 30) return { light: 'yellow', insight: `${ctx.daysSinceLastClose}d since last close` };
+      return { light: 'green', insight: `Last close ${ctx.daysSinceLastClose}d ago` };
+    },
+    Prospects: () => {
+      const n = (typeof PROSPECTS !== 'undefined' ? PROSPECTS.length : 0);
+      if (n === 0) return { light: 'red', insight: 'No prospects mapped' };
+      if (n < 20) return { light: 'yellow', insight: 'Hopper running thin' };
+      return { light: 'green', insight: `${n} mapped, full hopper` };
+    },
+    MRR: () => {
+      if (totalMRR === 0) return { light: 'red', insight: 'No revenue yet' };
+      if (ctx.closesLast30 === 0) return { light: 'yellow', insight: 'No new MRR in 30d' };
+      return { light: 'green', insight: `+${ctx.closesLast30} close${ctx.closesLast30 === 1 ? '' : 's'} in 30d` };
+    },
+  };
+
+  // Each tile links to its most relevant drill-down view.
   const stats = [
-    { val: total,            lbl: 'Pipeline',  prefix: '', suffix: '', spark: sparkPipeline,  color: '#0055ff', href: '/admin/deals' },
-    { val: leads,            lbl: 'Leads',     prefix: '', suffix: '', spark: sparkLeads,     color: '#0891b2', href: '/admin/deals?stage=lead' },
-    { val: qualified,        lbl: 'Qualified', prefix: '', suffix: '', spark: sparkQualified, color: '#7c3aed', href: '/admin/deals?stage=qualified' },
-    { val: proposed,         lbl: 'Proposed',  prefix: '', suffix: '', spark: sparkProposed,  color: '#d97706', href: '/admin/deals?stage=proposed' },
-    { val: won,              lbl: 'Won',       prefix: '', suffix: '', spark: sparkWon,       color: '#16a34a', href: '/admin/deals?stage=won' },
-    { val: PROSPECTS.length, lbl: 'Prospects', prefix: '', suffix: '', spark: sparkProspects, color: '#0ea5e9', href: '/pages/pipeline-prospects.html' },
-    { val: mrrDisplay.val,   lbl: 'MRR',       prefix: mrrDisplay.prefix, suffix: mrrDisplay.suffix, spark: sparkMRR, color: '#16a34a', href: '/financial-analysis.html' },
+    { val: total,            lbl: 'Pipeline',  prefix: '', suffix: '', href: '/admin/deals' },
+    { val: leads,            lbl: 'Leads',     prefix: '', suffix: '', href: '/admin/deals?stage=lead' },
+    { val: qualified,        lbl: 'Qualified', prefix: '', suffix: '', href: '/admin/deals?stage=qualified' },
+    { val: proposed,         lbl: 'Proposed',  prefix: '', suffix: '', href: '/admin/deals?stage=proposed' },
+    { val: won,              lbl: 'Won',       prefix: '', suffix: '', href: '/admin/deals?stage=won' },
+    { val: (typeof PROSPECTS !== 'undefined' ? PROSPECTS.length : 0), lbl: 'Prospects', prefix: '', suffix: '', href: '/pages/pipeline-prospects.html' },
+    { val: mrrDisplay.val,   lbl: 'MRR',       prefix: mrrDisplay.prefix, suffix: mrrDisplay.suffix, href: '/financial-analysis.html' },
   ];
 
   document.getElementById('statsRow').innerHTML = stats.map((s, i) => {
     const delay = (0.1 + i * 0.05).toFixed(2);
-    const delta = _wowDelta(s.spark);
+    const h = (statHealth[s.lbl] || (() => ({ light: 'neutral', insight: '' })))();
+    const insightClass = h.light === 'red' ? 'urgent' : h.light === 'green' ? 'good' : '';
     return `
-    <a class="brand-stat brand-reveal stat-link" data-delay="${delay}" href="${escapeHtml(s.href)}" title="View ${escapeHtml(s.lbl)} →">
-      <span class="stat-delta ${delta.kind}" title="last 7d vs prior 7d">${_arrow(delta.kind)} ${escapeHtml(delta.txt)}</span>
+    <a class="brand-stat brand-reveal stat-link" data-delay="${delay}" href="${escapeHtml(s.href)}" title="${escapeHtml(s.lbl)} · ${escapeHtml(h.insight)}">
+      <span class="stat-light ${escapeHtml(h.light)}" title="${escapeHtml(h.insight)}"></span>
       <div class="brand-stat-val" data-counter="${s.val}" data-prefix="${s.prefix}" data-suffix="${s.suffix}">0</div>
       <div class="brand-stat-lbl">${s.lbl}</div>
-      ${_sparklineSvg(s.spark, s.color)}
+      <div class="stat-insight ${insightClass}">${escapeHtml(h.insight)}</div>
     </a>`;
   }).join('');
 
@@ -4191,7 +4286,153 @@ function renderStats() {
   // Velocity hero pulls from /api/activities, runs after stats so the page
   // paints quickly with deal data first.
   renderVelocityHero();
+  // Agenda stoplights consume the same context so each numbered circle
+  // turns green/yellow/red based on real signals.
+  _applyAgendaHealth(ctx);
   initRevealAnimations();
+}
+
+// Build the shared health context once per render. Used by both the stat
+// tiles (renderStats) and the agenda stoplights (_applyAgendaHealth).
+function _statHealthContext() {
+  const dayMs = 86400000;
+  const now = Date.now();
+
+  const STUCK_STAGES = ['lead', 'qualified', 'site_walk', 'configured', 'proposed', 'negotiation'];
+  const stuckCutoff = now - 14 * dayMs;
+  const stuckDeals = (deals || []).filter(d => {
+    if (!STUCK_STAGES.includes(d.stage)) return false;
+    const t = d.updated_at ? new Date(d.updated_at + 'Z').getTime() : 0;
+    return t && t < stuckCutoff;
+  }).length;
+
+  // Oldest proposed/negotiation deal age (days)
+  const proposedDeals = (deals || []).filter(d => ['proposed', 'negotiation'].includes(d.stage));
+  let oldestProposedDays = 0;
+  if (proposedDeals.length > 0) {
+    const oldestT = proposedDeals.reduce((acc, d) => {
+      const t = d.updated_at ? new Date(d.updated_at + 'Z').getTime() : 0;
+      return (t && (!acc || t < acc)) ? t : acc;
+    }, 0);
+    oldestProposedDays = oldestT ? Math.floor((now - oldestT) / dayMs) : 0;
+  }
+
+  // Days since last close (closed_at on a won/deploying/active deal)
+  const closedDeals = (deals || []).filter(d => ['won', 'deploying', 'active'].includes(d.stage) && d.closed_at);
+  let daysSinceLastClose = null;
+  if (closedDeals.length > 0) {
+    const newestT = closedDeals.reduce((acc, d) => {
+      const t = new Date(d.closed_at + 'Z').getTime();
+      return (t && t > acc) ? t : acc;
+    }, 0);
+    daysSinceLastClose = newestT ? Math.floor((now - newestT) / dayMs) : null;
+  }
+  const closesLast30 = closedDeals.filter(d =>
+    (now - new Date(d.closed_at + 'Z').getTime()) < 30 * dayMs
+  ).length;
+
+  // ATC stats (collab + feedback combined)
+  const tickets = Array.isArray(_atcDashRequests) ? _atcDashRequests : [];
+  const urgentTickets = tickets.filter(t => t.priority === 'urgent' && t.status !== 'done').length;
+  const today = new Date().toISOString().slice(0, 10);
+  const pastDueTickets = tickets.filter(t => t.due_date && t.due_date < today && t.status !== 'done').length;
+  const opens = tickets.filter(t => t.status === 'open');
+  let oldestTicketDays = 0;
+  if (opens.length > 0) {
+    const oldestT = opens.reduce((acc, t) => {
+      const tt = t.created_at ? new Date(t.created_at + 'Z').getTime() : 0;
+      return (tt && (!acc || tt < acc)) ? tt : acc;
+    }, 0);
+    oldestTicketDays = oldestT ? Math.floor((now - oldestT) / dayMs) : 0;
+  }
+
+  // Sprint health
+  let sprintBlocked = 0, sprintComplete = 0, sprintTotal = 0;
+  if (typeof _hubSprintCache !== 'undefined' && _hubSprintCache) {
+    const flat = (_hubSprintCache.projects || []).flatMap(p => [p, ...(p.tasks || [])]);
+    sprintTotal = flat.length;
+    sprintBlocked = flat.filter(it => it.status === 'blocked').length;
+    sprintComplete = flat.filter(it => it.status === 'complete').length;
+  }
+
+  // 7-day activity volume (any action)
+  const acts7d = (typeof _activityRows !== 'undefined' ? _activityRows : [])
+    .filter(a => {
+      const t = a.created_at ? new Date(a.created_at + 'Z').getTime() : 0;
+      return t && (now - t) < 7 * dayMs;
+    }).length;
+
+  // Toolkit LED density — ratio of tiles with any activity in the last 24h
+  const tiles = document.querySelectorAll('.ql-card[data-module]');
+  let lit = 0, totalTiles = 0;
+  tiles.forEach(card => {
+    totalTiles++;
+    const led = card.querySelector('.ql-led');
+    if (led && (led.classList.contains('low') || led.classList.contains('med') || led.classList.contains('high'))) lit++;
+  });
+  const toolkitLitRatio = totalTiles > 0 ? lit / totalTiles : 0;
+
+  return {
+    stuckDeals, oldestProposedDays, daysSinceLastClose, closesLast30,
+    urgentTickets, pastDueTickets, oldestTicketDays,
+    sprintBlocked, sprintComplete, sprintTotal,
+    acts7d, toolkitLitRatio,
+  };
+}
+
+// Agenda stoplights — color each numbered circle by the health of the
+// section the item maps to. Uses the same context as the stat tiles so a
+// "red" sprint plan light agrees with whatever signals also red elsewhere.
+const AGENDA_HEALTH_KEYS = {
+  // Monday
+  'Sales Velocity check-in': ctx => ctx.closesLast30 >= 1 ? 'green'
+    : (ctx.daysSinceLastClose != null && ctx.daysSinceLastClose < 30) ? 'yellow' : 'red',
+  'Bottlenecks':              ctx => ctx.stuckDeals === 0 ? 'green' : ctx.stuckDeals <= 2 ? 'yellow' : 'red',
+  'Pipeline walk':            ctx => ctx.acts7d > 12 ? 'green' : ctx.acts7d > 4 ? 'yellow' : 'red',
+  'Air Traffic Control triage': ctx => {
+    const sum = ctx.urgentTickets + ctx.pastDueTickets;
+    return sum === 0 ? 'green' : sum <= 2 ? 'yellow' : 'red';
+  },
+  'Map review':               () => 'neutral',
+  'Sprint plan':              ctx => {
+    if (ctx.sprintTotal === 0) return 'neutral';
+    if (ctx.sprintBlocked === 0) return 'green';
+    return ctx.sprintBlocked <= 1 ? 'yellow' : 'red';
+  },
+  'Personal commitments':     () => 'neutral',
+  'Toolkit health':           ctx => ctx.toolkitLitRatio > 0.4 ? 'green' : ctx.toolkitLitRatio > 0.15 ? 'yellow' : 'red',
+  // Friday
+  'What shipped this week':   ctx => ctx.acts7d > 20 ? 'green' : ctx.acts7d > 5 ? 'yellow' : 'red',
+  'Velocity & wins':          ctx => ctx.closesLast30 >= 1 ? 'green' : 'red',
+  'Sprint wrap-up':           ctx => {
+    if (ctx.sprintTotal === 0) return 'neutral';
+    const r = ctx.sprintComplete / ctx.sprintTotal;
+    if (r > 0.6) return 'green';
+    return r > 0.25 ? 'yellow' : 'red';
+  },
+  'Bottleneck escalation':    ctx => ctx.stuckDeals === 0 ? 'green' : ctx.stuckDeals <= 2 ? 'yellow' : 'red',
+  'Ticket cleanup':           ctx => ctx.oldestTicketDays === 0 ? 'green' : ctx.oldestTicketDays <= 7 ? 'yellow' : 'red',
+  'Toolkit cleanup':          ctx => ctx.toolkitLitRatio > 0.4 ? 'green' : ctx.toolkitLitRatio > 0.15 ? 'yellow' : 'red',
+  'Monday prep':              () => 'neutral',
+  'Wins & shoutouts':         ctx => ctx.acts7d > 10 ? 'green' : 'neutral',
+};
+
+function _applyAgendaHealth(ctx) {
+  const items = document.querySelectorAll('#agendaList .agenda-item');
+  items.forEach(item => {
+    const titleEl = item.querySelector('.agenda-text-title');
+    const num = item.querySelector('.agenda-num');
+    if (!titleEl || !num) return;
+    const titleText = titleEl.textContent.trim();
+    const fn = AGENDA_HEALTH_KEYS[titleText] || (() => 'neutral');
+    const light = fn(ctx);
+    num.classList.remove('health-green', 'health-yellow', 'health-red', 'health-neutral');
+    num.classList.add('health-' + light);
+    num.title = light === 'red' ? 'Needs attention'
+              : light === 'yellow' ? 'Watch this'
+              : light === 'green' ? 'On track'
+              : '';
+  });
 }
 
 // ── Workflow step counts ────────────────────────────────────────
