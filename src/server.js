@@ -9,6 +9,7 @@ const path = require('path');
 // The libsql-based db module exports a `ready` promise that server.js awaits before listen().
 const db = require('./db/database');
 
+const { requireAuthPage } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const inquiryRoutes = require('./routes/inquiries');
 const recipientRoutes = require('./routes/recipients');
@@ -97,11 +98,26 @@ const forgotPasswordLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// ── Static files ───────────────��────────────────────────────────
+// ── Auth-gated pages in public/ that must not be publicly accessible ──
+// WHY: These toolkit pages live in public/ but should require login.
+// Explicit routes registered BEFORE express.static so the auth gate wins.
+const PROTECTED_PUBLIC_PAGES = [
+  'financial-analysis.html',
+  'elevator-button-emulator.html',
+  'elevator-install-guide.html',
+];
+for (const page of PROTECTED_PUBLIC_PAGES) {
+  app.get(`/${page}`, requireAuthPage, (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', page));
+  });
+}
+
+// ── Static files ────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
 // WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
+// WHY: requireAuthPage ensures these toolkit pages are only accessible to logged-in users
 // WHY: no-cache ensures dev changes are always picked up — browser still validates with the server
-app.use('/pages', express.static(path.join(__dirname, '..', 'pages'), {
+app.use('/pages', requireAuthPage, express.static(path.join(__dirname, '..', 'pages'), {
   setHeaders: (res) => { res.setHeader('Cache-Control', 'no-cache'); }
 }));
 
@@ -141,8 +157,9 @@ for (const repo of hotelRepos) {
   const siblingPath = path.join(HOTEL_REPOS_SIBLING, repo);
   const bundledPath = path.join(HOTEL_REPOS_BUNDLED, repo);
   // WHY: Prefer sibling (local dev with live edits) over bundled (production fallback)
+  // WHY: requireAuthPage ensures repo pages are only accessible to logged-in users
   const repoPath = fs.existsSync(siblingPath) ? siblingPath : bundledPath;
-  app.use(`/repos/${repo}`, express.static(repoPath));
+  app.use(`/repos/${repo}`, requireAuthPage, express.static(repoPath));
 }
 
 // ── API routes ──────────────────────────────────────────────────

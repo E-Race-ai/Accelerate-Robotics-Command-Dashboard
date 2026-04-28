@@ -93,4 +93,31 @@ function softAuth(req, _res, next) {
   next();
 }
 
-module.exports = { requireAuth, softAuth, requireRole, requirePermission, JWT_SECRET };
+/**
+ * Page-level auth gate for static HTML served behind login.
+ * Unlike requireAuth (which returns 401 JSON for APIs), this redirects
+ * unauthenticated browsers to the login page.
+ */
+function requireAuthPage(req, res, next) {
+  const token = req.cookies?.token;
+
+  if (!token) {
+    if (IS_PRODUCTION) {
+      return res.redirect('/admin-login');
+    }
+    // WHY: Dev passes through so local development doesn't require login
+    return next();
+  }
+
+  try {
+    jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    if (IS_PRODUCTION) {
+      return res.redirect('/admin-login');
+    }
+    next();
+  }
+}
+
+module.exports = { requireAuth, softAuth, requireRole, requirePermission, requireAuthPage, JWT_SECRET };
