@@ -227,6 +227,67 @@
       background: #f8fafc; border-color: #cbd5e1; color: #0f172a;
     }
 
+    /* ── Stealth Mode ────────────────────────────────────────────────
+       Per-card flag for confidential projects. The card stays in the
+       layout (so the team still sees activity is happening) but its
+       identifying details are masked. State is persisted client-side
+       in localStorage keyed by data-module so it survives reloads.
+       The toggle button is visible on hover; click to flip the state. */
+    .ql-card { position: relative; }
+    .ql-card .stealth-toggle {
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(4px);
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.12s, border-color 0.12s, background 0.12s;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      color: #64748b;
+      padding: 0; line-height: 1;
+      z-index: 2;
+    }
+    .ql-card:hover .stealth-toggle,
+    .ql-card.is-stealth .stealth-toggle { opacity: 1; }
+    .ql-card .stealth-toggle:hover {
+      background: white;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+    /* Stealthed appearance: keep dimensions, mask identifying content,
+       drop the accent color so it doesn't broadcast which team it is. */
+    .ql-card.is-stealth {
+      --ql-accent: #94a3b8 !important;
+      background: repeating-linear-gradient(
+        135deg,
+        #f8fafc 0px, #f8fafc 8px,
+        #f1f5f9 8px, #f1f5f9 16px
+      );
+      pointer-events: none;
+    }
+    .ql-card.is-stealth .stealth-toggle { pointer-events: auto; }
+    .ql-card.is-stealth .ql-icon,
+    .ql-card.is-stealth .ql-title,
+    .ql-card.is-stealth .ql-desc,
+    .ql-card.is-stealth .ql-roster,
+    .ql-card.is-stealth .ql-recent { visibility: hidden; }
+    .ql-card.is-stealth::after {
+      content: "🔒  Confidential";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: 0.02em;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .dept-block { opacity: 1; transform: none; }
       .dept-block.drop-in { animation: none; }
@@ -2637,6 +2698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   renderToolkitRosters();
+  applyToolkitStealth();
   refreshAll();
 });
 
@@ -2810,6 +2872,63 @@ async function renderToolkitRosters() {
 
   // Once owners are populated, refresh sort if a non-default mode is active.
   if (typeof applyToolkitSort === 'function') applyToolkitSort();
+}
+
+// ── Toolkit Stealth Mode ──────────────────────────────────────
+// Per-card confidentiality flag for sensitive projects. State lives in
+// localStorage keyed by data-module so it persists across reloads. The
+// card stays in the layout — masked, not removed — so the team still
+// sees that work is happening without seeing what it is.
+// WHY: localStorage (not server) for v1 — keeps the change small and avoids
+// a schema/migration. Trade-off is per-browser state. Move to API later if
+// the team needs synced stealth across devices.
+const STEALTH_LS_KEY = 'toolkit:stealth:v1';
+
+function _readStealth() {
+  try {
+    const raw = localStorage.getItem(STEALTH_LS_KEY);
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw));
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function _writeStealth(set) {
+  try {
+    localStorage.setItem(STEALTH_LS_KEY, JSON.stringify([...set]));
+  } catch (e) { /* quota or private mode — fail quietly */ }
+}
+
+function applyToolkitStealth() {
+  const stealth = _readStealth();
+  document.querySelectorAll('.ql-card[data-module]').forEach(card => {
+    const mod = card.dataset.module;
+    const on = stealth.has(mod);
+    card.classList.toggle('is-stealth', on);
+
+    // Inject the toggle button once. The button isn't a child <a>, so
+    // clicking it inside a card-as-link doesn't navigate; we stopPropagation
+    // and preventDefault to be safe.
+    let btn = card.querySelector('.stealth-toggle');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'stealth-toggle';
+      btn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const cur = _readStealth();
+        if (cur.has(mod)) cur.delete(mod); else cur.add(mod);
+        _writeStealth(cur);
+        applyToolkitStealth();
+      });
+      card.appendChild(btn);
+    }
+    btn.textContent = on ? '🔓' : '🔒';
+    btn.title = on ? 'Reveal — make this card visible to the team' : 'Stealth — mask this card as confidential';
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
 }
 
 // ── Toolkit sort/group ────────────────────────────────────────
