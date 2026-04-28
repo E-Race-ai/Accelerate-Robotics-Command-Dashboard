@@ -567,6 +567,113 @@
     .map-tab-panel-controls {
       display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
     }
+    /* ── Meeting Agenda card ────────────────────────────────── */
+    .agenda-card {
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      border: 1px solid #e0e7ff;
+      border-left: 3px solid #4338ca;
+      border-radius: 14px;
+      padding: 14px 18px;
+      box-shadow: 0 2px 6px rgba(67,56,202,0.06);
+    }
+    .agenda-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .agenda-title {
+      display: inline-flex; align-items: baseline; gap: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 800; font-size: 1rem; color: #0f172a;
+    }
+    .agenda-icon { font-size: 1.05rem; }
+    .agenda-clock {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; color: #64748b; font-weight: 500;
+      margin-left: 4px;
+    }
+    .agenda-tabs {
+      display: flex; gap: 4px;
+      padding: 3px;
+      background: #f1f5f9; border: 1px solid #e5e7eb;
+      border-radius: 999px;
+      align-items: center;
+    }
+    .agenda-tab {
+      background: transparent; border: 1px solid transparent;
+      padding: 4px 12px; border-radius: 999px;
+      font-size: 11.5px; font-weight: 700; color: #475569; cursor: pointer;
+      transition: all 0.12s;
+    }
+    .agenda-tab:hover { background: white; color: #0f172a; }
+    .agenda-tab.active {
+      background: #0c1220; color: white;
+    }
+    .agenda-print {
+      background: transparent; border: none;
+      font-size: 14px; padding: 4px 6px;
+      cursor: pointer; color: #475569;
+      transition: transform 0.1s;
+    }
+    .agenda-print:hover { transform: scale(1.15); }
+    .agenda-list {
+      list-style: none;
+      counter-reset: agenda;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 8px;
+      padding: 0; margin: 0;
+    }
+    .agenda-item {
+      counter-increment: agenda;
+      display: grid; grid-template-columns: auto 1fr auto;
+      gap: 10px; align-items: start;
+      padding: 8px 10px;
+      background: white;
+      border: 1px solid #eef2f7;
+      border-radius: 9px;
+      transition: border-color 0.12s, box-shadow 0.12s;
+    }
+    .agenda-item:hover {
+      border-color: #c7d2fe;
+      box-shadow: 0 2px 8px rgba(67,56,202,0.10);
+    }
+    .agenda-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #4338ca; color: white;
+      font-size: 11px; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .agenda-num::before { content: counter(agenda); }
+    .agenda-text { min-width: 0; }
+    .agenda-text-title {
+      font-size: 0.84rem; font-weight: 700; color: #0f172a;
+      line-height: 1.3;
+    }
+    .agenda-text-title a { color: inherit; text-decoration: none; }
+    .agenda-text-title a:hover { color: #4338ca; text-decoration: underline; }
+    .agenda-text-desc {
+      font-size: 0.74rem; color: #64748b; line-height: 1.4;
+      margin-top: 2px;
+    }
+    .agenda-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; font-weight: 700;
+      color: #4338ca;
+      background: #eef2ff;
+      padding: 2px 7px; border-radius: 999px;
+      white-space: nowrap;
+      align-self: flex-start;
+    }
+    /* Print styles — when the user hits "Print Agenda", strip everything
+       except the agenda card so meeting notes are clean. */
+    @media print {
+      body * { visibility: hidden; }
+      #meetingAgenda, #meetingAgenda * { visibility: visible; }
+      #meetingAgenda { position: absolute; top: 0; left: 0; width: 100%; }
+      .agenda-tabs, .agenda-print { display: none !important; }
+      .agenda-card { box-shadow: none; border: 1px solid #94a3b8; }
+    }
     /* ── Community Help Board (embedded mini-collab) ─────────── */
     .cb-grid {
       display: grid;
@@ -1590,14 +1697,38 @@
 
       <!-- Quick-nav: sticky jumplist so the 10+ sections feel one click away -->
       <nav class="dashboard-quicknav" id="dashboardQuicknav" aria-label="Jump to section">
+        <a href="#meetingAgenda"    data-target="meetingAgenda">Agenda</a>
         <a href="#velocityHero"     data-target="velocityHero">Velocity</a>
         <a href="#workflowPipeline" data-target="workflowPipeline">Pipeline</a>
         <a href="#communityBoard"   data-target="communityBoard">Community</a>
         <a href="#dealMap"          data-target="dealMap">Map</a>
-        <a href="#regionalMaps"     data-target="regionalMaps">Regions</a>
         <a href="#projectHub"       data-target="projectHub">Team Sync</a>
         <a href="#toolkitSection"   data-target="toolkitSection">Toolkit</a>
       </nav>
+
+      <!-- ═══ Meeting Agenda — Monday standup / Friday recap walkthrough ═══ -->
+      <!-- WHY: Each numbered item is a stop on the dashboard with a time
+           budget; clicking the item smooth-scrolls to the relevant section.
+           Auto-picks the right tab based on today's day-of-week. -->
+      <div class="mb-4 brand-reveal" data-delay="0.04" id="meetingAgenda">
+        <div class="agenda-card">
+          <div class="agenda-head">
+            <div class="agenda-title">
+              <span class="agenda-icon">📋</span>
+              <span>Meeting Agenda</span>
+              <span class="agenda-clock" id="agendaClock"></span>
+            </div>
+            <div class="agenda-tabs" role="tablist" aria-label="Meeting day">
+              <button class="agenda-tab" data-day="monday" type="button" role="tab" aria-selected="false">📅 Monday · Week ahead</button>
+              <button class="agenda-tab" data-day="friday" type="button" role="tab" aria-selected="false">🗓️ Friday · Recap & close</button>
+              <button class="agenda-print" id="agendaPrint" type="button" title="Print agenda">🖨️</button>
+            </div>
+          </div>
+          <ol class="agenda-list" id="agendaList">
+            <!-- Populated by JS -->
+          </ol>
+        </div>
+      </div>
 
       <!-- ═══ Sales Velocity hero (composite of speed / force / conversion) ═══ -->
       <div class="velocity-hero brand-reveal mb-4" data-delay="0.05" id="velocityHero">
@@ -2631,6 +2762,107 @@ function _initMapTabs() {
   });
 }
 _initMapTabs();
+
+// ── Meeting Agenda ─────────────────────────────────────────────
+// Two preset agendas (Monday standup + Friday recap), each a numbered
+// walkthrough of the dashboard. Each item links to a section anchor so
+// the meeting facilitator clicks down the list in order.
+const AGENDA_MONDAY = {
+  total: 60,
+  label: 'Monday standup · 60 min · set the week',
+  items: [
+    { time: 5,  target: 'velocityHero',     title: 'Sales Velocity check-in',
+      desc: 'Where did we end last week? Look at projected MRR and the +/- delta. Anyone celebrate a close?' },
+    { time: 5,  target: 'velocityHero',     title: 'Bottlenecks',
+      desc: 'Any deals stuck 14+ days? Assign an owner to unstick each red callout this week.' },
+    { time: 10, target: 'workflowPipeline', title: 'Pipeline walk',
+      desc: 'Step 1 → Step 5. Where are we adding effort this week? Any chips with low counts that need feeding?' },
+    { time: 10, target: 'communityBoard',   title: 'Air Traffic Control triage',
+      desc: 'Walk Inbound lane. Triage urgent tickets, assign claims, surface bug/feature submissions.' },
+    { time: 5,  target: 'dealMap',          title: 'Map review',
+      desc: 'Regional momentum, prospect coverage, any cities to push on.' },
+    { time: 15, target: 'projectHub',       title: 'Sprint plan',
+      desc: 'Set this week\'s top priorities. Mark blockers. Confirm milestone dates. Each person walks their My Focus.' },
+    { time: 5,  target: 'projectHub',       title: 'Personal commitments',
+      desc: 'Each department lead names their one ship-this-week priority for the activity stream.' },
+    { time: 5,  target: 'toolkitSection',   title: 'Toolkit health',
+      desc: 'Which tile LEDs are dim? Anything we need to revive or retire?' },
+  ],
+};
+const AGENDA_FRIDAY = {
+  total: 60,
+  label: 'Friday recap · 60 min · close out, prep for Monday',
+  items: [
+    { time: 5,  target: 'projectHub',       title: 'What shipped this week',
+      desc: 'Switch the activity stream to "Since Mon." Walk the highlights. Shoutouts.' },
+    { time: 5,  target: 'velocityHero',     title: 'Velocity & wins',
+      desc: 'Did velocity move? What closed? Any deal-won 🎉 to celebrate?' },
+    { time: 15, target: 'projectHub',       title: 'Sprint wrap-up',
+      desc: 'Mark sprint items complete. Identify spillover. Nothing should leave Friday flagged blocked without a plan.' },
+    { time: 5,  target: 'velocityHero',     title: 'Bottleneck escalation',
+      desc: 'Any deal still stuck after a week of attention? Decide: re-own, escalate, or kill.' },
+    { time: 10, target: 'communityBoard',   title: 'Ticket cleanup',
+      desc: 'Land everything that\'s done. Archive resolved feedback. Inbound should be < 5 going into Monday.' },
+    { time: 5,  target: 'toolkitSection',   title: 'Toolkit cleanup',
+      desc: 'Tools that went dark this week? Update or remove. Confirm activity LEDs reflect reality.' },
+    { time: 10, target: 'projectHub',       title: 'Monday prep',
+      desc: 'Pick the top 3 priorities for next week. Pre-claim ATC tickets. Each person leaves with a Monday-morning plan.' },
+    { time: 5,  target: 'projectHub',       title: 'Wins & shoutouts',
+      desc: 'Round-the-table: one person each shouts out a teammate. Posts to the activity stream.' },
+  ],
+};
+
+function _renderAgenda(day) {
+  const list = document.getElementById('agendaList');
+  const clock = document.getElementById('agendaClock');
+  if (!list) return;
+  const agenda = day === 'friday' ? AGENDA_FRIDAY : AGENDA_MONDAY;
+  if (clock) clock.textContent = '· ' + agenda.label;
+
+  list.innerHTML = agenda.items.map(item => `
+    <li class="agenda-item">
+      <span class="agenda-num"></span>
+      <div class="agenda-text">
+        <div class="agenda-text-title"><a href="#${escapeHtml(item.target)}">${escapeHtml(item.title)}</a></div>
+        <div class="agenda-text-desc">${escapeHtml(item.desc)}</div>
+      </div>
+      <span class="agenda-time">${item.time} min</span>
+    </li>
+  `).join('');
+
+  // Update tab active state
+  document.querySelectorAll('.agenda-tab').forEach(t => {
+    const on = t.dataset.day === day;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
+
+function _initAgenda() {
+  const container = document.getElementById('meetingAgenda');
+  if (!container) return;
+
+  // Auto-pick the day: Mon = monday, Fri/Sat/Sun = friday (recap window),
+  // mid-week defaults to whichever is closer.
+  // 0=Sunday, 1=Monday, 5=Friday, 6=Saturday
+  const dow = new Date().getDay();
+  let initial;
+  if (dow === 1) initial = 'monday';
+  else if (dow === 5 || dow === 6 || dow === 0) initial = 'friday';
+  else initial = (dow <= 3) ? 'monday' : 'friday';
+
+  _renderAgenda(initial);
+
+  // Tab clicks
+  container.querySelectorAll('.agenda-tab').forEach(tab => {
+    tab.addEventListener('click', () => _renderAgenda(tab.dataset.day));
+  });
+
+  // Print → CSS @media print strips everything except #meetingAgenda
+  const print = document.getElementById('agendaPrint');
+  if (print) print.addEventListener('click', () => window.print());
+}
+_initAgenda();
 
 // ── Air Traffic Control board (embedded full version on dashboard) ──
 // Full 4-lane kanban with drag-drop, mirrors /pages/collab.html. Post-update
