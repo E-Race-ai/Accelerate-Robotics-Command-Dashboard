@@ -427,6 +427,80 @@
       font-family: 'JetBrains Mono', monospace;
     }
     .hub-milestone-row .ms-when.overdue { color: #b91c1c; font-weight: 700; }
+    /* ── My Focus panel (top of left column) ─────────────────── */
+    /* Stack the My Focus card above the sprint panel inside the left column. */
+    .hub-left-stack {
+      display: flex; flex-direction: column; gap: 14px;
+      min-width: 0;
+    }
+    .my-focus {
+      background: linear-gradient(180deg, #ffffff, #fafbff);
+      border: 1px solid #e0e7ff;
+      box-shadow: 0 2px 6px rgba(99,102,241,0.06);
+      padding: 16px 18px;
+    }
+    .my-focus-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .my-focus-title {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem; font-weight: 700; color: #0f172a;
+    }
+    .my-focus-icon { font-size: 1.05rem; }
+    .my-focus-name { color: #4338ca; }
+    .my-focus-count {
+      background: #4338ca; color: white;
+      padding: 2px 9px; border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+    }
+    .my-focus-empty {
+      padding: 14px 0; text-align: center;
+      color: #94a3b8; font-size: 0.85rem;
+    }
+    .my-focus-empty .em { color: #16a34a; font-weight: 600; }
+    /* A small section header inside My Focus separating each category */
+    .my-focus-group {
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+      font-weight: 700; color: #6366f1; letter-spacing: 1.4px;
+      text-transform: uppercase;
+      padding: 8px 0 4px;
+      border-bottom: 1px dashed #e0e7ff;
+      margin-bottom: 4px;
+    }
+    .my-focus-group .gn { color: #c7d2fe; margin-left: 4px; }
+    .my-focus-group:first-child { padding-top: 0; }
+    .my-focus-row {
+      display: grid; grid-template-columns: auto 1fr auto;
+      gap: 10px; align-items: center;
+      padding: 7px 0;
+      font-size: 0.84rem;
+    }
+    .my-focus-row + .my-focus-row { border-top: 1px solid #f3f4f6; }
+    .my-focus-row .mf-label {
+      font-size: 9px; font-weight: 700;
+      padding: 2px 6px; border-radius: 4px;
+      letter-spacing: 0.4px; text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+    }
+    .my-focus-row .mf-label.deal      { background: #dbeafe; color: #1e40af; }
+    .my-focus-row .mf-label.claimed   { background: #ddd6fe; color: #5b21b6; }
+    .my-focus-row .mf-label.tagged    { background: #fef3c7; color: #92400e; }
+    .my-focus-row .mf-label.tracker   { background: #dcfce7; color: #166534; }
+    .my-focus-row .mf-name {
+      color: #0f172a; font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      min-width: 0;
+    }
+    .my-focus-row .mf-name a { color: inherit; text-decoration: none; }
+    .my-focus-row .mf-name a:hover { color: #4338ca; text-decoration: underline; }
+    .my-focus-row .mf-meta {
+      font-size: 0.7rem; color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace; white-space: nowrap;
+    }
+    .my-focus-row .mf-meta.urgent { color: #b91c1c; font-weight: 700; }
     /* ── Community Help Board (embedded mini-collab) ─────────── */
     .cb-grid {
       display: grid;
@@ -1711,10 +1785,27 @@
           </div>
         </div>
 
-        <!-- Two-pane main row: sprint LEFT, activity stream RIGHT -->
+        <!-- Two-pane main row: sprint LEFT (with My Focus), activity stream RIGHT -->
         <div class="hub-grid hub-merged">
-          <div class="hub-panel" id="hubSprint">
-            <div class="hub-loading">Loading sprint…</div>
+          <div class="hub-left-stack">
+            <!-- Personal focus panel — what's specifically on the current
+                 logged-in admin's plate (deals, claimed tickets, tagged
+                 tickets, tracker items). -->
+            <div class="hub-panel my-focus" id="myFocusPanel" style="display:none;">
+              <div class="my-focus-head">
+                <div class="my-focus-title">
+                  <span class="my-focus-icon">🎯</span>
+                  <span><span class="my-focus-name" id="myFocusName">My focus</span> — on your plate</span>
+                </div>
+                <span class="my-focus-count" id="myFocusCount">0</span>
+              </div>
+              <div id="myFocusBody">
+                <div class="hub-loading">Loading…</div>
+              </div>
+            </div>
+            <div class="hub-panel" id="hubSprint">
+              <div class="hub-loading">Loading sprint…</div>
+            </div>
           </div>
 
           <div class="hub-panel hub-activity">
@@ -2613,6 +2704,163 @@ _wireATCDashBoard();
 // and reinforces the "live" feel of the LIVE dot in the header.
 setInterval(loadCommunityBoard, 20000);
 
+// ── My Focus ──────────────────────────────────────────────────
+// Cross-references the logged-in admin against deals (owner email),
+// collab requests (claimed_by, target_user emails), and tracker items
+// (matched by full_name → tracker_people.full_name). Renders one stacked
+// list at the top of the left column so each user sees what's on their
+// plate first when reviewing the Team Sync Hub.
+let _currentUser = null;        // { email, role, name? } from /api/auth/me
+let _collabAllRequests = null;  // cached most-recent /api/collab list
+
+async function _fetchCurrentUser() {
+  if (_currentUser) return _currentUser;
+  try {
+    const r = await fetch('/api/auth/me');
+    if (r.ok) _currentUser = await r.json();
+  } catch { /* non-fatal — panel just stays hidden */ }
+  return _currentUser;
+}
+
+// Reuse the ATC board's cached collab list when it's been populated to avoid
+// a second round-trip per refresh; fall back to a fresh fetch on first paint.
+async function _ensureCollabForFocus() {
+  if (Array.isArray(_atcDashRequests) && _atcDashRequests.length >= 0
+      && _atcDashRequests !== _collabAllRequests) {
+    _collabAllRequests = _atcDashRequests;
+  }
+  if (!_collabAllRequests) {
+    try {
+      const r = await fetch('/api/collab');
+      if (r.ok) _collabAllRequests = await r.json();
+    } catch { _collabAllRequests = []; }
+  }
+}
+
+async function renderMyFocus() {
+  const panel = document.getElementById('myFocusPanel');
+  if (!panel) return;
+  const user = await _fetchCurrentUser();
+  if (!user || !user.email) {
+    // Anonymous / dev mode without a real cookie — hide the panel entirely.
+    panel.style.display = 'none';
+    return;
+  }
+
+  await _ensureCollabForFocus();
+
+  const userEmail = String(user.email || '').toLowerCase();
+  const userName = String(user.name || user.email.split('@')[0]).toLowerCase();
+  const firstName = (user.name || user.email).split(/[\s@]+/)[0];
+
+  // 1) Deals where I'm owner. `deals` is the global from refreshAll.
+  const myDeals = (Array.isArray(deals) ? deals : [])
+    .filter(d => d.stage !== 'lost' && d.owner && String(d.owner).toLowerCase() === userEmail);
+
+  // 2) Collab tickets I've claimed (still active)
+  const myClaimed = (_collabAllRequests || [])
+    .filter(c => c.claimed_by && String(c.claimed_by).toLowerCase() === userEmail
+              && c.status !== 'done' && c.status !== 'archived');
+
+  // 3) Open collab tickets tagged for me (target_user matches my email or name)
+  const myTagged = (_collabAllRequests || [])
+    .filter(c => c.status === 'open' && c.target_user && (
+      String(c.target_user).toLowerCase() === userEmail
+      || String(c.target_user).toLowerCase() === userName
+    ));
+
+  // 4) Tracker items where my full_name matches a tracker_people row.
+  // The cached sprint detail (_hubSprintCache) carries .people; we look up
+  // by case-insensitive full_name match. Owner OR support counts.
+  const myTrackerItems = [];
+  if (_hubSprintCache && _hubSprintCache.people) {
+    const meRow = _hubSprintCache.people.find(p =>
+      String(p.full_name || '').toLowerCase() === userName
+      || String(p.initials || '').toLowerCase() === userName
+    );
+    if (meRow) {
+      const flat = (_hubSprintCache.projects || [])
+        .flatMap(p => [p, ...(p.tasks || [])]);
+      for (const it of flat) {
+        if (it.status === 'complete') continue;
+        if (it.owner_id === meRow.id || (it.support_ids || []).includes(meRow.id)) {
+          myTrackerItems.push({ ...it, _ownership: it.owner_id === meRow.id ? 'owner' : 'support' });
+        }
+      }
+    }
+  }
+
+  const total = myDeals.length + myClaimed.length + myTagged.length + myTrackerItems.length;
+
+  // Greet the user, even if there's nothing on their plate
+  document.getElementById('myFocusName').textContent = firstName;
+  document.getElementById('myFocusCount').textContent = total;
+
+  if (total === 0) {
+    panel.style.display = '';
+    document.getElementById('myFocusBody').innerHTML = `
+      <div class="my-focus-empty">
+        <span class="em">🎉 You're caught up.</span> Nothing assigned, claimed, or tagged for you right now.
+      </div>
+    `;
+    return;
+  }
+
+  panel.style.display = '';
+
+  // Build the rendered groups. Order is intentional: things tagged for you
+  // come first (someone explicitly asked), then claimed (committed work),
+  // then tracker (active project work), then deals (long-running ownership).
+  const today = new Date().toISOString().slice(0, 10);
+  const sections = [];
+
+  if (myTagged.length) {
+    const rows = myTagged.map(c => `
+      <div class="my-focus-row">
+        <span class="mf-label tagged">tagged</span>
+        <span class="mf-name"><a href="/pages/collab.html">${escapeHtml(c.title)}</a></span>
+        <span class="mf-meta ${c.priority === 'urgent' ? 'urgent' : ''}">${escapeHtml(c.priority)} · ${timeAgo(c.created_at)}</span>
+      </div>
+    `).join('');
+    sections.push(`<div class="my-focus-group">Tagged for you<span class="gn">· ${myTagged.length}</span></div>${rows}`);
+  }
+  if (myClaimed.length) {
+    const rows = myClaimed.map(c => `
+      <div class="my-focus-row">
+        <span class="mf-label claimed">claimed</span>
+        <span class="mf-name"><a href="/pages/collab.html">${escapeHtml(c.title)}</a></span>
+        <span class="mf-meta">${escapeHtml(c.status.replace('_', ' '))} · ${timeAgo(c.claimed_at || c.created_at)}</span>
+      </div>
+    `).join('');
+    sections.push(`<div class="my-focus-group">Tickets you've claimed<span class="gn">· ${myClaimed.length}</span></div>${rows}`);
+  }
+  if (myTrackerItems.length) {
+    const rows = myTrackerItems.map(it => {
+      const overdue = it.end_date && it.end_date < today;
+      return `
+        <div class="my-focus-row">
+          <span class="mf-label tracker">${it._ownership}</span>
+          <span class="mf-name"><a href="/admin/project-tracker">${escapeHtml(it.name)}</a></span>
+          <span class="mf-meta ${overdue ? 'urgent' : ''}">${escapeHtml(it.status.replace('_', ' '))}${it.end_date ? ' · ' + escapeHtml(it.end_date.slice(5)) : ''}</span>
+        </div>
+      `;
+    }).join('');
+    sections.push(`<div class="my-focus-group">Sprint items<span class="gn">· ${myTrackerItems.length}</span></div>${rows}`);
+  }
+  if (myDeals.length) {
+    const rows = myDeals.map(d => `
+      <div class="my-focus-row">
+        <span class="mf-label deal">deal</span>
+        <span class="mf-name"><a href="/admin/deals?stage=${encodeURIComponent(d.stage)}">${escapeHtml(d.name)}</a></span>
+        <span class="mf-meta">${escapeHtml(d.stage)}</span>
+      </div>
+    `).join('');
+    sections.push(`<div class="my-focus-group">Deals you own<span class="gn">· ${myDeals.length}</span></div>${rows}`);
+  }
+
+  document.getElementById('myFocusBody').innerHTML = sections.join('');
+}
+
 // ── Project Hub ───────────────────────────────────────────────
 // Embedded sprint table + post-update form. The full /admin/project-tracker
 // page is the editing surface; this is the read-mostly coordination view.
@@ -3138,6 +3386,9 @@ async function refreshAll() {
   renderToolkitActivityLeds();
   loadProjectHub();
   loadCommunityBoard();
+  // My Focus runs after community board so its cache is warm; also waits
+  // implicitly for loadProjectHub to set _hubSprintCache for tracker rows.
+  renderMyFocus();
   document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
