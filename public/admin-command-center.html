@@ -4586,17 +4586,24 @@ function renderDealList() {
 // Each lane has its own dot color so the feed reads at a glance.
 const ACTIVITY_LANES = {
   // Outreach
-  'inquiry_received':   { lane: 'outreach', color: '#0ea5e9', label: 'submitted an inquiry on' },
-  'prospect_added':     { lane: 'outreach', color: '#0ea5e9', label: 'added prospect' },
+  'inquiry_received':     { lane: 'outreach', color: '#0ea5e9', label: 'submitted an inquiry on' },
+  'prospect_added':       { lane: 'outreach', color: '#0ea5e9', label: 'added prospect' },
   // Contract
-  'deal_created':       { lane: 'contract', color: '#0055ff', label: 'created deal' },
-  'stage_changed':      { lane: 'contract', color: '#0055ff', label: 'moved' },
-  'assessment_started': { lane: 'contract', color: '#7c3aed', label: 'started assessment for' },
+  'deal_created':         { lane: 'contract', color: '#0055ff', label: 'created deal' },
+  'stage_changed':        { lane: 'contract', color: '#0055ff', label: 'moved' },
+  'assessment_started':   { lane: 'contract', color: '#7c3aed', label: 'started assessment for' },
   // Launch
-  'deal_won':           { lane: 'launch',   color: '#16a34a', label: 'won' },
-  // Active / 24-7
-  'bug_reported':       { lane: 'active',   color: '#dc2626', label: 'reported a bug' },
-  'feature_requested':  { lane: 'active',   color: '#7c3aed', label: 'requested a feature' },
+  'deal_won':             { lane: 'launch',   color: '#16a34a', label: 'won' },
+  // Active / 24-7 — team comms, ticket churn, bug/feature reports
+  'bug_reported':         { lane: 'active',   color: '#dc2626', label: 'reported a bug' },
+  'feature_requested':    { lane: 'active',   color: '#7c3aed', label: 'requested a feature' },
+  'improvement_requested':{ lane: 'active',   color: '#7c3aed', label: 'asked to improve' },
+  'team_update':          { lane: 'active',   color: '#2563eb', label: 'posted an update' },
+  'standup':              { lane: 'active',   color: '#16a34a', label: 'posted standup' },
+  'shoutout':             { lane: 'active',   color: '#d97706', label: 'shouted out' },
+  'collab_requested':     { lane: 'active',   color: '#ea580c', label: 'opened collab ticket' },
+  'collab_claimed':       { lane: 'active',   color: '#0284c7', label: 'claimed' },
+  'collab_completed':     { lane: 'active',   color: '#16a34a', label: 'completed collab' },
 };
 const LANE_LABELS = {
   outreach: 'Outreach',
@@ -4780,12 +4787,27 @@ function _renderActivityRow(r) {
   let target = r.deal_name || '';
   let extraHtml = '';
   let detailObj = null;
+  // Inline body excerpt for team posts (team_update / standup / shoutout) so
+  // the row reads as a sentence instead of just "Eric Race team_update".
+  // 90 chars keeps the row to one visual line at typical widths.
+  const TEAM_POST_INLINE_MAX = 90;
   try {
     if (r.detail) {
       detailObj = JSON.parse(r.detail);
       if (detailObj) {
         if (!target && detailObj.name) target = detailObj.name;
         if (detailObj.title) target = detailObj.title;
+        // Team posts carry the message in detail.body — surface it inline
+        if (!target && detailObj.body) {
+          const body = String(detailObj.body).trim();
+          target = body.length > TEAM_POST_INLINE_MAX
+            ? body.slice(0, TEAM_POST_INLINE_MAX - 1) + '…'
+            : body;
+        }
+        // Tagged target_user on a collab ticket → show "→ Person" suffix
+        if (detailObj.target_user && (r.action === 'collab_requested' || r.action === 'collab_claimed')) {
+          extraHtml = `<span style="color:#9ca3af;font-size:0.78rem;"> · → ${escapeHtml(detailObj.target_user)}</span>`;
+        }
         // Stage move: render colored from → to pills instead of plain text
         if (detailObj.from && detailObj.to) {
           extraHtml = `<span class="stage-pair">${_stagePill(detailObj.from)}<span class="arrow">→</span>${_stagePill(detailObj.to)}</span>`;
@@ -4800,15 +4822,33 @@ function _renderActivityRow(r) {
   const initials = _initials(actor);
   const avatarColor = _colorFromString(actor);
 
-  // Build the inline detail panel content (revealed on row click)
+  // Build the inline detail panel content (revealed on row click).
+  // Render structured fields as labeled rows; only fall back to a JSON pre
+  // for unrecognized payloads so the panel reads as English, not a dump.
   const expandParts = [];
   expandParts.push(`<div><span class="field-label">action</span> ${escapeHtml(r.action)}</div>`);
   expandParts.push(`<div><span class="field-label">when</span> ${escapeHtml(r.created_at || '?')} <span style="color:#cbd5e1;">·</span> <span style="color:#94a3b8;">${ago}</span></div>`);
   if (r.deal_id) {
     expandParts.push(`<a class="quick-link" href="/admin/deals?id=${encodeURIComponent(r.deal_id)}">Open deal ${escapeHtml(r.deal_id)} →</a>`);
   }
-  if (detailObj) {
-    expandParts.push(`<div style="margin-top:6px;"><span class="field-label">details</span><pre>${escapeHtml(JSON.stringify(detailObj, null, 2))}</pre></div>`);
+  if (detailObj && typeof detailObj === 'object') {
+    const known = new Set(['body','title','name','from','to','severity','target_user','priority','collab_id','feedback_id','item_id','source','inquiry_id','company','email','screenshots']);
+    if (detailObj.body) {
+      expandParts.push(`<div style="margin-top:6px;"><span class="field-label">message</span><blockquote style="margin:4px 0 0;padding:6px 10px;border-left:3px solid #cbd5e1;color:#334155;background:#f8fafc;border-radius:0 4px 4px 0;white-space:pre-wrap;">${escapeHtml(detailObj.body)}</blockquote></div>`);
+    }
+    if (detailObj.title) expandParts.push(`<div><span class="field-label">title</span> ${escapeHtml(detailObj.title)}</div>`);
+    if (detailObj.target_user) expandParts.push(`<div><span class="field-label">tagged</span> ${escapeHtml(detailObj.target_user)}</div>`);
+    if (detailObj.priority) expandParts.push(`<div><span class="field-label">priority</span> ${escapeHtml(detailObj.priority)}</div>`);
+    if (detailObj.severity) expandParts.push(`<div><span class="field-label">severity</span> ${escapeHtml(detailObj.severity)}</div>`);
+    if (detailObj.from && detailObj.to) {
+      expandParts.push(`<div><span class="field-label">stage</span> ${escapeHtml(detailObj.from)} → ${escapeHtml(detailObj.to)}</div>`);
+    }
+    // Anything we don't recognize falls into a small "raw" footer so we still
+    // expose the data for debugging without being noisy by default.
+    const extras = Object.entries(detailObj).filter(([k,v]) => !known.has(k) && v != null && v !== '');
+    if (extras.length) {
+      expandParts.push(`<div style="margin-top:6px;"><span class="field-label">other</span><pre>${escapeHtml(JSON.stringify(Object.fromEntries(extras), null, 2))}</pre></div>`);
+    }
   } else if (r.detail) {
     expandParts.push(`<div><span class="field-label">details</span> ${escapeHtml(r.detail)}</div>`);
   }
