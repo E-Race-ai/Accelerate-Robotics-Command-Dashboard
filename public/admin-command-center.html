@@ -277,6 +277,86 @@
     .ql-avatar.ql-overflow {
       background: #e5e7eb; color: #64748b; font-size: 10px;
     }
+    /* Manual-assignment avatars get a tiny role badge so you can see at a
+       glance who's an explicit owner vs collaborator vs visitor. The badge
+       sits in the corner so the avatar's main face still reads. */
+    .ql-avatar.ql-assigned-owner {
+      box-shadow: 0 0 0 2px var(--ql-accent, #2563eb), 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .ql-avatar .ql-role-badge {
+      position: absolute;
+      bottom: -2px; right: -2px;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      border: 1.5px solid white;
+      font-size: 8px; line-height: 9px; text-align: center;
+      pointer-events: none;
+    }
+    .ql-avatar { position: relative; } /* anchor for the role badge */
+    .ql-role-badge.role-owner       { background: #2563eb; color: white; }
+    .ql-role-badge.role-collaborator{ background: #16a34a; color: white; }
+    .ql-role-badge.role-visitor     { background: #94a3b8; color: white; }
+
+    /* ── Manual assignments UI ──────────────────────────────
+       "+ person" button shows on hover, top-left of each card (mirrors
+       the stealth toggle pattern but on the opposite corner). Click opens
+       a tiny inline form with a name input + role select. Persisted in
+       localStorage. */
+    .ql-card .assign-add-btn {
+      position: absolute;
+      top: 8px; left: 8px;
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      background: rgba(255,255,255,0.92);
+      color: #475569;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.12s, border-color 0.12s, background 0.12s, color 0.12s;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 14px; line-height: 1;
+      padding: 0;
+      z-index: 3;
+    }
+    .ql-card:hover .assign-add-btn,
+    .ql-card .assign-form.is-open + .assign-add-btn { opacity: 1; }
+    .ql-card .assign-add-btn:hover {
+      background: white; border-color: #cbd5e1; color: #0f172a;
+    }
+    .ql-card .assign-form {
+      position: absolute;
+      top: 36px; left: 8px; right: 8px;
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 8px;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+      display: none;
+      z-index: 5;
+    }
+    .ql-card .assign-form.is-open { display: flex; gap: 6px; align-items: stretch; }
+    .ql-card .assign-form input,
+    .ql-card .assign-form select {
+      flex: 1; min-width: 0;
+      padding: 6px 8px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 11px;
+      background: #f8fafc;
+    }
+    .ql-card .assign-form select { flex: 0 0 80px; }
+    .ql-card .assign-form button {
+      flex: 0 0 auto;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: none;
+      background: var(--ql-accent, #2563eb);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ql-card .assign-form button:hover { filter: brightness(1.05); }
     /* ── Recent-commits hover preview ─────────────────────── */
     /* WHY: Disabled. Popover dropped below the hovered card and visually
        covered the icon of the card directly underneath it in the grid. The
@@ -2637,6 +2717,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   renderToolkitRosters();
+  // Manual assignments live in localStorage and don't depend on the rosters
+  // API — render them immediately so the UI is interactive even if the
+  // rosters call is slow or fails.
+  if (typeof applyToolkitAssignments === 'function') applyToolkitAssignments();
   refreshAll();
 });
 
@@ -2810,6 +2894,155 @@ async function renderToolkitRosters() {
 
   // Once owners are populated, refresh sort if a non-default mode is active.
   if (typeof applyToolkitSort === 'function') applyToolkitSort();
+  // Render any user-added owners / collaborators / visitors saved locally.
+  if (typeof applyToolkitAssignments === 'function') applyToolkitAssignments();
+}
+
+// ── Manual assignments ───────────────────────────────────────
+// Per-card owners/collaborators/visitors that the user assigns by hand.
+// Layered ON TOP of the git-derived roster from /api/toolkit/ownership —
+// the auto-derived authors still appear; manual entries are added in the
+// same avatar stack with a small role badge so you can tell them apart.
+//
+// WHY: localStorage v1 (same persistence pattern as Stealth Mode). Trade-off
+// is per-browser state. Promote to a server-side toolkit_assignments table
+// when the team needs synced assignments across devices/teammates.
+const ASSIGN_LS_KEY = 'toolkit:assignments:v1';
+const ASSIGN_ROLES = ['owner', 'collaborator', 'visitor'];
+
+function _readAssignments() {
+  try {
+    const raw = localStorage.getItem(ASSIGN_LS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    // Shape: { module: [{ name, role }, ...] }
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (e) { return {}; }
+}
+
+function _writeAssignments(obj) {
+  try { localStorage.setItem(ASSIGN_LS_KEY, JSON.stringify(obj)); }
+  catch (e) { /* quota or private mode — fail quietly */ }
+}
+
+function _assignInitials(name) {
+  if (!name) return '?';
+  return String(name).trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+// WHY: Stable color per name so the same person reads as the same avatar
+// across multiple cards. Hash-based so we don't need a global registry.
+function _assignColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  const hue = Math.abs(h) % 360;
+  return `hsl(${hue}, 55%, 52%)`;
+}
+
+function applyToolkitAssignments() {
+  const all = _readAssignments();
+
+  document.querySelectorAll('.ql-card[data-module]').forEach(card => {
+    const mod = card.dataset.module;
+    const list = Array.isArray(all[mod]) ? all[mod] : [];
+
+    // Inject the "+ person" button (once).
+    let addBtn = card.querySelector('.assign-add-btn');
+    if (!addBtn) {
+      addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'assign-add-btn';
+      addBtn.title = 'Assign someone (owner / collaborator / visitor)';
+      addBtn.textContent = '＋';
+      addBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const form = card.querySelector('.assign-form');
+        if (form) form.classList.toggle('is-open');
+        // Auto-focus the input so the user can start typing immediately.
+        if (form && form.classList.contains('is-open')) {
+          form.querySelector('input')?.focus();
+        }
+      });
+      card.appendChild(addBtn);
+    }
+
+    // Inject the inline form (once).
+    let form = card.querySelector('.assign-form');
+    if (!form) {
+      form = document.createElement('div');
+      form.className = 'assign-form';
+      form.innerHTML = `
+        <input type="text" placeholder="Name" maxlength="60">
+        <select>
+          ${ASSIGN_ROLES.map(r => `<option value="${r}">${r[0].toUpperCase() + r.slice(1)}</option>`).join('')}
+        </select>
+        <button type="button">Add</button>
+      `;
+      // WHY: Keep clicks inside the form from bubbling up to the card link.
+      form.addEventListener('click', e => e.stopPropagation());
+      const input = form.querySelector('input');
+      const select = form.querySelector('select');
+      const btn = form.querySelector('button');
+      const submit = (e) => {
+        e?.preventDefault();
+        const name = input.value.trim();
+        if (!name) { input.focus(); return; }
+        const role = select.value;
+        const cur = _readAssignments();
+        const arr = Array.isArray(cur[mod]) ? cur[mod] : [];
+        // No duplicates — one (name, role) entry per card.
+        const exists = arr.some(a => a.name.toLowerCase() === name.toLowerCase() && a.role === role);
+        if (!exists) arr.push({ name, role });
+        cur[mod] = arr;
+        _writeAssignments(cur);
+        input.value = '';
+        form.classList.remove('is-open');
+        applyToolkitAssignments();
+      };
+      btn.addEventListener('click', submit);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(e); });
+      card.appendChild(form);
+    }
+
+    // Render manual-assignment avatars. The git-derived roster (.ql-roster)
+    // is appended by renderToolkitRosters; we append our own pill-roster
+    // separately so we don't fight that code's append/skip logic.
+    let manual = card.querySelector('.ql-manual-roster');
+    if (manual) manual.remove();
+    if (list.length === 0) return;
+
+    manual = document.createElement('div');
+    manual.className = 'ql-roster ql-manual-roster';
+    // Sit just below the auto roster so both stacks are visible.
+    manual.style.top = '36px';
+    manual.style.right = '8px';
+
+    list.forEach((entry, idx) => {
+      const av = document.createElement('div');
+      av.className = 'ql-avatar' + (entry.role === 'owner' ? ' ql-assigned-owner' : '');
+      av.style.background = _assignColor(entry.name);
+      av.textContent = _assignInitials(entry.name);
+      av.title = `${entry.name} · ${entry.role} · click to remove`;
+      const badge = document.createElement('span');
+      badge.className = `ql-role-badge role-${entry.role}`;
+      badge.textContent = entry.role[0].toUpperCase();
+      av.appendChild(badge);
+      av.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!confirm(`Remove ${entry.name} (${entry.role}) from this tile?`)) return;
+        const cur = _readAssignments();
+        const arr = Array.isArray(cur[mod]) ? cur[mod] : [];
+        cur[mod] = arr.filter((_, i) => i !== idx);
+        if (cur[mod].length === 0) delete cur[mod];
+        _writeAssignments(cur);
+        applyToolkitAssignments();
+      });
+      manual.appendChild(av);
+    });
+    card.appendChild(manual);
+  });
 }
 
 // ── Toolkit sort/group ────────────────────────────────────────
