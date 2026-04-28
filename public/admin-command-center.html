@@ -501,6 +501,47 @@
       font-family: 'JetBrains Mono', monospace; white-space: nowrap;
     }
     .my-focus-row .mf-meta.urgent { color: #b91c1c; font-weight: 700; }
+    /* ── Tighten Team Sync Hub for focused at-a-glance scanning ─── */
+    /* Smaller pads + tighter rows so the meeting view shows more in less
+       vertical space. Targets all sub-panels of the hub. */
+    #projectHub .hub-panel { padding: 14px 16px; }
+    #projectHub .hub-section-label { margin-bottom: 8px; }
+    #projectHub .hub-item {
+      padding: 5px 0; font-size: 0.78rem; gap: 8px;
+    }
+    #projectHub .hub-owner, #projectHub .hub-people .hub-owner { width: 19px; height: 19px; font-size: 9px; }
+    #projectHub .hub-support { width: 16px; height: 16px; font-size: 8px; margin-left: -6px; }
+    #projectHub .hub-status-pill { font-size: 0.6rem; padding: 1px 7px; }
+    #projectHub .hub-due { font-size: 0.66rem; }
+    #projectHub .hub-counts .hub-count { font-size: 0.68rem; padding: 3px 9px; }
+    #projectHub .hub-sprint-name { font-size: 1rem; }
+    #projectHub .hub-sprint-dates { font-size: 0.72rem; }
+    #projectHub .my-focus-row { padding: 5px 0; font-size: 0.78rem; }
+    #projectHub .activity-item { padding: 6px 0; font-size: 0.78rem; gap: 8px; }
+    #projectHub .activity-avatar { width: 22px; height: 22px; font-size: 9px; }
+    #projectHub .activity-lane { font-size: 0.58rem; padding: 2px 7px; }
+    #projectHub .activity-time { font-size: 0.66rem; }
+    /* "Show more" toggle link inside hub panels */
+    .hub-show-more {
+      display: block; text-align: center;
+      padding: 8px 0 2px;
+      color: #4338ca; font-size: 0.74rem; font-weight: 600;
+      text-decoration: none; cursor: pointer;
+      background: none; border: none;
+    }
+    .hub-show-more:hover { text-decoration: underline; }
+    /* Collapsible Working Together panel */
+    .hub-pairings.collapsible .hub-pairing-list { display: none; }
+    .hub-pairings.collapsible.open .hub-pairing-list { display: flex; }
+    .hub-pairings .hub-section-label {
+      cursor: pointer; user-select: none;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .hub-pairings .hub-section-label::after {
+      content: '▸'; font-size: 0.7rem; color: #cbd5e1;
+      transition: transform 0.15s;
+    }
+    .hub-pairings.open .hub-section-label::after { transform: rotate(90deg); }
     /* ── Community Help Board (embedded mini-collab) ─────────── */
     .cb-grid {
       display: grid;
@@ -1769,10 +1810,7 @@
            can recap the week or kick off the new one. -->
       <div class="mb-8 brand-reveal" data-delay="0.23" id="projectHub">
         <div class="flex items-center justify-between mb-4">
-          <div>
-            <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Team Sync Hub</h3>
-            <div class="text-xs text-gray-500 mt-1">Monday standup · Friday recap · everything happening across departments in one place</div>
-          </div>
+          <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide">Team Sync</h3>
           <div class="flex items-center gap-3">
             <div class="meeting-mode-strip" id="meetingModeStrip" role="toolbar" aria-label="Meeting mode">
               <span class="mm-label">View</span>
@@ -3020,8 +3058,9 @@ function _hubPairingsHtml(flatItems, peopleById) {
     `;
   }).join('');
 
-  return `<div class="hub-pairings">
-    <div class="hub-section-label">Working together · top ${top.length}</div>
+  // Collapsed by default — clicking the section label toggles open/closed.
+  return `<div class="hub-pairings collapsible" id="hubPairings">
+    <div class="hub-section-label" data-toggle="pairings"><span>Working together · top ${top.length}</span></div>
     <div class="hub-pairing-list">${rows}</div>
   </div>`;
 }
@@ -3065,9 +3104,13 @@ async function loadProjectHub() {
   // People lookup for owner avatars
   const peopleById = new Map((detail.people || []).map(p => [p.id, p]));
 
-  // Limit list to ~14 rows so the panel stays glanceable;
-  // user clicks "Open Full Tracker →" header link if they want everything.
-  const visible = flatItems.slice(0, 14);
+  // Tightened to 8 rows by default so the panel reads at a glance during
+  // the standup. "Show all N" expands inline; "Open Full Tracker" link in
+  // the hub header is the editing surface.
+  const HUB_DEFAULT_ROWS = 8;
+  const expanded = panel.dataset.expanded === '1';
+  const visible = expanded ? flatItems : flatItems.slice(0, HUB_DEFAULT_ROWS);
+  const hidden = flatItems.length - visible.length;
 
   panel.innerHTML = `
     <div class="hub-section-label">Active sprint</div>
@@ -3085,11 +3128,21 @@ async function loadProjectHub() {
     ${visible.length === 0
       ? `<div class="hub-loading">No items in this sprint yet.</div>`
       : visible.map(it => _hubItemRowHtml(it, peopleById)).join('')}
-    ${flatItems.length > visible.length
-      ? `<div style="text-align:center;padding-top:10px;"><a href="/admin/project-tracker" style="color:#0055ff;font-size:0.78rem;font-weight:600;text-decoration:none;">+${flatItems.length - visible.length} more · Open full tracker →</a></div>`
-      : ''}
+    ${hidden > 0
+      ? `<button class="hub-show-more" type="button" data-toggle="sprint">Show ${hidden} more →</button>`
+      : (expanded && flatItems.length > HUB_DEFAULT_ROWS
+          ? `<button class="hub-show-more" type="button" data-toggle="sprint">Show less ↑</button>`
+          : '')}
     ${_hubPairingsHtml(flatItems, peopleById)}
   `;
+
+  // Wire the "Show more / Show less" toggle for the sprint list.
+  panel.querySelectorAll('button[data-toggle="sprint"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      panel.dataset.expanded = panel.dataset.expanded === '1' ? '' : '1';
+      loadProjectHub();
+    });
+  });
 
   // Wire delegated click→cycle on status pills (idempotent — no-op after first call)
   _wireHubStatusCycle();
@@ -3973,7 +4026,12 @@ async function renderActivityFeed() {
 }
 
 // Re-renders from in-memory _activityRows, applying lane + search +
-// meeting-mode time-cutoff filters.
+// meeting-mode time-cutoff filters. Defaults to a 12-row cap with a
+// "Show all" toggle so the meeting view stays focused; user can always
+// expand to see the full history.
+const ACTIVITY_DEFAULT_LIMIT = 12;
+let _activityShowAll = false;
+
 function _drawActivity() {
   const container = document.getElementById('activityFeed');
   if (!container) return;
@@ -3998,9 +4056,18 @@ function _drawActivity() {
     return;
   }
 
+  // Apply the 12-row cap unless the user has expanded to "show all."
+  // Search and lane filters bypass the cap — when a user is hunting,
+  // showing only 12 hits is annoying.
+  const isFiltered = q.length > 0 || _activityLane !== 'all' || _activityMode !== 'all';
+  const visible = (_activityShowAll || isFiltered)
+    ? filtered
+    : filtered.slice(0, ACTIVITY_DEFAULT_LIMIT);
+  const hidden = filtered.length - visible.length;
+
   // Group by time bucket; preserve original chronological order within each
   const groups = { 'Today': [], 'Yesterday': [], 'This week': [], 'Earlier': [] };
-  for (const r of filtered) groups[_bucketActivity(r.created_at)].push(r);
+  for (const r of visible) groups[_bucketActivity(r.created_at)].push(r);
 
   let html = '';
   for (const label of ['Today', 'Yesterday', 'This week', 'Earlier']) {
@@ -4008,6 +4075,11 @@ function _drawActivity() {
     if (!items.length) continue;
     html += `<div class="activity-group-label">${label} <span style="color:#cbd5e1;">· ${items.length}</span></div>`;
     html += items.map(_renderActivityRow).join('');
+  }
+  if (hidden > 0) {
+    html += `<button class="hub-show-more" type="button" data-toggle="activity">Show ${hidden} more →</button>`;
+  } else if (_activityShowAll && filtered.length > ACTIVITY_DEFAULT_LIMIT) {
+    html += `<button class="hub-show-more" type="button" data-toggle="activity">Show less ↑</button>`;
   }
   container.innerHTML = html;
 }
@@ -4107,11 +4179,29 @@ function _wireActivityFeedControls() {
   if (feed && !feed.dataset.wired) {
     feed.dataset.wired = '1';
     feed.addEventListener('click', (e) => {
+      // "Show more / less" toggle inside the activity feed
+      const more = e.target.closest('button[data-toggle="activity"]');
+      if (more) {
+        _activityShowAll = !_activityShowAll;
+        _drawActivity();
+        return;
+      }
       // Don't toggle if user clicked an actual link inside the expansion
       if (e.target.closest('.quick-link') || e.target.closest('a')) return;
       const row = e.target.closest('.activity-item');
       if (!row) return;
       row.classList.toggle('open');
+    });
+  }
+  // Working-together pairings collapse toggle — delegated on the hub
+  const hub = document.getElementById('projectHub');
+  if (hub && !hub.dataset.pairingsWired) {
+    hub.dataset.pairingsWired = '1';
+    hub.addEventListener('click', (e) => {
+      const label = e.target.closest('[data-toggle="pairings"]');
+      if (!label) return;
+      const wrap = label.closest('.hub-pairings');
+      if (wrap) wrap.classList.toggle('open');
     });
   }
 }
