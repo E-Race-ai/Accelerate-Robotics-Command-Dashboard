@@ -112,6 +112,126 @@
     }
     .toolkit-group-label:first-child { border-top: none; margin-top: 0; }
 
+    /* ── Toolkit Team View (Tetris layout) ──────────────────
+       Cards group by department into rectangular Tetris-style blocks.
+       The whole grid reads as one interlocked organism rather than a sea
+       of independent tiles — visualizing that the team works together.
+       Spec: docs/superpowers/specs/2026-04-27-toolkit-team-view-design.md */
+    .toolkit-tetris {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-auto-rows: minmax(140px, auto);
+      grid-auto-flow: dense;
+      gap: 6px;
+      padding: 10px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+    }
+    @media (max-width: 1023px) {
+      /* Below desktop, packing falls apart at 6 cols — collapse to a stacked
+         dept-block list, each block takes full width and uses an internal
+         2-col card grid. Preserves the team-grouping metaphor. */
+      .toolkit-tetris {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        background: none;
+        border: none;
+        gap: 14px;
+      }
+      .toolkit-tetris .dept-block {
+        grid-column: auto !important;
+        grid-row: auto !important;
+      }
+      .toolkit-tetris .dept-block-cells {
+        grid-template-columns: repeat(2, 1fr) !important;
+        grid-template-rows: none !important;
+      }
+    }
+    .dept-block {
+      --dept-color: #64748b;
+      grid-column: span var(--block-w, 1);
+      grid-row: span var(--block-h, 1);
+      display: flex;
+      flex-direction: column;
+      background: color-mix(in srgb, var(--dept-color) 7%, white);
+      border: 1px solid color-mix(in srgb, var(--dept-color) 22%, transparent);
+      border-top: 3px solid var(--dept-color);
+      border-radius: 0; /* sharp Tetris-piece corners */
+      padding: 4px 4px 6px;
+      position: relative;
+      opacity: 0;
+      transform: translateY(-180%);
+    }
+    .dept-block.drop-in {
+      animation: dept-drop 600ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      animation-delay: var(--drop-delay, 0ms);
+    }
+    @keyframes dept-drop {
+      0%   { opacity: 0; transform: translateY(-180%); }
+      55%  { opacity: 1; transform: translateY(7%); }
+      78%  { transform: translateY(-2%); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .dept-block-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      font-size: 10px; font-weight: 800; letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--dept-color);
+      padding: 4px 6px 5px;
+    }
+    .dept-block-count {
+      font-family: 'JetBrains Mono', Menlo, monospace;
+      font-size: 10px; font-weight: 700;
+      opacity: 0.7;
+    }
+    .dept-block-cells {
+      display: grid;
+      grid-template-columns: repeat(var(--block-w, 1), minmax(0, 1fr));
+      grid-template-rows: repeat(var(--block-h, 1), minmax(0, 1fr));
+      gap: 4px;
+      flex: 1;
+      min-height: 0;
+    }
+    /* Inside a Tetris block, cards stretch to the cell. Hover lift removed
+       so individual cards don't escape the team block visually. */
+    .toolkit-tetris .ql-card {
+      margin: 0;
+      height: 100%;
+      transform: none !important;
+    }
+    .toolkit-tetris .ql-card:hover {
+      transform: none !important;
+      border-color: var(--ql-accent, #2563eb);
+    }
+    .dept-block-cell-empty {
+      background: color-mix(in srgb, var(--dept-color) 4%, white);
+      border: 1px dashed color-mix(in srgb, var(--dept-color) 25%, transparent);
+      border-radius: 14px;
+      min-height: 130px;
+    }
+
+    /* Reshuffle button — sits in the sort bar, only visible in Team mode. */
+    .toolkit-sort .reshuffle {
+      margin-left: auto;
+      background: white; border: 1px solid #e5e7eb;
+      border-radius: 999px; padding: 5px 11px;
+      font-size: 11.5px; font-weight: 600; color: #475569;
+      cursor: pointer; align-items: center; gap: 4px;
+      display: none;
+    }
+    .toolkit-sort.team-active .reshuffle { display: inline-flex; }
+    .toolkit-sort.team-active .dir { display: none; }
+    .toolkit-sort .reshuffle:hover {
+      background: #f8fafc; border-color: #cbd5e1; color: #0f172a;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .dept-block { opacity: 1; transform: none; }
+      .dept-block.drop-in { animation: none; }
+    }
+
     /* ── Toolkit dashboard cards ────────────────────────── */
     .ql-card {
       background: white;
@@ -2132,15 +2252,16 @@
       <!-- ═══ Toolkit Dashboard (moved below the maps) ═══ -->
       <div class="mb-8 brand-reveal" data-delay="0.24" id="toolkitSection">
         <h3 class="headline text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Toolkit</h3>
-        <div class="toolkit-sort" id="toolkitSort" role="toolbar" aria-label="Sort toolkit">
+        <div class="toolkit-sort team-active" id="toolkitSort" role="toolbar" aria-label="Sort toolkit">
           <span class="label">Sort by</span>
-          <button data-sort="default" class="active" type="button">Default</button>
+          <button data-sort="team" class="active" type="button" title="Group cards by department into Tetris-style team blocks">Team</button>
           <button data-sort="name" type="button">A–Z</button>
           <button data-sort="owner" type="button">Owner</button>
           <button data-sort="dept" type="button">Department</button>
           <button data-sort="topic" type="button">Topic</button>
           <button data-sort="size" type="button">Size</button>
           <button class="dir" id="toolkitSortDir" type="button" title="Toggle ascending/descending">↑</button>
+          <button class="reshuffle" id="toolkitReshuffle" type="button" title="Replay the Tetris drop-in animation">↻ Reshuffle</button>
         </div>
         <div id="toolkitGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
 
@@ -2172,7 +2293,7 @@
           </a>
 
           <!-- Robot Command — terminal/command prompt -->
-          <a href="http://localhost:3100/#command" class="ql-card" data-module="robot_command" data-dept="ops" data-topic="robots" data-size="L" target="_blank" style="--ql-accent:#0891b2;">
+          <a href="http://localhost:3100/#command" class="ql-card" data-module="robot_command" data-dept="engineering" data-topic="robots" data-size="L" target="_blank" style="--ql-accent:#0891b2;">
             <div class="ql-icon" style="background:#ecfeff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 9l4 3-4 3"/><line x1="12" y1="15" x2="18" y2="15"/></svg>
             </div>
@@ -2217,16 +2338,16 @@
           </a>
 
           <!-- Robots Dossier — file/dossier icon -->
-          <a href="/repos/accelerate-carts/pages/robots-dossier.html" class="ql-card" data-module="robots_dossier" data-dept="product" data-topic="robots" data-size="M" target="_blank" style="--ql-accent:#6366f1;">
+          <a href="/repos/accelerate-carts/pages/robots-dossier.html" class="ql-card" data-module="robots_dossier" data-dept="engineering" data-topic="robots" data-size="M" data-codename="Cinderella's Shoe" target="_blank" style="--ql-accent:#6366f1;">
             <div class="ql-icon" style="background:#eef2ff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
             </div>
-            <div class="ql-title">Robots Dossier</div>
-            <div class="ql-desc">Fleet intelligence</div>
+            <div class="ql-title">Universal Platform Base</div>
+            <div class="ql-desc">Project · Cinderella's Shoe</div>
           </a>
 
           <!-- Service Van — truck icon -->
-          <a href="/repos/accelerate-thesis-hotel/pages/service-van.html" class="ql-card" data-module="service_van" data-dept="ops" data-topic="deployment" data-size="S" target="_blank" style="--ql-accent:#ea580c;">
+          <a href="/repos/accelerate-thesis-hotel/pages/service-van.html" class="ql-card" data-module="service_van" data-dept="field" data-topic="deployment" data-size="S" target="_blank" style="--ql-accent:#ea580c;">
             <div class="ql-icon" style="background:#fff7ed;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="14" height="10" rx="1"/><path d="M15 10h4l3 4v2h-7V10z"/><circle cx="6" cy="18" r="2"/><circle cx="19" cy="18" r="2"/></svg>
             </div>
@@ -2235,7 +2356,7 @@
           </a>
 
           <!-- LiDAR Scanner — wheel-stick building scanner toolkit -->
-          <a href="/pages/slam-lidar-scanner.html" class="ql-card" data-module="lidar_scanner" data-dept="engineering" data-topic="deployment" data-size="S" style="--ql-accent:#0055ff;">
+          <a href="/pages/slam-lidar-scanner.html" class="ql-card" data-module="lidar_scanner" data-dept="field" data-topic="deployment" data-size="S" style="--ql-accent:#0055ff;">
             <div class="ql-icon" style="background:#eef2ff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0055ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2v3M12 15v7M4.2 4.2l2.1 2.1M17.7 6.3l2.1-2.1M2 10h3M19 10h3"/><circle cx="17" cy="21" r="1.5"/></svg>
             </div>
@@ -2271,7 +2392,7 @@
           </a>
 
           <!-- Elevator Install Guide — wrench/install -->
-          <a href="/repos/accelerate-elevator/pages/install-guide.html" class="ql-card" data-module="elevator_install" data-dept="ops" data-topic="elevator" data-size="S" target="_blank" style="--ql-accent:#7c3aed;">
+          <a href="/repos/accelerate-elevator/pages/install-guide.html" class="ql-card" data-module="elevator_install" data-dept="engineering" data-topic="elevator" data-size="S" target="_blank" style="--ql-accent:#7c3aed;">
             <div class="ql-icon" style="background:#f5f3ff;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
             </div>
@@ -2280,7 +2401,7 @@
           </a>
 
           <!-- Elevator BOM — parts list -->
-          <a href="/repos/accelerate-elevator/pages/bom-order-guide.html" class="ql-card" data-module="elevator_bom" data-dept="ops" data-topic="elevator" data-size="S" target="_blank" style="--ql-accent:#ca8a04;">
+          <a href="/repos/accelerate-elevator/pages/bom-order-guide.html" class="ql-card" data-module="elevator_bom" data-dept="engineering" data-topic="elevator" data-size="S" target="_blank" style="--ql-accent:#ca8a04;">
             <div class="ql-icon" style="background:#fefce8;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
             </div>
@@ -2306,8 +2427,35 @@
             <div class="ql-desc">acceleraterobotics.com</div>
           </a>
 
+          <!-- Fleet Designer + Proposal Generator — sliders/grid icon -->
+          <a href="/pages/fleet-designer.html" class="ql-card" data-module="fleet_designer" data-dept="marketing" data-topic="sales" data-size="M" style="--ql-accent:#0ea5e9;">
+            <div class="ql-icon" style="background:#f0f9ff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="14" y2="6"/><circle cx="17" cy="6" r="2"/><line x1="4" y1="12" x2="9" y2="12"/><circle cx="12" cy="12" r="2"/><line x1="4" y1="18" x2="16" y2="18"/><circle cx="19" cy="18" r="2"/></svg>
+            </div>
+            <div class="ql-title">Fleet Designer</div>
+            <div class="ql-desc">Configure + generate proposals</div>
+          </a>
+
+          <!-- Deployment Playbook — book/checklist icon -->
+          <a href="/deployment-playbook.html" class="ql-card" data-module="deployment_playbook" data-dept="marketing" data-topic="deployment" data-size="M" style="--ql-accent:#7c3aed;">
+            <div class="ql-icon" style="background:#f5f3ff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15l2 2 4-4"/></svg>
+            </div>
+            <div class="ql-title">Deployment Playbook</div>
+            <div class="ql-desc">Site launch runbook</div>
+          </a>
+
+          <!-- Membership AI — sparkle/brain icon (Exploration / R&D) -->
+          <a href="/repos/accelerate-moore-miami/pages/member-intel.html" class="ql-card" data-module="membership_ai" data-dept="rd" data-topic="ai" data-size="M" target="_blank" style="--ql-accent:#d946ef;">
+            <div class="ql-icon" style="background:#fdf4ff;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d946ef" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3"/><path d="M12 18v3"/><path d="M3 12h3"/><path d="M18 12h3"/><path d="M5.6 5.6l2.1 2.1"/><path d="M16.3 16.3l2.1 2.1"/><path d="M5.6 18.4l2.1-2.1"/><path d="M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div class="ql-title">Membership AI</div>
+            <div class="ql-desc">Member intel · Moore Miami</div>
+          </a>
+
           <!-- Collab Bulletin Board — cross-team help requests -->
-          <a href="/pages/collab.html" class="ql-card" data-module="collab" data-dept="ops" data-topic="internal" data-size="S" style="--ql-accent:#ea580c;">
+          <a href="/pages/collab.html" class="ql-card" data-module="collab" data-dept="enterprise" data-topic="internal" data-size="S" style="--ql-accent:#ea580c;">
             <div class="ql-icon" style="background:#fff7ed;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
@@ -2316,7 +2464,7 @@
           </a>
 
           <!-- Improvement Request — public submit + tracking board -->
-          <a href="/pages/improvement-request.html" class="ql-card" data-module="improvement" data-dept="ops" data-topic="internal" data-size="S" style="--ql-accent:#10b981;">
+          <a href="/pages/improvement-request.html" class="ql-card" data-module="improvement" data-dept="enterprise" data-topic="internal" data-size="S" style="--ql-accent:#10b981;">
             <div class="ql-icon" style="background:#ecfdf5;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
             </div>
@@ -2325,7 +2473,7 @@
           </a>
 
           <!-- Bug / Feature feedback — wrench + lightbulb icon -->
-          <a href="/pages/feedback.html" class="ql-card" data-module="feedback" data-dept="engineering" data-topic="internal" data-size="S" style="--ql-accent:#dc2626;">
+          <a href="/pages/feedback.html" class="ql-card" data-module="feedback" data-dept="enterprise" data-topic="internal" data-size="S" style="--ql-accent:#dc2626;">
             <div class="ql-icon" style="background:#fef2f2;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M12 6V3M9 6L7 4M15 6l2-2M5 11H2M22 11h-3M5 16H2M22 16h-3"/></svg>
             </div>
@@ -2334,7 +2482,7 @@
           </a>
 
           <!-- Project Tracker — calendar / Gantt icon -->
-          <a href="/admin/project-tracker" class="ql-card" data-module="project_tracker" data-dept="ops" data-topic="internal" data-size="S" style="--ql-accent:#f59e0b;">
+          <a href="/admin/project-tracker" class="ql-card" data-module="project_tracker" data-dept="enterprise" data-topic="internal" data-size="S" style="--ql-accent:#f59e0b;">
             <div class="ql-icon" style="background:#fffbeb;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><rect x="6" y="13" width="6" height="2" rx="1" fill="#f59e0b"/><rect x="9" y="16" width="8" height="2" rx="1" fill="#f59e0b"/></svg>
             </div>
@@ -2666,7 +2814,8 @@ async function renderToolkitRosters() {
 
 // ── Toolkit sort/group ────────────────────────────────────────
 // State: `current` is the active key, `dir` is 1 (asc) or -1 (desc).
-const toolkitSortState = { current: 'default', dir: 1 };
+// 'team' is the new default — Tetris-style block layout grouped by dept.
+const toolkitSortState = { current: 'team', dir: 1 };
 
 function _sizeRank(s) {
   // Map S/M/L to a numeric so sort orders like-with-like
@@ -2688,18 +2837,25 @@ function _cardKey(card, by) {
   }
 }
 
-// Curated department order — what a sales-led org meets to talk about, in
-// roughly the order they'd open the dashboard. Tiles with a department not
-// in this list fall to the bottom (under "other").
-const TOOLKIT_DEPT_ORDER = ['sales', 'ops', 'engineering', 'product', 'finance', 'strategy', 'marketing'];
+// Curated department order — Eric's Monday-meeting flow. Tiles with a
+// department not in this list fall to the bottom (under "other").
+// 'field' = field service / maintenance / repair (truck-roll work).
+// 'enterprise' = internal team tools (collab, project tracker, improvements).
+const TOOLKIT_DEPT_ORDER = [
+  'ops', 'field', 'sales', 'marketing', 'product', 'engineering',
+  'rd', 'finance', 'strategy', 'enterprise',
+];
 const TOOLKIT_DEPT_LABEL = {
-  sales:       'Sales',
   ops:         'Operations',
-  engineering: 'Engineering',
+  field:       'Field Ops',
+  sales:       'Sales',
+  marketing:   'Marketing',
   product:     'Product',
+  engineering: 'Engineering',
+  rd:          'Exploration / R&D',
   finance:     'Finance',
   strategy:    'Strategy',
-  marketing:   'Marketing',
+  enterprise:  'Enterprise',
   other:       'Other',
 };
 
@@ -2714,10 +2870,171 @@ function _groupedSortKey(card) {
   return `${rank}|${topic}|${name}`;
 }
 
+// ── Tetris dimension picker + dept colors ────────────────────
+// Pick the most-square rectangle that fits N cards. Capped at canvas
+// width (6 cols) so blocks never exceed the grid. For sizes that have
+// no exact rectangle ≤ canvas width (primes 7+), pick the smallest
+// rectangle that fits with ≤ 1-2 empty cells; the empty slots render
+// as faint placeholders matching the dept tint.
+const TETRIS_CANVAS_COLS = 6;
+function _blockDims(n) {
+  // Hand-tuned lookup for common counts — keeps the visual predictable.
+  const lookup = {
+    1: [1,1], 2: [2,1], 3: [3,1], 4: [2,2],
+    5: [5,1], 6: [3,2], 7: [4,2], 8: [4,2],
+    9: [3,3], 10: [5,2], 11: [4,3], 12: [4,3],
+    13: [5,3], 14: [5,3], 15: [5,3], 16: [4,4],
+  };
+  if (lookup[n]) return lookup[n];
+  // Fallback for >16: pick dims closest to square, capped at canvas width
+  const cols = Math.min(TETRIS_CANVAS_COLS, Math.ceil(Math.sqrt(n)));
+  return [cols, Math.ceil(n / cols)];
+}
+
+// Canonical Tetris piece colors mapped to each dept. The spec's color
+// palette — see 2026-04-27-toolkit-team-view-design.md.
+const TETRIS_DEPT_COLORS = {
+  ops:         '#f97316', // L piece orange
+  field:       '#ec4899', // hot pink — distinct from ops since field-ops is the truck-roll cousin
+  sales:       '#ef4444', // Z piece red
+  marketing:   '#eab308', // O piece yellow
+  product:     '#a855f7', // T piece purple
+  engineering: '#06b6d4', // I piece cyan
+  rd:          '#d946ef', // fuchsia/magenta — exploratory + experimental energy
+  finance:     '#22c55e', // S piece green
+  strategy:    '#3b82f6', // J piece blue
+  enterprise:  '#0d9488', // teal — internal tooling, distinct from strategy blue and product purple
+  other:       '#64748b', // slate fallback
+};
+
+// Render the Team (Tetris) layout: cards grouped by dept into rectangular
+// blocks, packed by CSS Grid auto-flow:dense. Replays drop-in animation
+// each time it's invoked so reshuffles feel alive.
+function applyTeamLayout() {
+  const grid = document.getElementById('toolkitGrid');
+  if (!grid) return;
+
+  // Pull every card out of any prior wrappers so we can regroup cleanly.
+  const allCards = Array.from(grid.querySelectorAll('.ql-card'));
+  // Stamp original index for stable in-dept ordering across renders.
+  allCards.forEach((c, i) => {
+    if (c.dataset.originalIdx === undefined) c.dataset.originalIdx = String(i);
+  });
+
+  // Tear down prior structure (dept blocks + group labels) without losing cards.
+  grid.querySelectorAll('.dept-block, .toolkit-group-label').forEach(el => el.remove());
+
+  // Group cards by dept.
+  const byDept = {};
+  for (const c of allCards) {
+    const d = (c.dataset.dept || 'other').toLowerCase();
+    (byDept[d] = byDept[d] || []).push(c);
+  }
+  // Sort each dept's cards by original index for stable order.
+  for (const d of Object.keys(byDept)) {
+    byDept[d].sort((a, b) =>
+      parseInt(a.dataset.originalIdx, 10) - parseInt(b.dataset.originalIdx, 10)
+    );
+  }
+
+  // Order depts: curated order first, then any unknown depts (sorted), then 'other'.
+  const orderedDepts = [];
+  for (const d of TOOLKIT_DEPT_ORDER) if (byDept[d]) orderedDepts.push(d);
+  const unknown = Object.keys(byDept)
+    .filter(d => !TOOLKIT_DEPT_ORDER.includes(d) && d !== 'other')
+    .sort();
+  orderedDepts.push(...unknown);
+  if (byDept.other) orderedDepts.push('other');
+
+  // Switch grid into Tetris mode (drop the Tailwind utility classes).
+  grid.classList.add('toolkit-tetris');
+  grid.classList.remove('grid', 'grid-cols-2', 'sm:grid-cols-3', 'lg:grid-cols-4', 'xl:grid-cols-6', 'gap-4');
+
+  // Build dept blocks + drop-in animation.
+  const frag = document.createDocumentFragment();
+  let dropDelay = 0;
+  for (const dept of orderedDepts) {
+    const cards = byDept[dept];
+    const n = cards.length;
+    const [w, h] = _blockDims(n);
+    const color = TETRIS_DEPT_COLORS[dept] || TETRIS_DEPT_COLORS.other;
+    const label = TOOLKIT_DEPT_LABEL[dept] || (dept.charAt(0).toUpperCase() + dept.slice(1));
+
+    const block = document.createElement('div');
+    block.className = 'dept-block drop-in';
+    block.dataset.dept = dept;
+    block.style.setProperty('--block-w', w);
+    block.style.setProperty('--block-h', h);
+    block.style.setProperty('--dept-color', color);
+    block.style.setProperty('--drop-delay', dropDelay + 'ms');
+    dropDelay += 80; // stagger between depts so the drop reads as a sequence
+
+    const header = document.createElement('div');
+    header.className = 'dept-block-header';
+    const nameEl = document.createElement('span');
+    nameEl.textContent = label;
+    const countEl = document.createElement('span');
+    countEl.className = 'dept-block-count';
+    countEl.textContent = String(n);
+    header.appendChild(nameEl);
+    header.appendChild(countEl);
+
+    const cells = document.createElement('div');
+    cells.className = 'dept-block-cells';
+    cards.forEach(c => cells.appendChild(c));
+    // Pad with placeholder cells so the block fills its W×H footprint cleanly.
+    const empty = (w * h) - n;
+    for (let i = 0; i < empty; i++) {
+      const ph = document.createElement('div');
+      ph.className = 'dept-block-cell-empty';
+      cells.appendChild(ph);
+    }
+
+    block.appendChild(header);
+    block.appendChild(cells);
+    frag.appendChild(block);
+  }
+
+  grid.appendChild(frag);
+}
+
+// Tear down the Team layout when switching to a normal sort mode.
+function unwrapTeamLayout() {
+  const grid = document.getElementById('toolkitGrid');
+  if (!grid) return;
+  grid.querySelectorAll('.dept-block').forEach(block => {
+    block.querySelectorAll('.ql-card').forEach(c => grid.appendChild(c));
+    block.remove();
+  });
+  grid.classList.remove('toolkit-tetris');
+  grid.classList.add('grid', 'grid-cols-2', 'sm:grid-cols-3', 'lg:grid-cols-4', 'xl:grid-cols-6', 'gap-4');
+}
+
+// Replay the drop-in animation without rebuilding the DOM — used by the
+// Reshuffle button so the metaphor feels alive on demand.
+function reshuffleTeamLayout() {
+  const blocks = document.querySelectorAll('#toolkitGrid .dept-block');
+  blocks.forEach((b, i) => {
+    b.classList.remove('drop-in');
+    // Force reflow so the animation can restart from frame 0.
+    void b.offsetWidth;
+    b.style.setProperty('--drop-delay', (i * 80) + 'ms');
+    b.classList.add('drop-in');
+  });
+}
+
 function applyToolkitSort() {
   const grid = document.getElementById('toolkitGrid');
   if (!grid) return;
   const { current, dir } = toolkitSortState;
+
+  // Team mode is a layout, not a sort — short-circuit before flat-sort logic.
+  if (current === 'team') {
+    applyTeamLayout();
+    return;
+  }
+  // If we're leaving Team mode, unwrap blocks first so flat-sort can move cards.
+  unwrapTeamLayout();
 
   // Pull all cards (skip group labels from previous render)
   const cards = Array.from(grid.querySelectorAll('.ql-card'));
@@ -2775,24 +3092,39 @@ function initToolkitSort() {
   bar.querySelectorAll('button[data-sort]').forEach(btn => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.sort;
-      // Clicking the active sort button toggles direction; otherwise switch
+      // Clicking the active sort button toggles direction (or replays the
+      // drop-in for Team mode, since direction doesn't apply there).
       if (toolkitSortState.current === key) {
+        if (key === 'team') {
+          reshuffleTeamLayout();
+          return;
+        }
         toolkitSortState.dir *= -1;
       } else {
         toolkitSortState.current = key;
         toolkitSortState.dir = 1;
       }
       bar.querySelectorAll('button[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === key));
+      // Toggle visibility of Team-only affordances (reshuffle btn, hide dir toggle).
+      bar.classList.toggle('team-active', key === 'team');
       document.getElementById('toolkitSortDir').textContent = toolkitSortState.dir === 1 ? '↑' : '↓';
       applyToolkitSort();
     });
   });
+
+  // Reshuffle button — replays the Tetris drop-in any time.
+  const reshuffleBtn = document.getElementById('toolkitReshuffle');
+  if (reshuffleBtn) reshuffleBtn.addEventListener('click', () => reshuffleTeamLayout());
 
   document.getElementById('toolkitSortDir').addEventListener('click', () => {
     toolkitSortState.dir *= -1;
     document.getElementById('toolkitSortDir').textContent = toolkitSortState.dir === 1 ? '↑' : '↓';
     applyToolkitSort();
   });
+
+  // Render Team view immediately on first paint — don't wait for the async
+  // owner-roster fetch. The flat HTML grid would otherwise flash before Tetris.
+  applyToolkitSort();
 }
 
 // Boot the sort bar as soon as the DOM is parsed; renderToolkitRosters() runs
@@ -4586,17 +4918,24 @@ function renderDealList() {
 // Each lane has its own dot color so the feed reads at a glance.
 const ACTIVITY_LANES = {
   // Outreach
-  'inquiry_received':   { lane: 'outreach', color: '#0ea5e9', label: 'submitted an inquiry on' },
-  'prospect_added':     { lane: 'outreach', color: '#0ea5e9', label: 'added prospect' },
+  'inquiry_received':     { lane: 'outreach', color: '#0ea5e9', label: 'submitted an inquiry on' },
+  'prospect_added':       { lane: 'outreach', color: '#0ea5e9', label: 'added prospect' },
   // Contract
-  'deal_created':       { lane: 'contract', color: '#0055ff', label: 'created deal' },
-  'stage_changed':      { lane: 'contract', color: '#0055ff', label: 'moved' },
-  'assessment_started': { lane: 'contract', color: '#7c3aed', label: 'started assessment for' },
+  'deal_created':         { lane: 'contract', color: '#0055ff', label: 'created deal' },
+  'stage_changed':        { lane: 'contract', color: '#0055ff', label: 'moved' },
+  'assessment_started':   { lane: 'contract', color: '#7c3aed', label: 'started assessment for' },
   // Launch
-  'deal_won':           { lane: 'launch',   color: '#16a34a', label: 'won' },
-  // Active / 24-7
-  'bug_reported':       { lane: 'active',   color: '#dc2626', label: 'reported a bug' },
-  'feature_requested':  { lane: 'active',   color: '#7c3aed', label: 'requested a feature' },
+  'deal_won':             { lane: 'launch',   color: '#16a34a', label: 'won' },
+  // Active / 24-7 — team comms, ticket churn, bug/feature reports
+  'bug_reported':         { lane: 'active',   color: '#dc2626', label: 'reported a bug' },
+  'feature_requested':    { lane: 'active',   color: '#7c3aed', label: 'requested a feature' },
+  'improvement_requested':{ lane: 'active',   color: '#7c3aed', label: 'asked to improve' },
+  'team_update':          { lane: 'active',   color: '#2563eb', label: 'posted an update' },
+  'standup':              { lane: 'active',   color: '#16a34a', label: 'posted standup' },
+  'shoutout':             { lane: 'active',   color: '#d97706', label: 'shouted out' },
+  'collab_requested':     { lane: 'active',   color: '#ea580c', label: 'opened collab ticket' },
+  'collab_claimed':       { lane: 'active',   color: '#0284c7', label: 'claimed' },
+  'collab_completed':     { lane: 'active',   color: '#16a34a', label: 'completed collab' },
 };
 const LANE_LABELS = {
   outreach: 'Outreach',
@@ -4780,12 +5119,27 @@ function _renderActivityRow(r) {
   let target = r.deal_name || '';
   let extraHtml = '';
   let detailObj = null;
+  // Inline body excerpt for team posts (team_update / standup / shoutout) so
+  // the row reads as a sentence instead of just "Eric Race team_update".
+  // 90 chars keeps the row to one visual line at typical widths.
+  const TEAM_POST_INLINE_MAX = 90;
   try {
     if (r.detail) {
       detailObj = JSON.parse(r.detail);
       if (detailObj) {
         if (!target && detailObj.name) target = detailObj.name;
         if (detailObj.title) target = detailObj.title;
+        // Team posts carry the message in detail.body — surface it inline
+        if (!target && detailObj.body) {
+          const body = String(detailObj.body).trim();
+          target = body.length > TEAM_POST_INLINE_MAX
+            ? body.slice(0, TEAM_POST_INLINE_MAX - 1) + '…'
+            : body;
+        }
+        // Tagged target_user on a collab ticket → show "→ Person" suffix
+        if (detailObj.target_user && (r.action === 'collab_requested' || r.action === 'collab_claimed')) {
+          extraHtml = `<span style="color:#9ca3af;font-size:0.78rem;"> · → ${escapeHtml(detailObj.target_user)}</span>`;
+        }
         // Stage move: render colored from → to pills instead of plain text
         if (detailObj.from && detailObj.to) {
           extraHtml = `<span class="stage-pair">${_stagePill(detailObj.from)}<span class="arrow">→</span>${_stagePill(detailObj.to)}</span>`;
@@ -4800,15 +5154,33 @@ function _renderActivityRow(r) {
   const initials = _initials(actor);
   const avatarColor = _colorFromString(actor);
 
-  // Build the inline detail panel content (revealed on row click)
+  // Build the inline detail panel content (revealed on row click).
+  // Render structured fields as labeled rows; only fall back to a JSON pre
+  // for unrecognized payloads so the panel reads as English, not a dump.
   const expandParts = [];
   expandParts.push(`<div><span class="field-label">action</span> ${escapeHtml(r.action)}</div>`);
   expandParts.push(`<div><span class="field-label">when</span> ${escapeHtml(r.created_at || '?')} <span style="color:#cbd5e1;">·</span> <span style="color:#94a3b8;">${ago}</span></div>`);
   if (r.deal_id) {
     expandParts.push(`<a class="quick-link" href="/admin/deals?id=${encodeURIComponent(r.deal_id)}">Open deal ${escapeHtml(r.deal_id)} →</a>`);
   }
-  if (detailObj) {
-    expandParts.push(`<div style="margin-top:6px;"><span class="field-label">details</span><pre>${escapeHtml(JSON.stringify(detailObj, null, 2))}</pre></div>`);
+  if (detailObj && typeof detailObj === 'object') {
+    const known = new Set(['body','title','name','from','to','severity','target_user','priority','collab_id','feedback_id','item_id','source','inquiry_id','company','email','screenshots']);
+    if (detailObj.body) {
+      expandParts.push(`<div style="margin-top:6px;"><span class="field-label">message</span><blockquote style="margin:4px 0 0;padding:6px 10px;border-left:3px solid #cbd5e1;color:#334155;background:#f8fafc;border-radius:0 4px 4px 0;white-space:pre-wrap;">${escapeHtml(detailObj.body)}</blockquote></div>`);
+    }
+    if (detailObj.title) expandParts.push(`<div><span class="field-label">title</span> ${escapeHtml(detailObj.title)}</div>`);
+    if (detailObj.target_user) expandParts.push(`<div><span class="field-label">tagged</span> ${escapeHtml(detailObj.target_user)}</div>`);
+    if (detailObj.priority) expandParts.push(`<div><span class="field-label">priority</span> ${escapeHtml(detailObj.priority)}</div>`);
+    if (detailObj.severity) expandParts.push(`<div><span class="field-label">severity</span> ${escapeHtml(detailObj.severity)}</div>`);
+    if (detailObj.from && detailObj.to) {
+      expandParts.push(`<div><span class="field-label">stage</span> ${escapeHtml(detailObj.from)} → ${escapeHtml(detailObj.to)}</div>`);
+    }
+    // Anything we don't recognize falls into a small "raw" footer so we still
+    // expose the data for debugging without being noisy by default.
+    const extras = Object.entries(detailObj).filter(([k,v]) => !known.has(k) && v != null && v !== '');
+    if (extras.length) {
+      expandParts.push(`<div style="margin-top:6px;"><span class="field-label">other</span><pre>${escapeHtml(JSON.stringify(Object.fromEntries(extras), null, 2))}</pre></div>`);
+    }
   } else if (r.detail) {
     expandParts.push(`<div><span class="field-label">details</span> ${escapeHtml(r.detail)}</div>`);
   }

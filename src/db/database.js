@@ -413,7 +413,10 @@ async function initSchema() {
       claimed_at TEXT,
       due_date TEXT,
       created_at TEXT DEFAULT (datetime('now')),
-      resolved_at TEXT
+      updated_at TEXT DEFAULT (datetime('now')),
+      resolved_at TEXT,
+      archived_at TEXT,
+      is_security INTEGER NOT NULL DEFAULT 0 CHECK(is_security IN (0, 1))
     )`,
     `CREATE INDEX IF NOT EXISTS idx_collab_status_created ON collab_requests(status, created_at DESC)`,
     // ── Improvement Requests — public submit + public tracking board
@@ -512,6 +515,14 @@ async function initSchema() {
   await additiveAlterIfMissing("ALTER TABLE markets ADD COLUMN lng REAL");
   // WHY: Allow assigning improvement requests to portal users
   await additiveAlterIfMissing("ALTER TABLE improvement_requests ADD COLUMN assigned_to TEXT");
+  // WHY: Security-flagged tickets get hazard styling on the board so the
+  // technical team sees them immediately. Default 0 so existing rows are unflagged.
+  await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN is_security INTEGER NOT NULL DEFAULT 0");
+  // WHY: archived_at and updated_at power the stale-ticket cleanup pass —
+  // archived_at lets us hide soft-deleted rows; updated_at lets the auto-archive
+  // sweep find tickets with no activity in N days.
+  await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN archived_at TEXT");
+  await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN updated_at TEXT");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────
