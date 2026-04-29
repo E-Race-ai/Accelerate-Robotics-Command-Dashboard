@@ -8,6 +8,10 @@ let dealMap = null; // Leaflet map instance — lazy-initialized
 let stageFilter = null;
 
 const STAGES = ['lead', 'qualified', 'site_walk', 'configured', 'proposed', 'negotiation', 'won', 'deploying', 'active', 'lost'];
+// WHY: 'lost' lives outside the trail — losing a deal isn't a forward step. Every
+// other stage maps to one pip, drawn left-to-right in pipeline order so the
+// trail reads as "where is this deal in our funnel" at a glance.
+const PIPELINE_TRAIL_STAGES = ['lead', 'qualified', 'site_walk', 'configured', 'proposed', 'negotiation', 'won', 'deploying', 'active'];
 const STAGE_LABELS = {
   lead: 'Lead', qualified: 'Qualified', site_walk: 'Site Walk',
   configured: 'Configured', proposed: 'Proposed', negotiation: 'Negotiation',
@@ -189,6 +193,24 @@ function renderKanban(filtered) {
             const actorShort = d.last_activity_actor ? d.last_activity_actor.split('@')[0] : '';
             const actLabel = ACTION_LABELS[d.last_activity_action] || '';
 
+            // Stage-trail: pipeline-position visual ("step N of M"). Built once
+            // per card so we don't repeat the indexOf in every interpolation.
+            const stageIdx = PIPELINE_TRAIL_STAGES.indexOf(stage);
+            const isLostStage = stage === 'lost';
+            const trailTitle = isLostStage
+              ? 'Deal lost'
+              : `${STAGE_LABELS[stage]} — step ${stageIdx + 1} of ${PIPELINE_TRAIL_STAGES.length}`;
+            const trailHtml = `
+              <div class="deal-stage-trail${isLostStage ? ' is-lost' : ''}" title="${escapeHtml(trailTitle)}">
+                ${PIPELINE_TRAIL_STAGES.map((s, i) => {
+                  let cls = '';
+                  if (!isLostStage && i < stageIdx) cls = 'passed';
+                  else if (!isLostStage && i === stageIdx) cls = 'current';
+                  const styleAttr = i === stageIdx ? `style="--current-stage-color:${STAGE_COLORS[s]};"` : '';
+                  return `<span class="stage-dot ${cls}" ${styleAttr} title="${escapeHtml(STAGE_LABELS[s])}"></span>`;
+                }).join('')}
+              </div>`;
+
             return `
             <div class="deal-card brand-deal-card">
               <div class="brand-deal-stripe" style="background:linear-gradient(180deg, ${STAGE_COLORS[stage]}, ${STAGE_COLORS[stage]}88);"></div>
@@ -208,6 +230,8 @@ function renderKanban(filtered) {
                   ${elevators ? `<div class="deal-stat-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><polyline points="8 8 6 10 8 12"/><polyline points="16 8 18 10 16 12"/></svg><span class="deal-stat-val">${elevators}</span> elevators</div>` : ''}
                   ${d.source ? `<div class="deal-stat-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg><span class="deal-stat-val" style="text-transform:capitalize;">${escapeHtml(d.source)}</span></div>` : ''}
                 </div>` : ''}
+
+                ${trailHtml}
 
                 ${prob > 0 ? `
                 <div class="deal-prob-bar">
