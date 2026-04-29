@@ -137,7 +137,15 @@ async function initSchema() {
       notes TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
-      closed_at TEXT
+      closed_at TEXT,
+      -- WHY: 'dormant' is a soft-pause flag that keeps the deal in its current
+      -- stage but signals "we're not actively pushing this right now." Different
+      -- from 'lost' (which is terminal). Default 0 so existing rows are active.
+      is_dormant INTEGER NOT NULL DEFAULT 0,
+      -- WHY: ISO-8601 timestamp of the next scheduled meeting / follow-up. Powers
+      -- the per-card scheduler chip and a future "today's meetings" digest.
+      next_meeting_at TEXT,
+      next_meeting_note TEXT
     )`,
     `CREATE TABLE IF NOT EXISTS contacts (
       id TEXT PRIMARY KEY,
@@ -523,6 +531,13 @@ async function initSchema() {
   // sweep find tickets with no activity in N days.
   await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN archived_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN updated_at TEXT");
+  // WHY: Soft-pause flag for deals — distinct from 'lost'. Lets sales park a
+  // deal that's not progressing without losing it from the pipeline view.
+  await additiveAlterIfMissing("ALTER TABLE deals ADD COLUMN is_dormant INTEGER NOT NULL DEFAULT 0");
+  // WHY: Next meeting / follow-up scheduler. Surfaced on the kanban card and
+  // queryable for "today's meetings" digests.
+  await additiveAlterIfMissing("ALTER TABLE deals ADD COLUMN next_meeting_at TEXT");
+  await additiveAlterIfMissing("ALTER TABLE deals ADD COLUMN next_meeting_note TEXT");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────
