@@ -563,12 +563,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const heading = document.querySelector('h1.headline');
     const subtitle = document.querySelector('h1.headline + p');
     // Specific aliases for known multi-stage groupings; otherwise derive
-    // from the stage labels.
-    const isDeployBundle = urlStages.length >= 2
-      && urlStages.includes('won') && urlStages.includes('deploying') && urlStages.includes('active');
+    // from the stage labels. These mirror the Command Center stat tiles —
+    // each tile counts a stage bundle and links here with the matching ?stage= set.
+    const has = s => urlStages.includes(s);
+    const isDeployBundle = urlStages.length >= 2 && has('won') && has('deploying') && has('active');
+    const isQualifiedBundle = urlStages.length >= 2 && has('qualified') && has('site_walk') && has('configured');
+    const isProposedBundle = urlStages.length >= 2 && has('proposed') && has('negotiation');
     if (isDeployBundle) {
       if (heading) heading.textContent = 'Deployments';
       if (subtitle) subtitle.textContent = 'Won deals, active deployments, and go-live tracking';
+    } else if (isQualifiedBundle) {
+      if (heading) heading.textContent = 'Qualified deals';
+      if (subtitle) subtitle.textContent = 'Qualified, site walk, and configured stages';
+    } else if (isProposedBundle) {
+      if (heading) heading.textContent = 'Proposed deals';
+      if (subtitle) subtitle.textContent = 'Proposed and negotiation stages';
     } else if (urlStages.length === 1) {
       const label = STAGE_LABELS[urlStages[0]] || urlStages[0];
       if (heading) heading.textContent = `${label} deals`;

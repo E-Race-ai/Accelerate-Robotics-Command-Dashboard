@@ -4694,12 +4694,17 @@ function renderStats() {
   };
 
   // Each tile links to its most relevant drill-down view.
+  // WHY: Each tile's href must match the stages its count includes — otherwise the
+  // tile shows N but clicking through filters too narrowly and the page shows 0.
+  // Qualified count spans qualified/site_walk/configured; Proposed spans proposed/
+  // negotiation; Won spans won/deploying/active (a deal that closed and progressed
+  // to deploy/active still counts as won).
   const stats = [
     { val: total,            lbl: 'Pipeline',  prefix: '', suffix: '', href: '/admin/deals' },
     { val: leads,            lbl: 'Leads',     prefix: '', suffix: '', href: '/admin/deals?stage=lead' },
-    { val: qualified,        lbl: 'Qualified', prefix: '', suffix: '', href: '/admin/deals?stage=qualified' },
-    { val: proposed,         lbl: 'Proposed',  prefix: '', suffix: '', href: '/admin/deals?stage=proposed' },
-    { val: won,              lbl: 'Won',       prefix: '', suffix: '', href: '/admin/deals?stage=won' },
+    { val: qualified,        lbl: 'Qualified', prefix: '', suffix: '', href: '/admin/deals?stage=qualified&stage=site_walk&stage=configured' },
+    { val: proposed,         lbl: 'Proposed',  prefix: '', suffix: '', href: '/admin/deals?stage=proposed&stage=negotiation' },
+    { val: won,              lbl: 'Won',       prefix: '', suffix: '', href: '/admin/deals?stage=won&stage=deploying&stage=active' },
     { val: (typeof PROSPECTS !== 'undefined' ? PROSPECTS.length : 0), lbl: 'Prospects', prefix: '', suffix: '', href: '/pages/pipeline-prospects.html' },
     { val: mrrDisplay.val,   lbl: 'MRR',       prefix: mrrDisplay.prefix, suffix: mrrDisplay.suffix, href: '/financial-analysis.html' },
   ];
