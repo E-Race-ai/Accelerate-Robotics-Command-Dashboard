@@ -3379,6 +3379,12 @@ function _initMapTabs() {
       if (target === 'us' && typeof ccMap !== 'undefined' && ccMap) {
         setTimeout(() => ccMap.invalidateSize(), 50);
       }
+      // WHY: Regional maps are initialized while their panel is display:none, so
+      // each Leaflet container measures 0×0 and only fetches a tile sliver.
+      // Invalidate sizes when the regional tab first becomes visible so tiles fill the cards.
+      if (target === 'regional' && typeof regionMaps !== 'undefined') {
+        setTimeout(() => Object.values(regionMaps).forEach(m => m.invalidateSize()), 50);
+      }
     });
   });
 }
