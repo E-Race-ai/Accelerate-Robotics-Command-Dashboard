@@ -37,18 +37,23 @@
 </head>
 <body>
   <div class="embed-wrap">
-    <iframe id="frame" title="Robot Command (home-dashboard)"></iframe>
+    <!-- WHY: Same-origin /cl/* proxy → no DNS filter, no CSP issues, auth piggybacks on the existing JWT. -->
+    <iframe id="frame" src="/cl/?zone=command" title="Robot Command (home-dashboard)"></iframe>
     <div class="fallback" id="fallback">
       <div class="fallback-card">
-        <h1 id="fallbackHeading">Creative Labs URL not configured</h1>
-        <p id="fallbackBody">An admin needs to paste the current cloudflared tunnel URL into Settings → System.</p>
-        <p class="muted">Path: <code>/admin/settings</code> → System tab → "Creative Labs Tunnel URL"</p>
-        <p class="muted">If the tunnel just restarted, the URL rotated. PM2 keeps it running on the MacBook (<code>pm2 list</code>), and the new URL is in <code>pm2 logs creative-labs-tunnel</code>.</p>
+        <h1 id="fallbackHeading">Creative Labs unavailable</h1>
+        <p id="fallbackBody">The proxy could not reach home-dashboard.</p>
+        <p class="muted">If the tunnel just rotated, paste the new URL into <code>/admin/settings</code> → System tab.</p>
+        <p class="muted">On the MacBook: <code>pm2 logs creative-labs-tunnel</code> shows the current URL.</p>
       </div>
     </div>
   </div>
 
 <script>
+// WHY: Detect proxy errors (503/502 from /cl) by probing the proxy. The iframe
+// itself happily renders an upstream-error response body, so without this the
+// user would see the proxy's plain-text error page inline rather than the
+// styled fallback panel.
 (async function () {
   const frame = document.getElementById('frame');
   const fallback = document.getElementById('fallback');
@@ -62,42 +67,22 @@
     fallback.classList.add('show');
   }
 
-  // 1. Read the tunnel URL from system_settings.
-  let tunnelUrl;
   try {
-    const r = await fetch('/api/system-settings/creative_labs_url', { credentials: 'same-origin' });
-    if (r.status === 404) {
+    const r = await fetch('/cl/', { credentials: 'same-origin' });
+    if (r.status === 503) {
       return showFallback('Creative Labs URL not configured',
-        'An admin needs to paste the current cloudflared tunnel URL into Settings → System.');
+        'An admin needs to paste the cloudflared tunnel URL into Settings → System.');
+    }
+    if (r.status === 502) {
+      return showFallback('Creative Labs tunnel unreachable',
+        'The stored URL did not respond. The tunnel likely rotated — paste the new URL into Settings → System.');
     }
     if (!r.ok) {
-      return showFallback('Could not load Creative Labs URL', `Server returned ${r.status}.`);
+      return showFallback('Creative Labs proxy returned an error', `HTTP ${r.status}`);
     }
-    const data = await r.json();
-    tunnelUrl = data.value;
   } catch (e) {
-    return showFallback('Could not load Creative Labs URL', e.message);
+    return showFallback('Creative Labs proxy error', e.message);
   }
-
-  // 2. Probe the tunnel to confirm it's reachable. cloudflared quick tunnels
-  //    rotate on restart, so a stored URL can go stale even if PM2 is up.
-  // WHY: 2500ms covers Cloudflare cold-start; shorter and we'd false-fail on
-  //    fresh tunnels that take a moment to wake up.
-  const PROBE_TIMEOUT_MS = 2500;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
-
-  try {
-    await fetch(tunnelUrl, { mode: 'no-cors', signal: controller.signal });
-    clearTimeout(timeoutId);
-  } catch {
-    clearTimeout(timeoutId);
-    return showFallback('Creative Labs tunnel unreachable',
-      'The stored URL did not respond. The tunnel likely rotated — paste the new URL into Settings → System.');
-  }
-
-  // 3. Set the iframe to the command zone.
-  frame.src = tunnelUrl.replace(/\/$/, '') + '/?zone=command';
 })();
 </script>
 </body>

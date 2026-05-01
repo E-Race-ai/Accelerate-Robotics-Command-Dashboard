@@ -7,6 +7,7 @@
 const express = require('express');
 const db = require('../db/database');
 const { requireAuth } = require('../middleware/auth');
+const { invalidateCache: invalidateCreativeLabsCache } = require('./creative-labs-proxy');
 
 const router = express.Router();
 
@@ -57,6 +58,11 @@ router.put('/:key', requireAuth, async (req, res) => {
   );
 
   const row = await db.one(`SELECT key, value, updated_at, updated_by FROM system_settings WHERE key = ?`, [key]);
+
+  // WHY: Drop the cached tunnel URL + proxy instance so the next /cl/* request
+  // picks up the new value immediately, not on the next 30s cache cycle.
+  if (key === 'creative_labs_url') invalidateCreativeLabsCache();
+
   res.json(row);
 });
 

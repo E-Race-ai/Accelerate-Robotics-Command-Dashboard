@@ -31,6 +31,7 @@ const activityRoutes = require('./routes/activities');
 const collabRoutes = require('./routes/collab');
 const improvementRoutes = require('./routes/improvement-requests');
 const systemSettingsRoutes = require('./routes/system-settings');
+const { creativeLabsProxy } = require('./routes/creative-labs-proxy');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -226,6 +227,13 @@ app.use('/api/improvement-requests', (req, res, next) => {
 }, improvementRoutes);
 
 app.use('/api/system-settings', systemSettingsRoutes);
+
+// WHY: Proxy /cl/* to the tunnel URL stored in system_settings.creative_labs_url.
+// This serves home-dashboard (running on Eric's MacBook on localhost:3100) to
+// the team via acceleraterobotics.ai, bypassing Eric's local DNS filter that
+// blocks *.trycloudflare.com. requireAuthPage gates browser access so the
+// proxy isn't a public window into home-dashboard.
+app.use('/cl', requireAuthPage, creativeLabsProxy);
 
 // ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
 // WHY: Removed auth requirement temporarily so we can diagnose the API key issue.
