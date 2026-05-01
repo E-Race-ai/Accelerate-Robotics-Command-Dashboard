@@ -37,18 +37,20 @@
 </head>
 <body>
   <div class="embed-wrap">
-    <iframe id="frame" title="Beam Bot live feed (home-dashboard)"></iframe>
+    <iframe id="frame" src="/cl/beam-feed.html" title="Beam Bot live feed (home-dashboard)"></iframe>
     <div class="fallback" id="fallback">
       <div class="fallback-card">
-        <h1 id="fallbackHeading">Creative Labs URL not configured</h1>
-        <p id="fallbackBody">An admin needs to paste the current cloudflared tunnel URL into Settings → System.</p>
-        <p class="muted">Path: <code>/admin/settings</code> → System tab → "Creative Labs Tunnel URL"</p>
-        <p class="muted">If the tunnel just restarted, the URL rotated. PM2 keeps it running on the MacBook (<code>pm2 list</code>), and the new URL is in <code>pm2 logs creative-labs-tunnel</code>.</p>
+        <h1 id="fallbackHeading">Creative Labs unavailable</h1>
+        <p id="fallbackBody">The proxy could not reach home-dashboard.</p>
+        <p class="muted">If the tunnel just rotated, paste the new URL into <code>/admin/settings</code> → System tab.</p>
+        <p class="muted">On the MacBook: <code>pm2 logs creative-labs-tunnel</code> shows the current URL.</p>
       </div>
     </div>
   </div>
 
 <script>
+// WHY: See robot-command-embed.html — probe the proxy so a 502/503 surfaces
+// as the styled fallback rather than a raw text page in the iframe.
 (async function () {
   const frame = document.getElementById('frame');
   const fallback = document.getElementById('fallback');
@@ -62,37 +64,22 @@
     fallback.classList.add('show');
   }
 
-  let tunnelUrl;
   try {
-    const r = await fetch('/api/system-settings/creative_labs_url', { credentials: 'same-origin' });
-    if (r.status === 404) {
+    const r = await fetch('/cl/beam-feed.html', { credentials: 'same-origin' });
+    if (r.status === 503) {
       return showFallback('Creative Labs URL not configured',
-        'An admin needs to paste the current cloudflared tunnel URL into Settings → System.');
+        'An admin needs to paste the cloudflared tunnel URL into Settings → System.');
+    }
+    if (r.status === 502) {
+      return showFallback('Creative Labs tunnel unreachable',
+        'The stored URL did not respond. The tunnel likely rotated — paste the new URL into Settings → System.');
     }
     if (!r.ok) {
-      return showFallback('Could not load Creative Labs URL', `Server returned ${r.status}.`);
+      return showFallback('Creative Labs proxy returned an error', `HTTP ${r.status}`);
     }
-    const data = await r.json();
-    tunnelUrl = data.value;
   } catch (e) {
-    return showFallback('Could not load Creative Labs URL', e.message);
+    return showFallback('Creative Labs proxy error', e.message);
   }
-
-  // WHY: 2500ms covers Cloudflare cold-start; see robot-command-embed.html.
-  const PROBE_TIMEOUT_MS = 2500;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
-
-  try {
-    await fetch(tunnelUrl, { mode: 'no-cors', signal: controller.signal });
-    clearTimeout(timeoutId);
-  } catch {
-    clearTimeout(timeoutId);
-    return showFallback('Creative Labs tunnel unreachable',
-      'The stored URL did not respond. The tunnel likely rotated — paste the new URL into Settings → System.');
-  }
-
-  frame.src = tunnelUrl.replace(/\/$/, '') + '/beam-feed.html';
 })();
 </script>
 </body>
