@@ -30,6 +30,7 @@ const feedbackRoutes = require('./routes/feedback');
 const activityRoutes = require('./routes/activities');
 const collabRoutes = require('./routes/collab');
 const improvementRoutes = require('./routes/improvement-requests');
+const systemSettingsRoutes = require('./routes/system-settings');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,11 +52,13 @@ app.use(helmet({
       // WHY: Proposal pages embed robot product images from manufacturer CDNs and Google favicons
       // WHY: https: already covers OSM tiles, but explicit entry documents the dependency
       imgSrc: ["'self'", "data:", "https://img.youtube.com", "https:", "http:", "https://tile.openstreetmap.org"],
-      // WHY: localhost:3100 added so the home-dashboard reachability probe in
-      // robot-command-embed.html / beam-feed-embed.html can fire without CSP blocking it.
-      connectSrc: ["'self'", "http://localhost:3100"],
+      // WHY: localhost:3100 + *.trycloudflare.com for the Creative Labs embed pages.
+      // The cloudflared quick tunnel (rotates URL when it restarts) lives on
+      // *.trycloudflare.com; localhost:3100 is the fallback for when an admin
+      // is on Eric's MacBook directly.
+      connectSrc: ["'self'", "http://localhost:3100", "https://*.trycloudflare.com"],
       // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) + Creative Labs robot command embed
-      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com", "http://localhost:3100"],
+      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com", "http://localhost:3100", "https://*.trycloudflare.com"],
       // WHY: Helmet defaults script-src-attr to 'none', which blocks ALL inline event
       // handlers (onclick, onchange, etc.) even when script-src allows 'unsafe-inline'.
       // Our admin pages use onclick handlers extensively — allow them.
@@ -221,6 +224,8 @@ app.use('/api/improvement-requests', (req, res, next) => {
   if (req.method === 'POST') return inquiryLimiter(req, res, next);
   next();
 }, improvementRoutes);
+
+app.use('/api/system-settings', systemSettingsRoutes);
 
 // ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
 // WHY: Removed auth requirement temporarily so we can diagnose the API key issue.

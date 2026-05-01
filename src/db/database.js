@@ -439,6 +439,17 @@ async function initSchema() {
       resolved_at TEXT
     )`,
     `CREATE INDEX IF NOT EXISTS idx_improvement_status_created ON improvement_requests(status, created_at DESC)`,
+
+    // WHY: Generic key-value store for runtime-editable settings that don't warrant a
+    // dedicated table. First user is the Creative Labs tunnel URL — Eric pastes
+    // a fresh cloudflared quick-tunnel URL here when it rotates, and the
+    // robot-command/beam-feed embed pages read it from /api/public/system-settings.
+    `CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now')),
+      updated_by TEXT
+    )`,
   ];
 
   for (const sql of statements) {
