@@ -28,7 +28,7 @@
     display: block; padding: 12px 14px; background: #020617;
     color: #5eead4; font-family: 'JetBrains Mono', Menlo, monospace;
     font-size: 12px; border-radius: 6px; margin: 14px 0;
-    border: 1px solid rgba(34,211,238,0.15);
+    border: 1px solid rgba(34,211,238,0.15); word-break: break-all;
   }
   .fallback .muted { color: #64748b; font-size: 13px; }
   .fallback a { color: #22d3ee; text-decoration: none; }
@@ -37,38 +37,62 @@
 </head>
 <body>
   <div class="embed-wrap">
-    <iframe id="frame" src="http://localhost:3100/beam-feed.html" title="Beam Bot live feed (home-dashboard)"></iframe>
+    <iframe id="frame" title="Beam Bot live feed (home-dashboard)"></iframe>
     <div class="fallback" id="fallback">
       <div class="fallback-card">
-        <h1>Beam Bot Playground needs home-dashboard running</h1>
-        <p>This tool embeds <strong>home-dashboard's</strong> beam-feed page (telepresence drive + live camera) from your local machine on port 3100. It's not reachable right now.</p>
-        <p>Start it locally:</p>
-        <code>cd ~/Code/home-dashboard &amp;&amp; npm run dev</code>
-        <p>Then reload this page. Once the dashboard is serving on <a href="http://localhost:3100/" target="_blank" rel="noopener">localhost:3100</a>, the live feed will appear here.</p>
-        <p class="muted">Why this is local-only: home-dashboard runs on Eric's MacBook by default. To use Beam Bot from another machine, run home-dashboard there too — or ask Eric for a tunnel URL.</p>
+        <h1 id="fallbackHeading">Creative Labs URL not configured</h1>
+        <p id="fallbackBody">An admin needs to paste the current cloudflared tunnel URL into Settings → System.</p>
+        <p class="muted">Path: <code>/admin/settings</code> → System tab → "Creative Labs Tunnel URL"</p>
+        <p class="muted">If the tunnel just restarted, the URL rotated. PM2 keeps it running on the MacBook (<code>pm2 list</code>), and the new URL is in <code>pm2 logs creative-labs-tunnel</code>.</p>
       </div>
     </div>
   </div>
 
 <script>
-(function () {
+(async function () {
   const frame = document.getElementById('frame');
   const fallback = document.getElementById('fallback');
+  const heading = document.getElementById('fallbackHeading');
+  const body = document.getElementById('fallbackBody');
 
-  // WHY: 1500ms is enough for a local fetch to round-trip but short enough
-  // that team members on remote machines see the fallback quickly.
-  const PROBE_TIMEOUT_MS = 1500;
+  function showFallback(h, b) {
+    if (h) heading.textContent = h;
+    if (b) body.textContent = b;
+    frame.style.display = 'none';
+    fallback.classList.add('show');
+  }
 
+  let tunnelUrl;
+  try {
+    const r = await fetch('/api/system-settings/creative_labs_url', { credentials: 'same-origin' });
+    if (r.status === 404) {
+      return showFallback('Creative Labs URL not configured',
+        'An admin needs to paste the current cloudflared tunnel URL into Settings → System.');
+    }
+    if (!r.ok) {
+      return showFallback('Could not load Creative Labs URL', `Server returned ${r.status}.`);
+    }
+    const data = await r.json();
+    tunnelUrl = data.value;
+  } catch (e) {
+    return showFallback('Could not load Creative Labs URL', e.message);
+  }
+
+  // WHY: 2500ms covers Cloudflare cold-start; see robot-command-embed.html.
+  const PROBE_TIMEOUT_MS = 2500;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
 
-  fetch('http://localhost:3100/', { mode: 'no-cors', signal: controller.signal })
-    .then(() => clearTimeout(timeoutId))
-    .catch(() => {
-      clearTimeout(timeoutId);
-      frame.style.display = 'none';
-      fallback.classList.add('show');
-    });
+  try {
+    await fetch(tunnelUrl, { mode: 'no-cors', signal: controller.signal });
+    clearTimeout(timeoutId);
+  } catch {
+    clearTimeout(timeoutId);
+    return showFallback('Creative Labs tunnel unreachable',
+      'The stored URL did not respond. The tunnel likely rotated — paste the new URL into Settings → System.');
+  }
+
+  frame.src = tunnelUrl.replace(/\/$/, '') + '/beam-feed.html';
 })();
 </script>
 </body>
