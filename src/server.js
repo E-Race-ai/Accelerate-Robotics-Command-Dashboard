@@ -51,7 +51,9 @@ app.use(helmet({
       // WHY: Proposal pages embed robot product images from manufacturer CDNs and Google favicons
       // WHY: https: already covers OSM tiles, but explicit entry documents the dependency
       imgSrc: ["'self'", "data:", "https://img.youtube.com", "https:", "http:", "https://tile.openstreetmap.org"],
-      connectSrc: ["'self'"],
+      // WHY: localhost:3100 added so the home-dashboard reachability probe in
+      // robot-command-embed.html / beam-feed-embed.html can fire without CSP blocking it.
+      connectSrc: ["'self'", "http://localhost:3100"],
       // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) + Creative Labs robot command embed
       frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com", "http://localhost:3100"],
       // WHY: Helmet defaults script-src-attr to 'none', which blocks ALL inline event
