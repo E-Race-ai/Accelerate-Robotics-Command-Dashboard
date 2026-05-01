@@ -1,0 +1,3315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sensor Lab · Accelerate Robotics</title>
+<style>
+:root {
+  --bg: #f5f7fb;
+  --bg-2: #eef1f6;
+  --panel: #ffffff;
+  --panel-2: #fafbfd;
+  --line: #e3e7ef;
+  --line-strong: #d1d7e2;
+  --text: #0c1220;
+  --text-2: #3a4257;
+  --muted: #6c7689;
+  --accent: #0891b2;       /* Accelerate cyan */
+  --accent-2: #0e7490;
+  --accent-soft: #e0f2fe;
+  --gold: #c18a2b;
+  --green: #059669;
+  --red: #dc2626;
+  --amber: #d97706;
+  --purple: #7c3aed;
+  --shadow-sm: 0 1px 2px rgba(12, 18, 32, 0.05);
+  --shadow: 0 2px 8px rgba(12, 18, 32, 0.06);
+  --shadow-lg: 0 10px 30px rgba(12, 18, 32, 0.08);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+code, pre, .mono { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 12px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-2); text-decoration: underline; }
+
+header {
+  padding: 14px 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 14px;
+  box-shadow: var(--shadow-sm);
+}
+header .logo {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-weight: 700; font-size: 12px; letter-spacing: 0.5px;
+}
+header h1 { margin: 0; font-size: 15px; font-weight: 600; }
+header h1 .sub { color: var(--muted); font-weight: 500; margin-left: 6px; font-size: 13px; }
+header .spacer { flex: 1; }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 11px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  background: var(--bg-2); color: var(--muted); border: 1px solid var(--line);
+}
+.status-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.status-pill.connected { color: var(--green); background: #ecfdf5; border-color: #a7f3d0; }
+.status-pill.connected .dot { background: var(--green); box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15); }
+.status-pill.connecting { color: var(--amber); background: #fffbeb; border-color: #fcd34d; }
+.status-pill.connecting .dot { background: var(--amber); animation: pulse 1s infinite; }
+.status-pill.error { color: var(--red); background: #fef2f2; border-color: #fecaca; }
+.status-pill.error .dot { background: var(--red); }
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+.layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 57px); }
+nav {
+  background: var(--panel); border-right: 1px solid var(--line); padding: 18px 0;
+}
+nav .section-label {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.3px; color: var(--muted);
+  padding: 16px 22px 8px; font-weight: 600;
+}
+nav button.tab {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 9px 22px; border: 0; background: transparent; color: var(--text-2);
+  cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 500;
+  border-left: 3px solid transparent;
+}
+nav button.tab:hover { background: var(--bg-2); color: var(--text); }
+nav button.tab.active { background: var(--accent-soft); border-left-color: var(--accent); color: var(--accent-2); font-weight: 600; }
+nav button.tab .tab-ico { font-size: 15px; width: 20px; display: inline-block; text-align: center; }
+nav button.tab .tab-badge { margin-left: auto; background: var(--bg-2); color: var(--muted); font-size: 10px; padding: 1px 7px; border-radius: 8px; font-weight: 600; }
+nav button.tab.active .tab-badge { background: var(--accent); color: white; }
+
+main { padding: 26px 32px; overflow: hidden; min-width: 0; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+h2 { font-size: 22px; margin: 0 0 6px; font-weight: 700; letter-spacing: -0.3px; }
+h2 + p.lede { color: var(--muted); margin: 0 0 22px; font-size: 14px; max-width: 720px; }
+h3 { font-size: 12.5px; margin: 20px 0 8px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; margin-bottom: 14px; box-shadow: var(--shadow-sm);
+}
+.card-compact { padding: 14px; }
+
+button.btn {
+  padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: inherit; border: 1px solid; transition: all 0.12s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+button.btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+button.btn.primary:hover:not(:disabled) { background: var(--accent-2); border-color: var(--accent-2); }
+button.btn.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+button.btn.secondary { background: var(--panel); border-color: var(--line-strong); color: var(--text); }
+button.btn.secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+button.btn.ghost { background: transparent; border-color: transparent; color: var(--text-2); }
+button.btn.ghost:hover { background: var(--bg-2); color: var(--text); }
+button.btn.danger { background: var(--panel); border-color: #fecaca; color: var(--red); }
+button.btn.danger:hover { background: #fef2f2; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+
+.stat { background: var(--panel); padding: 14px 16px; border-radius: 8px; border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+.stat .label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); font-weight: 600; }
+.stat .value { font-size: 18px; margin-top: 4px; font-weight: 600; }
+.stat .value.big { font-size: 32px; color: var(--accent-2); font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+
+table.kv { width: 100%; border-collapse: collapse; }
+table.kv td { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+table.kv tr:last-child td { border-bottom: 0; }
+table.kv td:first-child { color: var(--muted); width: 42%; }
+table.kv td:last-child { color: var(--text); }
+table.kv td code { font-size: 12px; background: var(--bg-2); padding: 1px 5px; border-radius: 3px; }
+
+.chip {
+  display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 11px;
+  font-weight: 600; background: var(--bg-2); color: var(--muted); border: 1px solid var(--line); letter-spacing: 0.2px;
+}
+.chip.cyan { background: var(--accent-soft); color: var(--accent-2); border-color: #bae6fd; }
+.chip.green { background: #ecfdf5; color: var(--green); border-color: #a7f3d0; }
+.chip.amber { background: #fffbeb; color: var(--amber); border-color: #fcd34d; }
+.chip.red { background: #fef2f2; color: var(--red); border-color: #fecaca; }
+.chip.purple { background: #f5f3ff; color: var(--purple); border-color: #ddd6fe; }
+
+/* ───── Demo app gallery cards ───── */
+.app-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 22px; cursor: pointer; transition: all 0.15s;
+  display: flex; flex-direction: column; gap: 10px;
+  box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
+}
+.app-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--line-strong); }
+.app-card .ico {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.app-card .ico.cyan { background: var(--accent-soft); }
+.app-card .ico.purple { background: #f5f3ff; }
+.app-card .ico.green { background: #ecfdf5; }
+.app-card .ico.amber { background: #fffbeb; }
+.app-card .ico.red { background: #fef2f2; }
+.app-card h4 { margin: 0; font-size: 15px; font-weight: 700; }
+.app-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.app-card .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 10px; }
+
+/* ───── NEW feature highlight badge ─────
+   Auto-applied by JS to any element with data-shipped="YYYY-MM-DD".
+   Visible for 5 days from ship date, then fades out and removes itself.
+   See applyNewBadges() in the JS section. */
+.new-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: white;
+  border-radius: 10px;
+  text-transform: uppercase;
+  vertical-align: middle;
+  box-shadow: 0 1px 3px rgba(8, 145, 178, 0.3);
+  transition: opacity 0.4s ease;
+  white-space: nowrap;
+}
+nav button.tab .new-badge { margin-left: auto; padding: 1px 5px; font-size: 8.5px; }
+.app-card .new-badge { position: absolute; top: 14px; right: 14px; }
+h2 .new-badge, h3 .new-badge, h4 .new-badge { margin-left: 8px; vertical-align: middle; }
+
+/* ───── Demo app internals ───── */
+.demo-header {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 24px; margin-bottom: 14px; box-shadow: var(--shadow-sm);
+  display: flex; align-items: flex-start; gap: 20px;
+}
+.demo-header .ico {
+  width: 56px; height: 56px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; flex-shrink: 0;
+}
+.demo-header .body { flex: 1; }
+.demo-header h2 { margin-bottom: 4px; }
+.demo-header .desc { color: var(--muted); font-size: 14px; }
+
+.scene {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid var(--line); border-radius: 14px; padding: 28px;
+  margin-bottom: 14px; min-height: 300px; position: relative; overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.room-card {
+  display: flex; gap: 24px; align-items: center;
+}
+.room-visual {
+  width: 200px; height: 160px; border-radius: 12px; position: relative; flex-shrink: 0;
+  background:
+    linear-gradient(135deg, #e0f2fe 0%, #fef3c7 100%);
+  border: 1px solid var(--line);
+  display: flex; align-items: flex-end; padding: 12px;
+}
+.room-visual .door { position: absolute; right: 12px; bottom: 12px; width: 16px; height: 36px; background: #78350f; border-radius: 2px; }
+.room-visual .bed { position: absolute; left: 16px; bottom: 40px; width: 80px; height: 50px; background: white; border: 1px solid var(--line-strong); border-radius: 4px; box-shadow: var(--shadow-sm); }
+.room-visual .bed::before { content: ''; position: absolute; top: 4px; left: 4px; right: 4px; height: 14px; background: var(--accent-soft); border-radius: 2px; }
+.room-visual .lamp { position: absolute; right: 16px; top: 16px; width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, #fde68a, #f59e0b); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+.room-visual .number { position: absolute; top: 12px; left: 12px; font-weight: 700; font-size: 13px; color: var(--text); background: white; padding: 2px 8px; border-radius: 4px; box-shadow: var(--shadow-sm); }
+
+.room-meta { flex: 1; }
+.room-meta h3 { font-size: 14px; color: var(--text); text-transform: none; letter-spacing: 0; margin: 0 0 10px; font-weight: 600; }
+.room-meta .guest { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.room-meta .status { display: inline-block; padding: 3px 10px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-2); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.simulate-bar {
+  display: flex; gap: 8px; padding: 14px; background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 10px; margin-bottom: 14px; align-items: center;
+}
+.simulate-bar .label { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; }
+
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.timeline-item {
+  display: flex; gap: 14px; padding: 14px 0; position: relative;
+  border-bottom: 1px dashed var(--line);
+}
+.timeline-item:last-child { border-bottom: 0; }
+.timeline-item .dot {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong);
+  margin-top: 6px; flex-shrink: 0;
+}
+.timeline-item.active .dot { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.timeline-item.done .dot { background: var(--green); }
+.timeline-item .body { flex: 1; }
+.timeline-item .body .t { font-weight: 600; margin-bottom: 2px; }
+.timeline-item .body .d { color: var(--muted); font-size: 12.5px; }
+.timeline-item .t-time { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+/* ───── Log / raw ───── */
+.log {
+  background: #0c1220; color: #e2e8f0; border-radius: 8px;
+  padding: 14px; height: 380px; overflow-y: auto;
+  font-family: "SF Mono", monospace; font-size: 11.5px; line-height: 1.65;
+}
+.log .entry { padding: 2px 0; }
+.log .ts { color: #64748b; margin-right: 8px; }
+.log .tag { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 9.5px; text-transform: uppercase; margin-right: 8px; font-weight: 700; letter-spacing: 0.5px; }
+.log .tag.info { background: rgba(8, 145, 178, 0.25); color: #67e8f9; }
+.log .tag.ok { background: rgba(5, 150, 105, 0.25); color: #6ee7b7; }
+.log .tag.err { background: rgba(220, 38, 38, 0.25); color: #fca5a5; }
+.log .tag.rx { background: rgba(193, 138, 43, 0.25); color: #fcd34d; }
+.log .tag.tx { background: rgba(124, 58, 237, 0.3); color: #c4b5fd; }
+.log .tag.sys { background: rgba(148, 163, 184, 0.25); color: #cbd5e1; }
+.log .hex { color: #fcd34d; }
+
+/* ───── Tree (GATT) ───── */
+.tree { font-family: "SF Mono", monospace; font-size: 12px; }
+.tree .service { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.tree .service:last-child { border-bottom: 0; }
+.tree .service-name { color: var(--accent-2); font-weight: 700; }
+.tree .service-uuid { color: var(--muted); font-size: 11px; margin-left: 6px; }
+.tree .char { padding: 6px 0 6px 24px; font-size: 12px; }
+.tree .char-uuid { color: var(--gold); font-weight: 600; }
+.tree .char-props { color: var(--muted); font-size: 10.5px; margin-left: 8px; }
+.tree .char-value { color: var(--text); margin: 4px 0 0 24px; display: block; padding: 6px 10px; background: var(--bg-2); border-radius: 4px; font-size: 11.5px; }
+.tree .char-actions { display: inline-flex; gap: 4px; margin-left: 10px; }
+.tree .char-actions button { font-size: 10.5px; padding: 2px 8px; background: var(--panel); border: 1px solid var(--line); color: var(--text-2); border-radius: 3px; cursor: pointer; font-family: inherit; }
+.tree .char-actions button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ───── Step instructions ───── */
+.step {
+  display: flex; gap: 14px; padding: 14px; border-radius: 8px;
+  background: var(--panel-2); border: 1px solid var(--line); margin-bottom: 10px;
+}
+.step .num {
+  flex: 0 0 28px; height: 28px; border-radius: 50%;
+  background: var(--accent); color: white; font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.step .body { flex: 1; padding-top: 3px; }
+.step .body strong { display: block; margin-bottom: 2px; }
+.step .body span { color: var(--muted); font-size: 12.5px; }
+
+/* ───── Form ───── */
+textarea, input[type="text"], input[type="password"], select {
+  width: 100%; padding: 10px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; color: var(--text); font-family: "SF Mono", monospace; font-size: 12.5px;
+}
+textarea { min-height: 140px; resize: vertical; }
+textarea:focus, input:focus, select:focus { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.empty { padding: 44px; text-align: center; color: var(--muted); font-size: 13px; border: 1px dashed var(--line-strong); border-radius: 8px; }
+
+/* ───── Accelerometer viz ───── */
+.accel-viz {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+}
+.accel-bar {
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 14px;
+  position: relative; height: 180px; display: flex; flex-direction: column;
+}
+.accel-bar .axis { font-weight: 700; font-size: 18px; }
+.accel-bar .val { font-family: "SF Mono", monospace; font-size: 20px; color: var(--accent-2); font-variant-numeric: tabular-nums; }
+.accel-bar .track {
+  flex: 1; position: relative; margin-top: 8px; background: white;
+  border: 1px solid var(--line); border-radius: 4px;
+}
+.accel-bar .fill {
+  position: absolute; left: 50%; bottom: 50%; width: 40%; background: var(--accent);
+  transform: translateX(-50%); transition: height 0.15s, top 0.15s, bottom 0.15s;
+  border-radius: 2px;
+}
+.accel-bar.x .fill { background: #0891b2; }
+.accel-bar.y .fill { background: #7c3aed; }
+.accel-bar.z .fill { background: #d97706; }
+
+/* ───── Dispatch / events ───── */
+.event-feed { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; }
+.event-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 14px; display: flex; align-items: center; gap: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.event-card .ico { font-size: 20px; width: 24px; text-align: center; }
+.event-card .meta { flex: 1; }
+.event-card .meta .title { font-weight: 600; font-size: 13px; }
+.event-card .meta .sub { color: var(--muted); font-size: 11.5px; }
+.event-card .time { color: var(--muted); font-size: 11px; font-family: "SF Mono", monospace; font-variant-numeric: tabular-nums; }
+
+/* alert pulse for staff emergency */
+@keyframes alert-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
+  50% { box-shadow: 0 0 0 20px rgba(220, 38, 38, 0); }
+}
+.alert-active { animation: alert-pulse 1.2s infinite; border-color: var(--red) !important; }
+
+/* hotel floor plan (tiny svg) */
+.floor-plan {
+  width: 100%; max-width: 520px; aspect-ratio: 16/9;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px;
+  position: relative; margin: 8px 0;
+}
+.floor-plan .room-dot { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: var(--line-strong); border: 2px solid white; box-shadow: var(--shadow-sm); }
+.floor-plan .room-dot.active { background: var(--red); animation: alert-pulse 1.2s infinite; }
+
+pre.code {
+  background: var(--bg-2); padding: 14px; border-radius: 6px; overflow: auto;
+  font-size: 12px; line-height: 1.55; border: 1px solid var(--line);
+}
+
+.hero {
+  padding: 28px; border-radius: 14px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #faf5ff 100%);
+  border: 1px solid var(--line); margin-bottom: 22px;
+}
+.hero h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.5px; }
+.hero p.lede { color: var(--text-2); max-width: 680px; font-size: 15px; }
+
+/* ───── Pairing wizard modal ───── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(12, 18, 32, 0.55);
+  display: none; align-items: center; justify-content: center; z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--panel); border-radius: 14px; padding: 28px;
+  width: 560px; max-width: 94vw; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(12, 18, 32, 0.3); position: relative;
+}
+.modal h2 { margin: 0 0 6px; font-size: 20px; }
+.modal .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+.modal .close {
+  position: absolute; top: 16px; right: 16px; background: transparent;
+  border: 0; color: var(--muted); font-size: 22px; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 6px;
+}
+.modal .close:hover { background: var(--bg-2); color: var(--text); }
+
+.pair-steps { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+.pair-step {
+  display: flex; gap: 14px; padding: 14px;
+  border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line);
+  align-items: center;
+}
+.pair-step.active { border-color: var(--accent); background: var(--accent-soft); }
+.pair-step.done { border-color: var(--green); background: #ecfdf5; }
+.pair-step .num {
+  flex: 0 0 36px; height: 36px; border-radius: 50%;
+  background: var(--bg-2); color: var(--muted); font-weight: 700; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--line);
+}
+.pair-step.active .num { background: var(--accent); color: white; border-color: var(--accent); }
+.pair-step.done .num { background: var(--green); color: white; border-color: var(--green); }
+.pair-step .body { flex: 1; }
+.pair-step .body .t { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+.pair-step .body .d { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.pair-step .body .d code { background: var(--bg-2); padding: 1px 6px; border-radius: 3px; font-size: 11.5px; }
+
+.b10-visual {
+  width: 120px; height: 120px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #374151, #0f172a);
+  margin: 0 auto 18px; position: relative;
+  box-shadow: inset 0 -6px 12px rgba(0,0,0,0.4), var(--shadow);
+  display: flex; align-items: center; justify-content: center;
+}
+.b10-visual::before {
+  content: ''; position: absolute; width: 40px; height: 40px; border-radius: 50%;
+  background: radial-gradient(circle, #4b5563, #1f2937);
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.15);
+}
+.b10-visual .led {
+  position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+  width: 6px; height: 6px; border-radius: 50%; background: #1f2937;
+}
+.b10-visual.blinking .led {
+  background: #60a5fa;
+  animation: led-blink 0.6s infinite;
+  box-shadow: 0 0 12px #60a5fa;
+}
+@keyframes led-blink { 50% { opacity: 0.2; } }
+
+.countdown-ring {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 8px 14px; border-radius: 20px;
+  background: var(--accent-soft); color: var(--accent-2);
+  font-weight: 600; font-size: 13px;
+}
+.countdown-ring .num { font-variant-numeric: tabular-nums; font-size: 16px; }
+
+.hint-box {
+  padding: 12px 14px; border-radius: 8px; background: #fffbeb; border: 1px solid #fcd34d;
+  color: #78350f; font-size: 12.5px; line-height: 1.5; margin-top: 12px;
+}
+.hint-box strong { color: #78350f; }
+</style>
+</head>
+<body>
+
+<!-- Pairing wizard modal -->
+<div class="modal-backdrop" id="pair-modal">
+  <div class="modal">
+    <button class="close" onclick="closePairModal()">×</button>
+    <h2>Pair your B10</h2>
+    <div class="sub">Follow these steps — the whole thing takes about 15 seconds.</div>
+
+    <div class="b10-visual" id="b10-visual"><span class="led"></span></div>
+
+    <div class="pair-steps">
+      <div class="pair-step active" id="ps-1">
+        <div class="num">1</div>
+        <div class="body">
+          <div class="t">Press the B10 button for ~1 second</div>
+          <div class="d">You'll feel a <b>short vibration buzz</b> and see the <b>blue LED blink twice</b>. That's discoverable mode.</div>
+        </div>
+      </div>
+      <div class="pair-step" id="ps-2">
+        <div class="num">2</div>
+        <div class="body">
+          <div class="t">Within 5 sec, click "Find my B10"</div>
+          <div class="d"><b>Match the MAC.</b> Flip your B10 over — the 12-character ID printed on the back (e.g. <code>AC233FABF61A</code>) is your B10's MAC address. In Chrome's picker, that MAC appears in parentheses next to "Unknown or Unsupported Device" — formatted as <code>AC:23:3F:AB:F6:1A</code>. Pick the entry whose MAC matches. If you can't tell which is yours, try each — we now auto-detect non-B10 picks and tell you to retry without disconnecting the page.</div>
+        </div>
+      </div>
+      <div class="pair-step" id="ps-3">
+        <div class="num">3</div>
+        <div class="body">
+          <div class="t">Pick it and hit Pair</div>
+          <div class="d">We auto-validate it's a real Minew B10 by reading the manufacturer field. If you picked the wrong one, you'll get a red banner and the page disconnects — click <b>Connect B10</b> again and pick a different entry. Wrong picks are remembered so you don't retry them.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="pair-status" style="min-height: 22px; margin-bottom: 14px; font-size: 13px; color: var(--muted); text-align: center;"></div>
+
+    <div class="toolbar" style="justify-content: center; gap: 10px;">
+      <button class="btn primary" id="start-pair-btn" onclick="runPairFlow(false)">Find my B10 (show all)</button>
+      <button class="btn secondary" id="pair-all-btn" onclick="runPairFlow(true)" title="Only show devices matching known Minew names/services">Narrow to Minew</button>
+      <button class="btn ghost" onclick="closePairModal()">Cancel</button>
+    </div>
+
+    <div class="hint-box" id="pair-hint" style="display:none">
+      <strong>Can't identify it in the list?</strong> The B10 commonly shows up with no name (just a MAC). Best strategies:
+      <ol style="margin: 6px 0 0 18px; padding: 0;">
+        <li><b>Press the button again</b> right before clicking Find — the 60s window starts from the press, not from when you open this modal.</li>
+        <li><b>Watch for the device appearing live</b> — the Chrome picker scans continuously. Press the B10 while the picker is open and watch for a new entry to pop in.</li>
+        <li><b>Try every "Unknown or Unsupported Device"</b> — one of them is almost certainly your B10. We can disconnect and retry if you pick wrong.</li>
+        <li>If nothing ever appears: toggle macOS Bluetooth off/on, or plug in the charger for 30 sec to wake a flat battery.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">AR</div>
+  <h1>Sensor Lab <span class="sub">· Accelerate Robotics · B10</span></h1>
+  <span class="spacer"></span>
+  <span id="status" class="status-pill"><span class="dot"></span><span class="txt">Disconnected</span></span>
+  <button class="btn primary" id="connect-btn">Connect B10</button>
+  <button class="btn danger" id="disconnect-btn" style="display:none">Disconnect</button>
+</header>
+
+<div class="layout">
+  <nav>
+    <div class="section-label">Demo Apps</div>
+    <button class="tab active" data-tab="home"><span class="tab-ico">◎</span>Gallery</button>
+    <button class="tab" data-tab="room-service"><span class="tab-ico">🛎️</span>Room Service</button>
+    <button class="tab" data-tab="staff-duress"><span class="tab-ico">🚨</span>Staff Duress</button>
+    <button class="tab" data-tab="fall-detector"><span class="tab-ico">🤸</span>Fall Detector</button>
+    <button class="tab" data-tab="gait-lab" data-shipped="2026-04-27"><span class="tab-ico">🚶</span>Gait Lab</button>
+    <button class="tab" data-tab="sleep-lab" data-shipped="2026-04-27"><span class="tab-ico">🌙</span>Sleep Lab</button>
+    <button class="tab" data-tab="turn-lab" data-shipped="2026-04-28"><span class="tab-ico">🛏️</span>Turn Lab</button>
+    <button class="tab" data-tab="pose-lab" data-shipped="2026-04-28"><span class="tab-ico">🦴</span>Pose Lab</button>
+    <button class="tab" data-tab="guest-assist"><span class="tab-ico">🦯</span>Guest Assist</button>
+    <button class="tab" data-tab="fleet-trigger"><span class="tab-ico">🤖</span>Robot Trigger</button>
+
+    <div class="section-label">Sensor Tools</div>
+    <button class="tab" data-tab="pair"><span class="tab-ico">⚡</span>Pair &amp; Setup</button>
+    <button class="tab" data-tab="explorer"><span class="tab-ico">⌘</span>GATT Explorer</button>
+    <button class="tab" data-tab="info"><span class="tab-ico">ⓘ</span>Device Info</button>
+    <button class="tab" data-tab="log"><span class="tab-ico">≡</span>Raw Log</button>
+    <button class="tab" data-tab="decoder"><span class="tab-ico">✦</span>Frame Decoder</button>
+    <button class="tab" data-tab="sidecar" data-shipped="2026-04-27"><span class="tab-ico">⇄</span>Sidecar</button>
+
+    <div class="section-label">Build</div>
+    <button class="tab" data-tab="experiments"><span class="tab-ico">⚙</span>Experiments</button>
+    <button class="tab" data-tab="docs"><span class="tab-ico">🗎</span>Protocol Docs</button>
+    <button class="tab" data-tab="research" data-shipped="2026-04-27"><span class="tab-ico">📚</span>OSS Research</button>
+    <button class="tab" data-tab="whats-new" data-shipped="2026-04-27"><span class="tab-ico">✨</span>What's New</button>
+  </nav>
+
+  <main>
+    <!-- ───────── GALLERY HOME ───────── -->
+    <section class="tab-panel active" id="tab-home">
+      <div class="hero">
+        <h2>Sensor Lab</h2>
+        <p class="lede">A working playground for BLE sensors powering Accelerate Robotics deployments. Starting with the Minew B10 Smart Emergency Button. Explore capabilities, prototype demo apps for hospitality and healthcare, and iterate fast without an SDK. Connect a device, then click any app below.</p>
+      </div>
+
+      <h3>Prototype Demo Apps</h3>
+      <div class="grid-auto">
+        <div class="app-card" onclick="showTab('room-service')">
+          <div class="ico cyan">🛎️</div>
+          <h4>Room Service Wearable</h4>
+          <p>Guest presses the button: 1 tap for room service, 2 for housekeeping, 3 for concierge. Watch the order route, dispatch time, and confirm.</p>
+          <div class="tags"><span class="chip cyan">hospitality</span><span class="chip">button</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('staff-duress')">
+          <div class="ico red">🚨</div>
+          <h4>Staff Duress Alarm</h4>
+          <p>Housekeeper or nurse in trouble. Triple-press triggers escalation: supervisor → security → robot dispatch → 911. Full audit trail.</p>
+          <div class="tags"><span class="chip red">safety</span><span class="chip">hospital</span><span class="chip">hotel</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('fall-detector')">
+          <div class="ico green">🤸</div>
+          <h4>Fall Detector</h4>
+          <p>Live 3-axis accelerometer visualization. Threshold-based anomaly detection. Log suspected falls for review.</p>
+          <div class="tags"><span class="chip green">sensing</span><span class="chip">memory care</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('gait-lab')" data-shipped="2026-04-27">
+          <div class="ico cyan">🚶</div>
+          <h4>Gait Lab</h4>
+          <p>Cadence, stride regularity, and walking-bout detection from B10's accelerometer. Mobgap-style open-source pipeline. Slow + irregular gait predicts falls.</p>
+          <div class="tags"><span class="chip cyan">mobility</span><span class="chip">SPHM</span><span class="chip">open source</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('sleep-lab')" data-shipped="2026-04-27">
+          <div class="ico purple">🌙</div>
+          <h4>Sleep Lab</h4>
+          <p>Wrist-actigraphy sleep/wake classification (Cole-Kripke 1992) with live activity index and an 8-hour hypnogram simulator. Same primitives as SleepPy + skdh.</p>
+          <div class="tags"><span class="chip purple">sleep</span><span class="chip">memory care</span><span class="chip">open source</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('turn-lab')" data-shipped="2026-04-28">
+          <div class="ico green">🛏️</div>
+          <h4>In-bed Turn Lab</h4>
+          <p>Patient body roll classifier (supine / lateral / prone) with Q2h compliance timer. JS port of the Atlas Turn Monitor algorithm running on the Apple Watch SE. The HAPI prevention story.</p>
+          <div class="tags"><span class="chip green">HAPI</span><span class="chip">SPHM</span><span class="chip">Atlas Patch</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('pose-lab')" data-shipped="2026-04-28">
+          <div class="ico cyan">🦴</div>
+          <h4>Pose Lab</h4>
+          <p>Browser-side 33-keypoint pose estimation via MediaPipe Pose Landmarker (Apache-2.0). Real-time skeleton overlay + posture inference (standing / sitting / lying). Skeleton-only — no video ever leaves the device.</p>
+          <div class="tags"><span class="chip cyan">vision</span><span class="chip">privacy-first</span><span class="chip">MediaPipe</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('sidecar')" data-shipped="2026-04-27">
+          <div class="ico cyan">⇄</div>
+          <h4>Python Sidecar</h4>
+          <p>Live bridge to clinical-grade open-source toolkits (scikit-digital-health, mobgap, YASA) running locally as a FastAPI service. Output: Open mHealth IEEE 1752 envelope.</p>
+          <div class="tags"><span class="chip cyan">infra</span><span class="chip">FHIR</span><span class="chip">team-ready</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('research')" data-shipped="2026-04-27">
+          <div class="ico amber">📚</div>
+          <h4>OSS Toolkit Research</h4>
+          <p>Decision-grade comparison of every open-source mobility, gait, sleep, fall, vision, and contactless toolkit. License-safety filtering. Ranked picks with adoption recipes.</p>
+          <div class="tags"><span class="chip amber">research</span><span class="chip">decision matrix</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('guest-assist')">
+          <div class="ico purple">🦯</div>
+          <h4>Guest Assistance</h4>
+          <p>For accessible rooms and memory care suites. Wearer presses for help; assignment is routed to the nearest staff member or robot.</p>
+          <div class="tags"><span class="chip purple">accessibility</span><span class="chip">aging-in-place</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('fleet-trigger')">
+          <div class="ico amber">🤖</div>
+          <h4>Robot Fleet Trigger</h4>
+          <p>Button becomes a physical API: press to summon a Keenon W3 to your location, trigger a cleaning sweep, or dispatch a specific cart.</p>
+          <div class="tags"><span class="chip amber">robotics</span><span class="chip">dispatch</span></div>
+        </div>
+
+        <div class="app-card" onclick="showTab('experiments')" style="background:linear-gradient(135deg,#faf5ff,#fff);border-style:dashed">
+          <div class="ico purple">✦</div>
+          <h4>Build your own</h4>
+          <p>Small JS editor. Register handlers for <code>button:single</code>, <code>button:double</code>, <code>button:triple</code>, <code>motion</code>. Fire off fetch calls, trigger animations, anything.</p>
+          <div class="tags"><span class="chip">sandbox</span></div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:32px">How this fits Accelerate Robotics</h3>
+      <div class="card">
+        <p>The B10 is a <b>physical trigger primitive</b>: a cheap, rugged, IP66, 60-day battery wearable with 3 distinct button gestures + motion. In the hospital robotics OS, it's one of the input modalities that triggers fleet action:</p>
+        <ul style="color:var(--text-2);margin:8px 0 0 0;padding-left:20px;line-height:1.7">
+          <li><b>Guest / patient wearable</b> → personal request or alarm that routes to staff + robots</li>
+          <li><b>Staff wearable</b> → duress, assist, or workflow trigger</li>
+          <li><b>Robot / cart tag</b> → presence and proximity beacon for indoor positioning</li>
+          <li><b>Event primitive</b> → any physical moment we want to become a software event</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ───────── ROOM SERVICE ───────── -->
+    <section class="tab-panel" id="tab-room-service">
+      <div class="demo-header">
+        <div class="ico" style="background:var(--accent-soft)">🛎️</div>
+        <div class="body">
+          <h2>Room Service Wearable</h2>
+          <div class="desc">Guest at Thesis Hotel wears a B10. Single tap routes to room service, double to housekeeping, triple to concierge. No calling. No waiting for the phone to ring.</div>
+        </div>
+      </div>
+
+      <div class="simulate-bar">
+        <span class="label">Simulate</span>
+        <button class="btn secondary" onclick="fireButton('single')">Single tap</button>
+        <button class="btn secondary" onclick="fireButton('double')">Double tap</button>
+        <button class="btn secondary" onclick="fireButton('triple')">Triple tap</button>
+        <button class="btn ghost" onclick="rsReset()">Reset scene</button>
+      </div>
+
+      <div class="scene">
+        <div class="room-card">
+          <div class="room-visual">
+            <div class="number">Suite 1204</div>
+            <div class="bed"></div>
+            <div class="lamp"></div>
+            <div class="door"></div>
+          </div>
+          <div class="room-meta">
+            <h3>Current guest</h3>
+            <div class="guest">Ms. Clara Davies</div>
+            <div style="color:var(--muted);font-size:12.5px;margin-bottom:8px">Checked in: Apr 24 · 3-night stay · Membership: Gold</div>
+            <div id="rs-status" class="status">Idle · awaiting request</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Dispatch timeline</h3>
+          <div id="rs-timeline" class="timeline">
+            <div class="timeline-item"><div class="dot"></div><div class="body"><div class="t">Awaiting trigger</div><div class="d">Press the B10 or use the simulate buttons above</div></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Today</h3>
+          <div class="grid-3">
+            <div class="stat"><div class="label">Requests</div><div class="value big" id="rs-count">0</div></div>
+            <div class="stat"><div class="label">Avg response</div><div class="value big" id="rs-avg">—</div></div>
+            <div class="stat"><div class="label">Fulfilled</div><div class="value big" id="rs-fulfilled">0</div></div>
+          </div>
+          <h3 style="margin-top:18px">Recent</h3>
+          <div id="rs-feed" class="event-feed"><div class="empty" style="padding:18px">No requests yet.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── STAFF DURESS ───────── -->
+    <section class="tab-panel" id="tab-staff-duress">
+      <div class="demo-header">
+        <div class="ico" style="background:#fef2f2">🚨</div>
+        <div class="body">
+          <h2>Staff Duress Alarm</h2>
+          <div class="desc">Housekeeper, nurse, or desk agent wears a B10. A long triple-press triggers the duress ladder. Each level auto-escalates if not acknowledged.</div>
+        </div>
+      </div>
+
+      <div class="simulate-bar">
+        <span class="label">Simulate</span>
+        <button class="btn secondary" onclick="sdFire()">Trigger duress</button>
+        <button class="btn ghost" onclick="sdAck()">Supervisor acknowledge</button>
+        <button class="btn ghost" onclick="sdReset()">Reset</button>
+      </div>
+
+      <div class="scene" id="sd-scene">
+        <div style="display:flex;gap:28px;align-items:flex-start">
+          <div style="flex:1">
+            <h3 style="margin-top:0">Alert status</h3>
+            <div id="sd-banner" style="padding:20px;border:2px solid var(--line);border-radius:10px;background:var(--panel-2);text-align:center">
+              <div style="font-size:20px;font-weight:700;color:var(--muted)">NO ACTIVE ALARMS</div>
+              <div style="color:var(--muted);margin-top:6px;font-size:12.5px">All wearables nominal</div>
+            </div>
+            <h3 style="margin-top:18px">Staff on shift</h3>
+            <div id="sd-roster" class="event-feed"></div>
+          </div>
+          <div style="flex:0 0 280px">
+            <h3 style="margin-top:0">Escalation ladder</h3>
+            <div id="sd-ladder" class="timeline">
+              <div class="timeline-item"><div class="dot"></div><div class="body"><div class="t">0s · Duress detected</div><div class="d">Triple-press + >2s hold</div></div></div>
+              <div class="timeline-item"><div class="dot"></div><div class="body"><div class="t">+10s · Supervisor notified</div><div class="d">Push + location</div></div></div>
+              <div class="timeline-item"><div class="dot"></div><div class="body"><div class="t">+30s · Security dispatched</div><div class="d">If not acknowledged</div></div></div>
+              <div class="timeline-item"><div class="dot"></div><div class="body"><div class="t">+60s · Robot sent</div><div class="d">Nearest Keenon W3 navigates to room</div></div></div>
+              <div class="timeline-item"><div class="dot"></div><div class="body"><div class="t">+90s · 911 auto-call</div><div class="d">Manager approval bypass if confirmed</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── FALL DETECTOR ───────── -->
+    <section class="tab-panel" id="tab-fall-detector">
+      <div class="demo-header">
+        <div class="ico" style="background:#ecfdf5">🤸</div>
+        <div class="body">
+          <h2>Fall Detector</h2>
+          <div class="desc">Live accelerometer stream with magnitude-based event detection. For memory care suites, SNFs, and elderly guest rooms.</div>
+        </div>
+      </div>
+
+      <div class="simulate-bar">
+        <span class="label">Simulate</span>
+        <button class="btn secondary" onclick="fdSimMotion()">Walking</button>
+        <button class="btn secondary" onclick="fdSimFall()">Fall event</button>
+        <button class="btn ghost" onclick="fdReset()">Reset</button>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card">
+          <h3 style="margin-top:0">Live accelerometer</h3>
+          <div class="accel-viz">
+            <div class="accel-bar x"><div class="axis">X</div><div class="val" id="fd-x">0.00</div><div class="track"><div class="fill" id="fd-x-bar" style="height:0;bottom:50%"></div></div></div>
+            <div class="accel-bar y"><div class="axis">Y</div><div class="val" id="fd-y">0.00</div><div class="track"><div class="fill" id="fd-y-bar" style="height:0;bottom:50%"></div></div></div>
+            <div class="accel-bar z"><div class="axis">Z</div><div class="val" id="fd-z">0.00</div><div class="track"><div class="fill" id="fd-z-bar" style="height:0;bottom:50%"></div></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Detection</h3>
+          <div class="grid-2">
+            <div class="stat"><div class="label">Magnitude</div><div class="value big" id="fd-mag">0.00</div></div>
+            <div class="stat"><div class="label">State</div><div class="value" id="fd-state" style="color:var(--green)">nominal</div></div>
+          </div>
+          <h3>Threshold</h3>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="1" max="5" step="0.1" value="2.5" id="fd-thresh" style="flex:1" oninput="fdSetThresh(this.value)" />
+            <span id="fd-thresh-val" style="font-family:monospace;font-weight:600">2.5g</span>
+          </div>
+          <h3>Recent events</h3>
+          <div id="fd-events" class="event-feed" style="max-height:140px"><div class="empty" style="padding:14px">No anomalies detected</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── GAIT LAB ───────── -->
+    <section class="tab-panel" id="tab-gait-lab">
+      <div class="demo-header">
+        <div class="ico" style="background:#e0f2fe">🚶</div>
+        <div class="body">
+          <h2>Gait Lab</h2>
+          <div class="desc">Step detection, cadence, and stride-interval regularity from the B10's accelerometer. JS port of the foundational signal-processing pipeline used by <a href="https://github.com/mobilise-d/mobgap" target="_blank">mobgap</a> (Apache 2.0) and <a href="https://github.com/PfizerRD/scikit-digital-health" target="_blank">scikit-digital-health</a> (MIT). Slow cadence (&lt;80 spm) and high stride CV (&gt;0.15) are validated fall-risk markers.</div>
+        </div>
+      </div>
+
+      <div class="simulate-bar">
+        <span class="label">Simulate</span>
+        <button class="btn secondary" onclick="glSimWalk(110)">Normal walk · 110 spm</button>
+        <button class="btn secondary" onclick="glSimWalk(70)">Slow / frail · 70 spm</button>
+        <button class="btn secondary" onclick="glSimStill()">Stationary</button>
+        <button class="btn ghost" onclick="glReset()">Reset</button>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card">
+          <h3 style="margin-top:0">Live signal</h3>
+          <div class="grid-2">
+            <div class="stat"><div class="label">Linear |a − 1g|</div><div class="value big" id="gl-mag">0.00</div></div>
+            <div class="stat"><div class="label">State</div><div class="value" id="gl-state" style="color:var(--muted)">stationary</div></div>
+          </div>
+          <h3>Peak threshold</h3>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="0.05" max="0.8" step="0.01" value="0.25" id="gl-thresh" style="flex:1" oninput="glSetThreshold(this.value)" />
+            <span id="gl-thresh-val" style="font-family:monospace;font-weight:600">0.25g</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:6px">Lower = more sensitive (catches shuffles). Higher = only firm heel strikes.</div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Gait metrics</h3>
+          <div class="grid-2">
+            <div class="stat"><div class="label">Steps</div><div class="value big" id="gl-step-count">0</div></div>
+            <div class="stat"><div class="label">Cadence (spm)</div><div class="value big" id="gl-cadence">—</div></div>
+            <div class="stat"><div class="label">Stride CV</div><div class="value" id="gl-cv">—</div></div>
+            <div class="stat"><div class="label">Risk flag</div><div class="value" id="gl-risk" style="color:var(--muted)">—</div></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:10px"><b>Reference ranges:</b> 100–130 spm normal adult · 80–100 spm cautious · &lt;80 spm slow/frail. Stride CV &lt;0.05 healthy · &gt;0.15 elevated fall risk.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Algorithm provenance &amp; upgrade path</h3>
+        <p style="margin:0 0 8px;color:var(--text-2)">This card runs an in-browser peak-detection step counter with sliding-window cadence and coefficient-of-variation regularity — the same primitives clinical gait pipelines build on. To upgrade to validated walking-bout detection, stride length, and gait speed in m/s, pipe the same accelerometer stream into a Python sidecar running <a href="https://github.com/mobilise-d/mobgap" target="_blank">mobgap</a> or <a href="https://github.com/PfizerRD/scikit-digital-health" target="_blank">skdh</a>. Both are permissively licensed and edge-deployable on a Jetson or RPi.</p>
+      </div>
+    </section>
+
+    <!-- ───────── SLEEP LAB ───────── -->
+    <section class="tab-panel" id="tab-sleep-lab">
+      <div class="demo-header">
+        <div class="ico" style="background:#f5f3ff">🌙</div>
+        <div class="body">
+          <h2>Sleep Lab</h2>
+          <div class="desc">Wrist-actigraphy sleep/wake classification using the <b>Cole-Kripke (1992)</b> activity-count algorithm — the same foundation in <a href="https://github.com/elyiorgos/sleeppy" target="_blank">SleepPy</a> (BSD-3), <a href="https://github.com/PfizerRD/scikit-digital-health" target="_blank">scikit-digital-health</a> (MIT), and <a href="https://github.com/wadpac/GGIR" target="_blank">GGIR</a>. Live activity meter from the B10's accel stream; replay simulated 8-hour nights to see the hypnogram and clinical metrics.</div>
+        </div>
+      </div>
+
+      <div class="simulate-bar">
+        <span class="label">Replay night</span>
+        <button class="btn secondary" onclick="slSimNight('normal')">Healthy adult · 8 hr</button>
+        <button class="btn secondary" onclick="slSimNight('insomnia')">Insomnia · fragmented</button>
+        <button class="btn secondary" onclick="slSimNight('apnea')">Sleep apnea · arousals</button>
+        <button class="btn ghost" onclick="slReset()">Reset</button>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card">
+          <h3 style="margin-top:0">Live signal (worn B10)</h3>
+          <div class="grid-2">
+            <div class="stat"><div class="label">Activity index · 30 s</div><div class="value big" id="sl-activity">0.0</div></div>
+            <div class="stat"><div class="label">State</div><div class="value" id="sl-state" style="color:var(--muted)">—</div></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:10px">Live mode shows the foundational activity → sleep/wake decision. Worn overnight, Cole-Kripke aggregates 7 minute-epochs (current ± 3) to label each minute as wake or sleep with ~88% PSG agreement.</div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Last simulated night</h3>
+          <div class="grid-2">
+            <div class="stat"><div class="label">Time in bed</div><div class="value big" id="sl-tib">—</div></div>
+            <div class="stat"><div class="label">Total sleep</div><div class="value big" id="sl-tst">—</div></div>
+            <div class="stat"><div class="label">Sleep efficiency</div><div class="value" id="sl-se">—</div></div>
+            <div class="stat"><div class="label">WASO</div><div class="value" id="sl-waso">—</div></div>
+            <div class="stat"><div class="label">Sleep latency</div><div class="value" id="sl-lat">—</div></div>
+            <div class="stat"><div class="label">REM total</div><div class="value" id="sl-rem">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Hypnogram</h3>
+        <div id="sl-hypno" style="display:flex;height:60px;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--panel-2)">
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12.5px">Run a simulation above to render an 8-hour hypnogram</div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:10px;font-size:11.5px;color:var(--muted);flex-wrap:wrap">
+          <div><span style="display:inline-block;width:11px;height:11px;background:#d97706;border-radius:2px;margin-right:5px;vertical-align:middle"></span>Wake</div>
+          <div><span style="display:inline-block;width:11px;height:11px;background:#7dd3fc;border-radius:2px;margin-right:5px;vertical-align:middle"></span>Light (N1/N2)</div>
+          <div><span style="display:inline-block;width:11px;height:11px;background:#0c4a6e;border-radius:2px;margin-right:5px;vertical-align:middle"></span>Deep (N3)</div>
+          <div><span style="display:inline-block;width:11px;height:11px;background:#7c3aed;border-radius:2px;margin-right:5px;vertical-align:middle"></span>REM</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Algorithm provenance &amp; upgrade path</h3>
+        <p style="margin:0 0 8px;color:var(--text-2)">Cole-Kripke is accelerometer-only and gives wake/sleep — useful but coarse. To get staged wake/NREM/REM output you need a second signal (HR or HRV). Upgrade options that pair cleanly with B10 + a chest-strap HR sensor: <a href="https://github.com/ojwalch/sleep_classifiers" target="_blank">Walch et al. Apple Watch model</a> (open, accel + HR → wake/NREM/REM), <a href="https://github.com/cbrnr/sleepecg" target="_blank">SleepECG</a> (BSD-3, single-lead ECG), and <a href="https://github.com/AmbiqAI/sleepkit" target="_blank">SleepKit</a> (BSD-3, designed for low-power MCUs — direct B10 fit). For PSG-grade staging in a Python sidecar: <a href="https://github.com/raphaelvallat/yasa" target="_blank">YASA</a> (BSD-3, 87% PSG agreement) or <a href="https://github.com/perslev/U-Sleep" target="_blank">U-Sleep</a> (MIT, channel-agnostic).</p>
+      </div>
+    </section>
+
+    <!-- ───────── IN-BED TURN LAB ───────── -->
+    <section class="tab-panel" id="tab-turn-lab">
+      <div class="demo-header">
+        <div class="ico" style="background:#ecfdf5">🛏️</div>
+        <div class="body">
+          <h2>In-bed Turn Lab</h2>
+          <div class="desc">Patient body-roll classifier with Q2h compliance timer. JS port of the clinical algorithm shipping in <a href="file:///Users/ericrace/Code/AtlasTurnMonitor/" target="_blank">AtlasTurnMonitor</a> (Apple Watch SE + iPhone). Roll angle from gravity vector via <code>atan2(g.x, g.z)</code>, six clinically-grounded position classes, low-pass filtered. Pressure-injury prevention is the Atlas thesis — this is it in code form.</div>
+        </div>
+      </div>
+
+      <div class="simulate-bar">
+        <span class="label">Simulate position</span>
+        <button class="btn secondary" onclick="tlSimRoll(0)">Supine (0°)</button>
+        <button class="btn secondary" onclick="tlSimRoll(30)">Slight L (+30°)</button>
+        <button class="btn secondary" onclick="tlSimRoll(75)">Lateral L (+75°)</button>
+        <button class="btn secondary" onclick="tlSimRoll(-30)">Slight R (-30°)</button>
+        <button class="btn secondary" onclick="tlSimRoll(-75)">Lateral R (-75°)</button>
+        <button class="btn secondary" onclick="tlSimRoll(170)">Prone (170°)</button>
+        <button class="btn ghost" onclick="tlReset()">Reset</button>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card">
+          <h3 style="margin-top:0">Live position</h3>
+          <div class="grid-2">
+            <div class="stat"><div class="label">Roll angle</div><div class="value big" id="tl-roll">0°</div></div>
+            <div class="stat"><div class="label">Position</div><div class="value" id="tl-position" style="color:var(--green)">Supine</div></div>
+          </div>
+          <h3>Q2h compliance timer</h3>
+          <div style="display:flex;align-items:baseline;gap:10px">
+            <div style="font-size:32px;font-weight:700;font-variant-numeric:tabular-nums" id="tl-timer">0:00</div>
+            <div style="font-size:13px;color:var(--muted)">since last position change</div>
+          </div>
+          <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">Q2h reposition standard: any sustained position >2 hours → high HAPI risk. Atlas Patch + BMM tracks this in real deployments.</div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Compliance ledger (last 12 hours)</h3>
+          <div id="tl-ledger" style="display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto;font-size:12.5px;font-family:'SF Mono',monospace">
+            <div style="color:var(--muted);padding:14px;text-align:center">No turn events recorded yet. Click a simulate button or wear a B10.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Algorithm provenance</h3>
+        <p style="margin:0 0 8px;color:var(--text-2)">This is a 1:1 port of <code>AtlasTurnMonitorWatch/Services/MotionService.swift</code>'s <code>calculateRawRoll()</code> + <code>BodyPosition.classify()</code> from the Atlas iOS codebase. Roll = <code>atan2(g.x, g.z) * 180/π</code> (rotation around the wrist's y-axis = patient body roll). Six clinical classes: <code>supine (|r|&lt;15°)</code>, <code>slight L/R (15–45°)</code>, <code>lateral L/R (45–155°)</code>, <code>prone (&gt;155°)</code>. Gravity is low-pass filtered (α=0.2) to suppress sensor noise. The Q2h threshold is the standard repositioning interval cited in the Vollman/Black HAPI prevention literature.</p>
+        <p style="margin:0;color:var(--text-2)">When this card is wired to a worn B10 (or an Atlas Patch via the same accel pipeline), every position change emits an Open mHealth datapoint that BMM/UMM/Mobility Cloud can ingest as a <code>turn_event</code> for compliance reporting.</p>
+      </div>
+    </section>
+
+    <!-- ───────── POSE LAB ───────── -->
+    <section class="tab-panel" id="tab-pose-lab">
+      <div class="demo-header">
+        <div class="ico" style="background:var(--accent-soft)">🦴</div>
+        <div class="body">
+          <h2>Pose Lab</h2>
+          <div class="desc">Real-time 33-keypoint pose estimation via <a href="https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker" target="_blank">MediaPipe Pose Landmarker</a> (Apache-2.0). Runs entirely in the browser — no upload, no server, no video persistence. The model loads once from Google's CDN (~10 MB) and inference happens locally on every frame. Pair with an overhead RealSense camera in patient rooms for a vision-based mobility/fall sensing layer.</div>
+        </div>
+      </div>
+
+      <div class="simulate-bar">
+        <span class="label">Camera</span>
+        <button class="btn primary" id="pl-start-btn" onclick="plStart()">Start camera</button>
+        <button class="btn ghost" id="pl-stop-btn" onclick="plStop()" style="display:none">Stop</button>
+        <span id="pl-status" class="status-pill" style="margin-left:6px"><span class="dot"></span>idle</span>
+        <span style="font-size:11.5px;color:var(--muted);margin-left:auto">🔒 video stays in your browser · skeleton only is kept in memory</span>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card" style="position:relative;padding:0;overflow:hidden">
+          <video id="pl-video" autoplay playsinline muted style="display:block;width:100%;height:auto;background:#0c1220"></video>
+          <canvas id="pl-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Live metrics</h3>
+          <div class="grid-2">
+            <div class="stat"><div class="label">People detected</div><div class="value big" id="pl-people">0</div></div>
+            <div class="stat"><div class="label">Inference FPS</div><div class="value big" id="pl-fps">—</div></div>
+            <div class="stat"><div class="label">Posture (primary subject)</div><div class="value" id="pl-posture" style="color:var(--muted)">—</div></div>
+            <div class="stat"><div class="label">Avg landmark confidence</div><div class="value" id="pl-confidence">—</div></div>
+          </div>
+          <h3>Notes</h3>
+          <div style="font-size:12.5px;color:var(--text-2);line-height:1.6">
+            Posture inference uses a torso-angle heuristic on the shoulder-hip line:
+            <ul style="margin:6px 0;padding-left:18px;color:var(--muted)">
+              <li><b>Standing</b>: torso line near vertical (shoulder above hip)</li>
+              <li><b>Sitting</b>: torso vertical but knee + hip nearly collinear</li>
+              <li><b>Lying</b>: torso line near horizontal — flag for in-bed monitoring</li>
+            </ul>
+            For clinical-grade fall detection on top of these keypoints, the upgrade path is <a href="https://github.com/kennymckormick/pyskl" target="_blank">PySKL</a> + <a href="https://github.com/jingyaogong/PoseConv3D" target="_blank">PoseC3D</a> trained on NTU-RGB+D.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Privacy &amp; deployment</h3>
+        <p style="margin:0 0 8px;color:var(--text-2);font-size:13px">This card uses <code>@mediapipe/tasks-vision</code> via CDN. WASM + the pose-landmarker model load on first start. After that, every frame is processed in-browser via WebAssembly — the camera stream never leaves the device, and the rendered video element is the only place RGB bytes exist. The skeleton landmarks (33 points × frame) are the only data kept in memory, which means we can safely persist or stream <i>those</i> to BMM/UMM for trend reporting without exfiltrating identifying video.</p>
+        <p style="margin:0;color:var(--text-2);font-size:13px"><b>Production deployment:</b> drop a Jetson Orin Nano + Intel RealSense D435i overhead in patient rooms. RTMPose ONNX (Apache-2.0) at 30–60 FPS replaces MediaPipe for headless inference; keypoints stream over WebSocket back into the b10-playground for unified visualization.</p>
+      </div>
+    </section>
+
+    <!-- ───────── GUEST ASSIST ───────── -->
+    <section class="tab-panel" id="tab-guest-assist">
+      <div class="demo-header">
+        <div class="ico" style="background:#f5f3ff">🦯</div>
+        <div class="body">
+          <h2>Guest Assistance</h2>
+          <div class="desc">Accessible rooms and memory care: any press routes to the nearest available staff or robot. Live presence and location tracking.</div>
+        </div>
+      </div>
+
+      <div class="simulate-bar">
+        <span class="label">Simulate</span>
+        <button class="btn secondary" onclick="gaFire()">Request help</button>
+        <button class="btn ghost" onclick="gaReset()">Reset</button>
+      </div>
+
+      <div class="scene">
+        <div style="display:flex;gap:24px">
+          <div style="flex:1">
+            <h3 style="margin-top:0">Accessible room 308 · Mr. Kovacs</h3>
+            <div id="ga-status" style="padding:20px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);text-align:center">
+              <div style="font-size:16px;font-weight:600;color:var(--muted)">Awaiting request</div>
+            </div>
+            <h3>Context</h3>
+            <table class="kv">
+              <tr><td>Wearable battery</td><td><span id="ga-batt">—</span> <span class="chip green" id="ga-batt-chip">healthy</span></td></tr>
+              <tr><td>Last motion</td><td id="ga-last">—</td></tr>
+              <tr><td>Room sensor</td><td>door closed · light on</td></tr>
+              <tr><td>Preferences</td><td>verbal prompts · English · audible chime off</td></tr>
+            </table>
+          </div>
+          <div style="flex:0 0 260px">
+            <h3 style="margin-top:0">Dispatched</h3>
+            <div id="ga-dispatched" class="event-feed"><div class="empty" style="padding:14px">No active dispatch</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── FLEET TRIGGER ───────── -->
+    <section class="tab-panel" id="tab-fleet-trigger">
+      <div class="demo-header">
+        <div class="ico" style="background:#fffbeb">🤖</div>
+        <div class="body">
+          <h2>Robot Fleet Trigger</h2>
+          <div class="desc">Map each button gesture to a fleet action. This is the physical-to-digital primitive for the Accelerate OS.</div>
+        </div>
+      </div>
+
+      <div class="simulate-bar">
+        <span class="label">Simulate</span>
+        <button class="btn secondary" onclick="fireButton('single')">Single tap</button>
+        <button class="btn secondary" onclick="fireButton('double')">Double tap</button>
+        <button class="btn secondary" onclick="fireButton('triple')">Triple tap</button>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <h3 style="margin-top:0">Single tap</h3>
+          <label>Action</label>
+          <select id="ft-single">
+            <option value="summon-w3">Summon W3 to my location</option>
+            <option value="summon-t8">Summon T8 (open-tray)</option>
+            <option value="start-c30">Start C30 cleaning sweep</option>
+            <option value="pause-all">Pause all robots</option>
+            <option value="webhook">Custom webhook</option>
+          </select>
+          <div id="ft-single-status" style="margin-top:10px;color:var(--muted);font-size:12px">Ready</div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Double tap</h3>
+          <label>Action</label>
+          <select id="ft-double">
+            <option value="confirm">Confirm pending dispatch</option>
+            <option value="cancel">Cancel pending dispatch</option>
+            <option value="nav-lobby">Send nearest robot to lobby</option>
+            <option value="webhook">Custom webhook</option>
+          </select>
+          <div id="ft-double-status" style="margin-top:10px;color:var(--muted);font-size:12px">Ready</div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Triple tap</h3>
+          <label>Action</label>
+          <select id="ft-triple">
+            <option value="emergency-stop">Emergency stop all robots</option>
+            <option value="evacuate">Evacuation mode</option>
+            <option value="sos">SOS dispatch</option>
+            <option value="webhook">Custom webhook</option>
+          </select>
+          <div id="ft-triple-status" style="margin-top:10px;color:var(--muted);font-size:12px">Ready</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Dispatch log</h3>
+        <div id="ft-log" class="event-feed"><div class="empty" style="padding:14px">No dispatches yet.</div></div>
+      </div>
+    </section>
+
+    <!-- ───────── PAIR / SETUP ───────── -->
+    <section class="tab-panel" id="tab-pair">
+      <h2>Pair &amp; Setup</h2>
+      <p class="lede">Step-by-step for putting the B10 into discoverable mode and connecting from Chrome.</p>
+
+      <div class="card">
+        <div class="step"><div class="num">1</div><div class="body"><strong>Put the B10 in pair mode</strong><span>Press and hold the button for <b>~1 second</b>. You'll feel a short vibration and the blue LED will blink. The device is now discoverable.</span></div></div>
+        <div class="step"><div class="num">2</div><div class="body"><strong>Click Connect B10 in the top bar</strong><span>Chrome will open a device picker. Look for <code>MinewB10</code>, <code>N_xxxx</code>, or the MAC ID printed on the back (e.g. <code>AC233FABF61A</code>).</span></div></div>
+        <div class="step"><div class="num">3</div><div class="body"><strong>Auth is <code>minew123</code></strong><span>Default password for all Minew beacons. The playground tries it against writable characteristics once we discover the auth point.</span></div></div>
+        <div class="step"><div class="num">4</div><div class="body"><strong>Open any demo app</strong><span>Events from the B10 will flow into the demo apps and the raw log.</span></div></div>
+      </div>
+
+      <div class="card">
+        <h3>Button gestures</h3>
+        <table class="kv">
+          <tr><td>~1 sec hold</td><td>Enter discoverable / pair mode</td></tr>
+          <tr><td>5+ sec hold</td><td>Exit to unconnected / broadcast mode</td></tr>
+          <tr><td>Single tap · STAP</td><td>Configurable trigger</td></tr>
+          <tr><td>Double tap · DTAP</td><td>Configurable trigger</td></tr>
+          <tr><td>Triple tap · TTAP</td><td>Configurable trigger</td></tr>
+          <tr><td>Very long hold</td><td>SOS / alarm mode</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Troubleshooting</h3>
+        <ul style="color:var(--text-2);padding-left:20px;margin:0">
+          <li>"No devices found" → B10 is in storage mode. Press 1s to wake.</li>
+          <li>Empty picker → toggle macOS Bluetooth off/on.</li>
+          <li>Accidentally held &gt;5s? Re-press 1s to go back to discoverable.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ───────── GATT EXPLORER ───────── -->
+    <section class="tab-panel" id="tab-explorer">
+      <h2>GATT Explorer</h2>
+      <p class="lede">Every service and characteristic exposed by the B10. Read, subscribe to notifications, or write raw hex.</p>
+      <div class="toolbar">
+        <button class="btn secondary" id="refresh-gatt">Re-enumerate</button>
+        <button class="btn secondary" id="subscribe-all">Subscribe all notifications</button>
+        <button class="btn secondary" id="auth-btn">Send minew123 auth</button>
+      </div>
+      <div class="card" style="padding:14px">
+        <div id="gatt-tree" class="tree">
+          <div class="empty">Connect a device to see services and characteristics.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── DEVICE INFO ───────── -->
+    <section class="tab-panel" id="tab-info">
+      <h2>Device Info</h2>
+      <p class="lede">Read from the standard Device Information (0x180A) and Battery (0x180F) services.</p>
+      <div class="grid-3">
+        <div class="stat"><div class="label">Name</div><div class="value" id="info-name">—</div></div>
+        <div class="stat"><div class="label">ID</div><div class="value" id="info-id">—</div></div>
+        <div class="stat"><div class="label">Battery</div><div class="value big" id="info-battery">—</div></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3 style="margin-top:0">Device Information Service (0x180A)</h3>
+        <table class="kv" id="info-dis">
+          <tr><td>Manufacturer</td><td id="dis-manufacturer">—</td></tr>
+          <tr><td>Model Number</td><td id="dis-model">—</td></tr>
+          <tr><td>Serial Number</td><td id="dis-serial">—</td></tr>
+          <tr><td>Hardware Rev</td><td id="dis-hw">—</td></tr>
+          <tr><td>Firmware Rev</td><td id="dis-fw">—</td></tr>
+          <tr><td>Software Rev</td><td id="dis-sw">—</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ───────── RAW LOG ───────── -->
+    <section class="tab-panel" id="tab-log">
+      <h2>Raw Log</h2>
+      <p class="lede">Timestamped record of every byte in and out plus connection state changes.</p>
+      <div class="toolbar">
+        <button class="btn secondary" id="clear-log">Clear</button>
+        <button class="btn secondary" id="download-log">Download .jsonl</button>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+
+    <!-- ───────── DECODER ───────── -->
+    <section class="tab-panel" id="tab-decoder">
+      <h2>Frame Decoder</h2>
+      <p class="lede">Paste raw BLE advertisement hex to decode iBeacon and Eddystone UID/URL/TLM frames.</p>
+      <div class="card">
+        <label>Raw hex (spaces or colons OK)</label>
+        <textarea id="decoder-input" placeholder="02 01 06 1a ff 4c 00 02 15 ..."></textarea>
+        <div class="toolbar" style="margin-top:10px">
+          <button class="btn primary" id="decode-btn">Decode</button>
+          <button class="btn secondary" id="decode-example">Load iBeacon example</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Result</h3>
+        <pre class="code" id="decoder-output">—</pre>
+      </div>
+    </section>
+
+    <!-- ───────── SIDECAR ───────── -->
+    <section class="tab-panel" id="tab-sidecar">
+      <div class="demo-header">
+        <div class="ico" style="background:var(--accent-soft)">⇄</div>
+        <div class="body">
+          <h2>Python Sidecar</h2>
+          <div class="desc">Live bridge to clinical-grade open-source toolkits running locally as a FastAPI service. Output is wrapped in the <a href="https://www.openmhealth.org/documentation/" target="_blank">Open mHealth IEEE 1752.1-2021</a> envelope so it's drop-in compatible with RADAR-base, Stanford Spezi, and any FHIR R4 EHR.</div>
+        </div>
+      </div>
+
+      <div class="simulate-bar">
+        <span class="label">Sidecar</span>
+        <span class="status-pill" id="sc-status"><span class="dot"></span>not connected</span>
+        <button class="btn secondary" onclick="scConnect()">Connect</button>
+        <button class="btn ghost" onclick="scDisconnect()">Disconnect</button>
+        <span class="label" style="margin-left:14px">Algorithm</span>
+        <select id="sc-alg" onchange="scAlgChanged()" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--panel)">
+          <option value="">— connect first —</option>
+        </select>
+        <button class="btn secondary" onclick="scAnalyzeNow()">Analyze 30s buffer</button>
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-2);margin-left:6px"><input type="checkbox" id="sc-autostream" onchange="scToggleAutoStream(this.checked)" /> Auto-stream every 30s</label>
+        <button class="btn ghost" onclick="scHealthCheck()" title="Self-test every wrapped algorithm">⚕ Health check</button>
+        <span class="label" style="margin-left:14px">Sample data</span>
+        <select id="sc-sample" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--panel)">
+          <option value="">—</option>
+          <option value="walking">Walking · 30s</option>
+          <option value="stationary">Stationary · 30s</option>
+          <option value="falling">Falling · 30s</option>
+          <option value="stairs">Stairs · 30s</option>
+        </select>
+        <button class="btn ghost" onclick="scLoadSample()">Load + analyze</button>
+      </div>
+
+      <div id="sc-health-card" class="card" style="margin-bottom:14px;display:none" data-shipped="2026-04-28">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <h3 style="margin:0">Algorithm health</h3>
+          <span id="sc-health-overall" class="status-pill"></span>
+          <span id="sc-health-summary" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
+          <button class="btn ghost" onclick="document.getElementById('sc-health-card').style.display='none'" style="padding:2px 10px">×</button>
+        </div>
+        <div id="sc-health-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px"></div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card">
+          <h3 style="margin-top:0">Setup</h3>
+          <ol style="color:var(--text-2);padding-left:20px;line-height:1.7;font-size:13px;margin:0">
+            <li>Open a terminal, <code>cd ~/Code/b10-playground/sidecar</code></li>
+            <li>One-time: <code>python3 -m venv .venv &amp;&amp; source .venv/bin/activate &amp;&amp; pip install -r requirements.txt</code></li>
+            <li>Run: <code>python app.py</code> (binds to <code>localhost:8081</code>)</li>
+            <li>Click <b>Connect</b> above. The algorithm dropdown populates from <code>/v1/algorithms</code>.</li>
+          </ol>
+          <div style="margin-top:10px;font-size:11.5px;color:var(--muted)">API explorer: <a href="http://localhost:8081/docs" target="_blank">http://localhost:8081/docs</a> · Source: <code>sidecar/algorithms/</code></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Selected algorithm</h3>
+          <div id="sc-alg-info" style="color:var(--muted);font-size:13px">Connect and pick an algorithm to see its metadata, license, and upstream link.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Live output (Open mHealth datapoint)</h3>
+        <pre class="code" id="sc-output" style="max-height:340px;overflow:auto;background:var(--panel-2);padding:14px;border-radius:8px;font-size:11.5px;line-height:1.5">Awaiting first analysis…</pre>
+        <div style="margin-top:8px;font-size:11.5px;color:var(--muted)">Each frame is a complete IEEE 1752.1 datapoint with a header (provenance, timestamps, schema id) + body (algorithm output). This is the format Atlas BMM/Patch/Mobility Cloud should emit so it can be ingested by RADAR-base or routed through FHIR.</div>
+        <div id="sc-stream-history" style="margin-top:14px;display:none">
+          <h4 style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Stream history (last 8 frames)</h4>
+          <div id="sc-stream-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px" data-shipped="2026-04-27">
+        <h3 style="margin-top:0">Analyze a recorded session (CSV)</h3>
+        <p style="margin:0 0 10px;color:var(--text-2);font-size:13px">Drop a CSV with columns <code>ts,x,y,z</code> (timestamps in unix seconds, accel in g) to run any of the registered algorithms against an offline session — useful for analyzing recorded Atlas Patch data without a live B10. Output appears in the live panel above.</p>
+        <input type="file" id="sc-csv" accept=".csv,text/csv" onchange="scAnalyzeCsv(this.files[0])" style="font-size:13px" />
+        <div id="sc-csv-status" style="margin-top:8px;font-size:11.5px;color:var(--muted)"></div>
+        <div style="margin-top:10px;font-size:11.5px;color:var(--muted)">Try one of the bundled samples (commit <code>sidecar/data/</code>): <code>demo-walking-30s.csv</code> (110 spm walking, run with <i>gait_skdh</i>) · <code>demo-sleep-8min.csv</code> (8 min stationary, run with <i>sleep_cole_kripke</i>) · <code>demo-mixed-4min.csv</code> (walk · still · walk · fall, run with <i>falls_threshold</i>).</div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3 style="margin-top:0">How to add a new toolkit (engineering recipe)</h3>
+        <ol style="color:var(--text-2);padding-left:20px;line-height:1.7;font-size:13px;margin:0">
+          <li>Drop a new file in <code>sidecar/algorithms/</code> (e.g. <code>gait_mobgap.py</code>) that subclasses <code>BaseAlgorithm</code> from <code>algorithms/base.py</code>.</li>
+          <li>Implement <code>metadata</code> (name, license, upstream URL, expected sample rate) and <code>process(samples) -&gt; dict</code>.</li>
+          <li>Register it in <code>algorithms/__init__.py</code>.</li>
+          <li>Restart the sidecar. The algorithm appears at <code>/v1/analyze/&lt;name&gt;</code> and <code>/v1/stream/&lt;name&gt;</code>, plus in the dropdown above. OpenAPI docs auto-update.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ───────── OSS RESEARCH ───────── -->
+    <section class="tab-panel" id="tab-research">
+      <div class="demo-header">
+        <div class="ico" style="background:#fffbeb">📚</div>
+        <div class="body">
+          <h2>Open-Source Toolkit Research</h2>
+          <div class="desc">Decision-grade comparison of every open-source mobility, gait, sleep, fall, vision, contactless, and platform toolkit. License-safety filtering. Ranked picks with adoption recipes for the B10 + Atlas stack.</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card">
+          <h3 style="margin-top:0">Adopted (live in sidecar)</h3>
+          <table class="kv">
+            <tr><td><b>scikit-digital-health</b></td><td>MIT · Pfizer · gait + sit-to-stand + activity</td></tr>
+            <tr><td><b>mobgap (Mobilise-D)</b></td><td>Apache-2.0 · clinical-credibility walking bouts</td></tr>
+            <tr><td><b>NeuroKit2</b></td><td>MIT · HRV/respiration · activates with HR sensor</td></tr>
+            <tr><td><b>Cole-Kripke (1992)</b></td><td>public domain · sleep/wake</td></tr>
+            <tr><td><b>Open mHealth IEEE 1752</b></td><td>standard · output envelope</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Roadmap (next adoptions)</h3>
+          <table class="kv">
+            <tr><td><b>YASA</b></td><td>BSD-3 · PSG sleep staging when EEG enters scope</td></tr>
+            <tr><td><b>Walch et al.</b></td><td>open · wake/NREM/REM from accel + HR</td></tr>
+            <tr><td><b>RTMPose via rtmlib</b></td><td>Apache-2.0 · vision pose for room cameras</td></tr>
+            <tr><td><b>TI mmWave Industrial Toolbox</b></td><td>TI BSD · contactless room sensing</td></tr>
+            <tr><td><b>Acconeer A121 / XM125</b></td><td>BSD · embedded radar ($50)</td></tr>
+            <tr><td><b>BodyPressure (Georgia Tech)</b></td><td>MIT · HAPI moonshot — depth-only contact pressure</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">License-safety blocklist (do not adopt commercially)</h3>
+        <table class="kv">
+          <tr><td><b>OpenPose</b></td><td>$25k/yr commercial license · use RTMPose instead</td></tr>
+          <tr><td><b>AlphaPose</b></td><td>non-commercial only · use RTMPose</td></tr>
+          <tr><td><b>YOLOv8 / v11 -Pose (Ultralytics)</b></td><td>AGPL-3.0 · contaminates commercial product · use RTMPose</td></tr>
+          <tr><td><b>OxWearables</b> (biobankAccelerometerAnalysis, ssl-wearables, stepcount, actipy, asleep)</td><td>academic-use-only · use skdh + mobgap instead</td></tr>
+          <tr><td><b>gaitmap_mad</b></td><td>AGPL-3.0 · use gaitmap (MIT) or skdh</td></tr>
+          <tr><td><b>GajuuzZ Human-Falling-Detect-Tracks</b></td><td>no license declared + AlphaPose dep · build skeleton-based detector on PySKL</td></tr>
+        </table>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3 style="margin-top:0">Full research docs</h3>
+        <p style="margin:0 0 10px;color:var(--text-2);font-size:13px">Each track has a standalone reference doc with install commands, code snippets, validation papers, maintenance health, and per-toolkit "pick this if / avoid if" judgments.</p>
+        <ul style="margin:0;padding-left:20px;color:var(--text-2);font-size:13px;line-height:1.8">
+          <li><a href="docs/research/00-synthesis-decision-matrix.md" target="_blank"><b>00 · Synthesis decision matrix</b></a> — start here. The TL;DR pick, the blocklist, and how the picks map to Atlas BMM/HAPI/Falls/Patch/Mobility Cloud.</li>
+          <li><a href="docs/research/01-wearable-imu-toolkits.md" target="_blank">01 · Wearable IMU toolkits</a> — skdh, mobgap, YASA, gaitmap, SleepPy, Walch, SleepKit, Oxford suite (15+ libs reviewed)</li>
+          <li><a href="docs/research/02-vision-skeleton-toolkits.md" target="_blank">02 · Vision &amp; skeleton toolkits</a> — RTMPose, MediaPipe, MMPose, MMAction2, PySKL, in-bed pose</li>
+          <li><a href="docs/research/03-contactless-radar-inbed-toolkits.md" target="_blank">03 · Contactless · radar · in-bed</a> — TI mmWave, Acconeer, BCG datasets, BodyPressure, YAMNet, WiFi CSI</li>
+          <li><a href="docs/research/04-digital-health-platforms.md" target="_blank">04 · Digital-health platforms &amp; data standards</a> — RADAR-base, Stanford Spezi, Open mHealth, FHIR, Sage Bionetworks</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ───────── WHAT'S NEW ───────── -->
+    <section class="tab-panel" id="tab-whats-new">
+      <div class="demo-header">
+        <div class="ico" style="background:#f5f3ff">✨</div>
+        <div class="body">
+          <h2>What's New</h2>
+          <div class="desc">Every shipped feature gets a NEW · {days left} badge for 5 days, then fades into normal workflow. This page is the running ship log so the team and stakeholders can see week-to-week progress without missing anything.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Recent ships</h3>
+        <div id="wn-feed" style="display:flex;flex-direction:column;gap:0">
+          <!-- Populated by wnRender() from the SHIP_LOG below -->
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3 style="margin-top:0">How this works (engineering)</h3>
+        <p style="margin:0 0 10px;color:var(--text-2);font-size:13px">Any element with a <code>data-shipped="YYYY-MM-DD"</code> attribute gets an auto-rendered NEW badge until <code>shipped + 5 days</code>. After that the badge is removed entirely (no manual cleanup). Add new ships to the <code>SHIP_LOG</code> array near the top of the JS section — they appear here automatically.</p>
+      </div>
+    </section>
+
+    <!-- ───────── EXPERIMENTS ───────── -->
+    <section class="tab-panel" id="tab-experiments">
+      <h2>Experiments</h2>
+      <p class="lede">Small JS sandbox. Register handlers for B10 events. Use this to prototype new apps fast, then promote to a real demo tab.</p>
+      <div class="card">
+        <h3 style="margin-top:0">Available API</h3>
+        <pre class="code">on('button:single', fn)    // 1-tap
+on('button:double', fn)    // 2-tap
+on('button:triple', fn)    // 3-tap
+on('button', fn)           // any tap — receives {kind}
+on('motion', fn)           // accelerometer frame — receives {x, y, z, magnitude}
+log('message')             // print into log below
+b10                        // connection state
+bytes.toHex / bytes.fromHex
+fetch                      // call webhooks</pre>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Your code</h3>
+        <textarea id="exp-code" spellcheck="false">on('button:triple', () => {
+  log('🚨 Triple press — fire your dispatch');
+  // fetch('https://your-webhook/alert', {method: 'POST'});
+});
+on('button:single', () => log('☝️ single'));
+on('button:double', () => log('✌️ double'));
+on('motion', (d) => log(`🏃 mag=${d.magnitude.toFixed(2)}`));</textarea>
+        <div class="toolbar" style="margin-top:10px">
+          <button class="btn primary" id="run-experiment">Run</button>
+          <button class="btn secondary" id="stop-experiment">Stop</button>
+          <button class="btn secondary" id="save-experiment">Save</button>
+          <button class="btn secondary" id="load-experiment">Load saved</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Output</h3>
+        <div class="log" id="exp-log" style="height:200px"></div>
+      </div>
+    </section>
+
+    <!-- ───────── DOCS ───────── -->
+    <section class="tab-panel" id="tab-docs">
+      <h2>Protocol Docs</h2>
+      <p class="lede">Everything we've figured out about the B10's BLE protocol, consolidated.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-top:0">Hardware</h3>
+          <table class="kv">
+            <tr><td>Chipset</td><td>Nordic nRF52832</td></tr>
+            <tr><td>Model code</td><td><code>0x0011</code></td></tr>
+            <tr><td>Bluetooth</td><td>5.0</td></tr>
+            <tr><td>NFC</td><td>NTAG213 (13.56 MHz)</td></tr>
+            <tr><td>Battery</td><td>~100 mAh Li-Po, 60 days/charge</td></tr>
+            <tr><td>Sensors</td><td>6-axis accelerometer + button</td></tr>
+            <tr><td>IP rating</td><td>IP66</td></tr>
+            <tr><td>Feedback</td><td>Blue LED + haptic vibration</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Operating modes</h3>
+          <table class="kv">
+            <tr><td>Storage</td><td>Ships here. 8.5 µA. Press 1s to wake.</td></tr>
+            <tr><td>Discoverable</td><td>Connectable window for config.</td></tr>
+            <tr><td>Unconnected</td><td>Broadcast beacon mode. 49–119 µA.</td></tr>
+            <tr><td>Alarm / SOS</td><td>Continuous blue LED blink. ~130 µA.</td></tr>
+            <tr><td>DFU</td><td>Nordic Secure firmware update.</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Auth</h3>
+        <p>Default config password: <code>minew123</code> (exactly 8 chars). Minew's SDK docs warn that wrong-length passwords can brick firmware — we only send the default.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">6 advertising SLOTs</h3>
+        <p>The B10 broadcasts up to 6 concurrent advertisement channels. Each slot can be bound to a trigger (button tap, motion, always) and configured to emit one frame type.</p>
+        <table class="kv">
+          <tr><td>Frame types</td><td>iBeacon · Eddystone UID · Eddystone URL · Eddystone TLM · Info · Acceleration · Empty</td></tr>
+          <tr><td>Triggers</td><td>Always · Button STAP · DTAP · TTAP · Push/Release · Motion</td></tr>
+          <tr><td>Interval</td><td>100–5000 ms per slot</td></tr>
+          <tr><td>TX power</td><td>−8 / −4 / 0 / +4 dBm</td></tr>
+          <tr><td>SLOT 5</td><td>⚠️ Reserved. Required INFO packet for BeaconSET+ to connect.</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Connection state machine (from Minew SDK)</h3>
+        <pre class="code">CONNECTING
+  → CONNECTED
+  → READINGINFO
+  → DEVICEVALIDATING
+  → PASSWORDVALIDATING    ← send "minew123"
+  → SYNCHRONIZINGTIME
+  → READINGFEATURE
+  → READINGFRAMES
+  → READINGTRIGGERS
+  → READINGSENSORS
+  → COMPLETED</pre>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">References</h3>
+        <ul style="padding-left:20px;margin:0">
+          <li><a href="https://www.minew.com/product/b10-smart-emergency-button/" target="_blank">Minew B10 product page</a></li>
+          <li><a href="https://www.minew.com/wp-content/uploads/2023/08/B10-poster.pdf" target="_blank">B10 spec poster (PDF)</a></li>
+          <li><a href="https://docs.minew.com/Android/Android_BeaconPlus_Software_Development_Kit_Guide.html" target="_blank">BeaconSET Plus Android SDK</a></li>
+          <li><a href="https://reelyactive.github.io/diy/minew-b10-config/" target="_blank">reelyActive — B10 config walkthrough</a></li>
+          <li><a href="https://docs.meshtech.no/devices/0011_Minew_B10/" target="_blank">Meshtech — B10 device page (modes + GATT)</a></li>
+          <li><a href="https://github.com/minewdevelop/minewdevelop.github.io" target="_blank">minewdevelop on GitHub</a></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// B10 Lab — Web Bluetooth + demo apps
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MINEW_PASSWORD = 'minew123';
+
+// Broad optionalServices list — we don't know the custom Minew UUIDs yet.
+// Standard + Nordic UART + DFU + some best-guess Minew ranges. Will iterate.
+const OPTIONAL_SERVICES = [
+  'generic_access', 'generic_attribute',
+  'device_information', 'battery_service',
+  'human_interface_device', 'environmental_sensing', 'user_data', 'current_time',
+  '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART
+  '0000fe59-0000-1000-8000-00805f9b34fb', // Nordic DFU
+  'a0f4ff00-f003-4000-ba01-edcbad090909',
+  'a0f4ff01-f003-4000-ba01-edcbad090909',
+  'f000ffc0-0451-4000-b000-000000000000',
+];
+
+const SERVICE_NAMES = {
+  '00001800-0000-1000-8000-00805f9b34fb': 'Generic Access',
+  '00001801-0000-1000-8000-00805f9b34fb': 'Generic Attribute',
+  '0000180a-0000-1000-8000-00805f9b34fb': 'Device Information',
+  '0000180f-0000-1000-8000-00805f9b34fb': 'Battery',
+  '0000fe59-0000-1000-8000-00805f9b34fb': 'Nordic Secure DFU',
+  '6e400001-b5a3-f393-e0a9-e50e24dcca9e': 'Nordic UART',
+};
+const CHAR_NAMES = {
+  '00002a00-0000-1000-8000-00805f9b34fb': 'Device Name',
+  '00002a24-0000-1000-8000-00805f9b34fb': 'Model Number',
+  '00002a25-0000-1000-8000-00805f9b34fb': 'Serial Number',
+  '00002a26-0000-1000-8000-00805f9b34fb': 'Firmware Rev',
+  '00002a27-0000-1000-8000-00805f9b34fb': 'Hardware Rev',
+  '00002a28-0000-1000-8000-00805f9b34fb': 'Software Rev',
+  '00002a29-0000-1000-8000-00805f9b34fb': 'Manufacturer',
+  '00002a19-0000-1000-8000-00805f9b34fb': 'Battery Level',
+  '6e400002-b5a3-f393-e0a9-e50e24dcca9e': 'Nordic UART RX',
+  '6e400003-b5a3-f393-e0a9-e50e24dcca9e': 'Nordic UART TX',
+};
+
+const state = {
+  device: null, server: null, services: [],
+  subscriptions: new Map(),
+  logEntries: [],
+  listeners: new Map(),
+  fdThresh: 2.5,
+  rs: { count: 0, times: [], fulfilled: 0 },
+};
+
+// ───── helpers ─────
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const nowTs = () => new Date().toTimeString().slice(0, 8);
+const bytesToHex = b => {
+  const u = b instanceof DataView ? new Uint8Array(b.buffer, b.byteOffset, b.byteLength) : new Uint8Array(b);
+  return Array.from(u).map(x => x.toString(16).padStart(2, '0')).join(' ');
+};
+const hexToBytes = s => {
+  const c = s.replace(/[^0-9a-f]/gi, '');
+  const o = new Uint8Array(c.length / 2);
+  for (let i = 0; i < o.length; i++) o[i] = parseInt(c.substr(i * 2, 2), 16);
+  return o;
+};
+const textFromBuf = b => { try { return new TextDecoder().decode(b instanceof DataView ? b.buffer : b); } catch { return ''; } };
+const svcName = u => SERVICE_NAMES[u.toLowerCase()] || u.slice(0, 8);
+const chName = u => CHAR_NAMES[u.toLowerCase()] || u.slice(0, 8);
+
+function setStatus(kind, text) {
+  const p = $('#status');
+  p.className = 'status-pill' + (kind ? ' ' + kind : '');
+  p.querySelector('.txt').textContent = text;
+}
+
+function log(tag, msg, extra) {
+  const e = { ts: nowTs(), tag, msg, extra };
+  state.logEntries.push(e);
+  const row = document.createElement('div');
+  row.className = 'entry';
+  row.innerHTML = `<span class="ts">${e.ts}</span><span class="tag ${tag}">${tag}</span>${msg}` + (extra ? ` <span class="hex">${extra}</span>` : '');
+  const el = $('#log');
+  el.appendChild(row);
+  el.scrollTop = el.scrollHeight;
+}
+function expLog(msg) {
+  const el = $('#exp-log');
+  const r = document.createElement('div');
+  r.className = 'entry';
+  r.innerHTML = `<span class="ts">${nowTs()}</span> ${msg}`;
+  el.appendChild(r);
+  el.scrollTop = el.scrollHeight;
+}
+
+function emit(event, data) {
+  const ls = state.listeners.get(event);
+  if (ls) ls.forEach(fn => { try { fn(data); } catch (e) { expLog(`<span style="color:#fca5a5">error: ${e.message}</span>`); } });
+}
+function on(event, fn) {
+  if (!state.listeners.has(event)) state.listeners.set(event, []);
+  state.listeners.get(event).push(fn);
+}
+function offAll() { state.listeners.clear(); }
+
+// ───── tabs ─────
+$$('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+function showTab(name) {
+  $$('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  $$('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+}
+window.showTab = showTab; // for onclick handlers in gallery
+
+// ───── connect / disconnect ─────
+$('#connect-btn').addEventListener('click', openPairModal);
+$('#disconnect-btn').addEventListener('click', disconnect);
+
+// Known naming patterns + advertised services for Minew devices. We use these as
+// Chrome Web Bluetooth filters. Chrome OR's all filter entries.
+// IMPORTANT: the B10 doesn't always advertise a predictable name — many units
+// show up as "Unknown or Unsupported Device" with just a MAC. For that reason
+// the default flow uses acceptAllDevices, and this array is only used by the
+// optional "Narrow to likely Minew" toggle.
+const MINEW_FILTERS = [
+  { namePrefix: 'MinewB10' },
+  { namePrefix: 'Minew' },
+  { namePrefix: 'B10' },
+  { namePrefix: 'N_' },
+  { namePrefix: 'MS_' },
+  { namePrefix: 'DFU_' },
+  { namePrefix: 'nRF' },
+  // Advertised service hints (if B10 includes them in adv data)
+  { services: ['device_information'] },
+  { services: ['battery_service'] },
+  { services: ['0000fe59-0000-1000-8000-00805f9b34fb'] }, // Nordic DFU
+  { services: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] }, // Nordic UART
+];
+
+function openPairModal() {
+  // Try a silent auto-reconnect first using getDevices() (experimental)
+  attemptAutoReconnect().then(ok => {
+    if (ok) return;
+    // Fall back to showing the wizard
+    $('#pair-modal').classList.add('open');
+    resetPairSteps();
+    $('#pair-hint').style.display = 'none';
+    $('#pair-status').textContent = '';
+    // Animate step 1 to cue the user
+    $('#b10-visual').classList.add('blinking');
+    setTimeout(() => $('#b10-visual').classList.remove('blinking'), 3000);
+  });
+}
+function closePairModal() { $('#pair-modal').classList.remove('open'); $('#b10-visual').classList.remove('blinking'); }
+window.closePairModal = closePairModal;
+window.openPairModal = openPairModal;
+window.runPairFlow = runPairFlow;
+
+function resetPairSteps() {
+  ['ps-1', 'ps-2', 'ps-3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.classList.remove('active', 'done');
+    if (i === 0) el.classList.add('active');
+  });
+}
+function advancePairStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById('ps-' + i);
+    el.classList.remove('active', 'done');
+    if (i < n) el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  }
+}
+
+let countdownInterval = null;
+function startCountdown(seconds, onTick, onEnd) {
+  clearInterval(countdownInterval);
+  let left = seconds;
+  onTick(left);
+  countdownInterval = setInterval(() => {
+    left--;
+    if (left <= 0) { clearInterval(countdownInterval); onEnd(); return; }
+    onTick(left);
+  }, 1000);
+}
+function stopCountdown() { clearInterval(countdownInterval); }
+
+async function runPairFlow(showAll) {
+  if (!navigator.bluetooth) {
+    alert('Web Bluetooth not supported. Use Chrome, Edge, or Opera.');
+    return;
+  }
+  advancePairStep(2);
+  const statusEl = $('#pair-status');
+  statusEl.innerHTML = '<span class="countdown-ring">🔎 Scanning… <span class="num" id="cd-num">60</span>s</span>';
+  startCountdown(60, (n) => { const el = $('#cd-num'); if (el) el.textContent = n; }, () => {
+    statusEl.textContent = 'Scan timed out.';
+    $('#pair-hint').style.display = 'block';
+  });
+
+  setStatus('connecting', 'Scanning');
+  log('info', `Scan started (${showAll ? 'all devices' : 'Minew filters'})`);
+
+  let device;
+  try {
+    // Default (narrow=false) = show ALL devices — B10 often shows with no name
+    // and must be identified by MAC prefix. The "narrow" path uses filters.
+    const opts = showAll
+      ? { filters: MINEW_FILTERS, optionalServices: OPTIONAL_SERVICES }
+      : { acceptAllDevices: true, optionalServices: OPTIONAL_SERVICES };
+    device = await navigator.bluetooth.requestDevice(opts);
+  } catch (err) {
+    stopCountdown();
+    if (err.name === 'NotFoundError') {
+      statusEl.innerHTML = '<span style="color:var(--amber)">Picker closed without selecting a device</span>';
+      $('#pair-hint').style.display = 'block';
+      setStatus('', 'Disconnected');
+    } else {
+      statusEl.innerHTML = `<span style="color:var(--red)">Error: ${err.message}</span>`;
+      log('err', 'Scan error: ' + err.message);
+      setStatus('error', 'Error');
+    }
+    return;
+  }
+  stopCountdown();
+  advancePairStep(3);
+  statusEl.innerHTML = `<span style="color:var(--green)">✓ Picked <b>${device.name || device.id.slice(0,8) + '…'}</b></span>`;
+  log('info', `Selected: <b>${device.name || '(no name)'}</b>`, device.id);
+
+  // Remember for next time
+  try { localStorage.setItem('b10-last-device-id', device.id); } catch {}
+
+  await finishConnect(device);
+  setTimeout(closePairModal, 900);
+}
+
+async function attemptAutoReconnect() {
+  // Returns true if we successfully reconnected without the picker.
+  if (!navigator.bluetooth?.getDevices) return false;
+  try {
+    const saved = localStorage.getItem('b10-last-device-id');
+    if (!saved) return false;
+    const known = await navigator.bluetooth.getDevices();
+    const match = known.find(d => d.id === saved);
+    if (!match) return false;
+    log('info', `Found known device, reconnecting: ${match.name || match.id.slice(0,8)}…`);
+    setStatus('connecting', 'Auto-reconnecting');
+    // watchAdvertisements lets us wake up the connection without a new prompt,
+    // but it needs the flag. Try a direct gatt.connect() first.
+    try {
+      await finishConnect(match);
+      return true;
+    } catch {
+      log('info', 'Auto-reconnect needs user gesture, showing picker');
+      return false;
+    }
+  } catch (e) {
+    log('info', 'Auto-reconnect not available: ' + e.message);
+    return false;
+  }
+}
+
+async function finishConnect(device) {
+  state.device = device;
+  device.addEventListener('gattserverdisconnected', onDisconnected);
+  setStatus('connecting', 'Connecting GATT');
+  try {
+    state.server = await device.gatt.connect();
+  } catch (err) {
+    setStatus('error', 'Error');
+    log('err', 'GATT connect failed: ' + err.message);
+    throw err;
+  }
+  log('ok', 'GATT connected');
+  $('#info-name').textContent = device.name || '—';
+  $('#info-id').textContent = device.id;
+  setStatus('connected', 'Connected');
+  $('#connect-btn').style.display = 'none';
+  $('#disconnect-btn').style.display = '';
+  await enumerateServices();
+  await readDeviceInfo();
+  await readBattery();
+  // Post-connect identity validation: confirm this is actually a Minew B10
+  // (not one of the other "Unknown or Unsupported Device" entries the user
+  // might have picked from Chrome's picker). Empty Device Info or non-Nordic
+  // services = wrong device.
+  await validateB10Identity(device);
+}
+
+async function validateB10Identity(device) {
+  const mfr = ($('#dis-manufacturer')?.textContent || '').trim();
+  const model = ($('#dis-model')?.textContent || '').trim();
+  const haystack = (mfr + ' ' + model + ' ' + (device.name || '')).toLowerCase();
+  // Minew firmware typically reports manufacturer "Minew" or "Shenzhen Minew";
+  // model often contains "B10" or "MS_". Nordic dev kits show "Nordic Semiconductor".
+  const looksLikeMinew = /(minew|b10|ms_|n_)/i.test(haystack);
+  const looksLikeNordic = /(nordic)/i.test(haystack);
+  // Also count Nordic UART or Minew custom services as a positive signal
+  const hasNordicService = (state.services || []).some(s =>
+    s.uuid.toLowerCase().includes('6e400001') ||
+    s.uuid.toLowerCase().includes('0000fe59')
+  );
+
+  // Track tried devices so the user can skip them on retry
+  const triedKey = 'b10-tried-non-b10';
+  const tried = JSON.parse(localStorage.getItem(triedKey) || '[]');
+
+  if (looksLikeMinew || (looksLikeNordic && hasNordicService)) {
+    log('ok', `[validate] ✓ Confirmed ${looksLikeMinew ? 'Minew B10' : 'Nordic-based device'} — ${mfr} ${model}`);
+    return true;
+  }
+
+  // Unknown device — most likely the user picked the wrong "Unknown or
+  // Unsupported Device" entry. Tell them clearly.
+  if (!tried.includes(device.id)) {
+    tried.push(device.id);
+    if (tried.length > 30) tried.shift();
+    localStorage.setItem(triedKey, JSON.stringify(tried));
+  }
+
+  log('err', `[validate] ⚠️ This is not a Minew B10. Manufacturer="${mfr}" Model="${model}". Disconnecting.`);
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:80px;right:24px;z-index:9999;max-width:420px;background:#fef2f2;border:1px solid var(--red);border-left:4px solid var(--red);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow-lg);font-size:13px;line-height:1.55';
+  banner.innerHTML = `
+    <div style="font-weight:700;color:var(--red);margin-bottom:6px">⚠️ Wrong device picked</div>
+    <div style="color:var(--text-2)">That wasn't a Minew B10 — it was an unrelated BLE device that happened to be in range.<br><br>
+    <b>Manufacturer:</b> ${mfr || '—'}<br>
+    <b>Model:</b> ${model || '—'}<br><br>
+    Click <b>Connect B10</b> again and pick a <i>different</i> "Unknown or Unsupported Device" entry. We've remembered this one as wrong (${tried.length} tried so far).</div>
+    <button onclick="this.parentNode.remove()" style="position:absolute;top:8px;right:10px;border:0;background:transparent;font-size:16px;cursor:pointer;color:var(--muted)">×</button>
+  `;
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 30000);
+
+  // Disconnect cleanly so the user can retry
+  if (state.device?.gatt.connected) state.device.gatt.disconnect();
+  return false;
+}
+
+window.validateB10Identity = validateB10Identity;
+
+function disconnect() {
+  if (state.device?.gatt.connected) state.device.gatt.disconnect();
+  onDisconnected();
+}
+function onDisconnected() {
+  setStatus('', 'Disconnected');
+  $('#connect-btn').style.display = '';
+  $('#disconnect-btn').style.display = 'none';
+  state.subscriptions.clear();
+  state.server = null;
+  log('sys', 'Disconnected');
+}
+
+// ───── enumerate GATT ─────
+async function enumerateServices() {
+  const tree = $('#gatt-tree');
+  tree.innerHTML = '';
+  let services;
+  try { services = await state.server.getPrimaryServices(); }
+  catch (err) {
+    tree.innerHTML = '<div class="empty">No accessible services. Device may require different UUIDs in optionalServices.</div>';
+    log('err', 'getPrimaryServices failed: ' + err.message); return;
+  }
+  state.services = services;
+  log('ok', `Found ${services.length} service(s)`);
+  for (const svc of services) {
+    const d = document.createElement('div');
+    d.className = 'service';
+    d.innerHTML = `<div><span class="service-name">${svcName(svc.uuid)}</span><span class="service-uuid">${svc.uuid}</span></div>`;
+    tree.appendChild(d);
+    try {
+      const chars = await svc.getCharacteristics();
+      for (const c of chars) {
+        const p = [];
+        if (c.properties.read) p.push('READ');
+        if (c.properties.write) p.push('WRITE');
+        if (c.properties.writeWithoutResponse) p.push('WRITE_NR');
+        if (c.properties.notify) p.push('NOTIFY');
+        if (c.properties.indicate) p.push('INDICATE');
+        const cd = document.createElement('div');
+        cd.className = 'char';
+        cd.innerHTML = `<div><span class="char-uuid">${chName(c.uuid)} · ${c.uuid}</span><span class="char-props">${p.join(' ')}</span><span class="char-actions"></span></div><span class="char-value" id="val-${c.uuid}"></span>`;
+        const actions = cd.querySelector('.char-actions');
+        if (c.properties.read) { const b = document.createElement('button'); b.textContent = 'Read'; b.onclick = () => readChar(c); actions.appendChild(b); }
+        if (c.properties.notify || c.properties.indicate) { const b = document.createElement('button'); b.textContent = 'Subscribe'; b.onclick = () => toggleSubscribe(c, b); actions.appendChild(b); }
+        if (c.properties.write || c.properties.writeWithoutResponse) { const b = document.createElement('button'); b.textContent = 'Write hex'; b.onclick = () => writePrompt(c); actions.appendChild(b); }
+        d.appendChild(cd);
+      }
+    } catch (err) { log('err', `Chars for ${svc.uuid} failed: ${err.message}`); }
+  }
+}
+
+async function readChar(c) {
+  try {
+    const v = await c.readValue();
+    const hex = bytesToHex(v);
+    const txt = textFromBuf(v).replace(/[^\x20-\x7e]/g, '·');
+    const t = document.getElementById('val-' + c.uuid);
+    if (t) t.innerHTML = `<span style="color:var(--gold)">${hex}</span>  <span style="color:var(--muted)">"${txt}"</span>`;
+    log('rx', `READ ${chName(c.uuid)}`, hex);
+    return v;
+  } catch (err) { log('err', `Read ${chName(c.uuid)} failed: ${err.message}`); }
+}
+
+async function toggleSubscribe(c, btn) {
+  if (state.subscriptions.has(c.uuid)) {
+    try { await c.stopNotifications(); } catch {}
+    state.subscriptions.delete(c.uuid);
+    btn.textContent = 'Subscribe';
+    log('info', `Unsubscribed ${chName(c.uuid)}`);
+    return;
+  }
+  try {
+    await c.startNotifications();
+    c.addEventListener('characteristicvaluechanged', (e) => onNotify(c, e.target.value));
+    state.subscriptions.set(c.uuid, c);
+    btn.textContent = 'Unsubscribe';
+    log('ok', `Subscribed ${chName(c.uuid)}`);
+  } catch (err) { log('err', `Subscribe failed: ${err.message}`); }
+}
+
+function onNotify(c, value) {
+  const hex = bytesToHex(value);
+  log('rx', `NOTIFY ${chName(c.uuid)}`, hex);
+  interpretEvent(c, value);
+}
+
+async function writePrompt(c) {
+  const hex = prompt(`Write to ${chName(c.uuid)} — hex bytes:`, '');
+  if (!hex) return;
+  const bytes = hexToBytes(hex);
+  try {
+    if (c.properties.write) await c.writeValue(bytes);
+    else await c.writeValueWithoutResponse(bytes);
+    log('tx', `WROTE ${chName(c.uuid)}`, bytesToHex(bytes));
+  } catch (err) { log('err', `Write failed: ${err.message}`); }
+}
+
+// ───── Heuristic event interpretation (iterate with real data) ─────
+function interpretEvent(c, dv) {
+  const b = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+  if (!b.length) return;
+  const head = b[0];
+  if (b.length >= 3 && b.length <= 8) {
+    if (head === 0x01 || head === 0x10) fireButton('single');
+    else if (head === 0x02 || head === 0x20) fireButton('double');
+    else if (head === 0x03 || head === 0x30) fireButton('triple');
+  } else if (b.length >= 6) {
+    const x = readI16(b, 0), y = readI16(b, 2), z = readI16(b, 4);
+    const magnitude = Math.sqrt(x * x + y * y + z * z) / 1000;
+    emit('motion', { x, y, z, magnitude });
+    fdUpdate(x / 1000, y / 1000, z / 1000, magnitude);
+    glUpdate(x / 1000, y / 1000, z / 1000, magnitude);
+    slUpdate(x / 1000, y / 1000, z / 1000, magnitude);
+    tlUpdate(x / 1000, y / 1000, z / 1000);
+    scPushSample(x / 1000, y / 1000, z / 1000);
+  }
+}
+function readI16(b, off) { const v = (b[off] << 8) | b[off + 1]; return v >= 0x8000 ? v - 0x10000 : v; }
+
+function fireButton(kind) {
+  const now = new Date();
+  log('info', `button:${kind} fired`);
+  emit('button:' + kind, {});
+  emit('button', { kind, ts: now });
+  // Forward to each demo app's handler
+  rsOnButton(kind, now);
+  ftOnButton(kind, now);
+  if (kind === 'triple') sdOnTriple(now);
+  gaOnButton(now);
+}
+
+// ───── Device info / battery ─────
+async function readDeviceInfo() {
+  for (const svc of state.services) {
+    if (!svc.uuid.startsWith('0000180a')) continue;
+    const map = {'00002a29':'dis-manufacturer','00002a24':'dis-model','00002a25':'dis-serial','00002a27':'dis-hw','00002a26':'dis-fw','00002a28':'dis-sw'};
+    try {
+      const chars = await svc.getCharacteristics();
+      for (const c of chars) {
+        const k = c.uuid.slice(0, 8);
+        if (!map[k]) continue;
+        const v = await c.readValue();
+        document.getElementById(map[k]).textContent = textFromBuf(v);
+      }
+    } catch (e) { log('err', 'DIS read: ' + e.message); }
+  }
+}
+async function readBattery() {
+  for (const svc of state.services) {
+    if (!svc.uuid.startsWith('0000180f')) continue;
+    try {
+      const chars = await svc.getCharacteristics();
+      for (const c of chars) {
+        if (!c.uuid.startsWith('00002a19')) continue;
+        const v = await c.readValue();
+        const pct = v.getUint8(0);
+        $('#info-battery').textContent = pct + '%';
+        $('#ga-batt').textContent = pct + '%';
+        if (c.properties.notify) {
+          await c.startNotifications();
+          c.addEventListener('characteristicvaluechanged', (e) => {
+            const p = e.target.value.getUint8(0);
+            $('#info-battery').textContent = p + '%';
+            $('#ga-batt').textContent = p + '%';
+          });
+        }
+      }
+    } catch (e) { log('err', 'Battery read: ' + e.message); }
+  }
+}
+
+// ═══════ DEMO APP: Room Service ═══════
+const RS_ACTIONS = {
+  single: { name: 'Room Service', emoji: '🛎️', who: 'Kitchen (in-room dining)', eta: 14 },
+  double: { name: 'Housekeeping', emoji: '🧹', who: 'Housekeeping', eta: 18 },
+  triple: { name: 'Concierge', emoji: '🎩', who: 'Front desk · Concierge desk', eta: 6 },
+};
+function rsOnButton(kind, ts) {
+  if (!$('#tab-room-service').classList.contains('active')) {
+    // still track counts even when tab isn't active
+  }
+  const act = RS_ACTIONS[kind];
+  if (!act) return;
+  state.rs.count++;
+  state.rs.times.push(act.eta);
+  $('#rs-count').textContent = state.rs.count;
+  $('#rs-avg').textContent = Math.round(state.rs.times.reduce((a,b)=>a+b,0) / state.rs.times.length) + 'm';
+
+  $('#rs-status').textContent = `${act.emoji} ${act.name} requested`;
+  $('#rs-status').style.background = '#ecfdf5';
+  $('#rs-status').style.color = 'var(--green)';
+
+  const tl = $('#rs-timeline');
+  tl.innerHTML = '';
+  const steps = [
+    { t: 'Request received', d: `${act.emoji} ${act.name} — Suite 1204`, status: 'active' },
+    { t: 'Routed', d: `Dispatched to ${act.who}`, status: 'pending', delay: 800 },
+    { t: 'Acknowledged', d: 'Staff confirmed — on the way', status: 'pending', delay: 2800 },
+    { t: `ETA ${act.eta} min`, d: 'Guest notified via in-room display', status: 'pending', delay: 4000 },
+  ];
+  steps.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'timeline-item' + (i === 0 ? ' active' : '');
+    d.innerHTML = `<div class="dot"></div><div class="body"><div class="t">${s.t}</div><div class="d">${s.d}</div></div><div class="t-time">${nowTs()}</div>`;
+    tl.appendChild(d);
+    if (s.delay) setTimeout(() => {
+      d.classList.remove('active');
+      d.classList.add('active');
+      d.querySelector('.t-time').textContent = nowTs();
+    }, s.delay);
+  });
+  setTimeout(() => { steps.forEach((_, i) => { tl.children[i]?.classList.add('done'); tl.children[i]?.classList.remove('active'); }); state.rs.fulfilled++; $('#rs-fulfilled').textContent = state.rs.fulfilled; }, 5000);
+
+  // Recent feed
+  const feed = $('#rs-feed');
+  if (feed.querySelector('.empty')) feed.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'event-card';
+  card.innerHTML = `<div class="ico">${act.emoji}</div><div class="meta"><div class="title">${act.name}</div><div class="sub">Suite 1204 · ETA ${act.eta}m</div></div><div class="time">${nowTs()}</div>`;
+  feed.insertBefore(card, feed.firstChild);
+  while (feed.children.length > 10) feed.removeChild(feed.lastChild);
+}
+function rsReset() {
+  state.rs = { count: 0, times: [], fulfilled: 0 };
+  $('#rs-count').textContent = '0';
+  $('#rs-avg').textContent = '—';
+  $('#rs-fulfilled').textContent = '0';
+  $('#rs-status').textContent = 'Idle · awaiting request';
+  $('#rs-status').style.background = '';
+  $('#rs-status').style.color = '';
+  $('#rs-timeline').innerHTML = '<div class="timeline-item"><div class="dot"></div><div class="body"><div class="t">Awaiting trigger</div><div class="d">Press the B10 or use the simulate buttons above</div></div></div>';
+  $('#rs-feed').innerHTML = '<div class="empty" style="padding:18px">No requests yet.</div>';
+}
+
+// ═══════ DEMO APP: Staff Duress ═══════
+const STAFF_ROSTER = [
+  { name: 'Luisa M.', role: 'Housekeeping', zone: 'Floor 12', battery: 87 },
+  { name: 'Dev P.', role: 'Engineering', zone: 'Back of house', battery: 62 },
+  { name: 'Kai R.', role: 'Front desk', zone: 'Lobby', battery: 94 },
+];
+function sdRenderRoster() {
+  const el = $('#sd-roster');
+  el.innerHTML = '';
+  STAFF_ROSTER.forEach(s => {
+    const c = document.createElement('div');
+    c.className = 'event-card';
+    c.innerHTML = `<div class="ico">👷</div><div class="meta"><div class="title">${s.name} · ${s.role}</div><div class="sub">${s.zone} · batt ${s.battery}%</div></div><div class="time">●</div>`;
+    el.appendChild(c);
+  });
+}
+function sdFire() { sdOnTriple(new Date(), true); }
+let sdActive = false, sdStartTs = null, sdTimers = [];
+function sdOnTriple(ts, force = false) {
+  if (sdActive) return;
+  sdActive = true; sdStartTs = ts;
+  const victim = STAFF_ROSTER[0];
+  const scene = $('#sd-scene');
+  scene.classList.add('alert-active');
+  const banner = $('#sd-banner');
+  banner.style.background = '#fef2f2';
+  banner.style.borderColor = 'var(--red)';
+  banner.innerHTML = `<div style="font-size:22px;font-weight:700;color:var(--red)">🚨 DURESS · ${victim.name}</div><div style="color:var(--text);margin-top:4px">${victim.role} · ${victim.zone} · ${nowTs()}</div>`;
+  const ladder = $('#sd-ladder').children;
+  ladder[0]?.classList.add('done');
+  const run = (i, ms, label) => setTimeout(() => {
+    if (!sdActive) return;
+    ladder[i]?.classList.remove('active');
+    ladder[i]?.classList.add('done');
+    const next = ladder[i + 1]; if (next) next.classList.add('active');
+    log('info', `[duress] ${label}`);
+  }, ms);
+  ladder[1]?.classList.add('active');
+  sdTimers.push(run(1, 10000, '+10s · supervisor notified'));
+  sdTimers.push(run(2, 30000, '+30s · security dispatched'));
+  sdTimers.push(run(3, 60000, '+60s · robot dispatched'));
+  sdTimers.push(run(4, 90000, '+90s · 911 queued'));
+}
+function sdAck() {
+  if (!sdActive) return;
+  sdTimers.forEach(t => clearTimeout(t));
+  const banner = $('#sd-banner');
+  banner.style.background = '#ecfdf5';
+  banner.style.borderColor = 'var(--green)';
+  banner.innerHTML = `<div style="font-size:20px;font-weight:700;color:var(--green)">ACKNOWLEDGED</div><div style="color:var(--text);margin-top:4px">Supervisor en route · escalation paused</div>`;
+  $('#sd-scene').classList.remove('alert-active');
+  sdActive = false;
+  log('ok', '[duress] acknowledged by supervisor');
+}
+function sdReset() {
+  sdTimers.forEach(t => clearTimeout(t));
+  sdActive = false;
+  $('#sd-scene').classList.remove('alert-active');
+  $('#sd-banner').style.background = '';
+  $('#sd-banner').style.borderColor = '';
+  $('#sd-banner').innerHTML = `<div style="font-size:20px;font-weight:700;color:var(--muted)">NO ACTIVE ALARMS</div><div style="color:var(--muted);margin-top:6px;font-size:12.5px">All wearables nominal</div>`;
+  Array.from($('#sd-ladder').children).forEach(el => el.classList.remove('active', 'done'));
+}
+sdRenderRoster();
+
+// ═══════ DEMO APP: Fall Detector ═══════
+function fdSetThresh(v) { state.fdThresh = parseFloat(v); $('#fd-thresh-val').textContent = v + 'g'; }
+function fdUpdate(xg, yg, zg, mag) {
+  $('#fd-x').textContent = xg.toFixed(2);
+  $('#fd-y').textContent = yg.toFixed(2);
+  $('#fd-z').textContent = zg.toFixed(2);
+  $('#fd-mag').textContent = mag.toFixed(2);
+  // bars: normalize to -4g..+4g range
+  fdBar('fd-x-bar', xg);
+  fdBar('fd-y-bar', yg);
+  fdBar('fd-z-bar', zg);
+  if (mag > state.fdThresh) { fdAlert(mag); } else { $('#fd-state').textContent = 'nominal'; $('#fd-state').style.color = 'var(--green)'; }
+}
+function fdBar(id, v) {
+  const bar = document.getElementById(id);
+  if (!bar) return;
+  const pct = Math.min(Math.abs(v) / 4, 1) * 50;
+  if (v >= 0) { bar.style.bottom = '50%'; bar.style.top = 'auto'; bar.style.height = pct + '%'; }
+  else { bar.style.top = '50%'; bar.style.bottom = 'auto'; bar.style.height = pct + '%'; }
+}
+function fdAlert(mag) {
+  $('#fd-state').textContent = 'ANOMALY';
+  $('#fd-state').style.color = 'var(--red)';
+  const f = $('#fd-events');
+  if (f.querySelector('.empty')) f.innerHTML = '';
+  const c = document.createElement('div');
+  c.className = 'event-card';
+  c.innerHTML = `<div class="ico">⚠️</div><div class="meta"><div class="title">Possible fall</div><div class="sub">mag=${mag.toFixed(2)}g, threshold=${state.fdThresh}g</div></div><div class="time">${nowTs()}</div>`;
+  f.insertBefore(c, f.firstChild);
+}
+function fdSimMotion() {
+  let t = 0;
+  const iv = setInterval(() => {
+    const x = 0.4 * Math.sin(t * 0.4) + (Math.random() - 0.5) * 0.2;
+    const y = 0.3 * Math.cos(t * 0.5) + (Math.random() - 0.5) * 0.2;
+    const z = 1.0 + (Math.random() - 0.5) * 0.15;
+    fdUpdate(x, y, z, Math.sqrt(x * x + y * y + z * z)); if (typeof scPushSample === "function") scPushSample(x, y, z);
+    t++;
+    if (t > 40) clearInterval(iv);
+  }, 60);
+}
+function fdSimFall() {
+  // normal, then spike, then settle
+  let t = 0;
+  const iv = setInterval(() => {
+    let x = 0.3, y = 0.3, z = 1.0;
+    if (t === 10 || t === 11) { x = 3.2; y = -2.4; z = 2.9; } // impact
+    else if (t > 11 && t < 20) { x = 0.1; y = 0.1; z = 0.0; } // lying still
+    else { x += (Math.random() - 0.5) * 0.2; y += (Math.random() - 0.5) * 0.2; z += (Math.random() - 0.5) * 0.15; }
+    fdUpdate(x, y, z, Math.sqrt(x * x + y * y + z * z)); if (typeof scPushSample === "function") scPushSample(x, y, z);
+    t++;
+    if (t > 25) clearInterval(iv);
+  }, 70);
+}
+function fdReset() {
+  fdUpdate(0, 0, 0, 0);
+  $('#fd-events').innerHTML = '<div class="empty" style="padding:14px">No anomalies detected</div>';
+}
+window.fdSetThresh = fdSetThresh; window.fdSimMotion = fdSimMotion; window.fdSimFall = fdSimFall; window.fdReset = fdReset;
+
+// ═══════ DEMO APP: Gait Lab ═══════
+// WHY: Cadence (steps/min), walking bouts, and stride-interval regularity are
+// validated gait biomarkers used clinically. Slow gait (<80 spm) and high
+// step-interval CV (>0.15) predict falls. JS port of the foundational
+// signal-processing primitives in mobgap (Apache 2.0) and skdh (MIT).
+const gait = {
+  steps: 0,
+  stepTimes: [],            // ms timestamps of recent steps (sliding window)
+  lastStepMs: 0,
+  prevMag: 0,
+  prevPrevMag: 0,
+  threshold: 0.25,          // |a − 1g|; slider-controlled
+  refractoryMs: 250,        // min interval between steps; 240 spm hard ceiling
+  walking: false,
+  cadenceSpm: 0,
+  cv: 0,
+};
+
+function glSetThreshold(v) {
+  gait.threshold = parseFloat(v);
+  $('#gl-thresh-val').textContent = parseFloat(v).toFixed(2) + 'g';
+}
+
+function glUpdate(xg, yg, zg, mag) {
+  const now = Date.now();
+  // Subtract gravity (1g baseline) for linear-acceleration proxy
+  const linMag = Math.abs(mag - 1.0);
+  $('#gl-mag').textContent = linMag.toFixed(2);
+
+  // Peak detection on 3-sample window: prev is local max above threshold
+  const isPeak = gait.prevMag > gait.prevPrevMag
+              && gait.prevMag > linMag
+              && gait.prevMag > gait.threshold
+              && (now - gait.lastStepMs) > gait.refractoryMs;
+  if (isPeak) {
+    gait.steps++;
+    gait.stepTimes.push(now);
+    if (gait.stepTimes.length > 30) gait.stepTimes.shift();
+    gait.lastStepMs = now;
+    $('#gl-step-count').textContent = gait.steps;
+  }
+  gait.prevPrevMag = gait.prevMag;
+  gait.prevMag = linMag;
+
+  glRefreshDisplay(now);
+}
+
+function glRefreshDisplay(now) {
+  // Cadence over last 10s of steps
+  const recent = gait.stepTimes.filter(t => now - t < 10000);
+  if (recent.length >= 2) {
+    const span = recent[recent.length - 1] - recent[0];
+    gait.cadenceSpm = Math.round((recent.length - 1) * 60000 / span);
+    const ivs = [];
+    for (let i = 1; i < recent.length; i++) ivs.push(recent[i] - recent[i - 1]);
+    const mean = ivs.reduce((a, b) => a + b, 0) / ivs.length;
+    const variance = ivs.reduce((a, b) => a + (b - mean) ** 2, 0) / ivs.length;
+    gait.cv = mean > 0 ? Math.sqrt(variance) / mean : 0;
+  } else {
+    gait.cadenceSpm = 0;
+    gait.cv = 0;
+  }
+
+  // Walking bout: 4+ steps in last 4 seconds
+  const last4s = gait.stepTimes.filter(t => now - t < 4000);
+  gait.walking = last4s.length >= 4;
+
+  $('#gl-cadence').textContent = gait.cadenceSpm || '—';
+  $('#gl-cv').textContent = gait.cv ? gait.cv.toFixed(2) : '—';
+  const stateEl = $('#gl-state');
+  if (gait.walking) { stateEl.textContent = 'walking'; stateEl.style.color = 'var(--accent)'; }
+  else { stateEl.textContent = 'stationary'; stateEl.style.color = 'var(--muted)'; }
+
+  const flag = $('#gl-risk');
+  if (!gait.cadenceSpm) { flag.textContent = '—'; flag.style.color = 'var(--muted)'; }
+  else if (gait.cadenceSpm < 80) { flag.textContent = 'slow gait'; flag.style.color = 'var(--amber)'; }
+  else if (gait.cv > 0.15) { flag.textContent = 'irregular stride'; flag.style.color = 'var(--amber)'; }
+  else { flag.textContent = 'within range'; flag.style.color = 'var(--green)'; }
+}
+
+let glSimTimer = null;
+function glSimWalk(spmTarget) {
+  glReset();
+  // Synthesize 25Hz accelerometer with impact peaks at target cadence.
+  // 25Hz chosen to match typical low-power IMU streaming rates (Minew B10 et al).
+  const stepIntervalMs = 60000 / spmTarget;
+  const sampleMs = 40;
+  const peakWidth = 120;     // ms; half-width of a heel-strike impact spike
+  let t = 0;
+  const totalMs = 12000;
+  glSimTimer = setInterval(() => {
+    const phase = t % stepIntervalMs;
+    const bump = phase < peakWidth ? 0.6 * Math.sin((phase / peakWidth) * Math.PI) : 0;
+    const z = 1.0 + bump + (Math.random() - 0.5) * 0.05;
+    const x = 0.1 * Math.sin(t / 200) + (Math.random() - 0.5) * 0.05;
+    const y = 0.1 * Math.cos(t / 250) + (Math.random() - 0.5) * 0.05;
+    glUpdate(x, y, z, Math.sqrt(x * x + y * y + z * z)); if (typeof scPushSample === "function") scPushSample(x, y, z);
+    t += sampleMs;
+    if (t >= totalMs) { clearInterval(glSimTimer); glSimTimer = null; }
+  }, sampleMs);
+}
+
+function glSimStill() {
+  if (glSimTimer) { clearInterval(glSimTimer); glSimTimer = null; }
+  let t = 0;
+  glSimTimer = setInterval(() => {
+    const x = (Math.random() - 0.5) * 0.03;
+    const y = (Math.random() - 0.5) * 0.03;
+    const z = 1.0 + (Math.random() - 0.5) * 0.03;
+    glUpdate(x, y, z, Math.sqrt(x * x + y * y + z * z)); if (typeof scPushSample === "function") scPushSample(x, y, z);
+    t += 60;
+    if (t > 4000) { clearInterval(glSimTimer); glSimTimer = null; }
+  }, 60);
+}
+
+function glReset() {
+  if (glSimTimer) { clearInterval(glSimTimer); glSimTimer = null; }
+  gait.steps = 0;
+  gait.stepTimes = [];
+  gait.lastStepMs = 0;
+  gait.prevMag = 0;
+  gait.prevPrevMag = 0;
+  gait.walking = false;
+  gait.cadenceSpm = 0;
+  gait.cv = 0;
+  $('#gl-step-count').textContent = 0;
+  $('#gl-cadence').textContent = '—';
+  $('#gl-cv').textContent = '—';
+  $('#gl-mag').textContent = '0.00';
+  $('#gl-state').textContent = 'stationary';
+  $('#gl-state').style.color = 'var(--muted)';
+  $('#gl-risk').textContent = '—';
+  $('#gl-risk').style.color = 'var(--muted)';
+}
+
+window.glSetThreshold = glSetThreshold;
+window.glSimWalk = glSimWalk;
+window.glSimStill = glSimStill;
+window.glReset = glReset;
+
+// ═══════ DEMO APP: Sleep Lab ═══════
+// WHY: Activity-count sleep/wake (Cole-Kripke 1992) is the validated foundation
+// for wrist actigraphy that SleepPy, GGIR, and skdh all build on. Reports ~88%
+// epoch-by-epoch agreement with PSG. Walch et al. extends this to staged
+// wake/NREM/REM by adding HR — that's the next upgrade rung when B10 is paired
+// with a chest-strap HR sensor.
+const sleep = {
+  activityWindow: [],   // [{ts, i}] in last 60s
+  currentSim: null,
+};
+
+function slUpdate(xg, yg, zg, mag) {
+  const now = Date.now();
+  const linMag = Math.abs(mag - 1.0);
+  sleep.activityWindow.push({ ts: now, i: linMag });
+  while (sleep.activityWindow.length && now - sleep.activityWindow[0].ts > 60000) {
+    sleep.activityWindow.shift();
+  }
+  // 30s rolling activity index — sum of |a-1g| samples
+  const last30s = sleep.activityWindow.filter(w => now - w.ts < 30000);
+  const activity = last30s.reduce((a, b) => a + b.i, 0);
+  $('#sl-activity').textContent = activity.toFixed(1);
+  let state, color;
+  // Thresholds tuned for ~25Hz sample rate (B10 nominal). Higher rates need
+  // proportional adjustment — the upgrade path is per-minute Cole-Kripke.
+  if (activity > 8) { state = 'active'; color = 'var(--amber)'; }
+  else if (activity > 1.5) { state = 'quiet'; color = 'var(--accent)'; }
+  else { state = 'asleep'; color = 'var(--purple)'; }
+  $('#sl-state').textContent = state;
+  $('#sl-state').style.color = color;
+}
+
+// Stage codes: 0=wake, 1=light(N1/N2), 2=deep(N3), 3=REM
+function slGenerateHypnogram(profile) {
+  const out = [];
+  const push = (stage, mins) => {
+    // 5-min sub-epochs for a 96-segment hypnogram across 8 hours
+    const n = Math.round(mins / 5);
+    for (let i = 0; i < n; i++) out.push(stage);
+  };
+  if (profile === 'normal') {
+    push(0, 15);
+    push(1, 20); push(2, 35); push(1, 25); push(3, 10);   // cycle 1
+    push(1, 25); push(2, 25); push(1, 25); push(3, 20);   // cycle 2
+    push(1, 30); push(2, 15); push(1, 25); push(3, 25);   // cycle 3 — less deep
+    push(1, 35); push(0, 5);  push(1, 25); push(3, 30);   // cycle 4 — REM-heavy
+    push(0, 15);
+  } else if (profile === 'insomnia') {
+    push(0, 45);
+    push(1, 30); push(0, 15); push(1, 25); push(2, 15); push(0, 10);
+    push(1, 30); push(0, 20); push(1, 25); push(2, 10); push(3, 10);
+    push(0, 20); push(1, 30); push(2, 10); push(3, 15); push(0, 15);
+    push(1, 35); push(3, 20); push(0, 30);
+  } else if (profile === 'apnea') {
+    push(0, 15);
+    // micro-arousals every ~10 min suppress deep sleep, fragment cycles
+    for (let cycle = 0; cycle < 12; cycle++) {
+      push(1, 10); push(0, 5); push(2, 10); push(0, 5); push(1, 5);
+    }
+    push(3, 20); push(0, 10); push(3, 15);
+    push(0, 15);
+  }
+  return out;
+}
+
+function slSimNight(profile) {
+  const subEpochs = slGenerateHypnogram(profile);
+  sleep.currentSim = subEpochs;
+  slRenderHypnogram(subEpochs);
+  slComputeMetrics(subEpochs);
+  log('info', `[sleep] simulated night: ${profile}`);
+}
+
+function slRenderHypnogram(subEpochs) {
+  const stageColors = ['#d97706', '#7dd3fc', '#0c4a6e', '#7c3aed'];
+  const stageNames = ['Wake', 'Light', 'Deep', 'REM'];
+  const container = $('#sl-hypno');
+  container.innerHTML = '';
+  // Coalesce same-stage runs into single segments for cleaner DOM + tooltips
+  let prev = null, run = 0;
+  const flush = (s, n) => {
+    const seg = document.createElement('div');
+    seg.style.flex = `${n} 0 0`;
+    seg.style.background = stageColors[s];
+    seg.title = `${stageNames[s]} · ${n * 5} min`;
+    container.appendChild(seg);
+  };
+  for (const s of subEpochs) {
+    if (s === prev) run++;
+    else { if (prev !== null) flush(prev, run); prev = s; run = 1; }
+  }
+  if (prev !== null) flush(prev, run);
+}
+
+function slComputeMetrics(subEpochs) {
+  const minPerEpoch = 5;
+  const tibMin = subEpochs.length * minPerEpoch;
+  const tstMin = subEpochs.filter(s => s !== 0).length * minPerEpoch;
+  const se = Math.round((tstMin / tibMin) * 100);
+  // Sleep onset latency: leading wake epochs
+  let lat = 0;
+  for (const s of subEpochs) { if (s === 0) lat += minPerEpoch; else break; }
+  // WASO: wake epochs between first and last sleep epoch
+  const firstSleep = subEpochs.findIndex(s => s !== 0);
+  let lastSleep = subEpochs.length - 1;
+  while (lastSleep >= 0 && subEpochs[lastSleep] === 0) lastSleep--;
+  let waso = 0;
+  if (firstSleep >= 0 && lastSleep >= firstSleep) {
+    for (let i = firstSleep; i <= lastSleep; i++) if (subEpochs[i] === 0) waso += minPerEpoch;
+  }
+  const remMin = subEpochs.filter(s => s === 3).length * minPerEpoch;
+  const fmt = m => Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+  $('#sl-tib').textContent = fmt(tibMin);
+  $('#sl-tst').textContent = fmt(tstMin);
+  $('#sl-se').textContent = se + '%';
+  $('#sl-waso').textContent = waso + ' min';
+  $('#sl-lat').textContent = lat + ' min';
+  $('#sl-rem').textContent = fmt(remMin);
+}
+
+function slReset() {
+  sleep.activityWindow = [];
+  sleep.currentSim = null;
+  $('#sl-activity').textContent = '0.0';
+  $('#sl-state').textContent = '—';
+  $('#sl-state').style.color = 'var(--muted)';
+  $('#sl-hypno').innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12.5px">Run a simulation above to render an 8-hour hypnogram</div>';
+  ['sl-tib', 'sl-tst', 'sl-se', 'sl-waso', 'sl-lat', 'sl-rem'].forEach(id => $('#' + id).textContent = '—');
+}
+
+window.slSimNight = slSimNight;
+window.slReset = slReset;
+
+// ═══════ FEATURE: NEW badges + What's New feed ═══════
+// Every shipped element marks itself with data-shipped="YYYY-MM-DD".
+// This module auto-renders a "NEW · Nd" badge for 5 days, then removes it.
+// Add ships to SHIP_LOG to also have them appear in the What's New feed.
+const NEW_FEATURE_WINDOW_DAYS = 5;
+const SHIP_LOG = [
+  // Newest first. Each entry: { date, title, summary, tab? (for click-through) }.
+  { date: '2026-04-28', title: 'Pose Lab (MediaPipe)', tab: 'pose-lab', summary: 'Browser-side 33-keypoint pose estimation via MediaPipe Pose Landmarker (Apache-2.0). Real-time skeleton overlay + posture inference (standing/sitting/lying). Privacy-first: video never leaves the browser.' },
+  { date: '2026-04-28', title: 'In-bed Turn Lab', tab: 'turn-lab', summary: 'JS port of AtlasTurnMonitor (Apple Watch) — patient body-roll classifier with Q2h compliance timer. Six clinical position classes. The HAPI prevention story in code form.' },
+  { date: '2026-04-28', title: 'Sidecar Health Check button', tab: 'sidecar', summary: 'One-click ⚕ Health check button hits /v1/algorithms/health and renders pass/fail per algorithm in a color-coded grid.' },
+  { date: '2026-04-28', title: 'Sidecar Sample data dropdown', tab: 'sidecar', summary: 'Pick walking/stationary/falling/stairs → server-generated synthetic data loads into the buffer and runs the active algorithm. Zero-friction demo, no B10 required.' },
+  { date: '2026-04-27', title: 'Multi-algorithm endpoint', tab: 'sidecar', summary: '/v1/analyze/multi runs every applicable registered algorithm in one call. Unified Open mHealth datapoint with headline metrics promoted to a flat summary dict.' },
+  { date: '2026-04-27', title: 'Synthetic sample generator', tab: 'sidecar', summary: '/v1/sample/{walking|stationary|falling|stairs} returns server-generated test data. Two curls = full health snapshot.' },
+  { date: '2026-04-27', title: 'Algorithm self-test endpoint', tab: 'sidecar', summary: '/v1/algorithms/health pings every wrapper with synthetic walking and reports healthy / degraded / stub / errored. CI-ready.' },
+  { date: '2026-04-27', title: 'Session-based ingestion', tab: 'sidecar', summary: 'POST /v1/sessions/{id}/samples in chunks, GET aggregated analysis when ready. Solves "record an hour, analyze later".' },
+  { date: '2026-04-27', title: 'GitHub Actions CI', summary: 'Sidecar smoke tests now run on every push (Python 3.10 + 3.12). See .github/workflows/ci.yml.' },
+  { date: '2026-04-27', title: 'FHIR R4 Observation translator', tab: 'sidecar', summary: 'New /v1/analyze/{name}/fhir endpoint returns a full FHIR R4 Observation (with components for each metric) instead of the Open mHealth envelope. EHR-ready output for Epic / Cerner / Athena.' },
+  { date: '2026-04-27', title: 'CSV upload analyzer', tab: 'sidecar', summary: 'Drop a CSV (ts,x,y,z) into the Sidecar tab to run any algorithm against a recorded session. Use this to analyze archived Atlas Patch data without a live B10.' },
+  { date: '2026-04-27', title: 'YASA + Walch stub wrappers', tab: 'sidecar', summary: 'Two new sleep algorithms registered (sleep_yasa, sleep_walch). Both currently report "awaiting EEG" / "awaiting HR" with the exact pipeline that activates when the matching sensor pairs.' },
+  { date: '2026-04-27', title: 'B10 pairing identity validator', tab: 'pair', summary: 'Pair flow now reads manufacturer + model after GATT connect. Wrong device picked → red banner explains + auto-disconnect for clean retry. Tried-MAC list persisted to localStorage.' },
+  { date: '2026-04-27', title: 'Sidecar auto-stream', tab: 'sidecar', summary: 'Toggle auto-stream in the Sidecar tab to push the 30s accel buffer to the active algorithm every 30s. Stream history feed shows the last 8 results.' },
+  { date: '2026-04-27', title: 'mobgap (Mobilise-D) wrapped', tab: 'sidecar', summary: 'Apache-2.0 clinical gait pipeline registered as gait_mobgap. Multi-cohort validation n>2,300 across PD/MS/CHF/COPD — the credibility line for hospital RNs.' },
+  { date: '2026-04-27', title: 'NeuroKit2 wrapped', tab: 'sidecar', summary: 'MIT HRV / respiration / PPG / ECG analysis registered as vitals_neurokit. Activates fully when a HR strap (Polar H10, OH1) pairs with the B10.' },
+  { date: '2026-04-27', title: 'OSS Toolkit Research', tab: 'research', summary: 'Decision-grade comparison of every open-source mobility / sleep / fall / vision / contactless / platform toolkit. License-safety blocklist included.' },
+  { date: '2026-04-27', title: 'Python Sidecar', tab: 'sidecar', summary: 'FastAPI bridge to clinical-grade libraries (scikit-digital-health, mobgap, YASA). Output: Open mHealth IEEE 1752 envelope. Engineering team can drop in new toolkits in <30 min.' },
+  { date: '2026-04-27', title: 'Sleep Lab', tab: 'sleep-lab', summary: 'Cole-Kripke (1992) sleep/wake from B10 accel + 8-hour hypnogram simulator (healthy / insomnia / apnea profiles). Clinical metrics: TIB, TST, SE, WASO, latency, REM.' },
+  { date: '2026-04-27', title: 'Gait Lab', tab: 'gait-lab', summary: 'Step detection, cadence, stride-CV from B10 accel. Mobgap / skdh primitive port. Slow gait + irregular stride flagged as fall risk.' },
+  { date: '2026-04-27', title: 'NEW feature highlights', tab: 'whats-new', summary: 'Any element with data-shipped="YYYY-MM-DD" gets an auto-fading NEW badge for 5 days. Adds week-to-week visibility for the team without manual cleanup.' },
+];
+
+function applyNewBadges() {
+  const now = Date.now();
+  const elements = document.querySelectorAll('[data-shipped]');
+  elements.forEach(el => {
+    const shipped = new Date(el.dataset.shipped).getTime();
+    if (isNaN(shipped)) return;
+    const ageDays = (now - shipped) / 86400000;
+    if (ageDays < 0) return;
+    if (ageDays > NEW_FEATURE_WINDOW_DAYS) return;
+    if (el.querySelector(':scope > .new-badge')) return;
+    const daysLeft = Math.max(1, Math.ceil(NEW_FEATURE_WINDOW_DAYS - ageDays));
+    // Fade during the final day for a smooth retirement
+    const opacity = ageDays > NEW_FEATURE_WINDOW_DAYS - 1
+      ? Math.max(0, NEW_FEATURE_WINDOW_DAYS - ageDays)
+      : 1.0;
+    const badge = document.createElement('span');
+    badge.className = 'new-badge';
+    badge.style.opacity = String(opacity);
+    badge.textContent = daysLeft > 1 ? `NEW · ${daysLeft}d` : 'NEW';
+    badge.title = `Shipped ${el.dataset.shipped}. Highlighted ${NEW_FEATURE_WINDOW_DAYS} days from ship.`;
+    el.appendChild(badge);
+  });
+}
+
+function wnRender() {
+  const feed = document.getElementById('wn-feed');
+  if (!feed) return;
+  const now = Date.now();
+  feed.innerHTML = '';
+  // Sort: active highlights first, then by date desc
+  const decorated = SHIP_LOG.map(s => ({
+    ...s,
+    ageDays: (now - new Date(s.date).getTime()) / 86400000,
+  })).sort((a, b) => {
+    const aActive = a.ageDays <= NEW_FEATURE_WINDOW_DAYS;
+    const bActive = b.ageDays <= NEW_FEATURE_WINDOW_DAYS;
+    if (aActive !== bActive) return aActive ? -1 : 1;
+    return a.ageDays - b.ageDays;
+  });
+  for (const s of decorated) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)';
+    if (s.tab) { row.style.cursor = 'pointer'; row.onclick = () => showTab(s.tab); }
+    const isNew = s.ageDays <= NEW_FEATURE_WINDOW_DAYS;
+    const opacity = isNew ? 1 : 0.65;
+    row.style.opacity = String(opacity);
+    const daysLeft = isNew ? Math.max(1, Math.ceil(NEW_FEATURE_WINDOW_DAYS - s.ageDays)) : 0;
+    row.innerHTML = `
+      <div style="flex:0 0 96px;font-size:11.5px;color:var(--muted);font-family:'SF Mono',monospace">${s.date}</div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">${s.title}${isNew ? ` <span class="new-badge" style="margin-left:7px">NEW · ${daysLeft}d</span>` : ''}</div>
+        <div style="color:var(--text-2);font-size:12.5px;line-height:1.55">${s.summary}</div>
+      </div>
+    `;
+    feed.appendChild(row);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => { applyNewBadges(); wnRender(); });
+
+// ═══════ FEATURE: Python Sidecar bridge (WebSocket + REST) ═══════
+const SIDECAR_BASE = 'http://localhost:8081';
+const SIDECAR_WS_BASE = 'ws://localhost:8081';
+const sidecar = {
+  ws: null,
+  algorithms: [],
+  selected: null,
+  // Rolling sample buffer fed by the BLE notify path. ~25 Hz × 60 s = 1500 samples.
+  buffer: [],
+  bufferMaxSeconds: 60,
+};
+
+async function scConnect() {
+  scSetStatus('connecting');
+  try {
+    const r = await fetch(SIDECAR_BASE + '/v1/algorithms');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    sidecar.algorithms = await r.json();
+    const sel = document.getElementById('sc-alg');
+    sel.innerHTML = sidecar.algorithms.map(a =>
+      `<option value="${a.name}">${a.name} — ${a.description.slice(0, 60)}${a.description.length > 60 ? '…' : ''}</option>`
+    ).join('');
+    if (sidecar.algorithms.length) { sel.value = sidecar.algorithms[0].name; scAlgChanged(); }
+    scSetStatus('connected');
+    log('ok', `[sidecar] connected · ${sidecar.algorithms.length} algorithms available`);
+  } catch (e) {
+    scSetStatus('error');
+    log('err', `[sidecar] connect failed: ${e.message}. Is the sidecar running on ${SIDECAR_BASE}?`);
+  }
+}
+
+function scDisconnect() {
+  if (sidecar.ws) { sidecar.ws.close(); sidecar.ws = null; }
+  scSetStatus('not connected');
+  log('info', '[sidecar] disconnected');
+}
+
+function scAlgChanged() {
+  const sel = document.getElementById('sc-alg');
+  const meta = sidecar.algorithms.find(a => a.name === sel.value);
+  sidecar.selected = meta || null;
+  const info = document.getElementById('sc-alg-info');
+  if (!meta) { info.textContent = '—'; return; }
+  info.innerHTML = `
+    <div style="font-weight:600;color:var(--text);margin-bottom:6px">${meta.name}</div>
+    <div style="margin-bottom:10px">${meta.description}</div>
+    <table class="kv">
+      <tr><td>License</td><td>${meta.license}</td></tr>
+      <tr><td>Upstream</td><td><a href="${meta.upstream_url}" target="_blank">${meta.upstream_url}</a></td></tr>
+      <tr><td>Expected sample rate</td><td>${meta.expected_sample_rate_hz} Hz</td></tr>
+      <tr><td>Min window</td><td>${meta.min_window_seconds} s</td></tr>
+      <tr><td>Output schema</td><td><code>${meta.output_schema}</code></td></tr>
+    </table>
+  `;
+}
+
+async function scAnalyzeNow() {
+  if (!sidecar.selected) { log('err', '[sidecar] select an algorithm first'); return; }
+  const samples = sidecar.buffer.slice();
+  if (!samples.length) { log('err', '[sidecar] no buffered samples — connect a B10 or run a Gait/Sleep simulation first'); return; }
+  try {
+    const r = await fetch(`${SIDECAR_BASE}/v1/analyze/${sidecar.selected.name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ samples, user_id: 'b10-lab-demo' }),
+    });
+    const json = await r.json();
+    document.getElementById('sc-output').textContent = JSON.stringify(json, null, 2);
+    log('ok', `[sidecar] ${sidecar.selected.name} returned (${samples.length} samples analyzed)`);
+  } catch (e) {
+    log('err', `[sidecar] analyze failed: ${e.message}`);
+  }
+}
+
+function scSetStatus(s) {
+  const el = document.getElementById('sc-status');
+  el.className = 'status-pill' + (s === 'connected' ? ' connected' : s === 'connecting' ? ' connecting' : s === 'error' ? ' error' : '');
+  el.innerHTML = `<span class="dot"></span>${s}`;
+}
+
+// Hook the BLE notify path: every accel sample is also pushed into the sidecar buffer.
+// The buffer is a sliding window of the most recent N seconds.
+function scPushSample(xg, yg, zg) {
+  const now = Date.now() / 1000;
+  sidecar.buffer.push({ ts: now, x: xg, y: yg, z: zg });
+  // Drop samples older than bufferMaxSeconds
+  const cutoff = now - sidecar.bufferMaxSeconds;
+  while (sidecar.buffer.length && sidecar.buffer[0].ts < cutoff) sidecar.buffer.shift();
+}
+
+// Auto-stream: every 30s push the buffered samples to the active algorithm
+// and append the result to the history feed. Engineering team can leave this
+// running while a B10 is worn or a Gait/Sleep simulation plays.
+let scAutoStreamTimer = null;
+function scToggleAutoStream(on) {
+  if (on) {
+    if (!sidecar.selected) { log('err', '[sidecar] connect + select an algorithm first'); document.getElementById('sc-autostream').checked = false; return; }
+    document.getElementById('sc-stream-history').style.display = 'block';
+    scAnalyzeAndAppend();
+    scAutoStreamTimer = setInterval(scAnalyzeAndAppend, 30000);
+    log('ok', `[sidecar] auto-stream on · ${sidecar.selected.name} every 30s`);
+  } else {
+    if (scAutoStreamTimer) { clearInterval(scAutoStreamTimer); scAutoStreamTimer = null; }
+    log('info', '[sidecar] auto-stream off');
+  }
+}
+
+async function scAnalyzeAndAppend() {
+  if (!sidecar.selected) return;
+  const samples = sidecar.buffer.slice();
+  if (!samples.length) {
+    scAppendStreamEntry({ ts: Date.now(), summary: 'no buffered samples — connect a B10 or run a sim' });
+    return;
+  }
+  try {
+    const r = await fetch(`${SIDECAR_BASE}/v1/analyze/${sidecar.selected.name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ samples, user_id: 'b10-lab-stream' }),
+    });
+    const json = await r.json();
+    document.getElementById('sc-output').textContent = JSON.stringify(json, null, 2);
+    scAppendStreamEntry({ ts: Date.now(), summary: scSummarize(json), n_samples: samples.length });
+  } catch (e) {
+    scAppendStreamEntry({ ts: Date.now(), summary: `error: ${e.message}` });
+  }
+}
+
+function scSummarize(omh) {
+  const b = omh.body || {};
+  const parts = [];
+  if (b.steps !== undefined) parts.push(`${b.steps} steps`);
+  if (b.cadence_spm !== undefined) parts.push(`${b.cadence_spm} spm`);
+  if (b.stride_cv !== undefined) parts.push(`CV ${b.stride_cv}`);
+  if (b.n_walking_bouts !== undefined) parts.push(`${b.n_walking_bouts} bouts`);
+  if (b.sleep_efficiency_pct !== undefined) parts.push(`SE ${b.sleep_efficiency_pct}%`);
+  if (b.mean_enmo_mg !== undefined) parts.push(`ENMO ${b.mean_enmo_mg}mg`);
+  if (b.events && Array.isArray(b.events)) parts.push(`${b.events.length} events`);
+  if (b.error) parts.push(`error: ${b.error.slice(0, 60)}`);
+  if (b.status) parts.push(b.status);
+  return parts.length ? parts.join(' · ') : (b.source || 'no summary fields');
+}
+
+function scAppendStreamEntry(entry) {
+  const list = document.getElementById('sc-stream-list');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:10px;padding:6px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:"SF Mono",monospace';
+  const t = new Date(entry.ts).toTimeString().slice(0, 8);
+  row.innerHTML = `<span style="color:var(--muted)">${t}</span><span style="flex:1;color:var(--text)">${entry.summary}</span>${entry.n_samples ? `<span style="color:var(--muted)">${entry.n_samples} samples</span>` : ''}`;
+  list.insertBefore(row, list.firstChild);
+  while (list.children.length > 8) list.removeChild(list.lastChild);
+}
+
+// CSV upload: parse a recorded session and POST it to the active algorithm.
+// Expected columns: ts,x,y,z (header row optional). Engineering uses this to
+// run analysis on Atlas Patch CSV exports without a live B10.
+async function scAnalyzeCsv(file) {
+  if (!file) return;
+  const status = document.getElementById('sc-csv-status');
+  if (!sidecar.selected) { status.textContent = '⚠️ Connect + pick an algorithm first'; status.style.color = 'var(--amber)'; return; }
+  status.textContent = `parsing ${file.name}…`;
+  status.style.color = 'var(--muted)';
+  const text = await file.text();
+  const samples = scParseCsv(text);
+  if (!samples.length) { status.textContent = `⚠️ no samples found — expected columns ts,x,y,z`; status.style.color = 'var(--amber)'; return; }
+  status.textContent = `parsed ${samples.length.toLocaleString()} samples · POSTing to ${sidecar.selected.name}…`;
+  try {
+    const r = await fetch(`${SIDECAR_BASE}/v1/analyze/${sidecar.selected.name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ samples, user_id: 'csv:' + file.name }),
+    });
+    const json = await r.json();
+    document.getElementById('sc-output').textContent = JSON.stringify(json, null, 2);
+    status.textContent = `✓ analysis complete · ${samples.length.toLocaleString()} samples processed`;
+    status.style.color = 'var(--green)';
+    log('ok', `[sidecar] CSV ${file.name} analyzed by ${sidecar.selected.name}`);
+  } catch (e) {
+    status.textContent = `error: ${e.message}`;
+    status.style.color = 'var(--red)';
+  }
+}
+
+function scParseCsv(text) {
+  const rows = text.split(/\r?\n/).filter(r => r.trim());
+  if (!rows.length) return [];
+  // Detect header row (any non-numeric token in first row indicates header)
+  const first = rows[0].split(',');
+  const headerLooksTextual = first.some(c => isNaN(parseFloat(c)));
+  const dataRows = headerLooksTextual ? rows.slice(1) : rows;
+  // Column order: try to infer from header, else assume ts,x,y,z
+  let idx = { ts: 0, x: 1, y: 2, z: 3 };
+  if (headerLooksTextual) {
+    first.forEach((h, i) => {
+      const k = h.trim().toLowerCase();
+      if (['ts', 'time', 'timestamp', 'unix'].includes(k)) idx.ts = i;
+      else if (['x', 'acc_x', 'ax'].includes(k)) idx.x = i;
+      else if (['y', 'acc_y', 'ay'].includes(k)) idx.y = i;
+      else if (['z', 'acc_z', 'az'].includes(k)) idx.z = i;
+    });
+  }
+  const out = [];
+  for (const row of dataRows) {
+    const cols = row.split(',');
+    const ts = parseFloat(cols[idx.ts]);
+    const x = parseFloat(cols[idx.x]);
+    const y = parseFloat(cols[idx.y]);
+    const z = parseFloat(cols[idx.z]);
+    if (!isNaN(ts) && !isNaN(x) && !isNaN(y) && !isNaN(z)) {
+      out.push({ ts, x, y, z });
+    }
+  }
+  return out;
+}
+
+// Health check: hits /v1/algorithms/health and renders pass/fail per algorithm.
+async function scHealthCheck() {
+  const card = document.getElementById('sc-health-card');
+  const overall = document.getElementById('sc-health-overall');
+  const summary = document.getElementById('sc-health-summary');
+  const grid = document.getElementById('sc-health-grid');
+  card.style.display = 'block';
+  overall.className = 'status-pill connecting';
+  overall.innerHTML = '<span class="dot"></span>checking…';
+  summary.textContent = '';
+  grid.innerHTML = '';
+  try {
+    const r = await fetch(SIDECAR_BASE + '/v1/algorithms/health');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    overall.className = 'status-pill ' + (j.overall === 'healthy' ? 'connected' : 'error');
+    overall.innerHTML = `<span class="dot"></span>${j.overall}`;
+    summary.textContent = `${j.summary.healthy} healthy · ${j.summary.degraded} degraded · ${j.summary.skipped} skipped/stub · ${j.summary.errored} errored`;
+    const colorFor = (s) => ({
+      healthy: 'var(--green)', degraded: 'var(--amber)',
+      stub: 'var(--accent)', skipped: 'var(--muted)', errored: 'var(--red)',
+    }[s] || 'var(--muted)');
+    for (const [name, info] of Object.entries(j.algorithms)) {
+      const tile = document.createElement('div');
+      tile.style.cssText = `padding:10px 12px;border:1px solid var(--line);border-left:3px solid ${colorFor(info.status)};border-radius:6px;background:var(--panel-2)`;
+      const detail = info.source || info.reason || info.exception || info.awaiting || '';
+      tile.innerHTML = `<div style="display:flex;align-items:baseline;gap:8px"><span style="font-weight:600;font-size:13px">${name}</span><span style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:${colorFor(info.status)}">${info.status}</span></div><div style="font-size:11.5px;color:var(--muted);margin-top:3px;font-family:'SF Mono',monospace;line-height:1.4;word-break:break-word">${String(detail).slice(0,200)}</div>`;
+      grid.appendChild(tile);
+    }
+    log('ok', `[sidecar] health check: ${j.overall} (${j.summary.healthy}/${Object.keys(j.algorithms).length} healthy)`);
+  } catch (e) {
+    overall.className = 'status-pill error';
+    overall.innerHTML = '<span class="dot"></span>sidecar unreachable';
+    summary.textContent = e.message;
+    log('err', `[sidecar] health check failed: ${e.message}. Is the sidecar running on ${SIDECAR_BASE}?`);
+  }
+}
+
+// Sample data loader: GET /v1/sample/{kind}, dump into the buffer, run analysis.
+async function scLoadSample() {
+  const kind = document.getElementById('sc-sample').value;
+  if (!kind) { log('err', '[sidecar] pick a sample type first'); return; }
+  if (!sidecar.selected) { log('err', '[sidecar] connect + select an algorithm first'); return; }
+  try {
+    const r = await fetch(`${SIDECAR_BASE}/v1/sample/${kind}?seconds=30`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    sidecar.buffer = j.samples;  // replace buffer
+    log('info', `[sidecar] loaded ${j.samples.length} synthetic ${kind} samples → analyzing with ${sidecar.selected.name}…`);
+    await scAnalyzeNow();
+  } catch (e) {
+    log('err', `[sidecar] load sample failed: ${e.message}`);
+  }
+}
+
+window.scConnect = scConnect;
+window.scDisconnect = scDisconnect;
+window.scAlgChanged = scAlgChanged;
+window.scAnalyzeNow = scAnalyzeNow;
+window.scToggleAutoStream = scToggleAutoStream;
+window.scAnalyzeCsv = scAnalyzeCsv;
+window.scHealthCheck = scHealthCheck;
+window.scLoadSample = scLoadSample;
+
+// ═══════ DEMO APP: In-bed Turn Lab ═══════
+// 1:1 port of AtlasTurnMonitorWatch/Services/MotionService.swift +
+// Shared/TurnData.swift BodyPosition.classify(). Roll angle from gravity
+// vector via atan2(g.x, g.z). Six clinical classes. Low-pass filtered
+// gravity (α=0.2). Q2h compliance timer (clinical SPHM standard).
+// WHY: pressure injuries are 95% preventable with timely repositioning;
+// this is the algorithm Atlas already trusts in production.
+const turn = {
+  filtered: { x: 0, y: 0, z: -1 },  // matches AtlasTurnMonitor initial state
+  alpha: 0.2,                        // low-pass coefficient
+  calibrationOffset: 0,              // patient-specific calibration
+  currentPosition: 'Supine',
+  positionStartedMs: Date.now(),
+  ledger: [],                        // [{ts, position, durationMs}]
+};
+
+function tlClassify(rollDeg) {
+  const a = Math.abs(rollDeg);
+  if (a > 155) return 'Prone';
+  if (a < 15) return 'Supine';
+  if (rollDeg > 0) return a < 45 ? 'Slight Left' : 'Left Lateral';
+  return a < 45 ? 'Slight Right' : 'Right Lateral';
+}
+
+function tlPositionColor(p) {
+  if (p === 'Supine') return 'var(--green)';
+  if (p === 'Prone') return 'var(--purple)';
+  if (p.includes('Lateral')) return 'var(--accent)';
+  return 'var(--amber)';
+}
+
+function tlUpdate(xg, yg, zg) {
+  // Apple's CMDeviceMotion gives gravity separated from userAcceleration.
+  // We don't have that on raw BLE accel — assume the input vector IS gravity-
+  // dominated (B10 worn lying still). Real Patch deployment would do gravity
+  // separation upstream. For the demo this is fine.
+  turn.filtered.x = turn.filtered.x * (1 - turn.alpha) + xg * turn.alpha;
+  turn.filtered.y = turn.filtered.y * (1 - turn.alpha) + yg * turn.alpha;
+  turn.filtered.z = turn.filtered.z * (1 - turn.alpha) + zg * turn.alpha;
+  // atan2(x, z) — rotation around y-axis = patient body roll when worn at wrist
+  const rawRoll = Math.atan2(turn.filtered.x, turn.filtered.z) * (180 / Math.PI);
+  const roll = rawRoll - turn.calibrationOffset;
+  const position = tlClassify(roll);
+  $('#tl-roll').textContent = Math.round(roll) + '°';
+  const posEl = $('#tl-position');
+  posEl.textContent = position;
+  posEl.style.color = tlPositionColor(position);
+  if (position !== turn.currentPosition) {
+    tlRecordTurn(turn.currentPosition, position);
+    turn.currentPosition = position;
+    turn.positionStartedMs = Date.now();
+  }
+  tlRefreshTimer();
+}
+
+function tlRecordTurn(fromPos, toPos) {
+  const now = Date.now();
+  const durationMs = now - turn.positionStartedMs;
+  turn.ledger.push({ ts: now, fromPos, toPos, durationMs });
+  // Keep only last 12 hours of events
+  const cutoff = now - 12 * 3600 * 1000;
+  turn.ledger = turn.ledger.filter(e => e.ts >= cutoff);
+  tlRenderLedger();
+}
+
+function tlRefreshTimer() {
+  const elapsedMs = Date.now() - turn.positionStartedMs;
+  const elapsedMin = Math.floor(elapsedMs / 60000);
+  const elapsedSec = Math.floor((elapsedMs % 60000) / 1000);
+  const el = $('#tl-timer');
+  if (el) {
+    el.textContent = `${elapsedMin}:${String(elapsedSec).padStart(2, '0')}`;
+    // Q2h = 120 min. Color the timer as we approach / pass.
+    if (elapsedMin >= 120) el.style.color = 'var(--red)';
+    else if (elapsedMin >= 90) el.style.color = 'var(--amber)';
+    else el.style.color = 'var(--text)';
+  }
+}
+
+function tlRenderLedger() {
+  const el = $('#tl-ledger');
+  if (!el) return;
+  if (!turn.ledger.length) {
+    el.innerHTML = '<div style="color:var(--muted);padding:14px;text-align:center">No turn events recorded yet. Click a simulate button or wear a B10.</div>';
+    return;
+  }
+  el.innerHTML = '';
+  for (const e of [...turn.ledger].reverse()) {
+    const t = new Date(e.ts).toTimeString().slice(0, 5);
+    const minutes = Math.round(e.durationMs / 60000);
+    const overdue = minutes >= 120;
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;gap:10px;padding:6px 10px;background:${overdue ? '#fef2f2' : 'var(--panel-2)'};border:1px solid ${overdue ? 'var(--red)' : 'var(--line)'};border-radius:6px`;
+    row.innerHTML = `<span style="color:var(--muted);min-width:42px">${t}</span><span style="flex:1">${e.fromPos} → <b>${e.toPos}</b></span><span style="color:${overdue ? 'var(--red)' : 'var(--muted)'}">${minutes}m</span>`;
+    el.appendChild(row);
+  }
+}
+
+function tlSimRoll(degrees) {
+  // Synthesize a gravity vector that, when fed through atan2(x,z), yields
+  // the requested roll angle. z component decreases as we tilt sideways.
+  const rad = degrees * Math.PI / 180;
+  const xg = Math.sin(rad);
+  const zg = Math.cos(rad);
+  const yg = 0;
+  // Push a few samples to ensure the low-pass filter settles to the new pos
+  for (let i = 0; i < 8; i++) tlUpdate(xg, yg, zg);
+  log('info', `[turn-lab] simulated ${degrees}° → ${turn.currentPosition}`);
+}
+
+function tlReset() {
+  turn.filtered = { x: 0, y: 0, z: -1 };
+  turn.currentPosition = 'Supine';
+  turn.positionStartedMs = Date.now();
+  turn.ledger = [];
+  $('#tl-roll').textContent = '0°';
+  $('#tl-position').textContent = 'Supine';
+  $('#tl-position').style.color = 'var(--green)';
+  tlRefreshTimer();
+  tlRenderLedger();
+}
+
+// Refresh the timer once per second so it ticks live
+setInterval(() => {
+  if (document.getElementById('tab-turn-lab')?.classList.contains('active')) {
+    tlRefreshTimer();
+  }
+}, 1000);
+
+window.tlSimRoll = tlSimRoll;
+window.tlReset = tlReset;
+
+// ═══════ DEMO APP: Pose Lab (MediaPipe Pose Landmarker) ═══════
+// Browser-side pose estimation. WASM + model load once from CDN, then
+// inference runs locally on every frame. Apache-2.0. No server.
+//
+// Privacy: the <video> element shows the live stream (it has to render to
+// pull frames into the model), but we never copy/persist the pixels
+// elsewhere. Only the 33-keypoint landmark array is kept in memory and
+// could be safely streamed to a sidecar for further analysis.
+const pose = {
+  landmarker: null,
+  stream: null,
+  rafId: null,
+  lastVideoTime: -1,
+  fpsEma: 0,
+  fpsLast: performance.now(),
+};
+
+const POSE_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.16';
+const POSE_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+
+function plSetStatus(s, kind) {
+  const el = document.getElementById('pl-status');
+  el.className = 'status-pill' + (kind === 'connected' ? ' connected' : kind === 'connecting' ? ' connecting' : kind === 'error' ? ' error' : '');
+  el.innerHTML = `<span class="dot"></span>${s}`;
+}
+
+async function plLoadModel() {
+  if (pose.landmarker) return pose.landmarker;
+  plSetStatus('loading model…', 'connecting');
+  // Dynamically import the MediaPipe Tasks-Vision module from CDN
+  const tasksVision = await import(`${POSE_CDN}/vision_bundle.mjs`);
+  const { FilesetResolver, PoseLandmarker } = tasksVision;
+  const filesetResolver = await FilesetResolver.forVisionTasks(`${POSE_CDN}/wasm`);
+  pose.landmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
+    baseOptions: { modelAssetPath: POSE_MODEL_URL, delegate: 'GPU' },
+    runningMode: 'VIDEO',
+    numPoses: 2,
+  });
+  return pose.landmarker;
+}
+
+async function plStart() {
+  try {
+    plSetStatus('requesting camera…', 'connecting');
+    pose.stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+    const video = document.getElementById('pl-video');
+    video.srcObject = pose.stream;
+    await new Promise(res => video.addEventListener('loadeddata', res, { once: true }));
+    await plLoadModel();
+    plSetStatus('detecting', 'connected');
+    document.getElementById('pl-start-btn').style.display = 'none';
+    document.getElementById('pl-stop-btn').style.display = '';
+    plLoop();
+    log('ok', '[pose-lab] camera started · model loaded');
+  } catch (e) {
+    plSetStatus('error: ' + e.message, 'error');
+    log('err', `[pose-lab] start failed: ${e.message}`);
+  }
+}
+
+function plStop() {
+  if (pose.rafId) { cancelAnimationFrame(pose.rafId); pose.rafId = null; }
+  if (pose.stream) { pose.stream.getTracks().forEach(t => t.stop()); pose.stream = null; }
+  const video = document.getElementById('pl-video');
+  video.srcObject = null;
+  const c = document.getElementById('pl-canvas');
+  if (c.getContext) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  document.getElementById('pl-start-btn').style.display = '';
+  document.getElementById('pl-stop-btn').style.display = 'none';
+  plSetStatus('idle');
+  document.getElementById('pl-people').textContent = '0';
+  document.getElementById('pl-fps').textContent = '—';
+  document.getElementById('pl-posture').textContent = '—';
+  document.getElementById('pl-confidence').textContent = '—';
+  log('info', '[pose-lab] stopped');
+}
+
+// MediaPipe Pose 33-keypoint connections (subset for skeleton drawing)
+const POSE_CONNECTIONS = [
+  [11, 12], [11, 13], [13, 15], [12, 14], [14, 16],   // arms
+  [11, 23], [12, 24], [23, 24],                        // torso
+  [23, 25], [25, 27], [27, 29], [29, 31], [27, 31],    // left leg
+  [24, 26], [26, 28], [28, 30], [30, 32], [28, 32],    // right leg
+];
+
+function plLoop() {
+  const video = document.getElementById('pl-video');
+  const canvas = document.getElementById('pl-canvas');
+  if (!video || !canvas || !pose.landmarker) return;
+  // Sync canvas size to the video element's intrinsic dimensions
+  if (canvas.width !== video.videoWidth) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+  }
+  const ctx = canvas.getContext('2d');
+  if (video.currentTime !== pose.lastVideoTime) {
+    pose.lastVideoTime = video.currentTime;
+    const result = pose.landmarker.detectForVideo(video, performance.now());
+    plRenderSkeleton(ctx, canvas, result);
+    plUpdateMetrics(result);
+  }
+  pose.rafId = requestAnimationFrame(plLoop);
+}
+
+function plRenderSkeleton(ctx, canvas, result) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!result || !result.landmarks) return;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#0891b2';
+  ctx.fillStyle = '#7c3aed';
+  for (const lm of result.landmarks) {
+    // Draw bones
+    for (const [a, b] of POSE_CONNECTIONS) {
+      if (!lm[a] || !lm[b]) continue;
+      ctx.beginPath();
+      ctx.moveTo(lm[a].x * canvas.width, lm[a].y * canvas.height);
+      ctx.lineTo(lm[b].x * canvas.width, lm[b].y * canvas.height);
+      ctx.stroke();
+    }
+    // Draw joints
+    for (const p of lm) {
+      ctx.beginPath();
+      ctx.arc(p.x * canvas.width, p.y * canvas.height, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function plUpdateMetrics(result) {
+  const now = performance.now();
+  const dt = now - pose.fpsLast;
+  pose.fpsLast = now;
+  if (dt > 0) {
+    const inst = 1000 / dt;
+    pose.fpsEma = pose.fpsEma === 0 ? inst : pose.fpsEma * 0.85 + inst * 0.15;
+  }
+  document.getElementById('pl-fps').textContent = pose.fpsEma.toFixed(1);
+
+  const people = result?.landmarks?.length || 0;
+  document.getElementById('pl-people').textContent = people;
+
+  if (people === 0) {
+    document.getElementById('pl-posture').textContent = '—';
+    document.getElementById('pl-posture').style.color = 'var(--muted)';
+    document.getElementById('pl-confidence').textContent = '—';
+    return;
+  }
+
+  // Heuristic posture inference on first detected subject:
+  // shoulder = average of landmarks 11, 12; hip = average of 23, 24.
+  // Vector shoulder→hip; vertical means standing, near-horizontal means lying.
+  const lm = result.landmarks[0];
+  const shoulder = { x: (lm[11].x + lm[12].x) / 2, y: (lm[11].y + lm[12].y) / 2 };
+  const hip = { x: (lm[23].x + lm[24].x) / 2, y: (lm[23].y + lm[24].y) / 2 };
+  const dx = hip.x - shoulder.x;
+  const dy = hip.y - shoulder.y;
+  const torsoAngle = Math.abs(Math.atan2(dx, dy) * 180 / Math.PI);
+  // Knee flex check: distance ratio between hip→knee and knee→ankle.
+  const lKnee = lm[25], rKnee = lm[26], lAnkle = lm[27], rAnkle = lm[28];
+  const kneeFlexed = (
+    Math.abs(((lKnee.y + rKnee.y) / 2) - ((lm[23].y + lm[24].y) / 2)) < 0.15 ||
+    (lAnkle.y < lKnee.y + 0.05) || (rAnkle.y < rKnee.y + 0.05)
+  );
+
+  let posture, color;
+  if (torsoAngle > 50) { posture = 'Lying'; color = 'var(--purple)'; }
+  else if (kneeFlexed) { posture = 'Sitting'; color = 'var(--accent)'; }
+  else { posture = 'Standing'; color = 'var(--green)'; }
+  const postureEl = document.getElementById('pl-posture');
+  postureEl.textContent = posture;
+  postureEl.style.color = color;
+
+  // Average visibility/presence as a confidence proxy
+  const confs = lm.map(p => p.visibility || 0).filter(v => v > 0);
+  const avg = confs.length ? confs.reduce((a, b) => a + b, 0) / confs.length : 0;
+  document.getElementById('pl-confidence').textContent = avg.toFixed(2);
+}
+
+window.plStart = plStart;
+window.plStop = plStop;
+
+// ═══════ DEMO APP: Guest Assist ═══════
+function gaFire() { gaOnButton(new Date(), true); }
+function gaOnButton(ts) {
+  if (!$('#tab-guest-assist').classList.contains('active')) {}
+  $('#ga-last').textContent = nowTs();
+  $('#ga-status').innerHTML = `<div style="font-size:20px;font-weight:700;color:var(--red)">🆘 ASSISTANCE REQUESTED</div><div style="color:var(--text);margin-top:4px">Routing to nearest available staff…</div>`;
+  $('#ga-status').style.background = '#fef2f2';
+  $('#ga-status').style.borderColor = 'var(--red)';
+  const d = $('#ga-dispatched');
+  if (d.querySelector('.empty')) d.innerHTML = '';
+  const c = document.createElement('div');
+  c.className = 'event-card';
+  c.innerHTML = `<div class="ico">🏃</div><div class="meta"><div class="title">Staff member: Amara O.</div><div class="sub">ETA 90s · Nurse · Floor 3</div></div><div class="time">${nowTs()}</div>`;
+  d.insertBefore(c, d.firstChild);
+  setTimeout(() => {
+    $('#ga-status').innerHTML = `<div style="font-size:16px;font-weight:600;color:var(--green)">✓ Assistance arrived · marked resolved</div>`;
+    $('#ga-status').style.background = '#ecfdf5';
+    $('#ga-status').style.borderColor = 'var(--green)';
+  }, 5000);
+}
+function gaReset() {
+  $('#ga-status').innerHTML = `<div style="font-size:16px;font-weight:600;color:var(--muted)">Awaiting request</div>`;
+  $('#ga-status').style.background = '';
+  $('#ga-status').style.borderColor = '';
+  $('#ga-dispatched').innerHTML = '<div class="empty" style="padding:14px">No active dispatch</div>';
+}
+window.gaFire = gaFire; window.gaReset = gaReset;
+
+// ═══════ DEMO APP: Fleet Trigger ═══════
+function ftOnButton(kind, ts) {
+  const selId = kind === 'single' ? 'ft-single' : kind === 'double' ? 'ft-double' : 'ft-triple';
+  const statusId = selId + '-status';
+  const action = document.getElementById(selId)?.value;
+  if (!action) return;
+  document.getElementById(statusId).textContent = `▶ Firing: ${action}`;
+  document.getElementById(statusId).style.color = 'var(--accent-2)';
+  const log = $('#ft-log');
+  if (log.querySelector('.empty')) log.innerHTML = '';
+  const c = document.createElement('div');
+  c.className = 'event-card';
+  c.innerHTML = `<div class="ico">🤖</div><div class="meta"><div class="title">${kind} → ${action}</div><div class="sub">Dispatch queued</div></div><div class="time">${nowTs()}</div>`;
+  log.insertBefore(c, log.firstChild);
+  setTimeout(() => { document.getElementById(statusId).textContent = 'Ready'; document.getElementById(statusId).style.color = 'var(--muted)'; }, 2500);
+}
+
+// ───── GATT toolbar ─────
+$('#refresh-gatt').addEventListener('click', () => state.server && enumerateServices());
+$('#subscribe-all').addEventListener('click', async () => {
+  for (const svc of state.services) {
+    try {
+      const chars = await svc.getCharacteristics();
+      for (const c of chars) {
+        if ((c.properties.notify || c.properties.indicate) && !state.subscriptions.has(c.uuid)) {
+          await c.startNotifications();
+          c.addEventListener('characteristicvaluechanged', e => onNotify(c, e.target.value));
+          state.subscriptions.set(c.uuid, c);
+          log('ok', `Subscribed ${chName(c.uuid)}`);
+        }
+      }
+    } catch {}
+  }
+});
+$('#auth-btn').addEventListener('click', async () => {
+  const pwd = new TextEncoder().encode(MINEW_PASSWORD);
+  let sent = false;
+  for (const svc of state.services) {
+    try {
+      const chars = await svc.getCharacteristics();
+      for (const c of chars) {
+        if (!(c.properties.write || c.properties.writeWithoutResponse)) continue;
+        try {
+          if (c.properties.write) await c.writeValue(pwd);
+          else await c.writeValueWithoutResponse(pwd);
+          log('tx', `Sent minew123 → ${chName(c.uuid)}`);
+          sent = true;
+        } catch {}
+      }
+    } catch {}
+  }
+  if (!sent) log('err', 'No writable characteristics available');
+});
+
+// ───── log buttons ─────
+$('#clear-log').addEventListener('click', () => { state.logEntries = []; $('#log').innerHTML = ''; });
+$('#download-log').addEventListener('click', () => {
+  const jsonl = state.logEntries.map(e => JSON.stringify(e)).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([jsonl], { type: 'application/x-ndjson' }));
+  a.download = `b10-log-${Date.now()}.jsonl`;
+  a.click();
+});
+
+// ───── experiments ─────
+$('#run-experiment').addEventListener('click', () => {
+  offAll();
+  try {
+    const fn = new Function('on', 'log', 'b10', 'bytes', 'fetch', $('#exp-code').value);
+    fn(on, expLog, state, { toHex: bytesToHex, fromHex: hexToBytes }, window.fetch.bind(window));
+    expLog('<span style="color:#6ee7b7">running — handlers registered</span>');
+  } catch (e) { expLog('<span style="color:#fca5a5">error: ' + e.message + '</span>'); }
+});
+$('#stop-experiment').addEventListener('click', () => { offAll(); expLog('<span style="color:#cbd5e1">stopped</span>'); });
+$('#save-experiment').addEventListener('click', () => { localStorage.setItem('b10-experiment', $('#exp-code').value); expLog('saved'); });
+$('#load-experiment').addEventListener('click', () => { const v = localStorage.getItem('b10-experiment'); if (v) $('#exp-code').value = v; });
+
+// ───── decoder ─────
+$('#decode-btn').addEventListener('click', decode);
+$('#decode-example').addEventListener('click', () => { $('#decoder-input').value = '02 01 06 1a ff 4c 00 02 15 e2 c5 6d b5 df fb 48 d2 b0 60 d0 f5 a7 10 96 e0 00 01 00 02 c5'; });
+function decode() {
+  const b = hexToBytes($('#decoder-input').value);
+  const out = [`Length: ${b.length} bytes`, 'Hex: ' + bytesToHex(b)];
+  let i = 0;
+  while (i < b.length) {
+    const len = b[i];
+    if (!len || i + 1 + len > b.length) break;
+    const type = b[i + 1];
+    const data = b.slice(i + 2, i + 1 + len);
+    out.push(`\nAD block: type=0x${type.toString(16).padStart(2,'0')} len=${len} data=${bytesToHex(data)}`);
+    if (type === 0xff && data.length >= 24 && data[0] === 0x4c && data[1] === 0x00 && data[2] === 0x02 && data[3] === 0x15) {
+      const uuid = Array.from(data.slice(4, 20)).map(x => x.toString(16).padStart(2,'0')).join('');
+      const f = `${uuid.slice(0,8)}-${uuid.slice(8,12)}-${uuid.slice(12,16)}-${uuid.slice(16,20)}-${uuid.slice(20)}`;
+      const major = (data[20] << 8) | data[21];
+      const minor = (data[22] << 8) | data[23];
+      const tx = data[24] > 0x7f ? data[24] - 0x100 : data[24];
+      out.push(`  → iBeacon: uuid=${f} major=${major} minor=${minor} txPower=${tx}dBm`);
+    }
+    if (type === 0x16 && data[0] === 0xaa && data[1] === 0xfe) {
+      const ft = data[2];
+      if (ft === 0x00) out.push(`  → Eddystone-UID: tx=${(data[3]>0x7f?data[3]-0x100:data[3])}dBm ns=${bytesToHex(data.slice(4,14))} inst=${bytesToHex(data.slice(14,20))}`);
+      if (ft === 0x10) {
+        const scheme = ['http://www.', 'https://www.', 'http://', 'https://'][data[4]] || '';
+        out.push(`  → Eddystone-URL: ${scheme}${textFromBuf(data.slice(5)).replace(/[^\x20-\x7e]/g,'?')}`);
+      }
+      if (ft === 0x20) out.push(`  → Eddystone-TLM: v=${data[3]} batt_mV=${(data[4]<<8)|data[5]} temp=${((data[6]<<8)|data[7])/256}C pdu=${(data[8]<<24)|(data[9]<<16)|(data[10]<<8)|data[11]}`);
+    }
+    i += 1 + len;
+  }
+  $('#decoder-output').textContent = out.join('\n');
+}
+
+// expose simulate for buttons outside of tabs
+window.fireButton = fireButton;
+window.rsReset = rsReset;
+window.sdFire = sdFire; window.sdAck = sdAck; window.sdReset = sdReset;
+
+// init
+if (localStorage.getItem('b10-experiment')) $('#exp-code').value = localStorage.getItem('b10-experiment');
+setStatus('', 'Disconnected');
+log('sys', 'Sensor Lab ready. Put B10 in pair mode (1s press) then click Connect.');
+
+// Try silent auto-reconnect on page load if we have a remembered device
+(async () => {
+  if (localStorage.getItem('b10-last-device-id')) {
+    const ok = await attemptAutoReconnect();
+    if (ok) log('ok', 'Auto-reconnected to previously paired B10');
+  }
+})();
+
+// Close modal on backdrop click
+$('#pair-modal').addEventListener('click', (e) => { if (e.target === $('#pair-modal')) closePairModal(); });
+</script>
+</body>
+</html>
