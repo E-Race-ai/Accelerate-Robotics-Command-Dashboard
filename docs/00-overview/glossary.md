@@ -83,6 +83,63 @@ For the short version used by Claude Code day-to-day, see [`../../.claude/rules/
 | **Monolith** | Single Node.js process serving API + static files (what Accelerate Robotics runs today) |
 | **SQLite / WAL** | The backing store (SQLite) with write-ahead logging (WAL) enabled for concurrency and crash resilience |
 
+## Developer workflow (Git, GitHub, deploys)
+
+For a friendly, plain-English version of this section with examples,
+see [`/team-glossary`](../../pages/team-glossary.html) on the live site.
+
+### Git basics
+
+| Term | Definition |
+|---|---|
+| **Repository / repo** | The folder of code + its full history. Every project lives in one. We have several (e.g. `accelerate-robotics`, `accelerate-elevator`). |
+| **Clone** | Download a full copy of a repo to your laptop so you can read or change it locally. |
+| **Fork** | Make your own copy of someone else's repo on GitHub so you can change it without touching theirs. (We rarely fork internally — we branch.) |
+| **Branch** | A named line of changes parallel to `main`. You start a branch, make changes on it, then merge it back. |
+| **`main`** | The branch that represents what's actually shipped. Production deploys from here. |
+| **Fresh branch** | A new branch started from the current `main` — a clean starting point for a single piece of work. |
+| **Commit** | A single saved snapshot of changes, with a message explaining what changed and why. |
+| **Push** | Send your local commits up to GitHub so others can see them. |
+| **Pull** | Download new commits from GitHub onto your local copy. |
+| **Pull request (PR)** | A proposal on GitHub: "please merge this branch into `main`." Reviewers comment, CI runs tests, then it merges. |
+| **Merge** | Combine the changes from one branch into another (usually a feature branch into `main`). |
+| **Squash** | Collapse a branch's many commits into one commit when merging — keeps `main`'s history clean. We squash by default. |
+| **Rebase** | Replay your branch's commits on top of the latest `main` so it's "current" before merging. |
+| **Conflict** | When two branches changed the same line and Git can't auto-pick a winner. A human decides. |
+| **Stash** | Temporarily set aside uncommitted changes so you can switch branches, then bring them back. |
+| **Diff** | The line-by-line view of what changed. PRs and code reviews are diffs. |
+| **HEAD** | Git's word for "where you are right now" — the most recent commit on your current branch. |
+| **Origin** | The default name for the GitHub copy of the repo your laptop is talking to. |
+| **Tag / release** | A stable label on a specific commit ("v1.4.0"). Used for cutting versions and rollbacks. |
+
+### Process & deployment
+
+| Term | Definition |
+|---|---|
+| **Code review** | A teammate reads your PR's diff and either approves it or requests changes. Required before merging. |
+| **CI** | Continuous Integration — the automated test/lint runner that fires on every PR. Green = safe to merge. |
+| **CD** | Continuous Deployment — auto-deploy to production whenever `main` advances. |
+| **Deploy** | Push the new code out to where users can see it. |
+| **Production / prod** | The live site real users hit. |
+| **Staging** | A near-copy of production used for last-mile testing. |
+| **Dev / development** | Your laptop. Where work-in-progress lives before going to staging or prod. |
+| **Hotfix** | An urgent fix that goes straight to `main` and prod, skipping the usual rhythm. |
+| **Rollback** | Re-deploy the previous version because the current one is broken. |
+| **Lint** | Auto-checker that flags stylistic or risky code patterns. Runs in CI. |
+| **Test (unit / integration / E2E)** | Unit = one function. Integration = a few pieces working together. End-to-End = the whole app like a real user. |
+| **Build** | The step that bundles, compiles, or minifies code for shipping. (We have minimal build — most code ships as written.) |
+
+### Commit message types
+
+| Type | Meaning |
+|---|---|
+| **`feat`** | New capability for users |
+| **`fix`** | Bug fix |
+| **`refactor`** | Internal restructure, no behavior change |
+| **`docs`** | Documentation only |
+| **`test`** | Adding or fixing tests |
+| **`chore`** | Housekeeping (renames, deps, config) |
+
 ## Related
 
 - [`../../.claude/rules/domain-vocabulary.md`](../../.claude/rules/domain-vocabulary.md) — shorter domain-only version

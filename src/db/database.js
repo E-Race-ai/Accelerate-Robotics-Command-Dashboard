@@ -319,10 +319,208 @@ async function initSchema() {
       UNIQUE(user_id, module)
     )`,
     `CREATE INDEX IF NOT EXISTS idx_user_permissions_user ON user_permissions(user_id)`,
+
+    // ── Project tracker (sprint-based multi-project planner) ────────
+    `CREATE TABLE IF NOT EXISTS tracker_sprints (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS tracker_people (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      initials TEXT NOT NULL,
+      full_name TEXT,
+      notes TEXT,
+      active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    // WHY: Single table for projects + tasks + subtasks — they share 95% of columns.
+    // The level CHECK + parent_id FK enforce the 4-level hierarchy (sprint → project → task → subtask).
+    // parent_id level-matching is enforced in src/services/tracker-validation.js, not here.
+    `CREATE TABLE IF NOT EXISTS tracker_items (
+      id TEXT PRIMARY KEY,
+      sprint_id TEXT NOT NULL REFERENCES tracker_sprints(id) ON DELETE CASCADE,
+      parent_id TEXT REFERENCES tracker_items(id) ON DELETE CASCADE,
+      level TEXT NOT NULL CHECK(level IN ('project', 'task', 'subtask')),
+      name TEXT NOT NULL,
+      description TEXT,
+      owner_id INTEGER REFERENCES tracker_people(id),
+      color TEXT,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'not_started'
+        CHECK(status IN ('not_started', 'in_progress', 'blocked', 'complete')),
+      needs_verification INTEGER NOT NULL DEFAULT 0 CHECK(needs_verification IN (0, 1)),
+      verification_note TEXT,
+      is_milestone INTEGER NOT NULL DEFAULT 0 CHECK(is_milestone IN (0, 1)),
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS tracker_item_support (
+      item_id TEXT NOT NULL REFERENCES tracker_items(id) ON DELETE CASCADE,
+      person_id INTEGER NOT NULL REFERENCES tracker_people(id) ON DELETE CASCADE,
+      PRIMARY KEY (item_id, person_id)
+    )`,
+    // ── Bug reports + feature requests from end users (toolkit feedback form)
+    `CREATE TABLE IF NOT EXISTS feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL CHECK(type IN ('bug', 'feature')),
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      severity TEXT CHECK(severity IN ('low', 'medium', 'high', 'critical')),
+      page_url TEXT,
+      user_email TEXT,
+      user_name TEXT,
+      status TEXT NOT NULL DEFAULT 'new'
+        CHECK(status IN ('new', 'triaged', 'in_progress', 'resolved', 'wontfix')),
+      created_at TEXT DEFAULT (datetime('now')),
+      resolved_at TEXT
+    )`,
+    // Screenshots are stored as BLOBs (same pattern as assessment_photos) so a
+    // bug report is fully self-contained — no external file storage to manage.
+    `CREATE TABLE IF NOT EXISTS feedback_screenshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      feedback_id INTEGER NOT NULL REFERENCES feedback(id) ON DELETE CASCADE,
+      filename TEXT,
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      data BLOB NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_feedback_status_created ON feedback(status, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_feedback_screenshots_feedback ON feedback_screenshots(feedback_id)`,
+    // ── Collab Bulletin Board: cross-team help requests
+    // Type covers what kind of help is being asked for; target_user is set
+    // when one specific person is being tagged, NULL = open call to the team.
+    `CREATE TABLE IF NOT EXISTS collab_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL CHECK(type IN ('feature', 'tool', 'integration', 'doc', 'design', 'other')),
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      skills TEXT,
+      requester_email TEXT,
+      requester_name TEXT,
+      target_user TEXT,
+      priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high', 'urgent')),
+      status TEXT NOT NULL DEFAULT 'open'
+        CHECK(status IN ('open', 'claimed', 'in_progress', 'done', 'archived')),
+      claimed_by TEXT,
+      claimed_at TEXT,
+      due_date TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      resolved_at TEXT,
+      archived_at TEXT,
+      is_security INTEGER NOT NULL DEFAULT 0 CHECK(is_security IN (0, 1))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_collab_status_created ON collab_requests(status, created_at DESC)`,
+    // ── Improvement Requests — public submit + public tracking board
+    // WHY: Separate from feedback (bug/feature) so improvement ideas have their
+    // own pipeline with request numbers, categories, and a public tracking view.
+    `CREATE TABLE IF NOT EXISTS improvement_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'other'
+        CHECK(category IN ('ui', 'workflow', 'performance', 'integration', 'documentation', 'other')),
+      priority TEXT NOT NULL DEFAULT 'medium'
+        CHECK(priority IN ('low', 'medium', 'high', 'critical')),
+      user_name TEXT,
+      user_email TEXT,
+      assigned_to TEXT,
+      status TEXT NOT NULL DEFAULT 'new'
+        CHECK(status IN ('new', 'under_review', 'planned', 'in_progress', 'completed', 'declined')),
+      created_at TEXT DEFAULT (datetime('now')),
+      resolved_at TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_improvement_status_created ON improvement_requests(status, created_at DESC)`,
+
+    // WHY: Generic key-value store for runtime-editable settings that don't warrant a
+    // dedicated table. First user is the Creative Labs tunnel URL — Eric pastes
+    // a fresh cloudflared quick-tunnel URL here when it rotates, and the
+    // robot-command/beam-feed embed pages read it from /api/public/system-settings.
+    `CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now')),
+      updated_by TEXT
+    )`,
+    // ── WhatsApp Hub — directory of company WhatsApp groups
+    // WHY: WhatsApp doesn't expose a "feed" of all groups via any free API and
+    // the Business API requires per-group opt-in. Keeping a simple directory
+    // (name + invite link + curated notes) gives the team a single landing
+    // page to discover and jump into every internal chat.
+    `CREATE TABLE IF NOT EXISTS whatsapp_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      category TEXT NOT NULL DEFAULT 'team'
+        CHECK(category IN ('team', 'project', 'customer', 'community', 'other')),
+      invite_url TEXT,
+      member_count INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      pinned INTEGER NOT NULL DEFAULT 0,
+      created_by TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_whatsapp_groups_category ON whatsapp_groups(category)`,
+    `CREATE INDEX IF NOT EXISTS idx_whatsapp_groups_pinned_updated ON whatsapp_groups(pinned DESC, updated_at DESC)`,
   ];
 
   for (const sql of statements) {
     await client.execute(sql);
+  }
+
+  // ── Migrate stale CHECK constraint on role column ─────────────
+  // WHY: Early production databases have role CHECK('admin','sales','ops','viewer')
+  // which rejects 'module_owner' and 'super_admin'. SQLite can't ALTER a CHECK,
+  // so we rebuild the table if the old constraint is detected.
+  try {
+    // Probe: try inserting then rolling back a module_owner row
+    await client.execute("INSERT INTO admin_users (email, password_hash, role) VALUES ('__probe__', '', 'module_owner')");
+    await client.execute("DELETE FROM admin_users WHERE email = '__probe__'");
+  } catch (probeErr) {
+    if (/CHECK constraint failed/i.test(probeErr.message)) {
+      console.log('[db] Detected stale role CHECK constraint — rebuilding admin_users table');
+      // WHY: Discover which columns actually exist in the old table so the
+      // INSERT only references real columns — avoids "no such column" errors.
+      const colInfo = await client.execute("PRAGMA table_info(admin_users)");
+      const oldCols = new Set(colInfo.rows.map(r => r.name || r[1]));
+
+      await client.execute(`CREATE TABLE admin_users_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        role TEXT DEFAULT 'admin' CHECK(role IN ('super_admin', 'admin', 'module_owner', 'viewer', 'sales', 'ops')),
+        name TEXT DEFAULT '',
+        invited_by INTEGER,
+        invite_token TEXT,
+        invite_expires_at TEXT,
+        status TEXT DEFAULT 'active',
+        last_login_at TEXT,
+        reset_token TEXT,
+        reset_expires_at TEXT
+      )`);
+      // WHY: Only copy columns that exist in both old and new tables
+      const newCols = ['id', 'email', 'password_hash', 'created_at', 'role',
+        'name', 'invited_by', 'invite_token', 'invite_expires_at',
+        'status', 'last_login_at', 'reset_token', 'reset_expires_at'];
+      const shared = newCols.filter(c => oldCols.has(c));
+      const selectExprs = shared.map(c =>
+        c === 'role' ? `CASE WHEN role IN ('super_admin','admin','module_owner','viewer','sales','ops') THEN role ELSE 'admin' END` : c
+      );
+      await client.execute(`INSERT INTO admin_users_new (${shared.join(', ')}) SELECT ${selectExprs.join(', ')} FROM admin_users`);
+      await client.execute("DROP TABLE admin_users");
+      await client.execute("ALTER TABLE admin_users_new RENAME TO admin_users");
+      console.log('[db] admin_users table rebuilt with updated role CHECK constraint');
+    }
   }
 
   // Additive columns — safe to try, catch duplicate-column errors.
@@ -341,28 +539,47 @@ async function initSchema() {
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN invite_expires_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN status TEXT DEFAULT 'active'");
   await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN last_login_at TEXT");
+  // WHY: Forgot-password flow. Separate from invite_token so an active user can
+  // reset their password without their status flipping back to 'invited'.
+  await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN reset_token TEXT");
+  await additiveAlterIfMissing("ALTER TABLE admin_users ADD COLUMN reset_expires_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE markets ADD COLUMN lat REAL");
   await additiveAlterIfMissing("ALTER TABLE markets ADD COLUMN lng REAL");
+  // WHY: Allow assigning improvement requests to portal users
+  await additiveAlterIfMissing("ALTER TABLE improvement_requests ADD COLUMN assigned_to TEXT");
+  // WHY: Security-flagged tickets get hazard styling on the board so the
+  // technical team sees them immediately. Default 0 so existing rows are unflagged.
+  await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN is_security INTEGER NOT NULL DEFAULT 0");
+  // WHY: archived_at and updated_at power the stale-ticket cleanup pass —
+  // archived_at lets us hide soft-deleted rows; updated_at lets the auto-archive
+  // sweep find tickets with no activity in N days.
+  await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN archived_at TEXT");
+  await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN updated_at TEXT");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────
 async function seedAdmin() {
-  const email = process.env.ADMIN_EMAIL;
-  const password = process.env.ADMIN_PASSWORD;
-  if (!email || !password) return;
-
-  const existing = await one('SELECT id FROM admin_users WHERE email = ?', [email]);
-  if (existing) return;
+  // WHY: Seed all configured admin accounts on boot. ADMIN_EMAIL is the primary;
+  // ADMIN2_EMAIL is an optional second super admin (e.g. a co-founder or ops lead).
+  const admins = [
+    { email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD, name: 'Admin' },
+    { email: process.env.ADMIN2_EMAIL, password: process.env.ADMIN2_PASSWORD, name: 'Admin 2' },
+  ].filter(a => a.email && a.password);
 
   const BCRYPT_ROUNDS = 12;
-  const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
-  await run('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)', [email, hash]);
-  console.log(`[db] Seeded admin user: ${email}`);
+  for (const admin of admins) {
+    const existing = await one('SELECT id FROM admin_users WHERE email = ?', [admin.email]);
+    if (existing) continue;
 
-  const recipientExists = await one('SELECT id FROM notification_recipients WHERE email = ?', [email]);
-  if (!recipientExists) {
-    await run('INSERT INTO notification_recipients (email, name, active) VALUES (?, ?, 1)', [email, 'Admin']);
-    console.log(`[db] Added admin as notification recipient`);
+    const hash = bcrypt.hashSync(admin.password, BCRYPT_ROUNDS);
+    await run('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)', [admin.email, hash]);
+    console.log(`[db] Seeded admin user: ${admin.email}`);
+
+    const recipientExists = await one('SELECT id FROM notification_recipients WHERE email = ?', [admin.email]);
+    if (!recipientExists) {
+      await run('INSERT INTO notification_recipients (email, name, active) VALUES (?, ?, 1)', [admin.email, admin.name]);
+      console.log(`[db] Added ${admin.email} as notification recipient`);
+    }
   }
 }
 
@@ -409,7 +626,13 @@ async function seedRolePermissions() {
 // ── Bootstrap on import ─────────────────────────────────────────
 // WHY: server.js must `await require('./db/database').ready` before app.listen() so that
 // routes never race schema init / seeds.
-const ready = (async () => {
+// WHY: integration tests use better-sqlite3 directly (see tests/helpers/setup.js) and
+// don't need the libsql client's schema/seed bootstrap. Skipping under vitest avoids
+// parallel workers racing on the same `file::memory:` path and producing unhandled
+// "no such table: deals" rejections during seedDeals.
+const isTestEnv = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+
+const ready = isTestEnv ? Promise.resolve() : (async () => {
   await initSchema();
   await seedAdmin();
   await bootstrapAdminRoles();
@@ -425,6 +648,13 @@ const ready = (async () => {
   try {
     const { seedProspects } = require('./seed-prospects');
     await seedProspects({ client, one, all, run, transaction });
+  } catch (e) {
+    if (!e.message.includes('Cannot find module')) throw e;
+  }
+
+  try {
+    const { seedTracker } = require('./tracker-seed');
+    await seedTracker({ client, one, all, run, transaction });
   } catch (e) {
     if (!e.message.includes('Cannot find module')) throw e;
   }

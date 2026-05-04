@@ -70,3 +70,88 @@ Who gets emailed when a new inquiry comes in.
 - [`adr/0001-sqlite-over-postgres.md`](adr/0001-sqlite-over-postgres.md) — why SQLite
 - [`../../.claude/rules/database-migrations.md`](../../.claude/rules/database-migrations.md) — rules for schema changes
 - [`../50-operations/runbooks/backup-database.md`](../50-operations/runbooks/backup-database.md) — backup procedure
+
+## Project tracker
+
+Sprint-based multi-project planner. Page at `/admin/project-tracker`.
+
+### `tracker_sprints`
+
+Top-level container for a time-boxed workstream sprint.
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | TEXT | PRIMARY KEY (UUID) |
+| name | TEXT | NOT NULL |
+| description | TEXT | |
+| start_date | TEXT | NOT NULL (ISO date; API enforces start ≤ end) |
+| end_date | TEXT | NOT NULL |
+| created_at / updated_at | TEXT | DEFAULT (datetime('now')) |
+
+### `tracker_items`
+
+Unified table for projects / tasks / subtasks — one table instead of three because they share nearly all columns; the `level` CHECK + `parent_id` FK enforce the hierarchy.
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | TEXT | PRIMARY KEY (UUID) |
+| sprint_id | TEXT | NOT NULL REFERENCES tracker_sprints(id) ON DELETE CASCADE |
+| parent_id | TEXT | REFERENCES tracker_items(id) ON DELETE CASCADE (NULL for projects) |
+| level | TEXT | NOT NULL CHECK (level IN ('project','task','subtask')) |
+| name | TEXT | NOT NULL |
+| description | TEXT | |
+| owner_id | INTEGER | REFERENCES tracker_people(id) |
+| color | TEXT | (only meaningful on projects) |
+| start_date / end_date | TEXT | NOT NULL |
+| status | TEXT | CHECK IN (not_started, in_progress, blocked, complete) |
+| needs_verification | INTEGER | CHECK (0,1) |
+| verification_note | TEXT | |
+| is_milestone | INTEGER | CHECK (0,1) — renders as diamond |
+| sort_order | INTEGER | NOT NULL DEFAULT 0 |
+| created_at / updated_at | TEXT | DEFAULT (datetime('now')) |
+
+**Hierarchy rules** (enforced in `src/services/tracker-validation.js`, not the DB): projects have no parent; task parent must be a project; subtask parent must be a task. `sprint_id`, `level`, and `parent_id` are immutable after creation.
+
+### `tracker_people`
+
+Managed list of people for owner / support dropdowns. Decoupled from `admin_users`.
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| initials | TEXT | NOT NULL |
+| full_name | TEXT | |
+| notes | TEXT | |
+| active | INTEGER | NOT NULL DEFAULT 1 CHECK (0,1) — soft delete |
+| created_at | TEXT | DEFAULT (datetime('now')) |
+
+### `tracker_item_support`
+
+Many-to-many: which people support which item.
+
+| Column | Type | Constraints |
+|---|---|---|
+| item_id | TEXT | NOT NULL REFERENCES tracker_items(id) ON DELETE CASCADE |
+| person_id | INTEGER | NOT NULL REFERENCES tracker_people(id) ON DELETE CASCADE |
+| PRIMARY KEY | | (item_id, person_id) |
+
+### `whatsapp_groups`
+
+Curated directory of company WhatsApp groups + communities. Powers `/pages/whatsapp-hub.html`. Editable via the admin UI (auth-gated CRUD at `/api/whatsapp`).
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| name | TEXT | NOT NULL |
+| description | TEXT | nullable — short blurb shown on the card |
+| category | TEXT | NOT NULL DEFAULT 'team' CHECK IN ('team', 'project', 'customer', 'community', 'other') |
+| invite_url | TEXT | nullable — host whitelisted to `chat.whatsapp.com` / `wa.me` at the route layer |
+| member_count | INTEGER | NOT NULL DEFAULT 0 — manual entry, kept fresh by whoever updates the card |
+| notes | TEXT | nullable — "what's currently being discussed" surface |
+| pinned | INTEGER | NOT NULL DEFAULT 0 (0/1) — pinned cards sort first |
+| created_by | TEXT | nullable — admin email captured at insert time |
+| created_at / updated_at | TEXT | DEFAULT (datetime('now')) |
+
+**Indexes:** `(category)`, `(pinned DESC, updated_at DESC)` for the default sort.
+
+**Why directory, not feed:** WhatsApp doesn't expose a "read all my groups" API, and the Business API requires per-group opt-in plus paid templates. Curating names + invite links + freshness notes gives the heads-up view without fragile scraping.

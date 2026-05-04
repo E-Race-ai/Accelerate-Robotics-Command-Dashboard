@@ -1,7 +1,18 @@
 const { Resend } = require('resend');
 const db = require('../db/database');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// WHY: The Resend SDK throws if RESEND_API_KEY is missing, which crashes the
+// server on boot during local development. Lazily construct the client so the
+// app still runs without email configured — callers just get a logged warning
+// and the send becomes a no-op.
+// WHY: No caching — always read the current env var so a key update
+// via Render dashboard takes effect after the next redeploy without
+// the stale cached client silently using the old (invalid) key.
+function getResend() {
+  const key = (process.env.RESEND_API_KEY || '').trim();
+  if (!key) return null;
+  return new Resend(key);
+}
 const EMAIL_FROM = process.env.EMAIL_FROM || 'notifications@acceleraterobotics.ai';
 
 /**
@@ -18,8 +29,14 @@ async function notifyNewInquiry(inquiry) {
 
   const to = recipients.map(r => r.email);
 
+  const resend = getResend();
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set — skipping inquiry notification');
+    return;
+  }
+
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: EMAIL_FROM,
       to,
       subject: `New Investment Inquiry from ${inquiry.name}`,
@@ -41,6 +58,13 @@ async function notifyNewInquiry(inquiry) {
         </div>
       `,
     });
+    // WHY: Resend SDK returns { data, error } instead of throwing on API failures
+    // (domain not verified, invalid from address, rate limit, etc.). Without this
+    // check, a rejected send looks like a successful one in logs.
+    if (result && result.error) {
+      console.error('[email] Notification rejected by Resend:', result.error.name, '-', result.error.message, `(from=${EMAIL_FROM})`);
+      return;
+    }
     console.log(`[email] Notification sent to ${to.length} recipient(s)`);
   } catch (err) {
     console.error('[email] Failed to send notification:', err.message);
@@ -62,9 +86,12 @@ function escapeHtml(str) {
  * Fails silently (logs) so the invite POST succeeds even if Resend is misconfigured.
  */
 async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn('[email] RESEND_API_KEY not set — skipping invite email');
-    return;
+  const resend = getResend();
+  if (!resend) {
+    // WHY: Throw instead of silently returning so the invite endpoint can
+    // tell the admin that email is not configured — a silent no-op leaves
+    // them believing the invite was sent when it wasn't.
+    throw new Error('RESEND_API_KEY is not configured — cannot send invite email');
   }
   const roleLabel = {
     admin: 'Admin',
@@ -73,7 +100,7 @@ async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
   }[role] || role;
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: EMAIL_FROM,
       to: [to],
       subject: `You're invited to Accelerate Robotics`,
@@ -89,6 +116,13 @@ async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
         </div>
       `,
     });
+    // WHY: Resend SDK returns { data, error } instead of throwing. A rejected
+    // send (e.g. unverified domain) would otherwise look like a success.
+    if (result && result.error) {
+      const detail = `${result.error.name}: ${result.error.message} (from=${EMAIL_FROM})`;
+      console.error('[email] Invite rejected by Resend:', detail);
+      throw new Error(`Resend rejected invite email — ${detail}`);
+    }
     console.log(`[email] Invite sent to ${to}`);
   } catch (err) {
     console.error('[email] Invite email failed:', err.message);
@@ -96,4 +130,49 @@ async function sendInviteEmail({ to, name, inviterEmail, role, inviteUrl }) {
   }
 }
 
-module.exports = { notifyNewInquiry, sendInviteEmail };
+/**
+ * Sends a password reset email. Fire-and-forget from the caller's perspective:
+ * if the send fails, we throw so the route can log but still respond with a
+ * generic "if this email exists, we sent a link" message (prevents enumeration).
+ */
+async function sendPasswordResetEmail({ to, name, resetUrl }) {
+  const resend = getResend();
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set — skipping password reset email');
+    return;
+  }
+
+  try {
+    const result = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: [to],
+      subject: `Reset your Accelerate Robotics password`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <h2 style="color: #0055ff; margin: 0 0 16px;">Password reset</h2>
+          <p>Hi${name ? ' ' + escapeHtml(name) : ''},</p>
+          <p>We received a request to reset the password on your Accelerate Robotics account. Click the button below to choose a new password.</p>
+          <p style="margin: 24px 0;">
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #0055ff; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">Reset Password &rarr;</a>
+          </p>
+          <p style="color: #666; font-size: 13px;">This link expires in 1 hour. If you didn't request a reset, you can safely ignore this email — your password won't change.</p>
+          <p style="color: #999; font-size: 12px; margin-top: 32px;">Tip: paranoid sysadmins sometimes kick off resets just to check the system works. No action needed on your end in that case.</p>
+        </div>
+      `,
+    });
+    // WHY: Resend SDK returns { data, error } rather than throwing. Without
+    // this check, an API rejection (domain not verified, invalid from, rate
+    // limit) would be logged as a successful send.
+    if (result && result.error) {
+      const detail = `${result.error.name}: ${result.error.message} (from=${EMAIL_FROM})`;
+      console.error('[email] Password reset rejected by Resend:', detail);
+      throw new Error(`Resend rejected password reset email — ${detail}`);
+    }
+    console.log(`[email] Password reset email sent to ${to} (id=${result && result.data && result.data.id})`);
+  } catch (err) {
+    console.error('[email] Password reset email failed:', err.message);
+    throw err;
+  }
+}
+
+module.exports = { notifyNewInquiry, sendInviteEmail, sendPasswordResetEmail };

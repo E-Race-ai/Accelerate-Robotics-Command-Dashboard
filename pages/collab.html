@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collab Bulletin Board — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',system-ui,sans-serif; color:var(--text); min-height:100vh;
+    background:
+      radial-gradient(ellipse 60% 50% at 25% 20%, rgba(245,158,11,0.10), transparent),
+      radial-gradient(ellipse 60% 40% at 75% 30%, rgba(0,200,255,0.08), transparent),
+      linear-gradient(180deg, #f5f6fb 0%, #f7f8fc 100%);
+    background-attachment:fixed;
+    line-height:1.5;
+  }
+  h1, h2, h3 { font-family:'Space Grotesk', 'Inter', sans-serif; letter-spacing:-0.01em; }
+  .mono { font-family:'JetBrains Mono', Menlo, monospace; }
+
+  .page { max-width:1280px; margin:0 auto; padding:32px 24px 96px; }
+
+  .topbar {
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:18px; flex-wrap:wrap;
+  }
+  .back-link {
+    display:inline-flex; align-items:center; gap:6px; font-size:0.82rem;
+    color:var(--text-dim); text-decoration:none;
+  }
+  .back-link:hover { color:var(--blue); }
+
+  .eyebrow {
+    font-family:'JetBrains Mono', monospace; font-size:0.7rem; font-weight:700;
+    color:#ea580c; text-transform:uppercase; letter-spacing:2px; margin-bottom:10px;
+  }
+  h1 { font-size:2rem; font-weight:800; line-height:1.1; margin-bottom:8px; }
+  h1 .accent {
+    background:linear-gradient(135deg, #ea580c, #f59e0b);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  .lede { font-size:0.95rem; color:var(--text-dim); max-width:720px; margin-bottom:24px; }
+
+  /* ── ATC stats strip ─────────────────────────────────────── */
+  .atc-stats {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+  }
+  .atc-stat {
+    display: flex; flex-direction: column; align-items: flex-start;
+    padding-right: 14px;
+    border-right: 1px solid #eef2f7;
+    min-width: 84px;
+  }
+  .atc-stat:last-of-type { border-right: none; }
+  .atc-stat-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .atc-stat-label {
+    font-size: 0.68rem; color: #64748b; text-transform: uppercase;
+    letter-spacing: 0.6px; margin-top: 4px; font-weight: 600;
+  }
+  .atc-stat.urgent .atc-stat-num { color: #dc2626; }
+  .atc-stat.warn   .atc-stat-num { color: #d97706; }
+  .atc-stat.ok     .atc-stat-num { color: #16a34a; }
+  .atc-live-dot {
+    font-size: 0.7rem; font-weight: 700; color: #16a34a;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.6px;
+    animation: atcLivePulse 2s ease-in-out infinite;
+  }
+  @keyframes atcLivePulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+  }
+  .grow { flex: 1; }
+  .new-btn {
+    background: linear-gradient(135deg, #ea580c, #f59e0b); color: white;
+    border: none; padding: 9px 18px; border-radius: 10px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(234,88,12,0.25);
+    transition: transform 0.1s, box-shadow 0.15s;
+  }
+  .new-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(234,88,12,0.35); }
+
+  /* ── ATC lane board (4-col kanban with drag-and-drop) ───── */
+  .atc-board {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  @media (max-width: 1100px) { .atc-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px)  { .atc-board { grid-template-columns: 1fr; } }
+  .atc-lane {
+    display: flex; flex-direction: column;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    min-height: 240px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .atc-lane.drop-target {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    box-shadow: inset 0 0 0 2px rgba(59,130,246,0.20);
+  }
+  .atc-lane-head {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    border-top-left-radius: 12px; border-top-right-radius: 12px;
+    font-size: 0.78rem; font-weight: 700;
+    color: white; letter-spacing: 0.4px;
+  }
+  .atc-lane-open    { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  .atc-lane-claimed { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+  .atc-lane-active  { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+  .atc-lane-done    { background: linear-gradient(90deg, #16a34a, #4ade80); }
+  .atc-lane-count {
+    background: rgba(255,255,255,0.22);
+    padding: 1px 9px; border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  }
+  .atc-lane-body {
+    flex: 1; padding: 10px;
+    display: flex; flex-direction: column; gap: 8px;
+    overflow-y: auto; max-height: 70vh;
+  }
+  .atc-lane-empty {
+    padding: 20px 10px; text-align: center;
+    color: #cbd5e1; font-size: 0.78rem; font-style: italic;
+  }
+  /* Card — compact, draggable */
+  .atc-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-left: 3px solid transparent;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 6px;
+    cursor: grab;
+    transition: transform 0.1s, box-shadow 0.15s, border-color 0.15s, opacity 0.15s;
+  }
+  .atc-card:hover { box-shadow: 0 4px 12px rgba(15,23,42,0.08); transform: translateY(-1px); }
+  .atc-card:active { cursor: grabbing; }
+  .atc-card.dragging { opacity: 0.4; }
+  /* Priority on the left edge — at-a-glance triage */
+  .atc-card[data-priority="urgent"] {
+    border-left-color: #dc2626;
+    box-shadow: 0 0 0 1px rgba(220,38,38,0.18);
+    animation: atcUrgentPulse 2.6s ease-in-out infinite;
+  }
+  @keyframes atcUrgentPulse {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(220,38,38,0.18); }
+    50%      { box-shadow: 0 0 0 2px rgba(220,38,38,0.40), 0 0 14px rgba(220,38,38,0.18); }
+  }
+  .atc-card[data-priority="high"]   { border-left-color: #f59e0b; }
+  .atc-card[data-priority="medium"] { border-left-color: #94a3b8; }
+  .atc-card[data-priority="low"]    { border-left-color: #cbd5e1; }
+  /* ── Security hazard styling — overrides priority colors so security
+     tickets always read as hazard, regardless of how the submitter set priority.
+     The diagonal stripes evoke a workplace hazard barricade and are very hard
+     to miss in a feed of normal-looking cards. */
+  .atc-card[data-security="1"] {
+    border: 1px solid #b45309;
+    border-left: 6px solid #b45309;
+    background:
+      repeating-linear-gradient(135deg,
+        rgba(245,158,11,0.06) 0 8px,
+        rgba(245,158,11,0)    8px 16px),
+      #fffbeb;
+    box-shadow: 0 0 0 1px rgba(180,83,9,0.18);
+    animation: none;
+  }
+  .atc-card[data-security="1"] .atc-card-title { color: #7c2d12; }
+  .atc-pill-security {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: #b45309; color: #fff;
+    padding: 2px 7px; border-radius: 10px;
+    font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .atc-card { position: relative; }
+  .atc-card-archive {
+    position: absolute; top: 6px; right: 6px;
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: none;
+    color: #cbd5e1; font-size: 13px; font-weight: 700;
+    cursor: pointer; opacity: 0;
+    transition: opacity 0.12s, color 0.12s, background 0.12s;
+    border-radius: 50%;
+    line-height: 1;
+  }
+  .atc-card:hover .atc-card-archive { opacity: 1; }
+  .atc-card-archive:hover {
+    color: #b91c1c; background: #fee2e2;
+  }
+  .atc-card-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .atc-card-title {
+    font-size: 0.85rem; font-weight: 700; color: #0f172a; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .atc-card-meta {
+    font-size: 0.68rem; color: #94a3b8;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
+  }
+  .atc-card-meta strong { color: #475569; font-weight: 700; font-family: inherit; }
+  .atc-card-due { color: #d97706; }
+  .atc-card-due.overdue { color: #b91c1c; font-weight: 700; }
+  .atc-card-actions { display: flex; gap: 6px; margin-top: 4px; }
+  .atc-card-btn {
+    flex: 1; font-size: 11px; font-weight: 700;
+    padding: 5px 8px; border-radius: 6px;
+    background: white; color: #475569;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .atc-card-btn:hover { background: #0c1220; color: white; border-color: #0c1220; }
+  .atc-card-btn.primary { background: #0055ff; color: white; border-color: #0055ff; }
+  .atc-card-btn.primary:hover { background: #003ecc; border-color: #003ecc; }
+  .atc-card-btn.success { background: #16a34a; color: white; border-color: #16a34a; }
+  .atc-card-btn.success:hover { background: #108037; border-color: #108037; }
+
+  /* Existing toolbar/board styles — kept for backward compat but unused */
+  .toolbar {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin-bottom:20px;
+  }
+  .tab {
+    background:white; border:1px solid var(--border);
+    padding:7px 14px; border-radius:999px;
+    font-size:12.5px; font-weight:600; color:#475569; cursor:pointer;
+    transition:all 0.15s;
+  }
+  .tab:hover { background:#f8fafc; border-color:#cbd5e1; }
+  .tab.active { background:#0c1220; color:white; border-color:#0c1220; }
+  .tab .count {
+    margin-left:6px; padding:1px 7px; border-radius:999px;
+    background:rgba(255,255,255,0.18); font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+  }
+  .tab:not(.active) .count { background:#eef2f7; color:#64748b; }
+  .grow { flex:1; }
+  .new-btn {
+    background:linear-gradient(135deg, #ea580c, #f59e0b); color:white;
+    border:none; padding:9px 18px; border-radius:10px;
+    font-size:13px; font-weight:700; cursor:pointer;
+    box-shadow:0 4px 14px rgba(234,88,12,0.25);
+    transition:transform 0.1s, box-shadow 0.15s;
+  }
+  .new-btn:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(234,88,12,0.35); }
+
+  /* Card grid */
+  .board {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));
+    gap:14px;
+  }
+  .req-card {
+    background:white; border:1px solid var(--border); border-radius:14px;
+    padding:18px; display:flex; flex-direction:column; gap:8px;
+    box-shadow:0 1px 3px rgba(15,23,42,0.04);
+    transition:transform 0.12s, box-shadow 0.15s;
+    position:relative;
+  }
+  .req-card:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(15,23,42,0.08); }
+
+  .req-head { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .pill {
+    font-size:10px; font-weight:700; padding:3px 9px;
+    border-radius:999px; text-transform:uppercase; letter-spacing:0.6px;
+    white-space:nowrap;
+  }
+  .pill.type-feature      { background:#eef2ff; color:#4f46e5; }
+  .pill.type-tool         { background:#ecfeff; color:#0e7490; }
+  .pill.type-integration  { background:#f0fdf4; color:#166534; }
+  .pill.type-doc          { background:#fef3c7; color:#92400e; }
+  .pill.type-design       { background:#fdf2f8; color:#be185d; }
+  .pill.type-other        { background:#f1f5f9; color:#475569; }
+  .pill.prio-low          { background:#f1f5f9; color:#475569; }
+  .pill.prio-medium       { background:#fffbeb; color:#92400e; }
+  .pill.prio-high         { background:#fff1f2; color:#be123c; }
+  .pill.prio-urgent       { background:#fee2e2; color:#991b1b; box-shadow:0 0 0 1px #fca5a5; }
+  .pill.status-open       { background:#fef3c7; color:#92400e; }
+  .pill.status-claimed    { background:#dbeafe; color:#1e40af; }
+  .pill.status-in_progress{ background:#e0e7ff; color:#3730a3; }
+  .pill.status-done       { background:#dcfce7; color:#166534; }
+  .pill.status-archived   { background:#f1f5f9; color:#475569; }
+
+  .req-card h3 {
+    font-size:1rem; line-height:1.25; color:#0f172a;
+    margin-top:2px;
+  }
+  .req-card .desc {
+    font-size:0.85rem; color:#475569; line-height:1.45;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .req-meta {
+    display:flex; flex-direction:column; gap:5px;
+    font-size:0.75rem; color:#64748b;
+    margin-top:4px;
+  }
+  .req-meta .row { display:flex; align-items:center; gap:6px; }
+  .req-meta .row strong { color:#0f172a; font-weight:600; }
+  .skill-chip {
+    display:inline-block; background:#fef3c7; color:#92400e;
+    font-size:10.5px; font-weight:600; padding:2px 7px;
+    border-radius:5px; margin-right:4px;
+  }
+  .req-actions {
+    display:flex; gap:6px; margin-top:8px; padding-top:8px;
+    border-top:1px dashed var(--border);
+  }
+  .req-actions button {
+    flex:1; padding:7px 10px; border:1px solid var(--border);
+    background:white; border-radius:8px;
+    font-size:12px; font-weight:600; color:#0f172a;
+    cursor:pointer; transition:all 0.15s;
+  }
+  .req-actions button:hover { border-color:#0055ff; color:#0055ff; }
+  .req-actions button.primary {
+    background:#0055ff; color:white; border-color:#0055ff;
+  }
+  .req-actions button.primary:hover { background:#0040cc; border-color:#0040cc; }
+  .req-actions button.success {
+    background:#16a34a; color:white; border-color:#16a34a;
+  }
+  .req-actions button.success:hover { background:#108037; border-color:#108037; }
+
+  .empty {
+    grid-column:1/-1; padding:40px;
+    text-align:center; color:#94a3b8;
+    border:2px dashed #e5e7eb; border-radius:14px;
+    background:rgba(255,255,255,0.5);
+  }
+
+  /* Modal */
+  .modal-bg {
+    position:fixed; inset:0; background:rgba(15,23,42,0.5);
+    display:none; align-items:center; justify-content:center;
+    z-index:50; padding:20px;
+  }
+  .modal-bg.show { display:flex; }
+  .modal {
+    background:white; border-radius:16px;
+    width:100%; max-width:580px; max-height:90vh;
+    overflow-y:auto; padding:28px;
+    box-shadow:0 20px 50px rgba(15,23,42,0.25);
+  }
+  .modal h2 { font-size:1.3rem; font-weight:800; margin-bottom:18px; }
+  .field { display:flex; flex-direction:column; gap:5px; margin-bottom:16px; }
+  .field label { font-size:0.78rem; font-weight:700; color:#0f172a; }
+  .field .hint { font-size:0.72rem; color:#94a3b8; margin-top:-2px; }
+  .field input, .field textarea, .field select {
+    width:100%; padding:10px 13px;
+    border:1.5px solid var(--border); border-radius:9px;
+    font-family:inherit; font-size:0.9rem; background:#fafbfd;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline:none; border-color:var(--blue); background:white;
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+  }
+  .field textarea { min-height:110px; resize:vertical; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width: 520px) { .field-row { grid-template-columns:1fr; } }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
+  .modal-actions button {
+    padding:10px 18px; border-radius:9px; font-size:13px; font-weight:700;
+    cursor:pointer; border:1.5px solid var(--border); background:white;
+    transition:all 0.15s;
+  }
+  .modal-actions button.primary {
+    background:linear-gradient(135deg, #ea580c, #f59e0b); color:white; border-color:transparent;
+  }
+  .modal-actions button.primary:disabled { opacity:0.5; cursor:not-allowed; }
+
+  .status-msg {
+    padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:12px; display:none;
+  }
+  .status-msg.error { display:block; background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <a href="/admin" class="back-link">← Command Center</a>
+  </div>
+
+  <div class="eyebrow">Toolkit · Service Operations</div>
+  <h1><span class="accent">Air Traffic</span> Control</h1>
+  <p class="lede">Live status board for service tickets. Each lane is a phase of the workflow — incoming asks, claimed, in flight, and landed. Drag a card between lanes to update status, or claim from the open lane to take a ticket.</p>
+
+  <!-- ATC stats strip — at-a-glance state of the board. -->
+  <div class="atc-stats" id="atcStats">
+    <div class="atc-stat">
+      <span class="atc-stat-num" id="atc-total">0</span>
+      <span class="atc-stat-label">total active</span>
+    </div>
+    <div class="atc-stat urgent">
+      <span class="atc-stat-num" id="atc-urgent">0</span>
+      <span class="atc-stat-label">🚨 urgent</span>
+    </div>
+    <div class="atc-stat warn">
+      <span class="atc-stat-num" id="atc-overdue">0</span>
+      <span class="atc-stat-label">⏱ past due</span>
+    </div>
+    <div class="atc-stat ok">
+      <span class="atc-stat-num" id="atc-done24">0</span>
+      <span class="atc-stat-label">✅ landed today</span>
+    </div>
+    <div class="atc-stat">
+      <span class="atc-stat-num" id="atc-oldest">—</span>
+      <span class="atc-stat-label">oldest open</span>
+    </div>
+    <span class="grow"></span>
+    <label style="display:flex;align-items:center;gap:6px;color:#64748b;font-size:0.78rem;cursor:pointer;user-select:none;">
+      <input type="checkbox" id="showArchivedToggle" style="accent-color:#64748b;">
+      Show archived
+    </label>
+    <span class="atc-live-dot" title="Auto-refreshes every 20s">● LIVE</span>
+    <button class="new-btn" id="newBtn">+ New Ticket</button>
+  </div>
+
+  <!-- Lane board — 4 columns, drag-and-drop between lanes. -->
+  <div class="atc-board" id="atcBoard">
+    <div class="atc-lane" data-status="open">
+      <div class="atc-lane-head atc-lane-open">
+        <span class="atc-lane-name">📥 Inbound</span>
+        <span class="atc-lane-count" id="lane-count-open">0</span>
+      </div>
+      <div class="atc-lane-body" data-status="open" id="lane-open"></div>
+    </div>
+    <div class="atc-lane" data-status="claimed">
+      <div class="atc-lane-head atc-lane-claimed">
+        <span class="atc-lane-name">🤝 Claimed</span>
+        <span class="atc-lane-count" id="lane-count-claimed">0</span>
+      </div>
+      <div class="atc-lane-body" data-status="claimed" id="lane-claimed"></div>
+    </div>
+    <div class="atc-lane" data-status="in_progress">
+      <div class="atc-lane-head atc-lane-active">
+        <span class="atc-lane-name">✈ In Flight</span>
+        <span class="atc-lane-count" id="lane-count-in_progress">0</span>
+      </div>
+      <div class="atc-lane-body" data-status="in_progress" id="lane-in_progress"></div>
+    </div>
+    <div class="atc-lane" data-status="done">
+      <div class="atc-lane-head atc-lane-done">
+        <span class="atc-lane-name">🛬 Landed</span>
+        <span class="atc-lane-count" id="lane-count-done">0</span>
+      </div>
+      <div class="atc-lane-body" data-status="done" id="lane-done"></div>
+    </div>
+  </div>
+
+  <!-- Archived lane — only shown when "Show archived" toggle is on. -->
+  <div id="archivedSection" hidden style="margin-top:24px;">
+    <h3 style="font-size:0.95rem;color:#475569;font-weight:700;margin:0 0 8px;letter-spacing:0.01em;">
+      📦 Archived <span id="archivedCount" style="font-weight:500;color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:0.78rem;">0</span>
+    </h3>
+    <div id="archivedList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;"></div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2>New Collaboration Request</h2>
+    <div class="status-msg" id="modalErr"></div>
+    <form id="newForm">
+      <div class="field-row">
+        <div class="field">
+          <label for="m-type">Type</label>
+          <select id="m-type" name="type" required>
+            <option value="feature">Feature</option>
+            <option value="tool">Tool</option>
+            <option value="integration">Integration</option>
+            <option value="doc">Doc / Writeup</option>
+            <option value="design">Design</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="m-priority">Priority</label>
+          <select id="m-priority" name="priority">
+            <option value="low">Low — nice-to-have</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent — blocking work</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="m-title">Title</label>
+        <input type="text" id="m-title" required maxlength="200" placeholder="e.g. 'Hook the SLAM scanner output into the deployment playbook'">
+      </div>
+      <div class="field">
+        <label for="m-description">Details</label>
+        <span class="hint">What needs to happen, why it matters, any starting links.</span>
+        <textarea id="m-description" required maxlength="10000"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="m-skills">Skills needed <span style="color:#94a3b8;font-weight:500;">(optional)</span></label>
+          <input type="text" id="m-skills" placeholder="e.g. ROS, Figma, Stripe, copywriting">
+        </div>
+        <div class="field">
+          <label for="m-target">Tag a person <span style="color:#94a3b8;font-weight:500;">(optional)</span></label>
+          <select id="m-target">
+            <option value="">— Open to the team —</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="m-due">Due date <span style="color:#94a3b8;font-weight:500;">(optional)</span></label>
+        <input type="date" id="m-due">
+      </div>
+      <div class="field" style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin-top:6px;">
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer;">
+          <input type="checkbox" id="m-security" style="width:18px;height:18px;accent-color:#b45309;">
+          <span>⚠️ Security issue</span>
+        </label>
+        <span class="hint" style="display:block;margin-top:4px;color:#92400e;">Mark this if it touches authentication, data leakage, dependencies, infra security, or anything the technical team should pick up urgently. Auto-flagged for keywords like XSS, CSP, RCE, no-sandbox, etc.</span>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="cancelBtn">Cancel</button>
+        <button type="submit" class="primary" id="saveBtn">Post Request</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function timeAgo(iso) {
+    if (!iso) return '';
+    const ms = Date.now() - new Date(iso + 'Z').getTime();
+    const sec = Math.floor(ms / 1000);
+    if (sec < 60) return 'just now';
+    if (sec < 3600) return `${Math.floor(sec/60)}m ago`;
+    if (sec < 86400) return `${Math.floor(sec/3600)}h ago`;
+    return `${Math.floor(sec/86400)}d ago`;
+  }
+
+  let allRequests = [];
+
+  // Statuses we treat as "active" for the ATC view (the four lanes).
+  const ATC_LANES = ['open', 'claimed', 'in_progress', 'done'];
+
+  async function loadTeam() {
+    try {
+      const r = await fetch('/api/collab/team');
+      if (!r.ok) return;
+      const team = await r.json();
+      const sel = $('#m-target');
+      team.forEach(p => {
+        const o = document.createElement('option');
+        o.value = p.email;
+        o.textContent = p.name ? `${p.name} (${p.email})` : p.email;
+        sel.appendChild(o);
+      });
+    } catch (e) { /* non-fatal */ }
+  }
+
+  // Toggle for the "show archived" view — when true the board pulls
+  // archived tickets too and renders them in a fifth lane below the four.
+  let _showArchived = false;
+
+  async function loadRequests() {
+    try {
+      const url = _showArchived ? '/api/collab?include_archived=1' : '/api/collab';
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('fetch failed');
+      allRequests = await r.json();
+      renderATC();
+    } catch (e) {
+      const board = document.getElementById('atcBoard');
+      if (board) board.innerHTML = `<div class="atc-lane-empty" style="grid-column:1/-1;">Could not load tickets: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  // Render the four lanes + the stats strip in one pass. When _showArchived
+  // is true, also render an Archived section below the four lanes with a
+  // "Restore" button on each row to flip the ticket back to status='open'.
+  function renderATC() {
+    const buckets = { open: [], claimed: [], in_progress: [], done: [] };
+    const archived = [];
+    for (const r of allRequests) {
+      if (r.status === 'archived') archived.push(r);
+      else if (buckets[r.status]) buckets[r.status].push(r);
+    }
+    // Toggle the archived section + render rows. Most-recently archived first.
+    const archSection = document.getElementById('archivedSection');
+    if (archSection) {
+      archSection.hidden = !_showArchived;
+      if (_showArchived) {
+        document.getElementById('archivedCount').textContent = archived.length;
+        const list = document.getElementById('archivedList');
+        archived.sort((a,b) => new Date((b.archived_at||b.created_at||'')+'Z') - new Date((a.archived_at||a.created_at||'')+'Z'));
+        list.innerHTML = archived.length
+          ? archived.map(_atcCardHtml).map((html, i) => {
+              // Append a Restore button to each archived card. Re-uses the
+              // same delegated handler with action="restore".
+              return html.replace('</article>',
+                `<div class="atc-card-actions"><button class="atc-card-btn" data-action="restore" data-id="${archived[i].id}">Restore to inbox</button></div></article>`);
+            }).join('')
+          : '<div class="atc-lane-empty">Nothing archived.</div>';
+      }
+    }
+
+    // Per-lane render
+    for (const status of ATC_LANES) {
+      const body = document.getElementById(`lane-${status}`);
+      const countEl = document.getElementById(`lane-count-${status}`);
+      if (countEl) countEl.textContent = buckets[status].length;
+      if (!body) continue;
+      // Newest first inside each lane so freshly-arrived asks surface to the top.
+      // Done lane already feels chronological — show most-recent landings first.
+      const items = [...buckets[status]].sort((a, b) =>
+        new Date((b.created_at||'') + 'Z') - new Date((a.created_at||'') + 'Z')
+      );
+      body.innerHTML = items.length === 0
+        ? `<div class="atc-lane-empty">${ATC_LANE_EMPTY[status]}</div>`
+        : items.map(_atcCardHtml).join('');
+    }
+
+    // Stats strip
+    _renderATCStats(buckets);
+  }
+
+  const ATC_LANE_EMPTY = {
+    open:        'No incoming tickets',
+    claimed:     'Nothing in the holding pattern',
+    in_progress: 'No tickets in flight',
+    done:        'Nothing has landed yet',
+  };
+
+  function _atcCardHtml(req) {
+    const ago = timeAgo(req.created_at);
+    const requester = (req.requester_name || req.requester_email || '?').toString().split('@')[0];
+    const target = req.target_user ? req.target_user.split('@')[0] : null;
+    const claimedBy = req.claimed_by ? req.claimed_by.split('@')[0] : null;
+    const today = new Date().toISOString().slice(0, 10);
+    const overdue = req.due_date && req.due_date < today && req.status !== 'done';
+
+    // Action button — one primary CTA per status, mirrors the original card
+    // affordances. Drag-and-drop covers everything else.
+    let actionHtml = '';
+    if (req.status === 'open') {
+      actionHtml = `<button class="atc-card-btn primary" data-action="claim" data-id="${req.id}">Claim</button>`;
+    } else if (req.status === 'claimed') {
+      actionHtml = `<button class="atc-card-btn" data-action="status" data-id="${req.id}" data-value="in_progress">Start</button>`;
+    } else if (req.status === 'in_progress') {
+      actionHtml = `<button class="atc-card-btn success" data-action="status" data-id="${req.id}" data-value="done">Land</button>`;
+    }
+
+    // Archive button — soft-delete, available on every card. Hidden behind
+    // a discreet hover-only "✕" so it doesn't dominate the card chrome.
+    const archiveBtn = req.status !== 'archived'
+      ? `<button class="atc-card-archive" data-action="archive" data-id="${req.id}" title="Archive this ticket (recoverable)">✕</button>`
+      : '';
+
+    const sec = req.is_security ? 1 : 0;
+    return `
+      <article class="atc-card" draggable="true" data-id="${req.id}" data-priority="${escapeHtml(req.priority)}" data-security="${sec}">
+        ${archiveBtn}
+        <div class="atc-card-tags">
+          ${sec ? '<span class="atc-pill-security" title="Security issue — needs technical attention">⚠️ Security</span>' : ''}
+          <span class="pill type-${escapeHtml(req.type)}">${escapeHtml(req.type)}</span>
+          <span class="pill prio-${escapeHtml(req.priority)}">${escapeHtml(req.priority)}</span>
+        </div>
+        <div class="atc-card-title">${escapeHtml(req.title)}</div>
+        <div class="atc-card-meta">
+          <span><strong>${escapeHtml(requester)}</strong> · ${ago}</span>
+          ${target ? `<span>· → <strong>${escapeHtml(target)}</strong></span>` : ''}
+          ${claimedBy ? `<span>· 🤝 <strong>${escapeHtml(claimedBy)}</strong></span>` : ''}
+          ${req.due_date ? `<span class="atc-card-due ${overdue ? 'overdue' : ''}">· ⏱ ${escapeHtml(req.due_date)}</span>` : ''}
+        </div>
+        ${actionHtml ? `<div class="atc-card-actions">${actionHtml}</div>` : ''}
+      </article>
+    `;
+  }
+
+  function _renderATCStats(buckets) {
+    const total = buckets.open.length + buckets.claimed.length + buckets.in_progress.length;
+    const urgent = allRequests.filter(r => r.priority === 'urgent' && r.status !== 'done').length;
+    const today = new Date().toISOString().slice(0, 10);
+    const overdue = allRequests.filter(r => r.due_date && r.due_date < today && r.status !== 'done').length;
+    const dayMs = 86400000;
+    const done24 = buckets.done.filter(r =>
+      r.resolved_at && (Date.now() - new Date(r.resolved_at + 'Z').getTime()) < dayMs
+    ).length;
+    // Oldest open age (in days) — a high number is a triage red flag
+    let oldestText = '—';
+    if (buckets.open.length > 0) {
+      const oldest = buckets.open.reduce((acc, r) => {
+        const t = new Date((r.created_at||'') + 'Z').getTime();
+        return (!acc || t < acc) ? t : acc;
+      }, 0);
+      const days = Math.floor((Date.now() - oldest) / dayMs);
+      oldestText = days === 0 ? '<1d' : `${days}d`;
+    }
+    document.getElementById('atc-total').textContent = total;
+    document.getElementById('atc-urgent').textContent = urgent;
+    document.getElementById('atc-overdue').textContent = overdue;
+    document.getElementById('atc-done24').textContent = done24;
+    document.getElementById('atc-oldest').textContent = oldestText;
+  }
+
+  // "Show archived" toggle — re-fetches with include_archived flag and re-renders.
+  document.getElementById('showArchivedToggle').addEventListener('change', async (e) => {
+    _showArchived = e.target.checked;
+    await loadRequests();
+  });
+
+  // Card action buttons (claim, status change, archive, restore) — delegated
+  // at the document level so it covers the main board AND the archived section
+  // (which lives outside #atcBoard) without needing two separate listeners.
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
+    let body;
+    if (action === 'claim') {
+      body = { claim: true };
+    } else if (action === 'archive') {
+      // Confirm archive — soft-delete is reversible from the archived view, but
+      // the click is easy to misfire on dense cards, so a tiny confirm is worth it.
+      const card = btn.closest('.atc-card');
+      const title = card?.querySelector('.atc-card-title')?.textContent?.trim() || 'this ticket';
+      if (!confirm(`Archive "${title}"?\n\nIt will be hidden from the board but can be restored from the archived view.`)) return;
+      body = { status: 'archived' };
+    } else if (action === 'restore') {
+      body = { status: 'open' };
+    } else {
+      body = { status: btn.dataset.value };
+    }
+    btn.disabled = true;
+    try {
+      const r = await fetch(`/api/collab/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      await loadRequests();
+    } catch (err) {
+      alert('Failed: ' + err.message);
+      btn.disabled = false;
+    }
+  });
+
+  // ── Drag-and-drop between lanes ───────────────────────────
+  // HTML5 drag/drop. Card sets dragged ID via dataTransfer; lane bodies are
+  // drop targets that PATCH the request to the lane's status when dropped.
+  const board = document.getElementById('atcBoard');
+  board.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.atc-card');
+    if (!card) return;
+    e.dataTransfer.setData('text/plain', card.dataset.id);
+    e.dataTransfer.effectAllowed = 'move';
+    card.classList.add('dragging');
+  });
+  board.addEventListener('dragend', (e) => {
+    const card = e.target.closest('.atc-card');
+    if (card) card.classList.remove('dragging');
+    document.querySelectorAll('.atc-lane.drop-target').forEach(l => l.classList.remove('drop-target'));
+  });
+  board.addEventListener('dragover', (e) => {
+    const lane = e.target.closest('.atc-lane');
+    if (!lane) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.atc-lane.drop-target').forEach(l => l.classList.remove('drop-target'));
+    lane.classList.add('drop-target');
+  });
+  board.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const lane = e.target.closest('.atc-lane');
+    document.querySelectorAll('.atc-lane.drop-target').forEach(l => l.classList.remove('drop-target'));
+    if (!lane) return;
+    const id = e.dataTransfer.getData('text/plain');
+    const newStatus = lane.dataset.status;
+    if (!id || !ATC_LANES.includes(newStatus)) return;
+    // Find the dragged item; bail if it's already in this lane (no-op).
+    const item = allRequests.find(r => String(r.id) === String(id));
+    if (!item || item.status === newStatus) return;
+    try {
+      // "Open → Claimed" via drag is shorthand for the claim action
+      // (server records claimed_by and timestamp). All other transitions
+      // are plain status updates.
+      const body = (item.status === 'open' && newStatus === 'claimed')
+        ? { claim: true }
+        : { status: newStatus };
+      const r = await fetch(`/api/collab/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      await loadRequests();
+    } catch (err) {
+      alert('Move failed: ' + err.message);
+    }
+  });
+
+  // Modal open/close
+  $('#newBtn').addEventListener('click', () => $('#modalBg').classList.add('show'));
+  $('#cancelBtn').addEventListener('click', () => $('#modalBg').classList.remove('show'));
+  $('#modalBg').addEventListener('click', (e) => { if (e.target === $('#modalBg')) $('#modalBg').classList.remove('show'); });
+
+  // Submit
+  $('#newForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = $('#modalErr');
+    errEl.classList.remove('error');
+    errEl.textContent = '';
+    const saveBtn = $('#saveBtn');
+    saveBtn.disabled = true;
+
+    const body = {
+      type: $('#m-type').value,
+      priority: $('#m-priority').value,
+      title: $('#m-title').value,
+      description: $('#m-description').value,
+      skills: $('#m-skills').value,
+      target_user: $('#m-target').value,
+      due_date: $('#m-due').value || null,
+      is_security: $('#m-security').checked,
+    };
+    try {
+      const r = await fetch('/api/collab', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      $('#modalBg').classList.remove('show');
+      $('#newForm').reset();
+      await loadRequests();
+    } catch (err) {
+      errEl.classList.add('error');
+      errEl.textContent = 'Could not post: ' + err.message;
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+
+  loadTeam();
+  loadRequests();
+  // Auto-refresh every 20s — reinforces the "live air traffic control" feel
+  // and surfaces newly-posted tickets without requiring a manual reload.
+  setInterval(loadRequests, 20000);
+</script>
+</body>
+</html>
