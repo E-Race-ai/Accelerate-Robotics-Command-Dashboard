@@ -450,6 +450,27 @@ async function initSchema() {
       updated_at TEXT DEFAULT (datetime('now')),
       updated_by TEXT
     )`,
+    // ── WhatsApp Hub — directory of company WhatsApp groups
+    // WHY: WhatsApp doesn't expose a "feed" of all groups via any free API and
+    // the Business API requires per-group opt-in. Keeping a simple directory
+    // (name + invite link + curated notes) gives the team a single landing
+    // page to discover and jump into every internal chat.
+    `CREATE TABLE IF NOT EXISTS whatsapp_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      category TEXT NOT NULL DEFAULT 'team'
+        CHECK(category IN ('team', 'project', 'customer', 'community', 'other')),
+      invite_url TEXT,
+      member_count INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      pinned INTEGER NOT NULL DEFAULT 0,
+      created_by TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_whatsapp_groups_category ON whatsapp_groups(category)`,
+    `CREATE INDEX IF NOT EXISTS idx_whatsapp_groups_pinned_updated ON whatsapp_groups(pinned DESC, updated_at DESC)`,
   ];
 
   for (const sql of statements) {
