@@ -80,8 +80,39 @@ describe('glossary_activities log', () => {
 });
 
 // ── Pure helpers ──────────────────────────────────────────────────
-const { levelForPoints, shuffle, LEVELS, todayUtcDate, yesterdayUtcDate } =
+const { levelForPoints, shuffle, LEVELS, todayUtcDate, yesterdayUtcDate, friendlyName } =
   require('../../src/services/glossary-game-utils');
+
+describe('friendlyName — leaderboard display strings', () => {
+  it('parses dotted email into First L.', () => {
+    expect(friendlyName('claude.e.race@atlasmobility.com')).toBe('Claude R.');
+    expect(friendlyName('eric.race@accelerate.com')).toBe('Eric R.');
+  });
+
+  it('handles single-token locals', () => {
+    expect(friendlyName('eric@accelerate.com')).toBe('Eric');
+    expect(friendlyName('dev@accelerate.com')).toBe('Dev');
+  });
+
+  it('handles separator variants (dot, dash, underscore)', () => {
+    expect(friendlyName('jane-doe@example.com')).toBe('Jane D.');
+    expect(friendlyName('jane_doe@example.com')).toBe('Jane D.');
+  });
+
+  it('lower-cases the local part and capitalizes', () => {
+    expect(friendlyName('ERIC.RACE@example.com')).toBe('Eric R.');
+  });
+
+  it('passes through full names that look like names already', () => {
+    expect(friendlyName('Eric Race')).toBe('Eric Race');
+  });
+
+  it('returns Anonymous for empty/null', () => {
+    expect(friendlyName('')).toBe('Anonymous');
+    expect(friendlyName(null)).toBe('Anonymous');
+    expect(friendlyName(undefined)).toBe('Anonymous');
+  });
+});
 
 describe('levelForPoints — boundary behavior', () => {
   it('Level 1 at 0 points', () => {

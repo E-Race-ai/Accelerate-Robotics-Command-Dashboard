@@ -16,7 +16,7 @@ const { requireAuth } = require('../middleware/auth');
 const { SECTIONS, FLAT_BY_KEY, ALL_TERM_KEYS } = require('../data/glossary-terms');
 const {
   POINTS, LEVELS, BADGES, BADGE_BY_CODE,
-  levelForPoints, todayUtcDate, yesterdayUtcDate, shuffle, parseBadges,
+  levelForPoints, todayUtcDate, yesterdayUtcDate, shuffle, parseBadges, friendlyName,
 } = require('../services/glossary-game-utils');
 
 const router = express.Router();
@@ -149,7 +149,7 @@ router.get('/me', requireAuth, async (req, res) => {
     res.json({
       me: {
         email: row.user_email,
-        display_name: row.display_name,
+        display_name: friendlyName(row.display_name || row.user_email),
         total_points: row.total_points,
         ...lvl,
         current_streak: row.current_streak,
@@ -181,13 +181,20 @@ router.get('/leaderboard', requireAuth, async (_req, res) => {
        LIMIT 10`,
       [],
     );
+    // Team-wide stats for the game header — shows momentum even when only a
+    // few players are on the board.
+    const team = await db.one(
+      `SELECT COUNT(*) AS players, COALESCE(SUM(total_points), 0) AS total_points
+       FROM glossary_user_progress WHERE total_points > 0`,
+      [],
+    );
     res.json({
       players: rows.map((r, i) => {
         const lvl = levelForPoints(r.total_points);
         return {
           rank: i + 1,
           email: r.user_email,
-          display_name: r.display_name || r.user_email,
+          display_name: friendlyName(r.display_name || r.user_email),
           total_points: r.total_points,
           level: lvl.level,
           title: lvl.title,
@@ -196,6 +203,10 @@ router.get('/leaderboard', requireAuth, async (_req, res) => {
           badge_count: parseBadges(r.badges).length,
         };
       }),
+      team: {
+        players: Number(team?.players || 0),
+        total_points: Number(team?.total_points || 0),
+      },
     });
   } catch (err) {
     console.error('[glossary-game] leaderboard failed:', err);
@@ -240,10 +251,16 @@ router.post('/quiz/start', requireAuth, async (req, res) => {
     };
   });
 
+  // Snapshot the user's total at session start so /finish can precisely
+  // compute "what did this run award me, including level-up bonuses?"
+  // without us having to itemize every cascade by hand.
+  const startSnap = await db.one('SELECT total_points, level FROM glossary_user_progress WHERE user_email = ?', [email]);
   const session_id = crypto.randomBytes(16).toString('hex');
   QUIZ_SESSIONS.set(session_id, {
     user_email: email,
     questions: questions.map(q => ({ q_id: q.q_id, term: q.term, correct_id: q.choices.find(c => c._correct).id, answered: false, was_correct: false })),
+    points_at_start: startSnap?.total_points || 0,
+    level_at_start: startSnap?.level || 1,
     created_at: Date.now(),
   });
 
@@ -332,27 +349,41 @@ router.post('/quiz/finish', requireAuth, async (req, res) => {
     recentEightPlus: correct >= 8,
   });
 
-  // Cleanup the session — quiz is over.
-  QUIZ_SESSIONS.delete(session_id);
-
   // Fresh stats for the result screen.
   const final = await db.one('SELECT total_points, current_streak, longest_streak FROM glossary_user_progress WHERE user_email = ?', [email]);
   const lvl = levelForPoints(final.total_points);
+
+  // Whole-run accounting: by snapshotting points_at_start in /quiz/start, we
+  // can compute exactly what this run awarded — including any level-up
+  // bonuses that cascaded from per-correct, completion, perfect, or streak
+  // awards. Anything not categorized falls into level_up_bonus.
+  const totalAwarded = final.total_points - (session.points_at_start || 0);
+  const perCorrectTotal = correct * POINTS.QUIZ_CORRECT;
+  const completionAmt = POINTS.QUIZ_COMPLETED;
+  const perfectAmt = isPerfect ? POINTS.QUIZ_PERFECT : 0;
+  const streakAmt = streakAwarded;
+  const itemized = perCorrectTotal + completionAmt + perfectAmt + streakAmt;
+  const levelUpBonus = Math.max(0, totalAwarded - itemized);
+  const leveledUp = lvl.level !== (session.level_at_start || 1);
+
+  // Cleanup the session — quiz is over.
+  QUIZ_SESSIONS.delete(session_id);
 
   res.json({
     correct,
     total,
     perfect: isPerfect,
     awarded: {
-      completion: POINTS.QUIZ_COMPLETED,
-      per_correct_total: correct * POINTS.QUIZ_CORRECT,
-      perfect_bonus: isPerfect ? POINTS.QUIZ_PERFECT : 0,
-      streak: streakAwarded,
-      level_up_bonus: (perfect?.awarded || 0) - (perfect?.awarded ? POINTS.QUIZ_PERFECT : 0) +
-                      (completion.awarded - POINTS.QUIZ_COMPLETED),
+      per_correct_total: perCorrectTotal,
+      completion: completionAmt,
+      perfect_bonus: perfectAmt,
+      streak: streakAmt,
+      level_up_bonus: levelUpBonus,
+      total: totalAwarded,
     },
     new_badges: newBadges,
-    leveled_up: completion.level_changed || (perfect && perfect.level_changed) || false,
+    leveled_up: leveledUp,
+    from_level: session.level_at_start || 1,
     me: {
       total_points: final.total_points,
       ...lvl,
