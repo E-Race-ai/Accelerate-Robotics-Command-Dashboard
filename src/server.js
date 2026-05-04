@@ -32,6 +32,7 @@ const collabRoutes = require('./routes/collab');
 const improvementRoutes = require('./routes/improvement-requests');
 const whatsappRoutes = require('./routes/whatsapp');
 const hotelResearchRoutes = require('./routes/hotel-research');
+const glossaryGameRoutes = require('./routes/glossary-game');
 const systemSettingsRoutes = require('./routes/system-settings');
 const { creativeLabsProxy } = require('./routes/creative-labs-proxy');
 
@@ -237,6 +238,11 @@ app.use('/api/whatsapp', whatsappRoutes);
 // hotels with rough ADR estimates, and lets reps save candidates.
 // All methods require auth; gated inside the route module via requireAuth.
 app.use('/api/hotel-research', hotelResearchRoutes);
+
+// Glossary Game — gamification of /pages/team-glossary.html. Quiz sessions,
+// points, levels, streaks, badges. All points are server-awarded based on
+// validated activities, so clients can't fake totals.
+app.use('/api/glossary-game', glossaryGameRoutes);
 
 app.use('/api/system-settings', systemSettingsRoutes);
 
