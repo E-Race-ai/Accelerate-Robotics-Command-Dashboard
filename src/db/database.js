@@ -508,6 +508,38 @@ async function initSchema() {
     // WHY: idx_hotels_saved_submarket lives below in the additive section —
     // existing prod DBs got the table before the submarket column was added,
     // so the index can't run until ALTER TABLE has appended the column.
+
+    // ── Glossary game — gamification of /pages/team-glossary.html
+    // WHY: Per-user progress (points, level, streak) plus an activity log so
+    // teammates can earn points by quizzing and eventually swap them for swag
+    // via Axomo / Nectar. All point awards happen server-side based on
+    // validated activities — clients never tell the server how many points
+    // they earned, only what they did (so the system can't be cheated by
+    // posting fake totals).
+    `CREATE TABLE IF NOT EXISTS glossary_user_progress (
+      user_email TEXT PRIMARY KEY,
+      display_name TEXT,
+      total_points INTEGER NOT NULL DEFAULT 0,
+      level INTEGER NOT NULL DEFAULT 1,
+      current_streak INTEGER NOT NULL DEFAULT 0,
+      longest_streak INTEGER NOT NULL DEFAULT 0,
+      last_active_date TEXT,
+      quizzes_completed INTEGER NOT NULL DEFAULT 0,
+      perfect_quizzes INTEGER NOT NULL DEFAULT 0,
+      badges TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS glossary_activities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_email TEXT NOT NULL,
+      activity TEXT NOT NULL,
+      points INTEGER NOT NULL DEFAULT 0,
+      metadata TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_glossary_user_points ON glossary_user_progress(total_points DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_glossary_activities_user ON glossary_activities(user_email, created_at DESC)`,
   ];
 
   for (const sql of statements) {
