@@ -184,4 +184,86 @@ router.post('/ownership/refresh', (_req, res) => {
   res.json({ ok: true });
 });
 
+// ── Productivity calendar — daily commit activity ─────────────────
+// WHY: Powers the rolling-window activity grid on /admin's command
+// center. Currently scoped to accelerate-robotics only — the JSON
+// shape stays multi-repo-capable so a future expansion (e.g. adding
+// accelerate-elevator) is a 1-line edit here. Mirrors the data shape
+// used by ~/Code/project-dashboard.html:
+//   { daily_activity: { 'YYYY-MM-DD': [{ project, commits, messages: [{ hash, message }] }] } }
+const ACTIVITY_REPOS = [
+  { name: 'accelerate-robotics', dir: REPO_ROOT },
+];
+
+let activityCache = { days: 0, payload: null, at: 0 };
+const ACTIVITY_TTL_MS = 5 * 60 * 1000; // 5 min — fresh enough to reflect a just-pushed commit; cheap enough that admins refreshing rapidly don't spam git.
+
+// Cap stored messages per (project, day) — the drill-down panel only shows a
+// short list and unbounded growth on a heavy day would bloat the response.
+const MAX_MESSAGES_PER_BUCKET = 8;
+
+router.get('/git-activity', (req, res) => {
+  // Clamp `days` to a sane band: 7 minimum (anything smaller can't show even
+  // a 7-day window), 180 maximum (keeps git log output bounded).
+  const days = Math.min(Math.max(parseInt(req.query.days, 10) || 90, 7), 180);
+  if (activityCache.payload && activityCache.days === days && Date.now() - activityCache.at < ACTIVITY_TTL_MS) {
+    return res.json(activityCache.payload);
+  }
+
+  // `git log --since` accepts ISO 8601 — pad by one day to make sure dates
+  // near the boundary aren't dropped due to tz drift.
+  const since = new Date(Date.now() - (days + 1) * 24 * 60 * 60 * 1000).toISOString();
+  // iso → Map(project → { commits, messages: [...] })
+  const daily = new Map();
+
+  for (const { name, dir } of ACTIVITY_REPOS) {
+    if (!isGitRepo(dir)) continue;
+    try {
+      const out = execFileSync(
+        'git',
+        ['log', '--no-merges', `--since=${since}`, `--format=${COMMIT_FORMAT}`],
+        { cwd: dir, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
+      );
+      out.split('\n').filter(Boolean).forEach(line => {
+        const [sha, subject, _author, rawEmail, ts] = line.split('\x01');
+        if (!sha || !ts) return;
+        const email = (rawEmail || '').trim().toLowerCase();
+        if (HIDDEN_EMAILS.has(email)) return;
+        // Bucket by author-timestamp UTC date — matches client's
+        // toISOString().slice(0,10) cell-key generation.
+        const iso = new Date(Number(ts) * 1000).toISOString().slice(0, 10);
+        if (!daily.has(iso)) daily.set(iso, new Map());
+        const projMap = daily.get(iso);
+        const entry = projMap.get(name) || { commits: 0, messages: [] };
+        entry.commits++;
+        if (entry.messages.length < MAX_MESSAGES_PER_BUCKET) {
+          entry.messages.push({ hash: sha.slice(0, 7), message: (subject || '').trim() });
+        }
+        projMap.set(name, entry);
+      });
+    } catch (err) {
+      console.error(`git-activity: log failed in ${dir}:`, err.message);
+    }
+  }
+
+  // Flatten Map → plain object/array shape for JSON.
+  const dailyOut = {};
+  for (const [iso, projMap] of daily) {
+    dailyOut[iso] = Array.from(projMap.entries()).map(([project, info]) => ({
+      project,
+      commits: info.commits,
+      messages: info.messages,
+    }));
+  }
+
+  const payload = {
+    generated_at: new Date().toISOString(),
+    window_days: days,
+    repos: ACTIVITY_REPOS.filter(r => isGitRepo(r.dir)).map(r => r.name),
+    daily_activity: dailyOut,
+  };
+  activityCache = { days, payload, at: Date.now() };
+  res.json(payload);
+});
+
 module.exports = router;
