@@ -471,6 +471,39 @@ async function initSchema() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_whatsapp_groups_category ON whatsapp_groups(category)`,
     `CREATE INDEX IF NOT EXISTS idx_whatsapp_groups_pinned_updated ON whatsapp_groups(pinned DESC, updated_at DESC)`,
+    // ── Hotel Research Tool — saved prospects from OSM lookups
+    // WHY: Sales reps run city/zip searches against OpenStreetMap Overpass
+    // (free, no key) and bookmark the candidates into this table. We persist
+    // the OSM snapshot at the time of save (name, address, brand, stars,
+    // rooms) PLUS the rep's own captured intel (actual nightly rate, deal
+    // status, notes). Real-time pricing isn't included — that needs a paid
+    // partner API (Amadeus, Booking) and is intentionally deferred.
+    `CREATE TABLE IF NOT EXISTS hotels_saved (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      address TEXT,
+      city TEXT,
+      state TEXT,
+      zip TEXT,
+      country TEXT,
+      lat REAL,
+      lng REAL,
+      brand TEXT,
+      stars INTEGER,
+      rooms INTEGER,
+      phone TEXT,
+      website TEXT,
+      osm_id TEXT,
+      est_adr_dollars INTEGER,
+      status TEXT NOT NULL DEFAULT 'lead'
+        CHECK(status IN ('lead', 'contacted', 'qualified', 'proposed', 'won', 'lost', 'archived')),
+      notes TEXT,
+      saved_by TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_hotels_saved_status ON hotels_saved(status, updated_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_hotels_saved_city ON hotels_saved(city)`,
   ];
 
   for (const sql of statements) {

@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotel Research — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<style>
+  :root {
+    --bg: #f7f8fc;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --text: #111827;
+    --text-dim: #4b5563;
+    --text-faint: #9ca3af;
+    --accent: #d97706;        /* sales orange */
+    --accent-deep: #b45309;
+    --accent-soft: #fff7ed;
+    --green: #16a34a;
+    --green-soft: #f0fdf4;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 32px 28px 200px; }
+
+  .hdr-eyebrow {
+    text-transform: uppercase; letter-spacing: 0.12em;
+    font-size: 0.7rem; font-weight: 700; color: var(--accent-deep);
+  }
+  h1 {
+    font-size: 2.1rem; font-weight: 700; margin: 6px 0 8px;
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    font-size: 1rem; color: var(--text-dim);
+    max-width: 740px; margin: 0 0 22px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 4px; border-bottom: 1px solid var(--border);
+    margin-bottom: 22px;
+  }
+  .tab {
+    padding: 10px 16px; background: transparent; border: 0; cursor: pointer;
+    font: inherit; font-size: 0.92rem; font-weight: 600; color: var(--text-dim);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color 0.12s, border-color 0.12s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent-deep); border-bottom-color: var(--accent); }
+  .tab .badge {
+    display: inline-block; margin-left: 6px;
+    background: var(--accent-soft); color: var(--accent-deep);
+    font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: 100px;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Search form */
+  .search-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 22px; margin-bottom: 18px;
+  }
+  .search-row { display: grid; grid-template-columns: 1fr 160px auto; gap: 10px; align-items: end; }
+  .search-row label {
+    display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 700; color: var(--text-dim); margin-bottom: 5px;
+  }
+  .search-row input {
+    width: 100%; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 10px;
+    font: inherit; font-size: 0.95rem; background: white;
+  }
+  .search-row input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .search-row .btn-primary { padding: 10px 18px; font-size: 0.9rem; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 10px; font-weight: 600;
+    font-size: 0.86rem; cursor: pointer; border: 1px solid transparent;
+    text-decoration: none; transition: all 0.12s; font-family: inherit;
+    line-height: 1.2;
+  }
+  .btn-primary {
+    background: var(--accent); color: white;
+    box-shadow: 0 1px 3px rgba(217,119,6,0.30);
+  }
+  .btn-primary:hover { background: var(--accent-deep); }
+  .btn-primary:disabled { opacity: 0.6; cursor: wait; }
+  .btn-ghost {
+    background: var(--card); color: var(--text-dim); border-color: var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border-strong); }
+  .btn-success { background: var(--green); color: white; }
+  .btn-success:hover { background: #15803d; }
+  .btn-danger {
+    background: white; color: var(--danger); border-color: rgba(220,38,38,0.30);
+  }
+  .btn-danger:hover { background: #fef2f2; }
+  .btn-saved { background: var(--green-soft); color: var(--green); border-color: rgba(22,163,74,0.30); cursor: default; }
+
+  .search-meta {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    margin: 14px 0 6px;
+    font-size: 0.82rem; color: var(--text-dim);
+  }
+  .search-meta strong { color: var(--text); }
+  .search-meta .actions { margin-left: auto; display: flex; gap: 8px; }
+
+  /* Hotel cards */
+  .grid {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;
+    transition: box-shadow 0.12s, border-color 0.12s;
+    position: relative;
+  }
+  .card:hover { box-shadow: 0 4px 14px rgba(15,23,42,0.06); border-color: var(--border-strong); }
+  .card-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  }
+  .card-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.05rem; color: var(--text);
+    line-height: 1.25; word-break: break-word; flex: 1;
+  }
+  .card-stars {
+    color: #fbbf24; font-size: 0.85rem; flex-shrink: 0; line-height: 1;
+  }
+  .card-stars .empty { color: var(--text-faint); }
+  .card-address {
+    font-size: 0.82rem; color: var(--text-dim);
+    display: flex; align-items: flex-start; gap: 6px;
+  }
+  .card-meta {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    font-size: 0.78rem; color: var(--text-dim);
+  }
+  .card-meta-pill {
+    background: #f1f5f9; padding: 3px 9px; border-radius: 100px;
+    font-weight: 600; color: var(--text);
+  }
+  .card-meta-pill.adr { background: var(--accent-soft); color: var(--accent-deep); }
+  .card-meta-pill.brand { background: #eff6ff; color: #1e40af; }
+  .card-meta-pill.dist { background: #f1f5f9; color: var(--text-dim); }
+  .card-status-pill {
+    background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 100px;
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .card-status-pill.contacted { background: #cffafe; color: #155e75; }
+  .card-status-pill.qualified { background: #dbeafe; color: #1e40af; }
+  .card-status-pill.proposed  { background: #fef3c7; color: #92400e; }
+  .card-status-pill.won       { background: #dcfce7; color: #166534; }
+  .card-status-pill.lost      { background: #fee2e2; color: #991b1b; }
+  .card-status-pill.archived  { background: #f1f5f9; color: var(--text-dim); }
+  .card-actions {
+    display: flex; gap: 6px; margin-top: auto; padding-top: 6px; flex-wrap: wrap;
+  }
+  .card-actions .btn { padding: 6px 11px; font-size: 0.78rem; }
+  .card-actions a.btn-icon {
+    width: 32px; height: 32px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text-dim); transition: all 0.12s;
+  }
+  .card-actions a.btn-icon:hover { color: var(--accent-deep); border-color: var(--accent); }
+  .card-notes-preview {
+    background: #fef9c3; border-left: 3px solid #facc15;
+    border-radius: 6px; padding: 8px 10px;
+    font-size: 0.78rem; color: #713f12;
+    white-space: pre-wrap; word-break: break-word;
+    max-height: 110px; overflow-y: auto;
+  }
+
+  /* Empty + loading */
+  .empty, .loading, .err {
+    background: var(--card); border: 1px dashed var(--border-strong);
+    border-radius: 14px; padding: 40px 24px; text-align: center;
+    color: var(--text-faint);
+  }
+  .err { color: var(--danger); border-color: rgba(220,38,38,0.30); background: #fef2f2; }
+  .empty h3 { color: var(--text); margin: 0 0 4px; font-size: 1.1rem; }
+  .empty p { margin: 0 0 16px; font-size: 0.92rem; }
+
+  /* Saved tab toolbar */
+  .saved-toolbar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .saved-toolbar input {
+    flex: 1 1 220px; padding: 9px 14px;
+    border: 1px solid var(--border); border-radius: 10px;
+    font: inherit; font-size: 0.9rem; background: var(--card);
+  }
+  .saved-toolbar input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    padding: 6px 12px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 100px; font-size: 0.78rem; font-weight: 600;
+    color: var(--text-dim); cursor: pointer; transition: all 0.12s;
+  }
+  .chip:hover { color: var(--text); }
+  .chip.active { background: var(--accent-deep); color: white; border-color: var(--accent-deep); }
+
+  /* Modal */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(15,23,42,0.55); align-items: flex-start; justify-content: center;
+    padding: 60px 16px; overflow-y: auto;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 16px; padding: 24px 26px 22px;
+    width: 100%; max-width: 540px; box-shadow: 0 20px 60px rgba(15,23,42,0.25);
+  }
+  .modal h2 { font-size: 1.2rem; margin: 0 0 4px; }
+  .modal-sub { color: var(--text-dim); font-size: 0.86rem; margin: 0 0 16px; }
+  .form-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .form-row label {
+    font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 700; color: var(--text-dim);
+  }
+  .form-row input, .form-row select, .form-row textarea {
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font: inherit; font-size: 0.92rem; background: white; color: var(--text);
+  }
+  .form-row textarea { resize: vertical; min-height: 90px; }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+    outline: 2px solid var(--accent); outline-offset: -1px;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-actions {
+    display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px;
+    border-top: 1px solid var(--border); padding-top: 14px;
+  }
+  .form-actions .left { margin-right: auto; }
+  .form-error {
+    background: #fef2f2; border: 1px solid rgba(220,38,38,0.30);
+    color: var(--danger); padding: 8px 12px; border-radius: 8px;
+    font-size: 0.84rem; margin-bottom: 12px; display: none;
+  }
+  .form-error.show { display: block; }
+
+  @media (max-width: 720px) {
+    .search-row { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 1.6rem; }
+    .wrap { padding: 24px 16px 120px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr-eyebrow">Sales prospecting</div>
+    <h1>Hotel Research</h1>
+    <p class="lede">
+      Pinpoint research for any city or zip code. Pulls live hotel listings from OpenStreetMap (no key required), gives you a rough nightly-rate estimate from the brand or star rating, then save the candidates worth following up on. Real-time pricing isn't included — call the property or click through to their site to confirm.
+    </p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-panel="search" role="tab" aria-selected="true">Search</button>
+      <button class="tab" data-panel="saved" role="tab" aria-selected="false">My Saved <span class="badge" id="savedCount">0</span></button>
+    </div>
+
+    <!-- ─── Search panel ──────────────────────────────────────── -->
+    <div class="panel active" id="panel-search" role="tabpanel">
+      <div class="search-card">
+        <form id="searchForm" onsubmit="return runSearch(event)">
+          <div class="search-row">
+            <div>
+              <label for="f_location">City, state or 5-digit zip</label>
+              <input id="f_location" type="text" placeholder='e.g. "Boston, MA" or "02108"' autocomplete="off" required>
+            </div>
+            <div>
+              <label for="f_radius">Radius (miles)</label>
+              <input id="f_radius" type="number" value="5" min="1" max="25" step="1">
+            </div>
+            <div>
+              <button type="submit" class="btn btn-primary" id="searchBtn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Search
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div id="searchMeta"></div>
+      <div id="searchContent"></div>
+    </div>
+
+    <!-- ─── Saved panel ───────────────────────────────────────── -->
+    <div class="panel" id="panel-saved" role="tabpanel">
+      <div class="saved-toolbar">
+        <input id="savedSearch" type="search" placeholder="Filter by name, city, or brand…" autocomplete="off">
+        <div class="chip-row" id="statusChips"></div>
+      </div>
+      <div id="savedContent"></div>
+    </div>
+  </div>
+
+  <!-- Edit-saved modal -->
+  <div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal" role="dialog" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">Edit Saved Hotel</h2>
+      <p class="modal-sub" id="modalSub">Update notes, status, or pricing intel.</p>
+
+      <div class="form-error" id="formError"></div>
+
+      <form id="hotelForm" onsubmit="return saveHotel(event)">
+        <input type="hidden" id="f_id">
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="f_status">Status</label>
+            <select id="f_status">
+              <option value="lead">Lead</option>
+              <option value="contacted">Contacted</option>
+              <option value="qualified">Qualified</option>
+              <option value="proposed">Proposed</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="f_adr">Actual nightly rate (USD)</label>
+            <input id="f_adr" type="number" min="0" max="99999" placeholder="leave blank to use estimate">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="f_phone">Phone</label>
+            <input id="f_phone" type="text" placeholder="+1 …">
+          </div>
+          <div class="form-row">
+            <label for="f_rooms">Rooms</label>
+            <input id="f_rooms" type="number" min="0" max="99999">
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="f_website">Website</label>
+          <input id="f_website" type="url" placeholder="https://…">
+        </div>
+        <div class="form-row">
+          <label for="f_notes">Notes (decision maker, deal stage, anything useful)</label>
+          <textarea id="f_notes" maxlength="4000" placeholder="GM: Jane Doe · referred by Hilton Tampa · 220 rooms · interested in nightly turn-down support"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-danger left" id="deleteBtn" onclick="deleteHotel()">Delete</button>
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script src="/js/admin-auth.js"></script>
+<script>
+const STATUS_CHIPS = [
+  { id: 'all',       label: 'All' },
+  { id: 'lead',      label: 'Lead' },
+  { id: 'contacted', label: 'Contacted' },
+  { id: 'qualified', label: 'Qualified' },
+  { id: 'proposed',  label: 'Proposed' },
+  { id: 'won',       label: 'Won' },
+  { id: 'lost',      label: 'Lost' },
+  { id: 'archived',  label: 'Archived' },
+];
+
+let LAST_RESULTS = [];
+let SAVED = [];
+let savedFilter = 'all';
+let savedQuery = '';
+let editingId = null;
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtUsd(n) {
+  if (n == null || !isFinite(n)) return null;
+  return '$' + Math.round(n).toLocaleString('en-US');
+}
+
+function starRow(stars) {
+  if (!Number.isInteger(stars) || stars < 1 || stars > 5) return '';
+  let html = '';
+  for (let i = 1; i <= 5; i++) html += i <= stars ? '★' : '<span class="empty">★</span>';
+  return `<div class="card-stars" title="${stars}-star">${html}</div>`;
+}
+
+// ─── Tab switching ────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => {
+      x.classList.toggle('active', x === t);
+      x.setAttribute('aria-selected', x === t ? 'true' : 'false');
+    });
+    document.querySelectorAll('.panel').forEach(p => {
+      p.classList.toggle('active', p.id === 'panel-' + t.dataset.panel);
+    });
+    if (t.dataset.panel === 'saved') loadSaved();
+  });
+});
+
+// ─── Search ───────────────────────────────────────────────────────
+async function runSearch(e) {
+  e.preventDefault();
+  const location = document.getElementById('f_location').value.trim();
+  const radius = Number(document.getElementById('f_radius').value) || 5;
+  const btn = document.getElementById('searchBtn');
+  const meta = document.getElementById('searchMeta');
+  const content = document.getElementById('searchContent');
+  if (!location) return false;
+
+  btn.disabled = true; btn.textContent = 'Searching…';
+  meta.innerHTML = '';
+  content.innerHTML = '<div class="loading">Searching OpenStreetMap…</div>';
+  try {
+    const res = await fetch('/api/hotel-research/search', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ location, radius_miles: radius }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    LAST_RESULTS = data.hotels || [];
+    renderSearchResults(data);
+  } catch (err) {
+    content.innerHTML = `<div class="err">Search failed: ${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search';
+  }
+  return false;
+}
+
+function renderSearchResults(data) {
+  const meta = document.getElementById('searchMeta');
+  const content = document.getElementById('searchContent');
+  const n = data.hotels.length;
+  // ADR median for the result set — quick "what's this market like" signal.
+  const adrs = data.hotels.map(h => h.estimated_adr_dollars).filter(Number.isFinite).sort((a,b) => a-b);
+  const median = adrs.length ? adrs[Math.floor(adrs.length / 2)] : null;
+  meta.innerHTML = `
+    <div class="search-meta">
+      <span><strong>${n}</strong> hotel${n === 1 ? '' : 's'} found near <strong>${escapeHtml(data.center.display)}</strong> (${data.query.radius_miles}mi radius)</span>
+      ${median ? `<span>Median est. ADR: <strong>${fmtUsd(median)}</strong></span>` : ''}
+      <div class="actions">
+        ${n > 0 ? `<button class="btn btn-success" onclick="bulkSave()">Save all ${n}</button>` : ''}
+      </div>
+    </div>`;
+  if (n === 0) {
+    content.innerHTML = `
+      <div class="empty">
+        <h3>No hotels found</h3>
+        <p>Try a wider radius, a different city, or a metro center (e.g. "Boston, MA" instead of "Cambridge, MA").</p>
+      </div>`;
+    return;
+  }
+  content.innerHTML = `<div class="grid">${data.hotels.map(renderSearchCard).join('')}</div>`;
+}
+
+function renderSearchCard(h) {
+  const adr = h.estimated_adr_dollars;
+  const savedHotel = SAVED.find(s => s.osm_id && s.osm_id === h.osm_id);
+  const saveBtn = savedHotel
+    ? `<button class="btn btn-saved" disabled>✓ Saved</button>`
+    : `<button class="btn btn-success" onclick='saveOne(${JSON.stringify(h).replace(/'/g, "&apos;")})'>Save</button>`;
+  const bookingQuery = encodeURIComponent(`${h.name} ${h.city || ''}`.trim());
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-name">${escapeHtml(h.name)}</div>
+        ${starRow(h.stars)}
+      </div>
+      ${h.address ? `<div class="card-address">📍 ${escapeHtml(h.address)}</div>` : ''}
+      <div class="card-meta">
+        <span class="card-meta-pill dist">${h.distance_miles}mi</span>
+        ${h.brand ? `<span class="card-meta-pill brand">${escapeHtml(h.brand)}</span>` : ''}
+        ${adr ? `<span class="card-meta-pill adr">~${fmtUsd(adr)}/night</span>` : ''}
+        ${h.rooms ? `<span class="card-meta-pill">${h.rooms} rooms</span>` : ''}
+      </div>
+      <div class="card-actions">
+        ${saveBtn}
+        <a class="btn-icon" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" title="Open in Google Maps">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C7 2 4 6 4 10c0 6 8 12 8 12s8-6 8-12c0-4-3-8-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+        </a>
+        <a class="btn-icon" target="_blank" rel="noopener noreferrer" href="https://www.booking.com/searchresults.html?ss=${bookingQuery}" title="Open Booking.com search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+        </a>
+        ${h.website ? `<a class="btn-icon" target="_blank" rel="noopener noreferrer" href="${escapeHtml(h.website)}" title="Open hotel website"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 0 20a15.3 15.3 0 0 1 0-20z"/></svg></a>` : ''}
+        ${h.phone ? `<a class="btn-icon" href="tel:${escapeHtml(h.phone)}" title="Call ${escapeHtml(h.phone)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>` : ''}
+      </div>
+    </div>`;
+}
+
+async function saveOne(hotel) {
+  try {
+    const res = await fetch('/api/hotel-research/saved', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(hotel),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error || `HTTP ${res.status}`);
+    }
+    await loadSaved({ silent: true });
+    // Re-render the search results so the saved card flips to "✓ Saved"
+    if (LAST_RESULTS.length) renderSearchResults({
+      hotels: LAST_RESULTS,
+      query: { location: document.getElementById('f_location').value, radius_miles: Number(document.getElementById('f_radius').value) || 5 },
+      center: { display: '' },
+    });
+  } catch (err) {
+    alert('Save failed: ' + err.message);
+  }
+}
+
+async function bulkSave() {
+  if (!LAST_RESULTS.length) return;
+  // Skip already-saved ones
+  const savedOsmIds = new Set(SAVED.map(s => s.osm_id).filter(Boolean));
+  const toSave = LAST_RESULTS.filter(h => !savedOsmIds.has(h.osm_id));
+  if (!toSave.length) { alert('All of these are already saved.'); return; }
+  if (!confirm(`Save ${toSave.length} hotel${toSave.length === 1 ? '' : 's'} to your follow-up list?`)) return;
+  try {
+    const res = await fetch('/api/hotel-research/saved', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotels: toSave }),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error || `HTTP ${res.status}`);
+    }
+    await loadSaved({ silent: true });
+    if (LAST_RESULTS.length) renderSearchResults({
+      hotels: LAST_RESULTS,
+      query: { location: document.getElementById('f_location').value, radius_miles: Number(document.getElementById('f_radius').value) || 5 },
+      center: { display: '' },
+    });
+  } catch (err) {
+    alert('Bulk save failed: ' + err.message);
+  }
+}
+
+// ─── Saved tab ────────────────────────────────────────────────────
+async function loadSaved({ silent } = {}) {
+  if (!silent) document.getElementById('savedContent').innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const res = await fetch('/api/hotel-research/saved', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    SAVED = data.hotels || [];
+    document.getElementById('savedCount').textContent = SAVED.length;
+    renderSaved();
+  } catch (err) {
+    document.getElementById('savedContent').innerHTML = `<div class="err">Load failed: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderSaved() {
+  // Status chips with counts
+  const counts = { all: SAVED.length };
+  for (const c of STATUS_CHIPS) if (c.id !== 'all') counts[c.id] = 0;
+  for (const s of SAVED) counts[s.status] = (counts[s.status] || 0) + 1;
+  document.getElementById('statusChips').innerHTML = STATUS_CHIPS.map(c => `
+    <button class="chip ${savedFilter === c.id ? 'active' : ''}" type="button" onclick="setSavedFilter('${c.id}')">${c.label} ${counts[c.id] || 0}</button>
+  `).join('');
+
+  const q = savedQuery.toLowerCase().trim();
+  const filtered = SAVED.filter(s => {
+    if (savedFilter !== 'all' && s.status !== savedFilter) return false;
+    if (!q) return true;
+    return (`${s.name} ${s.city || ''} ${s.brand || ''} ${s.notes || ''}`).toLowerCase().includes(q);
+  });
+
+  const content = document.getElementById('savedContent');
+  if (SAVED.length === 0) {
+    content.innerHTML = `
+      <div class="empty">
+        <h3>No saved hotels yet</h3>
+        <p>Run a search and click "Save" on properties worth following up on. Your list builds over time across every research session.</p>
+      </div>`;
+    return;
+  }
+  if (filtered.length === 0) {
+    content.innerHTML = `<div class="empty"><h3>No matches</h3><p>Try a different filter or search term.</p></div>`;
+    return;
+  }
+  content.innerHTML = `<div class="grid">${filtered.map(renderSavedCard).join('')}</div>`;
+}
+
+function setSavedFilter(s) { savedFilter = s; renderSaved(); }
+
+document.getElementById('savedSearch').addEventListener('input', e => {
+  savedQuery = e.target.value;
+  renderSaved();
+});
+
+function renderSavedCard(h) {
+  const adr = h.est_adr_dollars;
+  const cityState = [h.city, h.state, h.zip].filter(Boolean).join(', ');
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-name">${escapeHtml(h.name)}</div>
+        ${starRow(h.stars)}
+      </div>
+      ${h.address || cityState ? `<div class="card-address">📍 ${escapeHtml(h.address || cityState)}</div>` : ''}
+      <div class="card-meta">
+        <span class="card-status-pill ${h.status}">${h.status}</span>
+        ${h.brand ? `<span class="card-meta-pill brand">${escapeHtml(h.brand)}</span>` : ''}
+        ${adr ? `<span class="card-meta-pill adr">${fmtUsd(adr)}/night</span>` : ''}
+        ${h.rooms ? `<span class="card-meta-pill">${h.rooms} rooms</span>` : ''}
+      </div>
+      ${h.notes ? `<div class="card-notes-preview">${escapeHtml(h.notes)}</div>` : ''}
+      <div class="card-actions">
+        <button class="btn btn-primary" onclick="openModal(${h.id})">Edit</button>
+        ${h.lat && h.lng ? `<a class="btn-icon" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" title="Open in Google Maps">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C7 2 4 6 4 10c0 6 8 12 8 12s8-6 8-12c0-4-3-8-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+        </a>` : ''}
+        ${h.phone ? `<a class="btn-icon" href="tel:${escapeHtml(h.phone)}" title="Call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>` : ''}
+        ${h.website ? `<a class="btn-icon" target="_blank" rel="noopener noreferrer" href="${escapeHtml(h.website)}" title="Website"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg></a>` : ''}
+      </div>
+    </div>`;
+}
+
+// ─── Edit modal ───────────────────────────────────────────────────
+function openModal(id) {
+  const h = SAVED.find(x => x.id === id);
+  if (!h) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = h.name;
+  document.getElementById('modalSub').textContent = [h.city, h.state].filter(Boolean).join(', ') || 'Update notes, status, or pricing intel.';
+  document.getElementById('formError').classList.remove('show');
+  document.getElementById('f_id').value = h.id;
+  document.getElementById('f_status').value = h.status || 'lead';
+  document.getElementById('f_adr').value = h.est_adr_dollars != null ? h.est_adr_dollars : '';
+  document.getElementById('f_phone').value = h.phone || '';
+  document.getElementById('f_rooms').value = h.rooms != null ? h.rooms : '';
+  document.getElementById('f_website').value = h.website || '';
+  document.getElementById('f_notes').value = h.notes || '';
+  document.getElementById('modalBackdrop').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalBackdrop').classList.remove('open');
+  editingId = null;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('modalBackdrop').classList.contains('open')) closeModal();
+});
+
+async function saveHotel(e) {
+  e.preventDefault();
+  if (!editingId) return false;
+  const errBox = document.getElementById('formError');
+  errBox.classList.remove('show');
+  const adrRaw = document.getElementById('f_adr').value.trim();
+  const roomsRaw = document.getElementById('f_rooms').value.trim();
+  const body = {
+    status: document.getElementById('f_status').value,
+    est_adr_dollars: adrRaw === '' ? null : Number(adrRaw),
+    phone: document.getElementById('f_phone').value.trim() || null,
+    rooms: roomsRaw === '' ? null : Number(roomsRaw),
+    website: document.getElementById('f_website').value.trim() || null,
+    notes: document.getElementById('f_notes').value,
+  };
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch(`/api/hotel-research/saved/${editingId}`, {
+      method: 'PATCH',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error || `HTTP ${res.status}`);
+    }
+    closeModal();
+    await loadSaved({ silent: true });
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.add('show');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+  return false;
+}
+
+async function deleteHotel() {
+  if (!editingId) return;
+  if (!confirm('Remove this hotel from your saved list? You can always re-add it.')) return;
+  try {
+    const res = await fetch(`/api/hotel-research/saved/${editingId}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error || `HTTP ${res.status}`);
+    }
+    closeModal();
+    await loadSaved({ silent: true });
+  } catch (err) {
+    alert('Delete failed: ' + err.message);
+  }
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────
+loadSaved({ silent: true });
+document.getElementById('f_location').focus();
+</script>
+</body>
+</html>
