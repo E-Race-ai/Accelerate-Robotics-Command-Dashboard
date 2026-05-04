@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Glossary — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<style>
+  :root {
+    --bg: #f7f8fc;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --text: #111827;
+    --text-dim: #4b5563;
+    --text-faint: #9ca3af;
+    --accent: #f97316;        /* admin orange */
+    --accent-soft: #fff7ed;
+    --accent-deep: #c2410c;
+    --code-bg: #f3f4f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 36px 28px 80px;
+  }
+
+  /* Header */
+  .hdr-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 6px 0 8px;
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    font-size: 1.05rem;
+    color: var(--text-dim);
+    max-width: 620px;
+    margin: 0 0 24px;
+  }
+
+  /* Search */
+  .search-wrap {
+    position: sticky;
+    top: 8px;
+    z-index: 10;
+    margin-bottom: 18px;
+  }
+  .search-box {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 4px 6px 4px 44px;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.06);
+  }
+  .search-box::before {
+    content: '🔍';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    opacity: 0.6;
+  }
+  .search-box input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    padding: 12px 8px;
+    font: inherit;
+    font-size: 1rem;
+    color: var(--text);
+  }
+  .search-box input::placeholder { color: var(--text-faint); }
+  .search-meta {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    padding-left: 4px;
+  }
+
+  /* Section nav (chips) */
+  .chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 26px;
+  }
+  .chips a {
+    text-decoration: none;
+    color: var(--text-dim);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.12s;
+  }
+  .chips a:hover {
+    color: var(--accent-deep);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* Section card */
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 26px 14px;
+    margin-bottom: 22px;
+    scroll-margin-top: 18px;
+  }
+  .section h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .section .section-sub {
+    color: var(--text-dim);
+    font-size: 0.92rem;
+    margin: 0 0 18px;
+  }
+
+  /* Term blocks */
+  .term {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 18px;
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  .term:first-of-type { border-top: 0; padding-top: 4px; }
+  .term-name {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 0.98rem;
+  }
+  .term-name .alias {
+    display: block;
+    font-weight: 500;
+    color: var(--text-faint);
+    font-size: 0.78rem;
+    margin-top: 2px;
+  }
+  .term-body { font-size: 0.95rem; color: var(--text); }
+  .term-body p { margin: 0 0 6px; }
+  .term-body p:last-child { margin-bottom: 0; }
+  .term-body code {
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 0.85em;
+    color: var(--accent-deep);
+  }
+  .term-body .ex {
+    display: block;
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: var(--text-dim);
+  }
+  .term-body .ex strong { color: var(--accent-deep); margin-right: 4px; }
+
+  .term.hidden { display: none; }
+  .section.empty { display: none; }
+  .no-results {
+    display: none;
+    background: var(--card);
+    border: 1px dashed var(--border-strong);
+    border-radius: 14px;
+    padding: 30px;
+    text-align: center;
+    color: var(--text-faint);
+  }
+  .no-results.show { display: block; }
+
+  /* Footer */
+  .foot {
+    margin-top: 36px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--text-faint);
+    font-size: 0.82rem;
+    text-align: center;
+  }
+  .foot a { color: var(--accent-deep); text-decoration: none; }
+  .foot a:hover { text-decoration: underline; }
+
+  @media (max-width: 720px) {
+    .term { grid-template-columns: 1fr; gap: 4px; }
+    .term-name { font-size: 1rem; }
+    h1 { font-size: 1.7rem; }
+    .wrap { padding: 24px 18px 60px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr-eyebrow">Team Reference</div>
+    <h1>Team Glossary</h1>
+    <p class="lede">Plain-English definitions for the technical terms you'll hear around Accelerate Robotics. Type to search across every section.</p>
+
+    <div class="search-wrap">
+      <div class="search-box">
+        <input id="q" type="search" placeholder="Search terms — e.g. fork, pull request, deploy…" autocomplete="off" autofocus>
+      </div>
+      <div class="search-meta" id="searchMeta"></div>
+    </div>
+
+    <nav class="chips" aria-label="Jump to section">
+      <a href="#git">Git &amp; GitHub</a>
+      <a href="#process">Code review &amp; deploys</a>
+      <a href="#types">Commit types</a>
+      <a href="#stack">Software &amp; data</a>
+      <a href="#robotics">Robots &amp; elevators</a>
+      <a href="#business">Business</a>
+    </nav>
+
+    <!-- ─── Git & GitHub ─────────────────────────────────────────── -->
+    <section class="section" id="git">
+      <h2>Git &amp; GitHub</h2>
+      <p class="section-sub">Git is the system that tracks every change to our code. GitHub is the website where that history lives so the team can collaborate.</p>
+
+      <div class="term">
+        <div class="term-name">Repository<span class="alias">aka "repo"</span></div>
+        <div class="term-body">
+          <p>The folder of code for one project, plus its full change history. We have several — <code>accelerate-robotics</code>, <code>accelerate-elevator</code>, <code>accelerate-thesis-hotel</code>, <code>accelerate-carts</code>.</p>
+          <span class="ex"><strong>Think of it like:</strong> a Google Doc that remembers every edit anyone has ever made, by anyone, forever.</span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Clone</div>
+        <div class="term-body">
+          <p>Download a full copy of a repo to your laptop so you can read or change the code locally.</p>
+          <span class="ex"><strong>Why we say it:</strong> "I cloned the repo" = "I have the code on my machine now."</span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Fork</div>
+        <div class="term-body">
+          <p>Make your own copy of someone else's repo on GitHub. Used mostly for open-source. Internally we work on branches in the same repo, not forks.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Branch</div>
+        <div class="term-body">
+          <p>A named lane of changes running parallel to the main code. You start a branch, make changes there, then merge it back. Multiple people can work on different branches at once without stepping on each other.</p>
+          <span class="ex"><strong>Think of it like:</strong> a draft that doesn't affect the published version until everyone agrees it's good.</span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name"><code>main</code></div>
+        <div class="term-body">
+          <p>The single branch that represents what's actually live. Production deploys come from here. We never commit directly to <code>main</code> — every change first lives on its own branch and gets reviewed before it merges in.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Fresh branch</div>
+        <div class="term-body">
+          <p>A brand-new branch started from the latest <code>main</code> — a clean slate for one specific piece of work. Starting "fresh" matters because if your branch is based on stale code, your changes could conflict with what's already shipped.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Commit</div>
+        <div class="term-body">
+          <p>A single saved snapshot of changes, with a short message explaining what changed and why. The Activity Calendar on the Command Center counts commits.</p>
+          <span class="ex"><strong>Think of it like:</strong> hitting "Save" with a sticky note attached.</span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Push</div>
+        <div class="term-body">
+          <p>Send your local commits up to GitHub so others can see them and so they're backed up off your laptop.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Pull</div>
+        <div class="term-body">
+          <p>Download new commits from GitHub onto your laptop, so your local copy is up to date with what teammates have shipped.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Pull request<span class="alias">aka "PR"</span></div>
+        <div class="term-body">
+          <p>A formal proposal on GitHub that says "please merge my branch into <code>main</code>." It shows the diff, lets reviewers comment line by line, and runs the test suite. Once it's approved and tests pass, it merges.</p>
+          <span class="ex"><strong>Why "pull":</strong> you're requesting that <code>main</code> pull your changes in.</span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Merge</div>
+        <div class="term-body">
+          <p>Combine the changes from one branch into another. The most common merge is "feature branch → <code>main</code>" at the end of a PR.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Squash</div>
+        <div class="term-body">
+          <p>When merging a PR, collapse all of its commits into one tidy commit on <code>main</code>. Keeps the history readable. We squash-merge by default.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Rebase</div>
+        <div class="term-body">
+          <p>Replay your branch's commits on top of the latest <code>main</code>, so it's "current" before merging. Useful when <code>main</code> has moved while you were working.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Conflict<span class="alias">"merge conflict"</span></div>
+        <div class="term-body">
+          <p>When two branches changed the same line of the same file and Git can't decide which wins. A human resolves it by picking which version to keep (or blending them).</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Stash</div>
+        <div class="term-body">
+          <p>Temporarily set aside uncommitted changes so you can switch branches, then bring them back later. Like a pocket for unfinished work.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Diff</div>
+        <div class="term-body">
+          <p>The line-by-line view of what changed — red lines were removed, green lines were added. PRs and code reviews are mostly about reading diffs.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">HEAD</div>
+        <div class="term-body">
+          <p>Git's word for "where you are right now" — the most recent commit on the branch you're currently on.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Origin</div>
+        <div class="term-body">
+          <p>The default name for the GitHub copy of the repo your laptop talks to when you push or pull.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Tag / release</div>
+        <div class="term-body">
+          <p>A stable label stuck on a specific commit, usually a version number like <code>v1.4.0</code>. Used for cutting versions and for rollbacks.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Process & deployment ─────────────────────────────────── -->
+    <section class="section" id="process">
+      <h2>Code review &amp; deploys</h2>
+      <p class="section-sub">How code gets from a teammate's laptop to the live site.</p>
+
+      <div class="term">
+        <div class="term-name">Code review</div>
+        <div class="term-body">
+          <p>Another teammate reads your PR's diff and either approves it or asks for changes. Required before anything merges to <code>main</code>.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">CI<span class="alias">Continuous Integration</span></div>
+        <div class="term-body">
+          <p>The automated test/lint runner that fires on every PR. Green checkmark = safe to merge. Red X = something broke; fix before merging.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">CD<span class="alias">Continuous Deployment</span></div>
+        <div class="term-body">
+          <p>Auto-deploy to production whenever <code>main</code> advances. No manual "push to prod" step.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Deploy</div>
+        <div class="term-body">
+          <p>Push the new code out to where users can see it. Usually triggered automatically by a merge to <code>main</code>.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Production<span class="alias">"prod"</span></div>
+        <div class="term-body">
+          <p>The live site real users hit. Most cautious changes go through staging first.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Staging</div>
+        <div class="term-body">
+          <p>A near-identical copy of production used for last-mile testing — same code paths, but no real users yet.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Dev / development</div>
+        <div class="term-body">
+          <p>Your laptop — where work-in-progress lives before going to staging or prod.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Hotfix</div>
+        <div class="term-body">
+          <p>An urgent fix that goes straight to <code>main</code> and prod, skipping the usual rhythm because something is on fire.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Rollback</div>
+        <div class="term-body">
+          <p>Re-deploy the previous version because the current one is broken. The fastest way out of a bad release.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Lint</div>
+        <div class="term-body">
+          <p>An auto-checker that flags risky or stylistically inconsistent code patterns. Runs in CI alongside tests.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Test (unit, integration, E2E)</div>
+        <div class="term-body">
+          <p><strong>Unit</strong> tests one function in isolation. <strong>Integration</strong> tests a few pieces working together (e.g. an API endpoint hitting the database). <strong>End-to-End (E2E)</strong> tests the whole app like a real user — clicking buttons in a real browser.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Build</div>
+        <div class="term-body">
+          <p>The step that bundles, compiles, or minifies code for shipping. We have a minimal build — most of our code ships as written.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Auto-merge</div>
+        <div class="term-body">
+          <p>Tell GitHub: "merge this PR automatically the moment CI passes and reviewers approve." Saves babysitting.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Commit types ─────────────────────────────────────────── -->
+    <section class="section" id="types">
+      <h2>Commit message types</h2>
+      <p class="section-sub">Every commit message starts with a type so you can scan history at a glance.</p>
+
+      <div class="term">
+        <div class="term-name"><code>feat</code></div>
+        <div class="term-body"><p>A new capability for users — a feature being added.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name"><code>fix</code></div>
+        <div class="term-body"><p>A bug fix.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name"><code>refactor</code></div>
+        <div class="term-body"><p>Internal restructure with no behavior change. Same outcome, cleaner code.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name"><code>docs</code></div>
+        <div class="term-body"><p>Documentation only — no code change.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name"><code>test</code></div>
+        <div class="term-body"><p>Adding or fixing tests.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name"><code>chore</code></div>
+        <div class="term-body"><p>Housekeeping — dependency bumps, config tweaks, file renames.</p></div>
+      </div>
+    </section>
+
+    <!-- ─── Stack ───────────────────────────────────────────────── -->
+    <section class="section" id="stack">
+      <h2>Software &amp; data</h2>
+      <p class="section-sub">Pieces of the app you'll hear named.</p>
+
+      <div class="term">
+        <div class="term-name">API</div>
+        <div class="term-body">
+          <p>The set of URLs the front-end (and other tools) call to read or change data on the server. Each URL is an "endpoint."</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Endpoint</div>
+        <div class="term-body">
+          <p>One specific URL on the server, like <code>/api/deals</code>. Each endpoint does one thing — list deals, create a deal, etc.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Frontend</div>
+        <div class="term-body">
+          <p>The part that runs in your browser — what users see and click.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Backend</div>
+        <div class="term-body">
+          <p>The part that runs on a server. It stores data, sends emails, and serves the frontend.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Database</div>
+        <div class="term-body">
+          <p>Where data is stored permanently. We use SQLite — a single file on disk that the backend reads from and writes to.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Schema</div>
+        <div class="term-body">
+          <p>The shape of the database — which tables exist, what columns each has, and which fields are required.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Migration</div>
+        <div class="term-body">
+          <p>A script that updates the database schema (adds a column, renames a table, etc.) without losing existing data.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Cache</div>
+        <div class="term-body">
+          <p>Saved-aside data so we don't have to recompute or re-fetch it. Faster, but can go stale — gets refreshed on a timer.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">JWT<span class="alias">JSON Web Token</span></div>
+        <div class="term-body">
+          <p>The signed token that proves you're logged in as an admin. Lives in a secure browser cookie, expires after 24 hours.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Edge case</div>
+        <div class="term-body">
+          <p>A rare or unusual scenario that often breaks code if it isn't explicitly handled (empty inputs, two users editing at once, etc.).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Robotics & elevators ─────────────────────────────────── -->
+    <section class="section" id="robotics">
+      <h2>Robots &amp; elevators</h2>
+      <p class="section-sub">Selected terms — full list in <a href="/repos/accelerate-robotics/docs/00-overview/glossary.md">docs/00-overview/glossary.md</a>.</p>
+
+      <div class="term">
+        <div class="term-name">AMR</div>
+        <div class="term-body"><p>Autonomous Mobile Robot — any wheeled floor-going robot that localizes and navigates on its own.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">Button emulator<span class="alias">"the wedge"</span></div>
+        <div class="term-body"><p>Our universal elevator-integration product — a small board that wires in parallel to existing push-buttons and lets a robot "press" them over BLE/LoRa, without touching the elevator's firmware.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">E-Box</div>
+        <div class="term-body"><p>Keenon's proprietary robot-elevator bridge hardware. Master + slave + RFID tags. Vendor-locked.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">LiDAR</div>
+        <div class="term-body"><p>Light Detection and Ranging — a laser scanner robots use to map their surroundings and avoid obstacles.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">LoRa</div>
+        <div class="term-body"><p>Long Range, low-power radio in the 850–930 MHz band. Penetrates elevator shafts where Bluetooth can't.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">SLAM</div>
+        <div class="term-body"><p>Simultaneous Localization and Mapping — how robots build internal floor plans while figuring out where they are inside them.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">Hall call / Car call</div>
+        <div class="term-body"><p><strong>Hall call</strong> = pressing the up/down button at the elevator lobby. <strong>Car call</strong> = pressing a floor number from inside the cab.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">RaaS</div>
+        <div class="term-body"><p>Robot-as-a-Service — leasing robots bundled with management and support, instead of selling them outright.</p></div>
+      </div>
+    </section>
+
+    <!-- ─── Business ─────────────────────────────────────────────── -->
+    <section class="section" id="business">
+      <h2>Business</h2>
+      <p class="section-sub">The acronyms you'll see in pipeline notes and proposals.</p>
+
+      <div class="term">
+        <div class="term-name">ARR / MRR</div>
+        <div class="term-body"><p>Annual / Monthly Recurring Revenue. The portion of revenue that repeats predictably (subscriptions, RaaS).</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">Capex / Opex</div>
+        <div class="term-body"><p><strong>Capex</strong> = capital expenditure (one-time hardware buys, build-outs). <strong>Opex</strong> = ongoing operational expenditure (service, maintenance).</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">KOL</div>
+        <div class="term-body"><p>Key Opinion Leader — a respected expert whose endorsement drives industry adoption.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">LOI</div>
+        <div class="term-body"><p>Letter of Intent — a non-binding signal that someone plans to do business with us.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">POC</div>
+        <div class="term-body"><p>Proof of Concept — a small deployment to demonstrate the idea works before committing to the full project.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">SLA</div>
+        <div class="term-body"><p>Service Level Agreement — the contract clause specifying how fast we respond and how often the system is up.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">TAM</div>
+        <div class="term-body"><p>Total Addressable Market — the maximum revenue if we captured 100% of every potential customer.</p></div>
+      </div>
+    </section>
+
+    <div class="no-results" id="noResults">No matches. Try a different word.</div>
+
+    <div class="foot">
+      Source of truth: <a href="/repos/accelerate-robotics/docs/00-overview/glossary.md">docs/00-overview/glossary.md</a> · Missing a term? Add it there and the next deploy will pick it up.
+    </div>
+  </div>
+
+<script>
+(function() {
+  const q = document.getElementById('q');
+  const meta = document.getElementById('searchMeta');
+  const noRes = document.getElementById('noResults');
+  const sections = Array.from(document.querySelectorAll('.section'));
+  const terms = Array.from(document.querySelectorAll('.term'));
+
+  // Pre-compute searchable text once. Lowercased, includes name + body so a
+  // search for "github copy" finds "Fork" via its body text.
+  const cache = terms.map(t => ({
+    el: t,
+    text: (t.textContent || '').toLowerCase(),
+    section: t.closest('.section'),
+  }));
+
+  function applyFilter(raw) {
+    const needle = (raw || '').trim().toLowerCase();
+    let visible = 0;
+    if (!needle) {
+      cache.forEach(c => c.el.classList.remove('hidden'));
+      sections.forEach(s => s.classList.remove('empty'));
+      noRes.classList.remove('show');
+      meta.textContent = '';
+      return;
+    }
+    // Word-by-word AND match — every space-separated token must appear.
+    const tokens = needle.split(/\s+/).filter(Boolean);
+    cache.forEach(c => {
+      const hit = tokens.every(t => c.text.includes(t));
+      c.el.classList.toggle('hidden', !hit);
+      if (hit) visible++;
+    });
+    sections.forEach(s => {
+      const anyVisible = s.querySelectorAll('.term:not(.hidden)').length > 0;
+      s.classList.toggle('empty', !anyVisible);
+    });
+    noRes.classList.toggle('show', visible === 0);
+    meta.textContent = `${visible} match${visible === 1 ? '' : 'es'} for "${raw.trim()}"`;
+  }
+
+  q.addEventListener('input', e => applyFilter(e.target.value));
+
+  // Smooth-scroll the chip nav and respect the sticky search bar height.
+  document.querySelectorAll('.chips a').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+})();
+</script>
+</body>
+</html>
