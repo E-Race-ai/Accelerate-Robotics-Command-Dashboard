@@ -30,6 +30,7 @@ const feedbackRoutes = require('./routes/feedback');
 const activityRoutes = require('./routes/activities');
 const collabRoutes = require('./routes/collab');
 const improvementRoutes = require('./routes/improvement-requests');
+const whatsappRoutes = require('./routes/whatsapp');
 const systemSettingsRoutes = require('./routes/system-settings');
 const { creativeLabsProxy } = require('./routes/creative-labs-proxy');
 
@@ -225,6 +226,10 @@ app.use('/api/improvement-requests', (req, res, next) => {
   if (req.method === 'POST') return inquiryLimiter(req, res, next);
   next();
 }, improvementRoutes);
+
+// WhatsApp Hub — admin-only directory of company WhatsApp groups.
+// All methods require auth; gated inside the route module via requireAuth.
+app.use('/api/whatsapp', whatsappRoutes);
 
 app.use('/api/system-settings', systemSettingsRoutes);
 

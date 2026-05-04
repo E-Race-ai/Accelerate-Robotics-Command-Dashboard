@@ -134,3 +134,24 @@ Many-to-many: which people support which item.
 | item_id | TEXT | NOT NULL REFERENCES tracker_items(id) ON DELETE CASCADE |
 | person_id | INTEGER | NOT NULL REFERENCES tracker_people(id) ON DELETE CASCADE |
 | PRIMARY KEY | | (item_id, person_id) |
+
+### `whatsapp_groups`
+
+Curated directory of company WhatsApp groups + communities. Powers `/pages/whatsapp-hub.html`. Editable via the admin UI (auth-gated CRUD at `/api/whatsapp`).
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| name | TEXT | NOT NULL |
+| description | TEXT | nullable — short blurb shown on the card |
+| category | TEXT | NOT NULL DEFAULT 'team' CHECK IN ('team', 'project', 'customer', 'community', 'other') |
+| invite_url | TEXT | nullable — host whitelisted to `chat.whatsapp.com` / `wa.me` at the route layer |
+| member_count | INTEGER | NOT NULL DEFAULT 0 — manual entry, kept fresh by whoever updates the card |
+| notes | TEXT | nullable — "what's currently being discussed" surface |
+| pinned | INTEGER | NOT NULL DEFAULT 0 (0/1) — pinned cards sort first |
+| created_by | TEXT | nullable — admin email captured at insert time |
+| created_at / updated_at | TEXT | DEFAULT (datetime('now')) |
+
+**Indexes:** `(category)`, `(pinned DESC, updated_at DESC)` for the default sort.
+
+**Why directory, not feed:** WhatsApp doesn't expose a "read all my groups" API, and the Business API requires per-group opt-in plus paid templates. Curating names + invite links + freshness notes gives the heads-up view without fragile scraping.
