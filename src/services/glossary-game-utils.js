@@ -75,7 +75,28 @@ function parseBadges(json) {
   catch { return []; }
 }
 
+// Friendly-name parser. Turns "claude.e.race@atlasmobility.com" → "Claude R.",
+// "eric@accelerate.com" → "Eric", "dev@accelerate.com" → "Dev". Used when the
+// user hasn't set an explicit display_name — keeps the leaderboard human.
+//
+// WHY this and not just the local-part: leaderboard rows of "claude.e.race"
+// next to "eric.race" look spammy. First-name-plus-last-initial is the
+// convention people read effortlessly.
+function friendlyName(emailOrName) {
+  if (!emailOrName) return 'Anonymous';
+  const raw = String(emailOrName).trim();
+  // Already a real name (has a space, no @): pass through.
+  if (raw.includes(' ') && !raw.includes('@')) return raw;
+  const local = raw.split('@')[0] || raw;
+  const parts = local.split(/[._\-]+/).filter(Boolean);
+  if (parts.length === 0) return 'Anonymous';
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  if (parts.length === 1) return cap(parts[0]);
+  // First + last-initial. Skip middle tokens (initials, etc.).
+  return `${cap(parts[0])} ${cap(parts[parts.length - 1]).charAt(0)}.`;
+}
+
 module.exports = {
   POINTS, LEVELS, BADGES, BADGE_BY_CODE,
-  levelForPoints, todayUtcDate, yesterdayUtcDate, shuffle, parseBadges,
+  levelForPoints, todayUtcDate, yesterdayUtcDate, shuffle, parseBadges, friendlyName,
 };
