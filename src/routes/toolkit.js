@@ -41,6 +41,7 @@ const MODULE_FILES = {
   inquiries:          ['src/routes/inquiries.js', 'public/admin.html'],
   project_tracker:    ['public/admin-project-tracker.html', 'src/routes/tracker.js'],
   public_website:     ['public/index.html'],
+  team_glossary:      ['pages/team-glossary.html', 'docs/00-overview/glossary.md'],
 };
 
 // Fallback assignments when `git log` turns up nothing real (external URLs
