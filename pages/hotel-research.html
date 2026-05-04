@@ -70,6 +70,48 @@
   .panel { display: none; }
   .panel.active { display: block; }
 
+  /* Preset markets */
+  .preset-card {
+    background: linear-gradient(180deg, var(--accent-soft) 0%, var(--card) 100%);
+    border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 14px; padding: 16px 20px 18px; margin-bottom: 14px;
+  }
+  .preset-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 10px; flex-wrap: wrap;
+  }
+  .preset-eyebrow {
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.7rem; font-weight: 700; color: var(--accent-deep);
+  }
+  .preset-sub { color: var(--text-dim); font-size: 0.82rem; margin-top: 2px; }
+  .preset-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .preset-chip {
+    padding: 6px 12px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 100px; font: inherit; font-size: 0.78rem; font-weight: 600;
+    color: var(--text-dim); cursor: pointer; transition: all 0.12s;
+  }
+  .preset-chip:hover { color: var(--accent-deep); border-color: var(--accent); background: var(--accent-soft); }
+  .preset-chip:disabled { cursor: wait; opacity: 0.6; }
+  .preset-chip.is-running { background: var(--accent); color: white; border-color: var(--accent); }
+  .preset-chip .radius {
+    color: var(--text-faint); margin-left: 4px; font-weight: 500; font-size: 0.7rem;
+  }
+  .preset-chip.is-running .radius { color: rgba(255,255,255,0.85); }
+  .btn-master {
+    background: var(--accent); color: white;
+    box-shadow: 0 1px 3px rgba(217,119,6,0.30);
+    padding: 7px 14px; font-size: 0.84rem; border: 0; border-radius: 10px;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .btn-master:hover { background: var(--accent-deep); }
+  .btn-master:disabled { cursor: wait; opacity: 0.7; }
+
+  /* Submarket pill on cards */
+  .card-meta-pill.submarket {
+    background: #ede9fe; color: #5b21b6; font-weight: 700;
+  }
+
   /* Search form */
   .search-card {
     background: var(--card); border: 1px solid var(--border); border-radius: 14px;
@@ -281,6 +323,18 @@
 
     <!-- ─── Search panel ──────────────────────────────────────── -->
     <div class="panel active" id="panel-search" role="tabpanel">
+      <!-- Preset markets — one-click submarket prospecting -->
+      <div class="preset-card" id="presetCard">
+        <div class="preset-head">
+          <div>
+            <div class="preset-eyebrow">Quick markets</div>
+            <div class="preset-sub">One click runs the search for that submarket. Saved hotels get tagged so you can filter later.</div>
+          </div>
+          <div id="presetMaster"></div>
+        </div>
+        <div class="preset-chips" id="presetChips"></div>
+      </div>
+
       <div class="search-card">
         <form id="searchForm" onsubmit="return runSearch(event)">
           <div class="search-row">
@@ -309,9 +363,10 @@
     <!-- ─── Saved panel ───────────────────────────────────────── -->
     <div class="panel" id="panel-saved" role="tabpanel">
       <div class="saved-toolbar">
-        <input id="savedSearch" type="search" placeholder="Filter by name, city, or brand…" autocomplete="off">
+        <input id="savedSearch" type="search" placeholder="Filter by name, city, brand, or notes…" autocomplete="off">
         <div class="chip-row" id="statusChips"></div>
       </div>
+      <div class="chip-row" id="submarketChips" style="margin: -8px 0 14px;"></div>
       <div id="savedContent"></div>
     </div>
   </div>
@@ -386,9 +441,12 @@ const STATUS_CHIPS = [
 
 let LAST_RESULTS = [];
 let SAVED = [];
+let PRESETS = {};            // { 'miami-dade': { label, submarkets: [...] }, ... }
 let savedFilter = 'all';
+let savedSubmarketFilter = 'all';
 let savedQuery = '';
 let editingId = null;
+let runAllInProgress = false;
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -422,7 +480,13 @@ document.querySelectorAll('.tab').forEach(t => {
 
 // ─── Search ───────────────────────────────────────────────────────
 async function runSearch(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
+  return runSearchInternal({ submarketTag: null });
+}
+
+// Shared search runner. `submarketTag` (when set) is attached to each result
+// so a subsequent save persists it to hotels_saved.submarket.
+async function runSearchInternal({ submarketTag }) {
   const location = document.getElementById('f_location').value.trim();
   const radius = Number(document.getElementById('f_radius').value) || 5;
   const btn = document.getElementById('searchBtn');
@@ -442,8 +506,8 @@ async function runSearch(e) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    LAST_RESULTS = data.hotels || [];
-    renderSearchResults(data);
+    LAST_RESULTS = (data.hotels || []).map(h => submarketTag ? { ...h, submarket: submarketTag } : h);
+    renderSearchResults({ ...data, hotels: LAST_RESULTS });
   } catch (err) {
     content.innerHTML = `<div class="err">Search failed: ${escapeHtml(err.message)}</div>`;
   } finally {
@@ -493,6 +557,7 @@ function renderSearchCard(h) {
       </div>
       ${h.address ? `<div class="card-address">📍 ${escapeHtml(h.address)}</div>` : ''}
       <div class="card-meta">
+        ${h.submarket ? `<span class="card-meta-pill submarket">📍 ${escapeHtml(h.submarket)}</span>` : ''}
         <span class="card-meta-pill dist">${h.distance_miles}mi</span>
         ${h.brand ? `<span class="card-meta-pill brand">${escapeHtml(h.brand)}</span>` : ''}
         ${adr ? `<span class="card-meta-pill adr">~${fmtUsd(adr)}/night</span>` : ''}
@@ -589,11 +654,29 @@ function renderSaved() {
     <button class="chip ${savedFilter === c.id ? 'active' : ''}" type="button" onclick="setSavedFilter('${c.id}')">${c.label} ${counts[c.id] || 0}</button>
   `).join('');
 
+  // Submarket filter — render only if any saved hotel has a submarket tag.
+  const submarketCounts = {};
+  for (const s of SAVED) {
+    if (s.submarket) submarketCounts[s.submarket] = (submarketCounts[s.submarket] || 0) + 1;
+  }
+  const submarketKeys = Object.keys(submarketCounts).sort();
+  const submarketChipsEl = document.getElementById('submarketChips');
+  if (submarketKeys.length === 0) {
+    submarketChipsEl.innerHTML = '';
+  } else {
+    submarketChipsEl.innerHTML = `
+      <button class="chip ${savedSubmarketFilter === 'all' ? 'active' : ''}" type="button" onclick="setSavedSubmarketFilter('all')">📍 All submarkets</button>
+      ${submarketKeys.map(k => `
+        <button class="chip ${savedSubmarketFilter === k ? 'active' : ''}" type="button" onclick="setSavedSubmarketFilter('${k.replace(/'/g, "\\'")}')">${escapeHtml(k)} ${submarketCounts[k]}</button>
+      `).join('')}`;
+  }
+
   const q = savedQuery.toLowerCase().trim();
   const filtered = SAVED.filter(s => {
     if (savedFilter !== 'all' && s.status !== savedFilter) return false;
+    if (savedSubmarketFilter !== 'all' && s.submarket !== savedSubmarketFilter) return false;
     if (!q) return true;
-    return (`${s.name} ${s.city || ''} ${s.brand || ''} ${s.notes || ''}`).toLowerCase().includes(q);
+    return (`${s.name} ${s.city || ''} ${s.brand || ''} ${s.notes || ''} ${s.submarket || ''}`).toLowerCase().includes(q);
   });
 
   const content = document.getElementById('savedContent');
@@ -613,6 +696,7 @@ function renderSaved() {
 }
 
 function setSavedFilter(s) { savedFilter = s; renderSaved(); }
+function setSavedSubmarketFilter(s) { savedSubmarketFilter = s; renderSaved(); }
 
 document.getElementById('savedSearch').addEventListener('input', e => {
   savedQuery = e.target.value;
@@ -631,6 +715,7 @@ function renderSavedCard(h) {
       ${h.address || cityState ? `<div class="card-address">📍 ${escapeHtml(h.address || cityState)}</div>` : ''}
       <div class="card-meta">
         <span class="card-status-pill ${h.status}">${h.status}</span>
+        ${h.submarket ? `<span class="card-meta-pill submarket">📍 ${escapeHtml(h.submarket)}</span>` : ''}
         ${h.brand ? `<span class="card-meta-pill brand">${escapeHtml(h.brand)}</span>` : ''}
         ${adr ? `<span class="card-meta-pill adr">${fmtUsd(adr)}/night</span>` : ''}
         ${h.rooms ? `<span class="card-meta-pill">${h.rooms} rooms</span>` : ''}
@@ -729,7 +814,123 @@ async function deleteHotel() {
   }
 }
 
+// ─── Preset markets ───────────────────────────────────────────────
+async function loadPresets() {
+  try {
+    const res = await fetch('/api/hotel-research/presets', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    PRESETS = data.markets || {};
+    renderPresets();
+  } catch (err) {
+    console.warn('preset load failed:', err);
+    document.getElementById('presetCard').style.display = 'none';
+  }
+}
+
+function renderPresets() {
+  const presetKeys = Object.keys(PRESETS);
+  if (presetKeys.length === 0) {
+    document.getElementById('presetCard').style.display = 'none';
+    return;
+  }
+  // For now we only render one market (Miami-Dade). Future: a dropdown to switch metros.
+  const firstKey = presetKeys[0];
+  const market = PRESETS[firstKey];
+  document.getElementById('presetMaster').innerHTML = `
+    <button class="btn-master" id="runAllBtn" onclick="runAllPresets('${firstKey}')">
+      Run all ${market.submarkets.length} ${market.label} submarkets
+    </button>`;
+  document.getElementById('presetChips').innerHTML = market.submarkets.map((s, i) => `
+    <button class="preset-chip" data-key="${firstKey}" data-idx="${i}" onclick="runPreset('${firstKey}', ${i})">
+      ${escapeHtml(s.submarket)}<span class="radius">${s.radius_miles}mi</span>
+    </button>
+  `).join('');
+}
+
+async function runPreset(marketKey, idx) {
+  const market = PRESETS[marketKey];
+  if (!market) return;
+  const sub = market.submarkets[idx];
+  if (!sub) return;
+  document.getElementById('f_location').value = sub.location;
+  document.getElementById('f_radius').value = sub.radius_miles;
+  // Tag every result with this submarket so the eventual save can persist it.
+  await runSearchInternal({ submarketTag: sub.submarket });
+}
+
+async function runAllPresets(marketKey) {
+  const market = PRESETS[marketKey];
+  if (!market || runAllInProgress) return;
+  runAllInProgress = true;
+  const btn = document.getElementById('runAllBtn');
+  btn.disabled = true;
+  const original = btn.textContent;
+  const aggregate = new Map();   // osm_id → hotel (with submarket tag)
+  const perSub = [];
+
+  for (let i = 0; i < market.submarkets.length; i++) {
+    const sub = market.submarkets[i];
+    btn.textContent = `Running ${i + 1}/${market.submarkets.length}: ${sub.submarket}…`;
+    // Mark the chip as in-progress for visual feedback
+    const chip = document.querySelector(`.preset-chip[data-idx="${i}"]`);
+    if (chip) chip.classList.add('is-running');
+    try {
+      const res = await fetch('/api/hotel-research/search', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location: sub.location, radius_miles: sub.radius_miles }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const tagged = (data.hotels || []).map(h => ({ ...h, submarket: sub.submarket }));
+      perSub.push({ submarket: sub.submarket, count: tagged.length });
+      // Dedupe across submarkets by osm_id — pick first occurrence (closest one wins
+      // since we run in the configured order; the one in its primary submarket).
+      for (const h of tagged) {
+        if (!aggregate.has(h.osm_id)) aggregate.set(h.osm_id, h);
+      }
+    } catch (err) {
+      console.error(`preset ${sub.submarket} failed:`, err);
+      perSub.push({ submarket: sub.submarket, error: err.message });
+    } finally {
+      if (chip) chip.classList.remove('is-running');
+    }
+    // Polite pause between Nominatim/Overpass calls (their policies ask for ≤1/sec).
+    if (i < market.submarkets.length - 1) await new Promise(r => setTimeout(r, 1100));
+  }
+
+  btn.textContent = original;
+  btn.disabled = false;
+  runAllInProgress = false;
+
+  LAST_RESULTS = Array.from(aggregate.values());
+  // Show an aggregate result view
+  const meta = document.getElementById('searchMeta');
+  const content = document.getElementById('searchContent');
+  const adrs = LAST_RESULTS.map(h => h.estimated_adr_dollars).filter(Number.isFinite).sort((a,b) => a-b);
+  const median = adrs.length ? adrs[Math.floor(adrs.length / 2)] : null;
+  meta.innerHTML = `
+    <div class="search-meta">
+      <span><strong>${LAST_RESULTS.length}</strong> unique hotel${LAST_RESULTS.length === 1 ? '' : 's'} across <strong>${market.label}</strong> (${perSub.length} submarkets)</span>
+      ${median ? `<span>Median est. ADR: <strong>${fmtUsd(median)}</strong></span>` : ''}
+      <div class="actions">
+        ${LAST_RESULTS.length ? `<button class="btn btn-success" onclick="bulkSave()">Save all ${LAST_RESULTS.length}</button>` : ''}
+      </div>
+    </div>
+    <div style="margin-top:8px;font-size:0.8rem;color:var(--text-dim);">
+      ${perSub.map(s => `<span class="card-meta-pill submarket" style="margin-right:6px;">${escapeHtml(s.submarket)}: ${s.error ? 'failed' : s.count}</span>`).join(' ')}
+    </div>`;
+  if (LAST_RESULTS.length === 0) {
+    content.innerHTML = `<div class="empty"><h3>No hotels found</h3><p>Try individual submarkets, or check that the OSM API is reachable.</p></div>`;
+  } else {
+    content.innerHTML = `<div class="grid">${LAST_RESULTS.map(renderSearchCard).join('')}</div>`;
+  }
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────
+loadPresets();
 loadSaved({ silent: true });
 document.getElementById('f_location').focus();
 </script>

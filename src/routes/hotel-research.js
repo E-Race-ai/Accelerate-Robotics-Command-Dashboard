@@ -39,6 +39,32 @@ const searchCache  = new Map(); // `${lat3},${lng3},${radius}` → { hotels, at 
 const MIN_RADIUS_MI = 1;
 const MAX_RADIUS_MI = 25; // 25mi covers a metro; beyond that is wasteful for prospecting
 
+// ── Preset markets ────────────────────────────────────────────────
+// WHY: Sales reps prospect within a fixed set of submarkets. Hardcoded here
+// so the team has consistent labels across runs (the saved-hotel `submarket`
+// field uses these exact strings). Add new metros by extending this map; the
+// frontend reads it via /presets so no UI redeploy is needed for a new entry.
+const PRESET_MARKETS = {
+  'miami-dade': {
+    label: 'Miami-Dade',
+    submarkets: [
+      // Radii are tight — these are dense urban submarkets. 1mi captures the
+      // walkable core; Kendall and Aventura get a touch more for spread.
+      { submarket: 'Brickell',         location: 'Brickell, Miami, FL',         radius_miles: 1   },
+      { submarket: 'Downtown Miami',   location: 'Downtown Miami, FL',          radius_miles: 1   },
+      { submarket: 'Midtown Miami',    location: 'Midtown Miami, FL',           radius_miles: 1   },
+      { submarket: 'Coconut Grove',    location: 'Coconut Grove, Miami, FL',    radius_miles: 1.5 },
+      { submarket: 'Coral Gables',     location: 'Coral Gables, FL',            radius_miles: 2   },
+      { submarket: 'Kendall',          location: 'Kendall, FL',                 radius_miles: 3   },
+      { submarket: 'Bal Harbour',      location: 'Bal Harbour, FL',             radius_miles: 1   },
+      { submarket: 'Surfside',         location: 'Surfside, FL',                radius_miles: 1   },
+      { submarket: 'North Beach',      location: 'North Beach, Miami Beach, FL', radius_miles: 1   },
+      { submarket: 'South Beach',      location: 'South Beach, Miami Beach, FL', radius_miles: 1.5 },
+      { submarket: 'Aventura',         location: 'Aventura, FL',                radius_miles: 2   },
+    ],
+  },
+};
+
 async function geocode(rawLocation) {
   const key = normLocation(rawLocation);
   if (!key) return null;
@@ -127,6 +153,13 @@ async function fetchHotels(lat, lng, radiusMi) {
 
 // ─── Routes ───────────────────────────────────────────────────────
 
+// GET /presets — list available preset markets (Miami-Dade, etc.)
+// WHY: Frontend renders these as quick-pick chips so reps don't have to
+// remember exact submarket names or radii.
+router.get('/presets', requireAuth, (_req, res) => {
+  res.json({ markets: PRESET_MARKETS });
+});
+
 // POST /search — body: { location: "Boston, MA" | "02108", radius_miles?: 5 }
 router.post('/search', requireAuth, async (req, res) => {
   const { location, radius_miles } = req.body || {};
@@ -170,9 +203,9 @@ router.post('/saved', requireAuth, async (req, res) => {
       const r = await db.run(
         `INSERT INTO hotels_saved (
            name, address, city, state, zip, country, lat, lng,
-           brand, stars, rooms, phone, website, osm_id,
+           brand, stars, rooms, phone, website, osm_id, submarket,
            est_adr_dollars, status, notes, saved_by
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           name,
           h.address || null, h.city || null, h.state || null, h.zip || null, h.country || 'US',
@@ -184,6 +217,7 @@ router.post('/saved', requireAuth, async (req, res) => {
           h.phone || null,
           h.website || null,
           h.osm_id || null,
+          h.submarket ? String(h.submarket).slice(0, 80) : null,
           Number.isFinite(Number(h.estimated_adr_dollars)) ? Math.round(Number(h.estimated_adr_dollars)) :
             (Number.isFinite(Number(h.est_adr_dollars))    ? Math.round(Number(h.est_adr_dollars))    : null),
           ALLOWED_STATUS.has(h.status) ? h.status : 'lead',
@@ -214,7 +248,7 @@ router.get('/saved', requireAuth, async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT id, name, address, city, state, zip, country, lat, lng,
-              brand, stars, rooms, phone, website, osm_id,
+              brand, stars, rooms, phone, website, osm_id, submarket,
               est_adr_dollars, status, notes, saved_by, created_at, updated_at
        FROM hotels_saved
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -255,8 +289,9 @@ router.patch('/saved/:id', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'est_adr_dollars must be a non-negative number under 100000' });
     }
   }
-  if (b.phone !== undefined)   { fields.push('phone = ?');   args.push(b.phone || null); }
-  if (b.website !== undefined) { fields.push('website = ?'); args.push(b.website || null); }
+  if (b.phone !== undefined)     { fields.push('phone = ?');     args.push(b.phone || null); }
+  if (b.website !== undefined)   { fields.push('website = ?');   args.push(b.website || null); }
+  if (b.submarket !== undefined) { fields.push('submarket = ?'); args.push(b.submarket ? String(b.submarket).slice(0, 80) : null); }
   if (b.rooms !== undefined) {
     const n = Number(b.rooms);
     if (b.rooms === null || b.rooms === '') { fields.push('rooms = ?'); args.push(null); }

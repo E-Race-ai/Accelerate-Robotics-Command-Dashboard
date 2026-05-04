@@ -494,6 +494,7 @@ async function initSchema() {
       phone TEXT,
       website TEXT,
       osm_id TEXT,
+      submarket TEXT,
       est_adr_dollars INTEGER,
       status TEXT NOT NULL DEFAULT 'lead'
         CHECK(status IN ('lead', 'contacted', 'qualified', 'proposed', 'won', 'lost', 'archived')),
@@ -504,6 +505,9 @@ async function initSchema() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_hotels_saved_status ON hotels_saved(status, updated_at DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_hotels_saved_city ON hotels_saved(city)`,
+    // WHY: idx_hotels_saved_submarket lives below in the additive section —
+    // existing prod DBs got the table before the submarket column was added,
+    // so the index can't run until ALTER TABLE has appended the column.
   ];
 
   for (const sql of statements) {
@@ -588,6 +592,14 @@ async function initSchema() {
   // sweep find tickets with no activity in N days.
   await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN archived_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN updated_at TEXT");
+
+  // WHY: Hotel Research preset markets (Miami-Dade submarkets, etc.) tag each saved
+  // hotel with which submarket it came from so the rep can filter "show me only Brickell."
+  // ALTER must come BEFORE the index since existing prod DBs created hotels_saved
+  // without the submarket column. additiveAlterIfMissing catches the duplicate-column
+  // race on subsequent boots.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN submarket TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_submarket ON hotels_saved(submarket)");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────
