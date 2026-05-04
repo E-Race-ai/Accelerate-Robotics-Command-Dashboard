@@ -608,16 +608,30 @@ async function bulkSave() {
   const toSave = LAST_RESULTS.filter(h => !savedOsmIds.has(h.osm_id));
   if (!toSave.length) { alert('All of these are already saved.'); return; }
   if (!confirm(`Save ${toSave.length} hotel${toSave.length === 1 ? '' : 's'} to your follow-up list?`)) return;
+
+  // WHY chunk: the server caps each request at 50 hotels (rate-limit safety),
+  // and Express's default JSON body limit is ~100KB which a 300+-hotel "Run all"
+  // payload blows past. 40 per batch keeps both bounds comfortable.
+  const BATCH = 40;
+  const batches = [];
+  for (let i = 0; i < toSave.length; i += BATCH) batches.push(toSave.slice(i, i + BATCH));
+
+  let savedSoFar = 0;
+  const errors = [];
   try {
-    const res = await fetch('/api/hotel-research/saved', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hotels: toSave }),
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      throw new Error(j.error || `HTTP ${res.status}`);
+    for (let i = 0; i < batches.length; i++) {
+      const res = await fetch('/api/hotel-research/saved', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hotels: batches[i] }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        errors.push(`Batch ${i + 1}/${batches.length}: ${j.error || `HTTP ${res.status}`}`);
+      } else {
+        savedSoFar += batches[i].length;
+      }
     }
     await loadSaved({ silent: true });
     if (LAST_RESULTS.length) renderSearchResults({
@@ -625,8 +639,11 @@ async function bulkSave() {
       query: { location: document.getElementById('f_location').value, radius_miles: Number(document.getElementById('f_radius').value) || 5 },
       center: { display: '' },
     });
+    if (errors.length) {
+      alert(`Saved ${savedSoFar} of ${toSave.length}.\n\nIssues:\n${errors.join('\n')}`);
+    }
   } catch (err) {
-    alert('Bulk save failed: ' + err.message);
+    alert(`Bulk save failed after ${savedSoFar} of ${toSave.length}: ${err.message}`);
   }
 }
 
