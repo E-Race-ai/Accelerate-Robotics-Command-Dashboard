@@ -42,6 +42,7 @@ const MODULE_FILES = {
   project_tracker:    ['public/admin-project-tracker.html', 'src/routes/tracker.js'],
   public_website:     ['public/index.html'],
   team_glossary:      ['pages/team-glossary.html', 'docs/00-overview/glossary.md'],
+  whatsapp_hub:       ['pages/whatsapp-hub.html', 'src/routes/whatsapp.js'],
 };
 
 // Fallback assignments when `git log` turns up nothing real (external URLs
