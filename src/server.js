@@ -31,6 +31,7 @@ const activityRoutes = require('./routes/activities');
 const collabRoutes = require('./routes/collab');
 const improvementRoutes = require('./routes/improvement-requests');
 const whatsappRoutes = require('./routes/whatsapp');
+const hotelResearchRoutes = require('./routes/hotel-research');
 const systemSettingsRoutes = require('./routes/system-settings');
 const { creativeLabsProxy } = require('./routes/creative-labs-proxy');
 
@@ -230,6 +231,12 @@ app.use('/api/improvement-requests', (req, res, next) => {
 // WhatsApp Hub — admin-only directory of company WhatsApp groups.
 // All methods require auth; gated inside the route module via requireAuth.
 app.use('/api/whatsapp', whatsappRoutes);
+
+// Hotel Research Tool — sales-rep prospecting helper.
+// Searches OpenStreetMap (Nominatim + Overpass) by city/zip, returns
+// hotels with rough ADR estimates, and lets reps save candidates.
+// All methods require auth; gated inside the route module via requireAuth.
+app.use('/api/hotel-research', hotelResearchRoutes);
 
 app.use('/api/system-settings', systemSettingsRoutes);
 
