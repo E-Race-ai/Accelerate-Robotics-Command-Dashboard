@@ -248,6 +248,31 @@
   }
   .top-call-row .tc-phone:hover { background: #dcfce7; }
 
+  /* Region grouping inside the top-calls tile */
+  .tc-region { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #fcd34d; }
+  .tc-region:first-of-type { border-top: 0; padding-top: 0; }
+  .tc-region-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; padding: 0 4px; }
+  .tc-region-head strong { color: #78350f; font-size: 0.92rem; }
+  .tc-region-meta { color: #92400e; font-size: 0.74rem; font-weight: 600; }
+
+  /* Fit-score explainer modal */
+  .fs-tier-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 14px; }
+  .fs-tier-chip { padding: 3px 10px; border-radius: 100px; font-family: 'Space Grotesk', sans-serif; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; color: white; }
+  .fs-tier-chip.top  { background: linear-gradient(135deg, #16a34a, #22c55e); }
+  .fs-tier-chip.high { background: linear-gradient(135deg, #0891b2, #06b6d4); }
+  .fs-tier-chip.mid  { background: linear-gradient(135deg, #d97706, #f59e0b); }
+  .fs-tier-chip.low  { background: #94a3b8; }
+  .fs-section-h { margin: 16px 0 6px; font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; color: #0f172a; }
+  .fs-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .fs-table td { padding: 6px 10px; border-top: 1px solid #e5e7eb; vertical-align: top; }
+  .fs-table td:first-child { width: 38%; color: #475569; }
+  .fs-table-neg td:first-child { color: #991b1b; }
+  .fs-why { color: #94a3b8; font-style: italic; font-size: 0.84em; }
+
+  /* Call disposition modal buttons */
+  .cd-btn { text-align: left; padding: 10px 14px !important; }
+  .cd-btn:hover { background: #f8fafc; }
+
   /* Route-open picker — Waze / Apple Maps / Google Maps cards */
   .route-pick-card {
     background: #f8fafc; border: 1px solid var(--border);
@@ -2522,47 +2547,256 @@ function renderTopCallsTile() {
   const el = document.getElementById('topCallsTile');
   if (!el) return;
   if (!SAVED || SAVED.length === 0) { el.style.display = 'none'; return; }
-  const candidates = SAVED
+  // Bucket by submarket so reps see balanced regional coverage instead
+  // of South Beach dominating the entire list. 4 per region by AI fit.
+  const PER_REGION_CAP = 4;
+  const eligible = SAVED
     .filter(h => h.lat != null && h.lng != null)
     .filter(h => !h.triage || h.triage === 'maybe' || h.triage === 'yes')
     .filter(h => (h.visit_count || 0) === 0)
     .filter(h => h.status === 'lead')
-    .sort((a, b) => (b.ai_fit_score || 0) - (a.ai_fit_score || 0))
-    .slice(0, 10);
-  if (candidates.length === 0) { el.style.display = 'none'; return; }
+    .sort((a, b) => (b.ai_fit_score || 0) - (a.ai_fit_score || 0));
+  if (eligible.length === 0) { el.style.display = 'none'; return; }
+  const bySubmarket = new Map();
+  for (const h of eligible) {
+    const k = h.submarket || 'Unsorted';
+    if (!bySubmarket.has(k)) bySubmarket.set(k, []);
+    const list = bySubmarket.get(k);
+    if (list.length < PER_REGION_CAP) list.push(h);
+  }
+  const regions = [...bySubmarket.entries()]
+    .map(([key, hotels]) => ({
+      key, hotels,
+      topFit: hotels[0]?.ai_fit_score || 0,
+      avgFit: Math.round(hotels.map(h => h.ai_fit_score || 0).reduce((a, b) => a + b, 0) / Math.max(1, hotels.length)),
+    }))
+    .sort((a, b) => b.topFit - a.topFit);
+
   el.style.display = '';
   el.innerHTML = `
-    <div class="tc-head">
-      <span class="tc-eyebrow">🔥 TOP 10 CALLS TODAY</span>
-      <div>
-        <h3>Your highest-fit untouched leads</h3>
-        <div class="tc-sub">Click a row to drill into the rail · click 📞 to dial · click 🗺️ to plan a visit</div>
+    <div class="tc-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <span class="tc-eyebrow">🔥 TOP CALLS BY REGION</span>
+        <div>
+          <h3>Cold-call queue · highest-fit untouched leads</h3>
+          <div class="tc-sub">${PER_REGION_CAP} per submarket · 📞 dials + logs the call disposition · click row to drill in</div>
+        </div>
       </div>
+      <button type="button" class="btn btn-ghost" onclick="window._openFitScoreExplainer()" style="font-size:0.78rem;white-space:nowrap" title="See exactly how the AI fit score is calculated">ℹ️ How is this scored?</button>
     </div>
-    <div class="top-calls-list">
-      ${candidates.map((h, i) => {
-        const tier = h.ai_fit_tier || 'low';
-        const bg = tier === 'top' ? '#16a34a' : tier === 'high' ? '#0891b2' : tier === 'mid' ? '#f59e0b' : '#94a3b8';
-        const ap = nearestAirport(h.lat, h.lng);
-        const sub = [
-          h.brand || h.operator || null,
-          h.rooms ? `${h.rooms} rms` : null,
-          h.est_adr_dollars ? `$${h.est_adr_dollars}` : null,
-          h.submarket ? `📍 ${h.submarket}` : null,
-          ap ? `✈️ ${ap.miles.toFixed(1)}mi → ${ap.code}` : null,
-        ].filter(Boolean).join(' · ');
-        return `
-          <div class="top-call-row" onclick="window._jumpToTopCall(${h.id})">
-            <div class="tc-fit" style="background:${bg}">${h.ai_fit_score ?? '–'}</div>
-            <div>
-              <div class="tc-name">${escapeHtml(h.name)}</div>
-              <div class="tc-meta">${escapeHtml(sub)}</div>
-            </div>
-            ${h.phone ? `<a class="tc-phone" href="tel:${escapeHtml(h.phone)}" onclick="event.stopPropagation()">📞 Call</a>` : '<span></span>'}
-            <button class="tc-action" type="button" onclick="event.stopPropagation(); window._jumpToTopCall(${h.id})">Open →</button>
-          </div>`;
-      }).join('')}
+
+    ${regions.map(region => `
+      <div class="tc-region">
+        <div class="tc-region-head">
+          <strong>📍 ${escapeHtml(region.key)}</strong>
+          <span class="tc-region-meta">${region.hotels.length} top fit${region.hotels.length === 1 ? '' : 's'} · avg ${region.avgFit}</span>
+        </div>
+        <div class="top-calls-list">
+          ${region.hotels.map(h => {
+            const tier = h.ai_fit_tier || 'low';
+            const bg = tier === 'top' ? '#16a34a' : tier === 'high' ? '#0891b2' : tier === 'mid' ? '#f59e0b' : '#94a3b8';
+            const ap = nearestAirport(h.lat, h.lng);
+            const sub = [
+              h.brand || h.operator || null,
+              h.rooms ? `${h.rooms} rms` : null,
+              h.est_adr_dollars ? `$${h.est_adr_dollars}` : null,
+              ap ? `✈️ ${ap.miles.toFixed(1)}mi → ${ap.code}` : null,
+            ].filter(Boolean).join(' · ');
+            return `
+              <div class="top-call-row" onclick="window._jumpToTopCall(${h.id})">
+                <div class="tc-fit" style="background:${bg}" title="Click ℹ️ above to see scoring breakdown">${h.ai_fit_score ?? '–'}</div>
+                <div>
+                  <div class="tc-name">${escapeHtml(h.name)}</div>
+                  <div class="tc-meta">${escapeHtml(sub)}</div>
+                </div>
+                ${h.phone ? `<a class="tc-phone" href="tel:${escapeHtml(h.phone)}" onclick="event.stopPropagation(); window._coldCallStart(${h.id})">📞 Call</a>` : '<span></span>'}
+                <button class="tc-action" type="button" onclick="event.stopPropagation(); window._jumpToTopCall(${h.id})">Open →</button>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>
+    `).join('')}`;
+}
+
+// ── AI Fit Score explainer modal — full transparency on the scoring ──
+window._openFitScoreExplainer = function() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:680px;max-height:88vh;overflow-y:auto" role="dialog">
+      <h2 style="margin-top:0;display:flex;align-items:center;gap:8px">🤖 How the AI Fit Score works</h2>
+      <p class="modal-sub">Every saved hotel gets a 0–100 score reflecting how well it fits the Accelerate Robotics platform play. The formula is deterministic and explainable — every input has a known weight, and the top reasons surface on each card. Score = sum of category points, clamped to 0–100.</p>
+      <div class="fs-tier-row">
+        <span class="fs-tier-chip top">70+ TOP</span>
+        <span class="fs-tier-chip high">50–69 HIGH</span>
+        <span class="fs-tier-chip mid">30–49 MID</span>
+        <span class="fs-tier-chip low">0–29 LOW</span>
+      </div>
+      <h3 class="fs-section-h">Property scale (the bigger, the better)</h3>
+      <table class="fs-table">
+        <tr><td><strong>Rooms (keys)</strong></td><td>300+ → <strong>+25</strong> · 150–299 → +18 · 75–149 → +10 · 30–74 → +4</td></tr>
+        <tr><td><strong>Floors</strong></td><td>8+ → <strong>+15</strong> · 4–7 → +8 <span class="fs-why">— elevator integration value spikes with floor count</span></td></tr>
+        <tr><td><strong>Stars</strong></td><td>5★ → <strong>+10</strong> · 4★ → +7 · 3★ → +3</td></tr>
+      </table>
+      <h3 class="fs-section-h">Brand + chain (enterprise-sales fit)</h3>
+      <table class="fs-table">
+        <tr><td><strong>Brand class</strong></td><td>Luxury → <strong>+20</strong> · Upper-Upscale → +17 · Upscale → +13 · Upper-Midscale → +8 · Midscale → +4</td></tr>
+        <tr><td><strong>Recognized chain</strong></td><td>+10 if Marriott / Hilton / Hyatt / IHG / Accor / Four Seasons / Ritz / Wyndham / Choice / Best Western / Kimpton / Westin / Sheraton / Sofitel / Fairmont / St Regis / Edition / W / Aman / Mandarin / Rosewood / Loews / Omni / Fontainebleau (matched in name, brand, or operator)</td></tr>
+      </table>
+      <h3 class="fs-section-h">Revenue density</h3>
+      <table class="fs-table">
+        <tr><td><strong>Estimated ADR</strong></td><td>$400+ → <strong>+15</strong> · $250–399 → +10 · $150–249 → +5 <span class="fs-why">— higher ADR means robotics ROI compounds faster</span></td></tr>
+        <tr><td><strong>Newly opened</strong></td><td>+6 if opened ≥ 2018 <span class="fs-why">— modern infra, easier to integrate</span></td></tr>
+      </table>
+      <h3 class="fs-section-h">F&amp;B + event-space (deal size)</h3>
+      <table class="fs-table">
+        <tr><td><strong>Restaurants</strong></td><td>+3 each, capped at +12</td></tr>
+        <tr><td><strong>Event sqft</strong></td><td>50,000+ → <strong>+12</strong> · 20,000+ → +8 · 10,000+ → +5 · 5,000+ → +3</td></tr>
+        <tr><td><strong>Meeting rooms</strong></td><td>+1 per 2 rooms (3+ threshold), cap +6</td></tr>
+        <tr><td><strong>Ballroom capacity</strong></td><td>1,000+ → <strong>+8</strong> · 500+ → +5 · 200+ → +3</td></tr>
+        <tr><td><strong>Spa</strong></td><td>+3 if any</td></tr>
+        <tr><td><strong>Pools</strong></td><td>+3 if 2+</td></tr>
+      </table>
+      <h3 class="fs-section-h">Name-pattern signals (when structured data is sparse)</h3>
+      <table class="fs-table">
+        <tr><td><strong>Resort / Spa</strong></td><td>+6</td></tr>
+        <tr><td><strong>Tower / Towers / Skyline</strong></td><td>+6</td></tr>
+        <tr><td><strong>Grand / Grande</strong></td><td>+5</td></tr>
+        <tr><td><strong>Plaza · Boutique · Beach/Oceanfront/Bay</strong></td><td>+4 each</td></tr>
+        <tr><td><strong>Palace / Royal / Imperial</strong></td><td>+3</td></tr>
+        <tr><td><strong>Stacking cap</strong></td><td>Total name-pattern bonus capped at +12</td></tr>
+      </table>
+      <h3 class="fs-section-h">Funnel position</h3>
+      <table class="fs-table">
+        <tr><td><strong>Already engaged</strong></td><td>+4 if status is contacted / qualified / proposed</td></tr>
+      </table>
+      <h3 class="fs-section-h">Penalties</h3>
+      <table class="fs-table fs-table-neg">
+        <tr><td><strong>Hostel in name</strong></td><td><strong>−40</strong></td></tr>
+        <tr><td><strong>Motel in name</strong></td><td><strong>−25</strong></td></tr>
+        <tr><td><strong>Tiny inn</strong></td><td><strong>−15</strong> if &lt; 15 rooms</td></tr>
+      </table>
+      <div style="margin-top:14px;padding:10px 14px;background:#f0f9ff;border-radius:8px;border-left:3px solid #0891b2;font-size:0.82rem;color:#0c4a6e">
+        <strong>Why deterministic, not LLM-based?</strong> Reps need to trust + audit the score. Reasoning chips on each card ("594 rooms (XL)", "Luxury class", "5★") map 1:1 to the weights above. As Ben/Celia capture intel on visits (restaurant counts, event sqft, etc.) the score updates automatically — no LLM call.
+      </div>
+      <div style="margin-top:16px;text-align:right">
+        <button type="button" class="btn btn-primary" data-close>Got it</button>
+      </div>
     </div>`;
+  document.body.appendChild(modal);
+  const close = () => modal.remove();
+  modal.querySelector('button[data-close]').addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+};
+
+// ── Cold-call disposition tracker ─────────────────────────────────────
+// On 📞 Call, fire the dialer immediately + open a small modal so the
+// outcome gets logged the moment Ben hangs up. Each disposition maps to
+// a status update + optional pre-booked visit (for "Appointment set").
+window._coldCallStart = function(hotelId) {
+  setTimeout(() => openCallDispositionModal(hotelId), 600);
+};
+
+function openCallDispositionModal(hotelId) {
+  const h = SAVED.find(s => s.id === hotelId);
+  if (!h) return;
+  // Default appointment date = next Tuesday (matches Ben's May 12 tour day)
+  const defaultApptDate = (() => {
+    const today = new Date();
+    const day = today.getDay();
+    const daysUntilTue = ((9 - day) % 7) || 7;
+    const t = new Date(today); t.setDate(t.getDate() + daysUntilTue);
+    return t.toISOString().slice(0, 10);
+  })();
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:480px" role="dialog">
+      <h2 style="margin-top:0">📞 Call disposition</h2>
+      <p class="modal-sub"><strong>${escapeHtml(h.name)}</strong>${h.submarket ? ` · 📍 ${escapeHtml(h.submarket)}` : ''}</p>
+      <p style="font-size:0.84rem;color:var(--text-dim);margin-top:-4px">Capture the outcome the moment you hang up so the next rep doesn't have to ask "what happened?"</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+        <button type="button" class="btn btn-ghost cd-btn" data-disposition="voicemail">📨 Left voicemail</button>
+        <button type="button" class="btn btn-ghost cd-btn" data-disposition="no_answer">📵 No answer</button>
+        <button type="button" class="btn btn-ghost cd-btn" data-disposition="contacted">💬 Connected — gauging interest</button>
+        <button type="button" class="btn btn-ghost cd-btn" data-disposition="appointment" style="background:#dcfce7;color:#14532d;border-color:#86efac;font-weight:700">✅ Appointment set</button>
+        <button type="button" class="btn btn-ghost cd-btn" data-disposition="not_fit" style="color:#991b1b">❌ Not a fit</button>
+      </div>
+      <div id="cd-followup" style="display:none;margin-top:14px;padding:12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px">
+        <label style="font-size:0.84rem;font-weight:600;color:#14532d;display:block;margin-bottom:6px">📅 When's the meeting?</label>
+        <input id="cd-appt-date" type="date" value="${defaultApptDate}" style="width:100%;padding:8px;border:1px solid #86efac;border-radius:6px;font:inherit">
+        <label style="font-size:0.84rem;font-weight:600;color:#14532d;display:block;margin:10px 0 6px">Who did you book with?</label>
+        <input id="cd-contact" type="text" placeholder="Jane Doe, GM" maxlength="200" style="width:100%;padding:8px;border:1px solid #86efac;border-radius:6px;font:inherit">
+      </div>
+      <div style="margin-top:14px">
+        <textarea id="cd-notes" placeholder="Notes (optional)…" rows="2" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:0.86rem;resize:vertical"></textarea>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" class="btn btn-ghost" data-skip>Skip — just close</button>
+        <button type="button" class="btn btn-primary" id="cd-save" disabled>Save disposition</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  let chosen = null;
+  modal.querySelectorAll('.cd-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      chosen = btn.dataset.disposition;
+      modal.querySelectorAll('.cd-btn').forEach(b => { b.style.outline = b === btn ? '2px solid var(--accent)' : ''; });
+      modal.querySelector('#cd-save').disabled = false;
+      modal.querySelector('#cd-followup').style.display = chosen === 'appointment' ? '' : 'none';
+    });
+  });
+  const close = () => modal.remove();
+  modal.querySelector('button[data-skip]').addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+  modal.querySelector('#cd-save').addEventListener('click', async () => {
+    if (!chosen) return;
+    const notes = modal.querySelector('#cd-notes').value.trim();
+    try { await saveCallDisposition(hotelId, chosen, notes, modal); close(); }
+    catch (err) { alert('Could not save: ' + err.message); }
+  });
+}
+
+async function saveCallDisposition(hotelId, disposition, userNotes, modal) {
+  const h = SAVED.find(s => s.id === hotelId);
+  const dispositionMap = {
+    voicemail:   { status: null, note_prefix: '📨 Voicemail' },
+    no_answer:   { status: null, note_prefix: '📵 No answer' },
+    contacted:   { status: 'contacted', note_prefix: '💬 Connected' },
+    appointment: { status: 'qualified', note_prefix: '✅ Appointment set' },
+    not_fit:     { status: 'archived', note_prefix: '❌ Not a fit', triage: 'no' },
+  };
+  const cfg = dispositionMap[disposition];
+  if (!cfg) throw new Error('unknown disposition');
+  const dateLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const newLine = `[${dateLabel}] ${cfg.note_prefix}${userNotes ? ' — ' + userNotes : ''}`;
+  const combinedNotes = (h.notes ? h.notes + '\n' : '') + newLine;
+  const patch = { notes: combinedNotes };
+  if (cfg.status) patch.status = cfg.status;
+  if (cfg.triage) patch.triage = cfg.triage;
+  const r = await fetch(`/api/hotel-research/saved/${hotelId}`, {
+    method: 'PATCH', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  if (disposition === 'appointment') {
+    const apptDate = modal.querySelector('#cd-appt-date').value;
+    const contact = modal.querySelector('#cd-contact').value.trim();
+    if (apptDate) {
+      const visitNote = contact ? `Cold-call appointment with ${contact}` : 'Cold-call appointment';
+      try {
+        await fetch(`/api/hotel-research/saved/${hotelId}/visits`, {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visit_date: apptDate, kind: 'meeting_scheduled', notes: visitNote }),
+        });
+      } catch (err) { console.warn('Could not pre-book visit:', err); }
+    }
+  }
+  await loadSaved({ silent: true });
 }
 
 window._jumpToTopCall = function(id) {
