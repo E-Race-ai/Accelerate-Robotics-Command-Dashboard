@@ -710,6 +710,42 @@ async function initSchema() {
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN opportunity_score INTEGER");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN photo_url TEXT");
 
+  // WHY enrichment columns: critical-market BDRs (Miami-Dade) need a richer
+  // hotel snapshot than OSM alone provides — photo, brief description, public
+  // rating, review count, and a Wikipedia link when one exists. Pulled by
+  // src/services/hotel-enrichment.js from Wikipedia REST + the hotel website's
+  // OpenGraph tags. enriched_at is a timestamp the enrichment service stamps
+  // on success so we don't repeat work for the same row.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN description TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN rating REAL");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN review_count INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN wikipedia_url TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN enriched_at TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_enriched_at ON hotels_saved(enriched_at)");
+
+  // WHY ai_fit columns: pre-sort the triage queue by best-fit-first so reps
+  // spend their first hour on the highest-value targets. Score is a 0-100
+  // integer set by src/services/fit-score.js. Reasoning is a JSON array of
+  // short strings shown on the triage card. scored_at lets us re-run the
+  // scorer on demand without redoing already-scored rows.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ai_fit_score INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ai_fit_reasoning TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ai_fit_tier TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ai_fit_scored_at TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_fit_score ON hotels_saved(ai_fit_score DESC)");
+
+  // WHY enrichment_depth: token + API budget gate. Top-fit hotels (top 100)
+  // get deep research treatment; mid-fit get standard; low-fit get only the
+  // basic OSM data we already saved. Reps shouldn't waste research time on
+  // hotels they likely won't target. chain_description holds the brand-level
+  // summary (pulled from Wikipedia of the chain) so independent properties
+  // of a known chain still get useful context even when their own page
+  // doesn't exist.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN enrichment_depth TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN chain_description TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN chain_url TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_depth ON hotels_saved(enrichment_depth)");
+
   // ── Facility master record — the unified record per real-world property ─
   // WHY: BDR research, prospect graduation, deals, assessments, and CRM
   // activity all describe the same physical hotel — but until now lived in
@@ -737,6 +773,17 @@ async function initSchema() {
 
   await additiveAlterIfMissing("ALTER TABLE prospects ADD COLUMN facility_id TEXT");
   await client.execute("CREATE INDEX IF NOT EXISTS idx_prospects_facility ON prospects(facility_id)");
+
+  // WHY triage: BDR fast-pass over a search-result list. One-click pills
+  // (yes / no / maybe / needs_research) so Ben can sweep 346 cards in a
+  // morning. Validation happens in the route layer — SQLite ALTER TABLE
+  // can't add a CHECK constraint mid-stream.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage_by TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage_player TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage_at TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_triage ON hotels_saved(triage)");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_triage_player ON hotels_saved(triage_player)");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────

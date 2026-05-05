@@ -6094,7 +6094,11 @@ function isFullPageRoute(href) {
   } catch { return false; }
 }
 
-function openToolFrame(href, title) {
+// WHY: Encode the open tool's path in the URL (?tool=<href>) so a reload
+// restores the iframe state. Previously pushState('/admin') always kept the
+// URL at /admin, which meant any reload while inside a tool bounced the user
+// back to the dashboard home and they lost their place.
+function openToolFrame(href, title, opts = {}) {
   const frame = document.getElementById('toolFrame');
   const iframe = document.getElementById('toolFrameIframe');
   const titleEl = document.getElementById('toolFrameTitle');
@@ -6112,8 +6116,14 @@ function openToolFrame(href, title) {
     a.classList.toggle('active', a.getAttribute('href') === href);
   });
 
-  // WHY: Push state so browser back button closes the frame
-  history.pushState({ toolFrame: true, href }, title, '/admin');
+  // Push state with the tool path so reload restores it. opts.replace is
+  // used by the on-load restorer so we don't add a duplicate history entry.
+  if (!opts.skipHistory) {
+    const url = `/admin?tool=${encodeURIComponent(href)}`;
+    const entry = { toolFrame: true, href, title: title || '' };
+    if (opts.replace) history.replaceState(entry, title || '', url);
+    else              history.pushState(entry, title || '', url);
+  }
 }
 
 function closeToolFrame() {
@@ -6129,15 +6139,46 @@ function closeToolFrame() {
   document.querySelectorAll('.brand-nav-links a').forEach(a => {
     a.classList.toggle('active', a.getAttribute('href') === '/admin');
   });
+  // Drop the ?tool= query param so the URL reflects "we're on the dashboard
+  // home." Otherwise a refresh re-opens the closed tool.
+  if (window.location.search.includes('tool=')) {
+    history.replaceState(null, '', '/admin');
+  }
 }
 
 // Handle browser back button
 window.addEventListener('popstate', (e) => {
+  // If the popped state has a tool path, re-open it (forward/back inside
+  // toolkit history). Otherwise, fall back to closing if the frame is open.
   const frame = document.getElementById('toolFrame');
-  if (frame.classList.contains('active')) {
+  if (e.state && e.state.toolFrame && e.state.href) {
+    openToolFrame(e.state.href, e.state.title || '', { skipHistory: true });
+  } else if (frame.classList.contains('active')) {
     closeToolFrame();
   }
 });
+
+// On initial load, check ?tool=<path> in the URL and open the matching
+// toolkit page. This is what makes reload-while-inside-a-tool work.
+(function restoreToolFrameFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const tool = params.get('tool');
+    if (!tool) return;
+    // Only allow same-origin paths — never open an external URL just because
+    // someone crafted a ?tool=https://evil.com link.
+    if (tool.startsWith('//') || /^https?:/i.test(tool)) return;
+    if (!tool.startsWith('/')) return;
+    // Look up the matching nav link's title for a nice header
+    const navLink = document.querySelector(`.brand-nav-links a[href="${tool}"]`);
+    const title = navLink ? navLink.textContent.trim() : '';
+    // replace: true so we don't add a phantom history entry on top of the
+    // initial /admin?tool=... that the user reloaded.
+    openToolFrame(tool, title, { replace: true });
+  } catch (err) {
+    console.warn('tool restore failed:', err);
+  }
+})();
 
 // Intercept clicks on toolkit cards and nav links
 document.addEventListener('click', (e) => {
