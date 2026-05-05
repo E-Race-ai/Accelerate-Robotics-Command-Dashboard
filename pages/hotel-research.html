@@ -216,6 +216,13 @@
   }
   .top-call-row .tc-phone:hover { background: #dcfce7; }
 
+  /* Route-open picker — Waze / Apple Maps / Google Maps cards */
+  .route-pick-card {
+    background: #f8fafc; border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .route-pick-card:hover { border-color: var(--accent); background: #f0f9ff; }
+
   /* ─── Triage Game overlay ─────────────────────────────────── */
   .triage-game {
     display: none;
@@ -1789,6 +1796,25 @@
       </div>
       <div class="saved-toolbar">
         <input id="savedSearch" type="search" placeholder="Filter by name, city, brand, notes, or visits…" autocomplete="off">
+        <label style="font-size:0.84rem;color:var(--text-dim);display:flex;align-items:center;gap:6px;font-weight:600">Sort by
+          <select id="savedSortBy" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:white">
+            <option value="ai_fit_score">AI fit score</option>
+            <option value="rooms">Rooms (keys)</option>
+            <option value="event_sqft">Event space (sqft)</option>
+            <option value="restaurant_count">Restaurants</option>
+            <option value="meeting_room_count">Meeting rooms</option>
+            <option value="ballroom_capacity">Ballroom capacity</option>
+            <option value="est_adr_dollars">ADR ($/night)</option>
+            <option value="total_floors">Floors</option>
+            <option value="stars">Star rating</option>
+            <option value="year_opened">Year opened</option>
+            <option value="revenue_potential_annual">Revenue potential</option>
+            <option value="visit_count">Visit count</option>
+            <option value="updated_at">Recently updated</option>
+            <option value="name">Name (A-Z)</option>
+          </select>
+        </label>
+        <button id="savedSortDir" type="button" class="btn btn-ghost" title="Toggle sort direction">↓ DESC</button>
         <div class="chip-row" id="statusChips"></div>
         <button id="routeModeToggle" class="btn btn-ghost" type="button" onclick="window._toggleRouteMode()">🗺️ Plan route</button>
         <div class="view-toggle" role="tablist" aria-label="View mode">
@@ -1818,6 +1844,11 @@
           <label>Rooms ≥ <input id="advRoomsMin" type="number" min="0" step="10" value="0" style="width:80px"></label>
           <label>ADR ≥ <input id="advAdrMin" type="number" min="0" step="50" value="0" style="width:80px"> $</label>
           <label>ADR ≤ <input id="advAdrMax" type="number" min="0" step="50" value="9999" style="width:80px"> $</label>
+          <label>Restaurants ≥ <input id="advRestMin" type="number" min="0" step="1" value="0" style="width:60px"></label>
+          <label>Event sqft ≥ <input id="advEventMin" type="number" min="0" step="1000" value="0" style="width:90px"></label>
+          <label>Meeting rms ≥ <input id="advMtgMin" type="number" min="0" step="1" value="0" style="width:60px"></label>
+          <label>Floors ≥ <input id="advFloorsMin" type="number" min="0" step="1" value="0" style="width:60px"></label>
+          <label>Fit ≥ <input id="advFitMin" type="number" min="0" max="100" step="5" value="0" style="width:60px"></label>
           <label class="toggle-label"><input id="advHasPhone" type="checkbox"> Has phone</label>
           <label class="toggle-label"><input id="advHasWebsite" type="checkbox"> Has website</label>
           <label class="toggle-label"><input id="advHasVisits" type="checkbox"> Visited</label>
@@ -1920,6 +1951,7 @@
           <button class="btn btn-ghost" type="button" onclick="window._scheduleNav(7)">Next ›</button>
         </div>
         <button class="btn btn-primary" type="button" onclick="window._openAutoWeekWizard()">⚡ Auto-plan week</button>
+        <button class="btn btn-ghost" type="button" onclick="window._wipeAllRoutes()" style="color:#b91c1c;border-color:#fecaca" title="Delete every route in the system. Use when the schedule view is cluttered with old/duplicate routes.">🗑️ Clear all routes</button>
       </div>
 
       <div id="scheduleWeek" class="schedule-week"></div>
@@ -2159,12 +2191,18 @@ const ADV = {
   roomsMin: 0,
   adrMin: 0,
   adrMax: 9999,
+  // F&B + event-space + fit-min — all default 0 ("any")
+  restMin: 0, eventMin: 0, mtgMin: 0, floorsMin: 0, fitMin: 0,
   hasPhone: false,
   hasWebsite: false,
   hasVisits: false,
   untouched: false,
   graduated: false,
 };
+// Saved-list global sort. Default: AI fit DESC so the best opportunities
+// surface at the top without the rep having to think about it.
+let SAVED_SORT_BY  = 'ai_fit_score';
+let SAVED_SORT_DIR = 'desc';
 const BRAND_CLASS_LABELS = {
   luxury: 'Luxury', upper_upscale: 'Upper Upscale', upscale: 'Upscale',
   upper_midscale: 'Upper Midscale', midscale: 'Midscale',
@@ -3923,20 +3961,150 @@ function renderRouteUI() {
 async function _openRouteInMaps() {
   if (ROUTE_PICKED.length < 2) return;
   try {
-    const res = await fetch('/api/hotel-research/route', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hotel_ids: ROUTE_PICKED }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    window.open(data.google_maps_url, '_blank', 'noopener');
+    // Resolve the picked-hotel ids to ordered coords. The server-side /route
+    // endpoint validates + reorders if needed; we still build the per-app
+    // URLs locally so we can offer Waze/Apple/Google without round-tripping.
+    const stops = ROUTE_PICKED
+      .map(id => SAVED.find(s => s.id === id))
+      .filter(s => s && s.lat != null && s.lng != null);
+    if (stops.length < 2) throw new Error('Picked hotels are missing coordinates');
+    openRoutePickerDialog(stops, 'Picked route');
   } catch (err) {
     alert('Could not build route: ' + err.message);
   }
 }
 window._openRouteInMaps = _openRouteInMaps;
+
+// ── Route-open picker — Waze / Apple Maps / Google Maps ─────────────
+// Multi-stop URL formats per app. Waze deep links only navigate to a
+// single destination, so we surface that limitation explicitly.
+function buildGoogleMapsUrl(stops) {
+  return 'https://www.google.com/maps/dir/' + stops.map(s => `${s.lat},${s.lng}`).join('/');
+}
+function buildAppleMapsUrl(stops) {
+  // Apple Maps supports chained destinations via `+to:`; first stop is the
+  // origin, the rest are waypoints.
+  const [first, ...rest] = stops;
+  const dest = rest.map(s => `${s.lat},${s.lng}`).join('+to:');
+  return `https://maps.apple.com/?saddr=${first.lat},${first.lng}&daddr=${dest}&dirflg=d`;
+}
+function buildWazeUrl(firstStop) {
+  // Waze multi-stop has to be entered manually in-app; deep link goes to
+  // the first stop + reps add stops as they go.
+  return `https://waze.com/ul?ll=${firstStop.lat},${firstStop.lng}&navigate=yes`;
+}
+
+function openRoutePickerDialog(stops, label) {
+  if (!stops || stops.length === 0) return;
+  const gm = buildGoogleMapsUrl(stops);
+  const am = buildAppleMapsUrl(stops);
+  const wz = buildWazeUrl(stops[0]);
+  const totalStops = stops.length;
+
+  // Build a modal — same style as other modals on the page
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:480px" role="dialog">
+      <h2 style="margin-top:0">📍 Open route in…</h2>
+      <p class="modal-sub" style="margin-bottom:14px">${escapeHtml(label || 'Route')} · ${totalStops} stop${totalStops === 1 ? '' : 's'}</p>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="route-pick-card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <span style="font-size:1.6rem">🗺️</span>
+            <div style="flex:1">
+              <div style="font-weight:700">Google Maps</div>
+              <div style="font-size:0.78rem;color:var(--text-dim)">Multi-stop · works on web + iOS + Android</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <a class="btn btn-primary" target="_blank" rel="noopener" href="${escapeHtml(gm)}" style="flex:1;text-align:center;text-decoration:none">Open in browser</a>
+            <button class="btn btn-ghost" type="button" data-copy="${escapeHtml(gm)}">📋 Copy link</button>
+            <button class="btn btn-ghost route-share-btn" type="button" data-share='${JSON.stringify({title:'Google Maps route', url:gm})}' style="display:none">📲 Share</button>
+          </div>
+        </div>
+
+        <div class="route-pick-card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <span style="font-size:1.6rem">🍎</span>
+            <div style="flex:1">
+              <div style="font-weight:700">Apple Maps</div>
+              <div style="font-size:0.78rem;color:var(--text-dim)">Multi-stop · best on iPhone, opens in CarPlay</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <a class="btn btn-primary" target="_blank" rel="noopener" href="${escapeHtml(am)}" style="flex:1;text-align:center;text-decoration:none">Open in browser</a>
+            <button class="btn btn-ghost" type="button" data-copy="${escapeHtml(am)}">📋 Copy link</button>
+            <button class="btn btn-ghost route-share-btn" type="button" data-share='${JSON.stringify({title:'Apple Maps route', url:am})}' style="display:none">📲 Share</button>
+          </div>
+        </div>
+
+        <div class="route-pick-card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <span style="font-size:1.6rem">🚗</span>
+            <div style="flex:1">
+              <div style="font-weight:700">Waze</div>
+              <div style="font-size:0.78rem;color:var(--text-dim)">First stop only — Waze deep links don't carry multi-stop. Tap "+ stop" inside Waze for the next destinations.</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <a class="btn btn-primary" target="_blank" rel="noopener" href="${escapeHtml(wz)}" style="flex:1;text-align:center;text-decoration:none">Open in browser</a>
+            <button class="btn btn-ghost" type="button" data-copy="${escapeHtml(wz)}">📋 Copy link</button>
+            <button class="btn btn-ghost route-share-btn" type="button" data-share='${JSON.stringify({title:'Waze route', url:wz})}' style="display:none">📲 Share</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;background:#f8fafc;border-radius:8px;padding:10px 12px;font-size:0.8rem;color:var(--text-dim)">
+        <strong style="color:var(--text)">📲 Get this on your phone:</strong> Click 📋 Copy link, then paste into Slack DM, iMessage, or any chat app on your computer — open it on your phone to launch the right map app.
+      </div>
+
+      <div style="margin-top:14px;text-align:right">
+        <button class="btn btn-ghost" type="button" data-close>Close</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // Show the native Share buttons on devices with navigator.share (mobile)
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  if (canShare) {
+    modal.querySelectorAll('.route-share-btn').forEach(btn => {
+      btn.style.display = '';
+      btn.addEventListener('click', async () => {
+        try {
+          const data = JSON.parse(btn.dataset.share);
+          await navigator.share({ title: data.title, url: data.url });
+        } catch { /* user cancelled */ }
+      });
+    });
+  }
+
+  // Wire copy-to-clipboard buttons
+  modal.querySelectorAll('button[data-copy]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+      } catch {
+        // Fallback — select+copy via a hidden textarea
+        const ta = document.createElement('textarea');
+        ta.value = btn.dataset.copy;
+        document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy'); ta.remove();
+        btn.textContent = '✓ Copied!';
+      }
+    });
+  });
+
+  const close = () => modal.remove();
+  modal.querySelector('button[data-close]').addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+}
+window._openRoutePicker = openRoutePickerDialog;
 
 // ─── Visit log ────────────────────────────────────────────────────
 async function loadVisits(hotelId) {
@@ -4250,6 +4418,11 @@ function applyFilters(rows) {
     if (ADV.brandClass !== 'all' && (s.brand_class || 'independent') !== ADV.brandClass) return false;
     if (ADV.starsMin > 0 && (Number(s.stars) || 0) < ADV.starsMin) return false;
     if (ADV.roomsMin > 0 && (Number(s.rooms) || 0) < ADV.roomsMin) return false;
+    if (ADV.restMin   > 0 && (Number(s.restaurant_count) || 0) < ADV.restMin) return false;
+    if (ADV.eventMin  > 0 && (Number(s.event_sqft) || 0) < ADV.eventMin) return false;
+    if (ADV.mtgMin    > 0 && (Number(s.meeting_room_count) || 0) < ADV.mtgMin) return false;
+    if (ADV.floorsMin > 0 && (Number(s.total_floors) || 0) < ADV.floorsMin) return false;
+    if (ADV.fitMin    > 0 && (Number(s.ai_fit_score) || 0) < ADV.fitMin) return false;
     const adr = Number(s.est_adr_dollars) || 0;
     if (adr < ADV.adrMin) return false;
     if (adr > ADV.adrMax) return false;
@@ -4264,14 +4437,25 @@ function applyFilters(rows) {
 }
 
 function applySort(rows) {
-  if (!sortKey) return rows;
-  const dir = sortDir === 'desc' ? -1 : 1;
-  const numeric = new Set(['stars', 'rooms', 'est_adr_dollars', 'visit_count', 'revenue_potential_annual', 'opportunity_score']);
+  // Dropdown wins over per-column header sort. If the dropdown is on a
+  // value, sortKey shadows it. Otherwise fall through to header-driven sort.
+  const key = SAVED_SORT_BY || sortKey;
+  const dir = (SAVED_SORT_BY ? SAVED_SORT_DIR : sortDir) === 'desc' ? -1 : 1;
+  if (!key) return rows;
+  const numeric = new Set([
+    'stars', 'rooms', 'est_adr_dollars', 'visit_count',
+    'revenue_potential_annual', 'opportunity_score',
+    'ai_fit_score', 'total_floors', 'year_opened',
+    'restaurant_count', 'bar_count', 'event_sqft',
+    'meeting_room_count', 'ballroom_capacity',
+    'spa_count', 'pool_count',
+  ]);
   const sorted = rows.slice().sort((a, b) => {
-    const va = a[sortKey], vb = b[sortKey];
-    if (numeric.has(sortKey)) {
-      const na = Number.isFinite(Number(va)) ? Number(va) : -Infinity;
-      const nb = Number.isFinite(Number(vb)) ? Number(vb) : -Infinity;
+    const va = a[key], vb = b[key];
+    if (numeric.has(key)) {
+      // Treat null/missing as worst-possible so DESC sort surfaces real data first
+      const na = Number.isFinite(Number(va)) ? Number(va) : (dir < 0 ? -Infinity : Infinity);
+      const nb = Number.isFinite(Number(vb)) ? Number(vb) : (dir < 0 ? -Infinity : Infinity);
       return (na - nb) * dir;
     }
     const sa = (va == null ? '' : String(va)).toLowerCase();
@@ -4499,19 +4683,37 @@ function wireAdvFilters() {
   $('advHasVisits')  ?.addEventListener('change', e => { ADV.hasVisits = e.target.checked; renderSaved(); });
   $('advUntouched')  ?.addEventListener('change', e => { ADV.untouched = e.target.checked; renderSaved(); });
   $('advGraduated')  ?.addEventListener('change', e => { ADV.graduated = e.target.checked; renderSaved(); });
+  // F&B + event-space + fit min — new sort/filter dimensions
+  $('advRestMin')    ?.addEventListener('change', e => { ADV.restMin   = Number(e.target.value) || 0; renderSaved(); });
+  $('advEventMin')   ?.addEventListener('change', e => { ADV.eventMin  = Number(e.target.value) || 0; renderSaved(); });
+  $('advMtgMin')     ?.addEventListener('change', e => { ADV.mtgMin    = Number(e.target.value) || 0; renderSaved(); });
+  $('advFloorsMin')  ?.addEventListener('change', e => { ADV.floorsMin = Number(e.target.value) || 0; renderSaved(); });
+  $('advFitMin')     ?.addEventListener('change', e => { ADV.fitMin    = Number(e.target.value) || 0; renderSaved(); });
+  // Sort dropdown + direction toggle
+  $('savedSortBy')   ?.addEventListener('change', e => { SAVED_SORT_BY = e.target.value; renderSaved(); });
+  $('savedSortDir')  ?.addEventListener('click', () => {
+    SAVED_SORT_DIR = SAVED_SORT_DIR === 'desc' ? 'asc' : 'desc';
+    const btn = $('savedSortDir');
+    if (btn) btn.textContent = SAVED_SORT_DIR === 'desc' ? '↓ DESC' : '↑ ASC';
+    renderSaved();
+  });
   $('advClearBtn')   ?.addEventListener('click', () => {
     Object.assign(ADV, {
       brandClass: 'all', starsMin: 0, roomsMin: 0, adrMin: 0, adrMax: 9999,
+      restMin: 0, eventMin: 0, mtgMin: 0, floorsMin: 0, fitMin: 0,
       hasPhone: false, hasWebsite: false, hasVisits: false, untouched: false, graduated: false,
     });
     document.getElementById('advBrandClass').value = 'all';
-    document.getElementById('advStarsMin').value = 0;
-    document.getElementById('advRoomsMin').value = 0;
-    document.getElementById('advAdrMin').value = 0;
+    ['advStarsMin','advRoomsMin','advAdrMin','advRestMin','advEventMin','advMtgMin','advFloorsMin','advFitMin']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = 0; });
     document.getElementById('advAdrMax').value = 9999;
-    ['advHasPhone','advHasWebsite','advHasVisits','advUntouched','advGraduated'].forEach(id => { document.getElementById(id).checked = false; });
+    ['advHasPhone','advHasWebsite','advHasVisits','advUntouched','advGraduated']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
     savedFilter = 'all'; savedSubmarketFilter = 'all'; savedQuery = ''; document.getElementById('savedSearch').value = '';
     sortKey = null; sortDir = 'asc';
+    SAVED_SORT_BY = 'ai_fit_score'; SAVED_SORT_DIR = 'desc';
+    const sb = document.getElementById('savedSortBy'); if (sb) sb.value = 'ai_fit_score';
+    const sd = document.getElementById('savedSortDir'); if (sd) sd.textContent = '↓ DESC';
     renderSaved();
   });
 }
@@ -4926,7 +5128,19 @@ async function runAllPresets(marketKey) {
 // SCHEDULE — BDR weekly territory plan
 // ═══════════════════════════════════════════════════════════════════
 let SCHEDULE_ANCHOR = null;   // Date object — the Monday of the visible week
-let SCHEDULE_ROUTES = [];     // [{id, name, scheduled_date, zone, notes, stop_count, done_count}]
+let SCHEDULE_ROUTES = [];     // [{id, name, scheduled_date, zone, notes, stop_count, done_count, stops:[]}]
+
+// Open a schedule-day route in the Waze/Apple/Google Maps picker
+window._openScheduleDayRoute = function(routeId) {
+  const r = SCHEDULE_ROUTES.find(rt => rt.id === routeId);
+  if (!r || !r.stops) return;
+  const stops = r.stops.filter(s => s.lat && s.lng);
+  if (stops.length < 2) {
+    alert('This route needs at least 2 stops with coordinates.');
+    return;
+  }
+  openRoutePickerDialog(stops, r.name || 'Route');
+};
 
 function _mondayOf(d) {
   const x = new Date(d);
@@ -4985,6 +5199,9 @@ async function renderScheduleWeek() {
       if (res.ok) {
         const data = await res.json();
         stopsByRoute[r.id] = data.stops || [];
+        // Cache on the route object so the route-open picker can read stops
+        // without re-fetching when the user clicks "📍 Open".
+        r.stops = data.stops || [];
       }
     } catch {}
   }));
@@ -5030,9 +5247,8 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
         <input type="checkbox" ${s.done ? 'checked' : ''} onchange="window._toggleStopDone(${r.id}, ${s.stop_id}, this.checked)">
         <span class="schedule-day-stop-name">${escapeHtml(s.name)}</span>
       </div>`).join('');
-    const mapsUrl = stops.length >= 2
-      ? 'https://www.google.com/maps/dir/' + stops.filter(s => s.lat && s.lng).map(s => `${s.lat},${s.lng}`).join('/')
-      : null;
+    const stopsWithCoords = stops.filter(s => s.lat && s.lng);
+    const hasRoute = stopsWithCoords.length >= 2;
     return `
       <div class="schedule-day ${isToday ? 'today' : ''}" data-date="${iso}" data-route-id="${r.id}">
         <div class="schedule-day-head">
@@ -5050,7 +5266,7 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
         ${total > 0 ? `<div class="schedule-day-progress"><div class="schedule-day-progress-bar"><div class="schedule-day-progress-fill" style="width:${pct}%"></div></div><span>${pct}%</span></div>` : ''}
         <div class="schedule-day-stops">${stopsHtml || '<div class="schedule-day-empty">No stops yet.</div>'}</div>
         <div class="schedule-day-actions">
-          ${mapsUrl ? `<a class="btn btn-primary" target="_blank" rel="noopener" href="${escapeHtml(mapsUrl)}" style="text-decoration:none;flex:1;text-align:center;">📍 Open</a>` : ''}
+          ${hasRoute ? `<button class="btn btn-primary" type="button" onclick="window._openScheduleDayRoute(${r.id})" style="flex:1">📍 Open</button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -5168,6 +5384,23 @@ window._buildBenTour = async function() {
     }
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '⚡ Build / refresh Ben\'s tour'; }
+  }
+};
+
+// Bulk-wipe every route — the rescue button when the schedule view is full
+// of duplicate/auto-generated routes from prior wizard clicks.
+window._wipeAllRoutes = async function() {
+  if (!confirm('Delete EVERY route in the schedule? This wipes Ben\'s tour, auto-plan week routes, and any manually-built routes. Cannot be undone.')) return;
+  try {
+    const r = await fetch('/api/hotel-research/routes/all', {
+      method: 'DELETE', credentials: 'same-origin',
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    alert(`Deleted ${data.deleted} route${data.deleted === 1 ? '' : 's'}. The schedule is now empty — re-run "Build Ben's tour" or the auto-plan wizard to repopulate.`);
+    if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
+  } catch (err) {
+    alert('Could not delete routes: ' + err.message);
   }
 };
 

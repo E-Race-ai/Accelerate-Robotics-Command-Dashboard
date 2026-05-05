@@ -710,6 +710,19 @@ async function initSchema() {
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN opportunity_score INTEGER");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN photo_url TEXT");
 
+  // WHY F&B + event-space intel: BDRs sort prospects by deal size, and a
+  // hotel with 4 restaurants + 50,000 sqft of event space is a meaningfully
+  // bigger software opportunity than a 200-key limited-service property
+  // with no F&B. Captured manually by reps as they research; surfaced as
+  // first-class sort/filter dimensions on the map + saved list.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN restaurant_count INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN bar_count INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN event_sqft INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN meeting_room_count INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ballroom_capacity INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN spa_count INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN pool_count INTEGER");
+
   // WHY enrichment columns: critical-market BDRs (Miami-Dade) need a richer
   // hotel snapshot than OSM alone provides — photo, brief description, public
   // rating, review count, and a Wikipedia link when one exists. Pulled by
