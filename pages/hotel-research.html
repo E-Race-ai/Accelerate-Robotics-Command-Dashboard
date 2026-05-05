@@ -939,6 +939,16 @@
     max-height: 110px; overflow-y: auto;
   }
 
+  /* Pagination bar — sits below the grid when more cards are hidden */
+  .saved-pagination {
+    display: flex; gap: 10px; justify-content: center; align-items: center;
+    margin-top: 20px; padding: 18px 14px;
+    background: var(--card); border: 1px dashed var(--border-strong);
+    border-radius: 12px;
+    flex-wrap: wrap;
+  }
+  .saved-pagination .btn { font-size: 0.9rem; padding: 9px 18px; }
+
   /* Empty + loading */
   .empty, .loading, .err {
     background: var(--card); border: 1px dashed var(--border-strong);
@@ -5931,9 +5941,42 @@ function renderSaved() {
     content.innerHTML = summary + renderSavedTable(filtered);
     attachTableHandlers();
   } else {
-    content.innerHTML = summary + `<div class="grid">${filtered.map(renderSavedCard).join('')}</div>`;
+    // ── Pagination ────────────────────────────────────────────────
+    // 896 cards rendered at once was making the saved tab unscrollable.
+    // We default to top N by current sort, and reveal more in chunks.
+    // SAVED_PAGE_SIZE persists across re-renders so a "Show more" stays
+    // expanded when the rep changes a filter.
+    if (typeof window.SAVED_PAGE_SIZE !== 'number') window.SAVED_PAGE_SIZE = 30;
+    const total = filtered.length;
+    const pageSize = Math.min(window.SAVED_PAGE_SIZE, total);
+    const visible = filtered.slice(0, pageSize);
+    const moreCount = total - pageSize;
+    const showMoreBar = moreCount > 0
+      ? `<div class="saved-pagination">
+           <button class="btn btn-primary" type="button" onclick="window._savedShowMore(30)">↓ Show 30 more (${moreCount} hidden)</button>
+           <button class="btn btn-ghost" type="button" onclick="window._savedShowMore('all')">Show all ${total.toLocaleString()}</button>
+         </div>`
+      : (total > 30 ? `<div class="saved-pagination">
+           <button class="btn btn-ghost" type="button" onclick="window._savedShowMore('reset')">↑ Collapse to top 30</button>
+         </div>` : '');
+    content.innerHTML = summary + `<div class="grid">${visible.map(renderSavedCard).join('')}</div>` + showMoreBar;
   }
 }
+
+window._savedShowMore = function(arg) {
+  if (arg === 'all') window.SAVED_PAGE_SIZE = 100000;
+  else if (arg === 'reset') window.SAVED_PAGE_SIZE = 30;
+  else window.SAVED_PAGE_SIZE = (window.SAVED_PAGE_SIZE || 30) + Number(arg || 30);
+  renderSaved();
+  // Scroll user back to where they were (just past the previous batch)
+  if (arg !== 'reset') {
+    const cards = document.querySelectorAll('.card[data-id]');
+    if (cards[Math.max(0, (window.SAVED_PAGE_SIZE - Number(arg || 30)) - 5)]) {
+      cards[Math.max(0, (window.SAVED_PAGE_SIZE - Number(arg || 30)) - 5)]
+        .scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+};
 
 const TABLE_COLS = [
   { key: 'name',                     label: 'Hotel' },
