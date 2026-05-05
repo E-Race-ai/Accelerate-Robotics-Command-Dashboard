@@ -762,9 +762,9 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
   try {
     const r = await db.run(
       `INSERT INTO prospects (
-         market_id, status, name, address, brand, brand_class, keys, stars,
-         signal, source, research_date, facility_id
-       ) VALUES (?, 'staged', ?, ?, ?, ?, ?, ?, ?, 'ai_research', datetime('now'), ?)`,
+         market_id, status, name, address, brand, brand_class, keys, floors, stars,
+         signal, operator, source, research_date, facility_id
+       ) VALUES (?, 'staged', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ai_research', datetime('now'), ?)`,
       [
         marketId,
         hotel.name,
@@ -772,8 +772,10 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
         hotel.brand,
         brandClass,
         hotel.rooms,
+        hotel.total_floors,              // populates the "Floors" stat on the prospects card
         hotel.stars,
         signalStr,                       // signal field — repurposed for submarket + pilot tier
+        hotel.operator,                  // operator (HEI Hotels, Highgate, etc.) shows on prospect card
         facilityId,
       ],
     );
