@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/brand.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
     --bg: #f7f8fc;
@@ -306,6 +308,183 @@
     h1 { font-size: 1.6rem; }
     .wrap { padding: 24px 16px 120px; }
   }
+
+  /* ─── Map workspace ─────────────────────────────────────────── */
+  .hotel-map {
+    height: 70vh; min-height: 500px; width: 100%;
+    border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .map-toolbar {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px; margin-bottom: 12px;
+  }
+  .map-toolbar-stats { font-size: 0.92rem; font-weight: 600; }
+  .map-toolbar-stats strong { color: var(--accent-deep); }
+  .map-toolbar-filters { display: flex; gap: 12px; flex-wrap: wrap; margin-left: auto; }
+  .map-toolbar-filters label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.82rem; color: var(--text-dim);
+  }
+  .map-toolbar-filters select {
+    padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: white; font: inherit; font-size: 0.86rem;
+  }
+  .map-legend {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-top: 10px; font-size: 0.82rem; color: var(--text-dim);
+  }
+  .map-legend-pin {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 4px; border: 2px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+  }
+  .leaflet-popup-content {
+    font-family: inherit; font-size: 0.86rem; line-height: 1.45; min-width: 220px;
+  }
+  .leaflet-popup-content .pop-name {
+    font-weight: 700; color: var(--text); font-size: 0.95rem; margin-bottom: 4px;
+  }
+  .leaflet-popup-content .pop-meta {
+    font-size: 0.78rem; color: var(--text-dim); margin-bottom: 8px;
+  }
+  .leaflet-popup-content .pop-actions {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;
+  }
+  .leaflet-popup-content .pop-actions button {
+    padding: 5px 10px; font-size: 0.74rem; font-weight: 600;
+    border-radius: 6px; border: 1px solid var(--border); background: white;
+    cursor: pointer; color: var(--text-dim);
+  }
+  .leaflet-popup-content .pop-actions button:hover { color: var(--accent-deep); border-color: var(--accent); }
+  .leaflet-popup-content .pop-actions .primary {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+  .leaflet-popup-content .pop-actions .primary:hover { background: var(--accent-deep); }
+
+  /* Hotel pins — colored circle marker via inline SVG */
+  .hotel-pin {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.30);
+  }
+
+  /* ─── Route builder ────────────────────────────────────────── */
+  .saved-toolbar #routeModeToggle.active {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+  .route-bar {
+    display: none;
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    background: var(--card); border: 1px solid var(--border);
+    box-shadow: 0 12px 40px rgba(15,23,42,0.18);
+    border-radius: 14px; padding: 12px 18px;
+    z-index: 50; min-width: 380px; max-width: 92vw;
+    align-items: center; gap: 16px;
+  }
+  .route-bar.active { display: flex; }
+  .route-bar-info { display: flex; flex-direction: column; line-height: 1.2; }
+  .route-bar-info strong { font-size: 0.95rem; color: var(--text); }
+  .route-bar-hint { font-size: 0.74rem; color: var(--text-faint); }
+  .route-bar-actions { display: flex; gap: 8px; margin-left: auto; }
+
+  .route-checkbox {
+    position: absolute; top: 12px; right: 12px;
+    width: 26px; height: 26px;
+    background: white; border: 2px solid var(--border-strong);
+    border-radius: 8px; display: none;
+    align-items: center; justify-content: center;
+    cursor: pointer; font-weight: 700; color: var(--text-faint);
+    transition: all 0.12s;
+  }
+  body.route-mode .card .route-checkbox { display: flex; }
+  body.route-mode .card.route-picked .route-checkbox {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+  body.route-mode .card.route-picked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .route-order-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 0.95rem;
+  }
+
+  /* ─── Visit log on saved cards ─────────────────────────────── */
+  .visit-summary {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 6px; font-size: 0.78rem; color: var(--text-dim);
+  }
+  .visit-summary .v-pill {
+    background: #ecfeff; color: #0e7490;
+    padding: 3px 9px; border-radius: 100px; font-weight: 600; font-size: 0.74rem;
+  }
+
+  /* Visit log section in modal */
+  .visit-log-section {
+    border-top: 1px solid var(--border); margin-top: 18px; padding-top: 14px;
+  }
+  .visit-log-section h3 {
+    font-size: 0.92rem; margin: 0 0 10px;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .visit-log-empty {
+    color: var(--text-faint); font-size: 0.84rem;
+    padding: 14px; text-align: center; background: #f8fafc; border-radius: 8px;
+  }
+  .visit-row {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+    position: relative;
+  }
+  .visit-row-head {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 4px; font-size: 0.84rem;
+  }
+  .visit-row-date { font-weight: 700; color: var(--text); }
+  .visit-row-type {
+    background: #f1f5f9; color: var(--text-dim);
+    padding: 2px 7px; border-radius: 100px;
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .visit-row-type.drop_in           { background: #fef3c7; color: #92400e; }
+  .visit-row-type.drive_by          { background: #ecfeff; color: #155e75; }
+  .visit-row-type.scheduled_meeting { background: #dbeafe; color: #1e40af; }
+  .visit-row-type.phone_call        { background: #f5f3ff; color: #6d28d9; }
+  .visit-row-type.email             { background: #f1f5f9; color: var(--text-dim); }
+  .visit-row-contact { font-size: 0.78rem; color: var(--text-dim); }
+  .visit-row-summary { font-size: 0.84rem; color: var(--text); margin: 4px 0; white-space: pre-wrap; }
+  .visit-row-next {
+    margin-top: 6px; padding: 6px 10px;
+    background: var(--accent-soft); color: var(--accent-deep);
+    border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+  }
+  .visit-row-delete {
+    position: absolute; top: 8px; right: 8px;
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--text-faint); font-size: 0.7rem;
+  }
+  .visit-row-delete:hover { color: var(--danger); }
+
+  .add-visit-form {
+    background: #f8fafc; border-radius: 8px; padding: 10px 12px;
+    margin-top: 8px;
+  }
+  .add-visit-form .form-row { margin-bottom: 8px; }
+  .add-visit-form .form-row label { font-size: 0.7rem; }
+  .add-visit-form-row { display: grid; grid-template-columns: 130px 1fr 130px; gap: 8px; }
+  .add-visit-form-row .form-row { margin-bottom: 0; }
+  .add-visit-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+
+  /* Graduate button on saved cards */
+  .btn-graduate {
+    background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: 0;
+    box-shadow: 0 1px 3px rgba(22,163,74,0.30);
+  }
+  .btn-graduate:hover { background: linear-gradient(135deg, #15803d, #14532d); }
+  .graduated-pill {
+    background: #dcfce7; color: #14532d;
+    padding: 5px 10px; border-radius: 100px;
+    font-size: 0.74rem; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
 </style>
 </head>
 <body>
@@ -318,6 +497,7 @@
 
     <div class="tabs" role="tablist">
       <button class="tab active" data-panel="search" role="tab" aria-selected="true">Search</button>
+      <button class="tab" data-panel="map"   role="tab" aria-selected="false">🗺️ Map</button>
       <button class="tab" data-panel="saved" role="tab" aria-selected="false">My Saved <span class="badge" id="savedCount">0</span></button>
     </div>
 
@@ -360,14 +540,60 @@
       <div id="searchContent"></div>
     </div>
 
+    <!-- ─── Map panel — visual research workspace ─────────────── -->
+    <div class="panel" id="panel-map" role="tabpanel">
+      <div class="map-toolbar">
+        <div class="map-toolbar-stats" id="mapStats">Loading…</div>
+        <div class="map-toolbar-filters">
+          <label>Status filter:
+            <select id="mapStatusFilter">
+              <option value="all">All statuses</option>
+              <option value="lead">Lead</option>
+              <option value="contacted">Contacted</option>
+              <option value="qualified">Qualified</option>
+              <option value="proposed">Proposed</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+          </label>
+          <label>Submarket:
+            <select id="mapSubmarketFilter"><option value="all">All submarkets</option></select>
+          </label>
+        </div>
+      </div>
+      <div id="mapEl" class="hotel-map"></div>
+      <div class="map-legend">
+        <span class="map-legend-pin" style="background:#94a3b8"></span>Lead
+        <span class="map-legend-pin" style="background:#06b6d4"></span>Contacted
+        <span class="map-legend-pin" style="background:#3b82f6"></span>Qualified
+        <span class="map-legend-pin" style="background:#f59e0b"></span>Proposed
+        <span class="map-legend-pin" style="background:#16a34a"></span>Won
+        <span class="map-legend-pin" style="background:#dc2626"></span>Lost
+        <span style="margin-left:auto;color:var(--text-faint);font-size:0.78rem;">📌 click a pin to view + plan a visit</span>
+      </div>
+    </div>
+
     <!-- ─── Saved panel ───────────────────────────────────────── -->
     <div class="panel" id="panel-saved" role="tabpanel">
       <div class="saved-toolbar">
         <input id="savedSearch" type="search" placeholder="Filter by name, city, brand, or notes…" autocomplete="off">
         <div class="chip-row" id="statusChips"></div>
+        <button id="routeModeToggle" class="btn btn-ghost" type="button" onclick="window._toggleRouteMode()">🗺️ Plan route</button>
       </div>
       <div class="chip-row" id="submarketChips" style="margin: -8px 0 14px;"></div>
       <div id="savedContent"></div>
+
+      <!-- Route bar — sticky at the bottom of the viewport while route mode is on -->
+      <div id="routeBar" class="route-bar">
+        <div class="route-bar-info">
+          <strong id="routeCount">0 stops</strong>
+          <span class="route-bar-hint">Pick 2–25 hotels in the order you want to visit them.</span>
+        </div>
+        <div class="route-bar-actions">
+          <button class="btn btn-ghost" type="button" onclick="window._clearRoute()">Clear</button>
+          <button class="btn btn-primary" type="button" id="openInMapsBtn" onclick="window._openRouteInMaps()" disabled>📍 Open in Google Maps</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -417,6 +643,56 @@
           <label for="f_notes">Notes (decision maker, deal stage, anything useful)</label>
           <textarea id="f_notes" maxlength="4000" placeholder="GM: Jane Doe · referred by Hilton Tampa · 220 rooms · interested in nightly turn-down support"></textarea>
         </div>
+
+        <!-- Visit log — drop-in / drive-by tracking timeline + add form -->
+        <div class="visit-log-section">
+          <h3>📍 Visit log</h3>
+          <div id="visitLogList"><div class="visit-log-empty">Loading…</div></div>
+          <div class="add-visit-form">
+            <div class="add-visit-form-row">
+              <div class="form-row">
+                <label for="vf_date">Date</label>
+                <input id="vf_date" type="date">
+              </div>
+              <div class="form-row">
+                <label for="vf_contact">Contact (optional)</label>
+                <input id="vf_contact" type="text" placeholder="Jane Doe">
+              </div>
+              <div class="form-row">
+                <label for="vf_type">Visit type</label>
+                <select id="vf_type">
+                  <option value="drop_in">Drop-in</option>
+                  <option value="drive_by">Drive-by</option>
+                  <option value="scheduled_meeting">Scheduled meeting</option>
+                  <option value="phone_call">Phone call</option>
+                  <option value="email">Email</option>
+                </select>
+              </div>
+            </div>
+            <div class="add-visit-form-row">
+              <div class="form-row">
+                <label for="vf_role">Their role (optional)</label>
+                <input id="vf_role" type="text" placeholder="GM, Front desk, Owner">
+              </div>
+              <div class="form-row">
+                <label for="vf_summary">What you learned</label>
+                <input id="vf_summary" type="text" placeholder="GM said they're piloting nightly cleaning bots — interested in our service.">
+              </div>
+              <div class="form-row">
+                <label for="vf_due">Follow-up by (optional)</label>
+                <input id="vf_due" type="date">
+              </div>
+            </div>
+            <div class="form-row">
+              <label for="vf_next">Next step (optional)</label>
+              <input id="vf_next" type="text" placeholder="Send pricing deck Tuesday">
+            </div>
+            <div class="add-visit-actions">
+              <button type="button" class="btn btn-primary" onclick="window._addVisit()">+ Log visit</button>
+            </div>
+          </div>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-danger left" id="deleteBtn" onclick="deleteHotel()">Delete</button>
           <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -475,8 +751,284 @@ document.querySelectorAll('.tab').forEach(t => {
       p.classList.toggle('active', p.id === 'panel-' + t.dataset.panel);
     });
     if (t.dataset.panel === 'saved') loadSaved();
+    if (t.dataset.panel === 'map')   renderMap();
   });
 });
+
+// ─── Map state + rendering ────────────────────────────────────────
+const STATUS_PIN_COLORS = {
+  lead:       '#94a3b8',
+  contacted:  '#06b6d4',
+  qualified:  '#3b82f6',
+  proposed:   '#f59e0b',
+  won:        '#16a34a',
+  lost:       '#dc2626',
+  archived:   '#cbd5e1',
+};
+
+let MAP = null;        // Leaflet instance (lazy)
+let MAP_PINS = [];     // current Leaflet markers
+let MAP_FILTERS = { status: 'all', submarket: 'all' };
+
+function ensureMap() {
+  if (MAP) return MAP;
+  // Default center: Miami; fitBounds will recenter once pins load.
+  MAP = L.map('mapEl', { zoomControl: true }).setView([25.7617, -80.1918], 11);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors',
+  }).addTo(MAP);
+  return MAP;
+}
+
+function pinIcon(color) {
+  // Inline SVG so we don't ship a sprite. WHY: a single Leaflet divIcon with
+  // an HTML span is enough — this is purely visual, no clickability beyond
+  // the marker itself.
+  return L.divIcon({
+    className: '',
+    html: `<div class="hotel-pin" style="background:${color}"></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -10],
+  });
+}
+
+function renderMap() {
+  ensureMap();
+  // Make sure the map sizes correctly when shown for the first time —
+  // Leaflet computes layout on init, so a hidden parent leaves it 0×0.
+  setTimeout(() => MAP.invalidateSize(), 50);
+
+  // Clear old pins
+  MAP_PINS.forEach(p => MAP.removeLayer(p));
+  MAP_PINS = [];
+
+  // Filter
+  const filtered = SAVED.filter(h => {
+    if (h.lat == null || h.lng == null) return false;
+    if (MAP_FILTERS.status !== 'all' && h.status !== MAP_FILTERS.status) return false;
+    if (MAP_FILTERS.submarket !== 'all' && h.submarket !== MAP_FILTERS.submarket) return false;
+    return true;
+  });
+
+  // Submarket filter dropdown — re-render options based on current saved set
+  const subSet = Array.from(new Set(SAVED.map(h => h.submarket).filter(Boolean))).sort();
+  const subSel = document.getElementById('mapSubmarketFilter');
+  if (subSel) {
+    const cur = subSel.value;
+    subSel.innerHTML = '<option value="all">All submarkets</option>' +
+      subSet.map(s => `<option value="${escapeHtml(s)}"${cur === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('');
+  }
+
+  // Stats
+  document.getElementById('mapStats').innerHTML = filtered.length === 0
+    ? `<span style="color:var(--text-faint);">No saved hotels match the filter — save some on the Search tab to see them on the map.</span>`
+    : `<strong>${filtered.length}</strong> saved hotel${filtered.length === 1 ? '' : 's'} on the map · ${SAVED.filter(h => h.status === 'qualified').length} qualified · ${SAVED.filter(h => h.prospect_id).length} graduated to prospects`;
+
+  if (filtered.length === 0) return;
+
+  // Pins
+  const bounds = [];
+  for (const h of filtered) {
+    const color = STATUS_PIN_COLORS[h.status] || '#94a3b8';
+    const marker = L.marker([h.lat, h.lng], { icon: pinIcon(color) }).addTo(MAP);
+    marker.bindPopup(buildPopupHtml(h));
+    MAP_PINS.push(marker);
+    bounds.push([h.lat, h.lng]);
+  }
+  if (bounds.length > 0) MAP.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+}
+
+function buildPopupHtml(h) {
+  const adr = h.est_adr_dollars ? `$${h.est_adr_dollars}/night` : '';
+  const visitBit = h.visit_count > 0
+    ? `<span class="v-pill">${h.visit_count} visit${h.visit_count === 1 ? '' : 's'}</span>`
+    : '<span style="color:var(--text-faint);font-size:0.74rem;">no visits yet</span>';
+  return `
+    <div class="pop-name">${escapeHtml(h.name)}</div>
+    <div class="pop-meta">
+      ${h.address ? escapeHtml(h.address) + '<br>' : ''}
+      ${h.brand ? escapeHtml(h.brand) + ' · ' : ''}${adr}${h.rooms ? ' · ' + h.rooms + ' rms' : ''}
+    </div>
+    <div class="pop-meta">${h.submarket ? '📍 ' + escapeHtml(h.submarket) + ' · ' : ''}${h.status}</div>
+    <div class="pop-meta">${visitBit}</div>
+    <div class="pop-actions">
+      <button class="primary" onclick="window._openEditFromMap(${h.id})">Open</button>
+      ${h.lat && h.lng ? `<a target="_blank" rel="noopener" style="text-decoration:none;" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}"><button>Maps</button></a>` : ''}
+      ${h.phone ? `<a href="tel:${escapeHtml(h.phone)}" style="text-decoration:none;"><button>Call</button></a>` : ''}
+    </div>
+  `;
+}
+
+window._openEditFromMap = function(id) {
+  // Switch to Saved tab + open the modal for this hotel.
+  document.querySelector('.tab[data-panel="saved"]').click();
+  setTimeout(() => openModal(id), 250);
+};
+
+document.getElementById('mapStatusFilter')?.addEventListener('change', e => {
+  MAP_FILTERS.status = e.target.value; renderMap();
+});
+document.getElementById('mapSubmarketFilter')?.addEventListener('change', e => {
+  MAP_FILTERS.submarket = e.target.value; renderMap();
+});
+
+// ─── Route builder mode ───────────────────────────────────────────
+let ROUTE_PICKED = []; // ordered hotel IDs
+
+function _toggleRouteMode() {
+  const on = !document.body.classList.contains('route-mode');
+  document.body.classList.toggle('route-mode', on);
+  document.getElementById('routeModeToggle').classList.toggle('active', on);
+  document.getElementById('routeBar').classList.toggle('active', on);
+  if (!on) _clearRoute();
+  renderSaved(); // re-render so cards show/hide checkboxes
+}
+window._toggleRouteMode = _toggleRouteMode;
+
+function _toggleRoutePick(id) {
+  const idx = ROUTE_PICKED.indexOf(id);
+  if (idx >= 0) ROUTE_PICKED.splice(idx, 1);
+  else ROUTE_PICKED.push(id);
+  renderRouteUI();
+}
+window._toggleRoutePick = _toggleRoutePick;
+
+function _clearRoute() {
+  ROUTE_PICKED = [];
+  renderRouteUI();
+}
+window._clearRoute = _clearRoute;
+
+function renderRouteUI() {
+  const n = ROUTE_PICKED.length;
+  const el = document.getElementById('routeCount');
+  if (el) el.textContent = `${n} stop${n === 1 ? '' : 's'}`;
+  const btn = document.getElementById('openInMapsBtn');
+  if (btn) btn.disabled = (n < 2 || n > 25);
+  // Update card highlights + order numbers
+  document.querySelectorAll('#savedContent .card').forEach(card => {
+    const id = Number(card.dataset.id);
+    const pickIdx = ROUTE_PICKED.indexOf(id);
+    card.classList.toggle('route-picked', pickIdx >= 0);
+    const cb = card.querySelector('.route-checkbox');
+    if (cb) cb.innerHTML = pickIdx >= 0 ? `<span class="route-order-num">${pickIdx + 1}</span>` : '';
+  });
+}
+
+async function _openRouteInMaps() {
+  if (ROUTE_PICKED.length < 2) return;
+  try {
+    const res = await fetch('/api/hotel-research/route', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotel_ids: ROUTE_PICKED }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    window.open(data.google_maps_url, '_blank', 'noopener');
+  } catch (err) {
+    alert('Could not build route: ' + err.message);
+  }
+}
+window._openRouteInMaps = _openRouteInMaps;
+
+// ─── Visit log ────────────────────────────────────────────────────
+async function loadVisits(hotelId) {
+  try {
+    const res = await fetch(`/api/hotel-research/saved/${hotelId}/visits`, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.visits || [];
+  } catch (err) {
+    console.warn('visits load failed:', err);
+    return [];
+  }
+}
+
+function renderVisits(visits) {
+  if (!visits.length) {
+    return `<div class="visit-log-empty">No visits logged yet. Add one below to track drop-bys, calls, and meetings.</div>`;
+  }
+  return visits.map(v => `
+    <div class="visit-row">
+      <button class="visit-row-delete" onclick="window._deleteVisit(${v.id})" title="Delete this visit">✕</button>
+      <div class="visit-row-head">
+        <span class="visit-row-date">${escapeHtml(v.visit_date)}</span>
+        <span class="visit-row-type ${v.visit_type}">${escapeHtml(v.visit_type.replace(/_/g, ' '))}</span>
+        ${v.contact_name ? `<span class="visit-row-contact">— ${escapeHtml(v.contact_name)}${v.contact_role ? ` (${escapeHtml(v.contact_role)})` : ''}</span>` : ''}
+      </div>
+      ${v.summary ? `<div class="visit-row-summary">${escapeHtml(v.summary)}</div>` : ''}
+      ${v.next_step ? `<div class="visit-row-next">→ ${escapeHtml(v.next_step)}${v.next_step_due ? ` <span style="opacity:0.7">by ${escapeHtml(v.next_step_due)}</span>` : ''}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+window._deleteVisit = async function(visitId) {
+  if (!editingId) return;
+  if (!confirm('Delete this visit log entry?')) return;
+  try {
+    const res = await fetch(`/api/hotel-research/saved/${editingId}/visits/${visitId}`, {
+      method: 'DELETE', credentials: 'same-origin',
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await refreshVisitsInModal(editingId);
+    await loadSaved({ silent: true });
+  } catch (err) { alert('Delete failed: ' + err.message); }
+};
+
+window._addVisit = async function() {
+  if (!editingId) return;
+  const visit_date    = document.getElementById('vf_date').value;
+  const visit_type    = document.getElementById('vf_type').value;
+  const contact_name  = document.getElementById('vf_contact').value.trim() || null;
+  const contact_role  = document.getElementById('vf_role').value.trim() || null;
+  const summary       = document.getElementById('vf_summary').value.trim() || null;
+  const next_step     = document.getElementById('vf_next').value.trim() || null;
+  const next_step_due = document.getElementById('vf_due').value || null;
+  if (!visit_date) { alert('Pick a visit date'); return; }
+  try {
+    const res = await fetch(`/api/hotel-research/saved/${editingId}/visits`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visit_date, visit_type, contact_name, contact_role, summary, next_step, next_step_due }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    // Reset the form fields
+    document.getElementById('vf_contact').value = '';
+    document.getElementById('vf_role').value = '';
+    document.getElementById('vf_summary').value = '';
+    document.getElementById('vf_next').value = '';
+    document.getElementById('vf_due').value = '';
+    await refreshVisitsInModal(editingId);
+    await loadSaved({ silent: true });
+  } catch (err) { alert('Save failed: ' + err.message); }
+};
+
+async function refreshVisitsInModal(hotelId) {
+  const visits = await loadVisits(hotelId);
+  const wrap = document.getElementById('visitLogList');
+  if (wrap) wrap.innerHTML = renderVisits(visits);
+}
+
+// ─── Graduate to prospect ─────────────────────────────────────────
+window._graduateHotel = async function(id) {
+  if (!confirm('Graduate this hotel to the Prospects pipeline? It moves into your sales workflow and stays linked back to its research record.')) return;
+  try {
+    const res = await fetch(`/api/hotel-research/saved/${id}/graduate`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    alert(`✓ Graduated as Prospect #${data.prospect_id}. Open /pages/pipeline-prospects.html to assign a market and continue working it.`);
+    await loadSaved({ silent: true });
+  } catch (err) { alert('Could not graduate: ' + err.message); }
+};
 
 // ─── Search ───────────────────────────────────────────────────────
 async function runSearch(e) {
@@ -723,8 +1275,20 @@ document.getElementById('savedSearch').addEventListener('input', e => {
 function renderSavedCard(h) {
   const adr = h.est_adr_dollars;
   const cityState = [h.city, h.state, h.zip].filter(Boolean).join(', ');
+  const visitsBit = (h.visit_count > 0)
+    ? `<div class="visit-summary">
+         <span class="v-pill">${h.visit_count} visit${h.visit_count === 1 ? '' : 's'}</span>
+         ${h.last_visit_date ? `<span>last: ${escapeHtml(h.last_visit_date)}</span>` : ''}
+       </div>` : '';
+  const graduatedBit = h.prospect_id
+    ? `<span class="graduated-pill" title="Graduated to Prospect #${h.prospect_id}">✓ Prospect #${h.prospect_id}</span>`
+    : '';
+  const graduateBtn = (!h.prospect_id && (h.status === 'qualified' || h.status === 'contacted' || h.status === 'lead'))
+    ? `<button class="btn btn-graduate" type="button" onclick="window._graduateHotel(${h.id})" title="Move into the Prospects pipeline">→ Graduate</button>`
+    : '';
   return `
-    <div class="card">
+    <div class="card" data-id="${h.id}">
+      <div class="route-checkbox" onclick="window._toggleRoutePick(${h.id})"></div>
       <div class="card-head">
         <div class="card-name">${escapeHtml(h.name)}</div>
         ${starRow(h.stars)}
@@ -736,10 +1300,13 @@ function renderSavedCard(h) {
         ${h.brand ? `<span class="card-meta-pill brand">${escapeHtml(h.brand)}</span>` : ''}
         ${adr ? `<span class="card-meta-pill adr">${fmtUsd(adr)}/night</span>` : ''}
         ${h.rooms ? `<span class="card-meta-pill">${h.rooms} rooms</span>` : ''}
+        ${graduatedBit}
       </div>
+      ${visitsBit}
       ${h.notes ? `<div class="card-notes-preview">${escapeHtml(h.notes)}</div>` : ''}
       <div class="card-actions">
-        <button class="btn btn-primary" onclick="openModal(${h.id})">Edit</button>
+        <button class="btn btn-primary" onclick="openModal(${h.id})">Edit · Visits</button>
+        ${graduateBtn}
         ${h.lat && h.lng ? `<a class="btn-icon" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" title="Open in Google Maps">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C7 2 4 6 4 10c0 6 8 12 8 12s8-6 8-12c0-4-3-8-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
         </a>` : ''}
@@ -750,7 +1317,7 @@ function renderSavedCard(h) {
 }
 
 // ─── Edit modal ───────────────────────────────────────────────────
-function openModal(id) {
+async function openModal(id) {
   const h = SAVED.find(x => x.id === id);
   if (!h) return;
   editingId = id;
@@ -764,7 +1331,19 @@ function openModal(id) {
   document.getElementById('f_rooms').value = h.rooms != null ? h.rooms : '';
   document.getElementById('f_website').value = h.website || '';
   document.getElementById('f_notes').value = h.notes || '';
+  // Default visit date = today (so reps don't have to type it 80% of the time)
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('vf_date').value = today;
+  document.getElementById('vf_type').value = 'drop_in';
+  document.getElementById('vf_contact').value = '';
+  document.getElementById('vf_role').value = '';
+  document.getElementById('vf_summary').value = '';
+  document.getElementById('vf_next').value = '';
+  document.getElementById('vf_due').value = '';
+  document.getElementById('visitLogList').innerHTML = '<div class="visit-log-empty">Loading…</div>';
   document.getElementById('modalBackdrop').classList.add('open');
+  // Lazily load the visit timeline now that the modal is up.
+  refreshVisitsInModal(id);
 }
 
 function closeModal() {

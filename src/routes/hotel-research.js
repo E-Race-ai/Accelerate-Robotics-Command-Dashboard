@@ -247,12 +247,15 @@ router.get('/saved', requireAuth, async (req, res) => {
   }
   try {
     const rows = await db.all(
-      `SELECT id, name, address, city, state, zip, country, lat, lng,
-              brand, stars, rooms, phone, website, osm_id, submarket,
-              est_adr_dollars, status, notes, saved_by, created_at, updated_at
-       FROM hotels_saved
-       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-       ORDER BY updated_at DESC, id DESC`,
+      `SELECT h.id, h.name, h.address, h.city, h.state, h.zip, h.country, h.lat, h.lng,
+              h.brand, h.stars, h.rooms, h.phone, h.website, h.osm_id, h.submarket,
+              h.est_adr_dollars, h.status, h.notes, h.saved_by, h.prospect_id,
+              h.created_at, h.updated_at,
+              (SELECT COUNT(*) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) AS visit_count,
+              (SELECT MAX(visit_date) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) AS last_visit_date
+       FROM hotels_saved h
+       ${where.length ? 'WHERE ' + where.join(' AND ').replace(/(name|city|brand|status)/g, 'h.$1') : ''}
+       ORDER BY h.updated_at DESC, h.id DESC`,
       args,
     );
     res.json({ hotels: rows });
@@ -324,6 +327,176 @@ router.delete('/saved/:id', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[hotel-research] delete failed:', err);
     res.status(500).json({ error: 'Failed to delete saved hotel' });
+  }
+});
+
+// ─── Visit log — drop-in / drive-by tracking ─────────────────────
+const ALLOWED_VISIT_TYPE = new Set(['drop_in', 'drive_by', 'scheduled_meeting', 'phone_call', 'email']);
+
+// GET /saved/:id/visits — visit timeline for one hotel
+router.get('/saved/:id/visits', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const visits = await db.all(
+      `SELECT id, visit_date, visit_type, contact_name, contact_role, summary, next_step, next_step_due, created_by, created_at
+       FROM hotel_visits WHERE hotel_saved_id = ? ORDER BY visit_date DESC, id DESC`,
+      [id],
+    );
+    res.json({ visits });
+  } catch (err) {
+    console.error('[hotel-research] visits list failed:', err);
+    res.status(500).json({ error: 'Failed to load visits' });
+  }
+});
+
+// POST /saved/:id/visits — log a visit
+router.post('/saved/:id/visits', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+
+  const hotel = await db.one('SELECT id FROM hotels_saved WHERE id = ?', [id]);
+  if (!hotel) return res.status(404).json({ error: 'saved hotel not found' });
+
+  const b = req.body || {};
+  const visitDate = String(b.visit_date || '').trim();
+  if (!visitDate) return res.status(400).json({ error: 'visit_date is required (YYYY-MM-DD)' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate)) return res.status(400).json({ error: 'visit_date must be YYYY-MM-DD' });
+
+  const visitType = ALLOWED_VISIT_TYPE.has(b.visit_type) ? b.visit_type : 'drop_in';
+  const nextDue = b.next_step_due && /^\d{4}-\d{2}-\d{2}$/.test(b.next_step_due) ? b.next_step_due : null;
+
+  try {
+    const r = await db.run(
+      `INSERT INTO hotel_visits (
+         hotel_saved_id, visit_date, visit_type, contact_name, contact_role,
+         summary, next_step, next_step_due, created_by
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id, visitDate, visitType,
+        b.contact_name ? String(b.contact_name).slice(0, 200) : null,
+        b.contact_role ? String(b.contact_role).slice(0, 100) : null,
+        b.summary ? String(b.summary).slice(0, 4000) : null,
+        b.next_step ? String(b.next_step).slice(0, 1000) : null,
+        nextDue,
+        req.admin?.email || null,
+      ],
+    );
+    // Bump the saved hotel's updated_at so it sorts to the top of the list.
+    await db.run("UPDATE hotels_saved SET updated_at = datetime('now') WHERE id = ?", [id]);
+    res.status(201).json({ ok: true, id: r.lastInsertRowid });
+  } catch (err) {
+    console.error('[hotel-research] visit save failed:', err);
+    res.status(500).json({ error: 'Failed to save visit' });
+  }
+});
+
+// DELETE /saved/:id/visits/:visitId
+router.delete('/saved/:id/visits/:visitId', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const vid = Number(req.params.visitId);
+  if (!Number.isInteger(id) || !Number.isInteger(vid)) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const r = await db.run('DELETE FROM hotel_visits WHERE id = ? AND hotel_saved_id = ?', [vid, id]);
+    if (!r.changes) return res.status(404).json({ error: 'visit not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[hotel-research] visit delete failed:', err);
+    res.status(500).json({ error: 'Failed to delete visit' });
+  }
+});
+
+// ─── Route builder ───────────────────────────────────────────────
+// POST /route — body: { hotel_ids: [1, 2, 3], origin?: "current"|"first" }
+// Returns a Google Maps deep-link with the hotels as waypoints. Order
+// preserves the input array, so reps can pre-arrange in their preferred
+// drive order. Auto-optimization (TSP) is a future enhancement.
+router.post('/route', requireAuth, async (req, res) => {
+  const ids = Array.isArray(req.body?.hotel_ids) ? req.body.hotel_ids.map(Number).filter(Number.isInteger) : [];
+  if (ids.length < 2) return res.status(400).json({ error: 'pick at least 2 hotels for a route' });
+  if (ids.length > 25) return res.status(400).json({ error: 'Google Maps caps waypoints at 25' });
+
+  try {
+    // Preserve input order: build a CASE-WHEN ORDER BY so SQLite returns
+    // rows in the same sequence the rep selected.
+    const placeholders = ids.map(() => '?').join(',');
+    const orderBy = ids.map((id, i) => `WHEN ${id} THEN ${i}`).join(' ');
+    const rows = await db.all(
+      `SELECT id, name, lat, lng, address
+       FROM hotels_saved
+       WHERE id IN (${placeholders}) AND lat IS NOT NULL AND lng IS NOT NULL
+       ORDER BY CASE id ${orderBy} END`,
+      ids,
+    );
+    if (rows.length < 2) return res.status(400).json({ error: 'fewer than 2 of those hotels have coordinates' });
+
+    // Google Maps directions URL with all stops as path segments — works
+    // without an API key, opens in the user's preferred map app on mobile.
+    const segments = rows.map(r => `${r.lat},${r.lng}`).join('/');
+    const google_maps_url = `https://www.google.com/maps/dir/${segments}`;
+
+    res.json({
+      google_maps_url,
+      stops: rows.map(r => ({ id: r.id, name: r.name, lat: r.lat, lng: r.lng, address: r.address })),
+      total_stops: rows.length,
+    });
+  } catch (err) {
+    console.error('[hotel-research] route failed:', err);
+    res.status(500).json({ error: 'Failed to build route' });
+  }
+});
+
+// ─── Graduate to prospect ────────────────────────────────────────
+// POST /saved/:id/graduate — body: { market_id?: 'miami-dade-fl' }
+// Creates a row in the existing `prospects` table from the saved hotel's
+// research data and links the saved hotel back via prospect_id so the
+// graduation is auditable.
+//
+// WHY this design: the deal pipeline already has a prospects table with its
+// own UI; we don't want to fork that. Graduation hands the property over
+// while preserving the research breadcrumbs (visits, notes, submarket tag
+// stay on the hotel_saved row).
+router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+
+  const hotel = await db.one('SELECT * FROM hotels_saved WHERE id = ?', [id]);
+  if (!hotel) return res.status(404).json({ error: 'saved hotel not found' });
+  if (hotel.prospect_id) return res.status(409).json({ error: 'already graduated', prospect_id: hotel.prospect_id });
+
+  // brand_class heuristic: stars or brand name → CHECK-friendly value.
+  const brand = (hotel.brand || '').toLowerCase();
+  let brandClass = 'independent';
+  if (hotel.stars >= 5 || /four seasons|ritz|st\.? regis|waldorf|mandarin/.test(brand)) brandClass = 'luxury';
+  else if (/autograph|tribute|curio|kimpton|w hotel|edition/.test(brand))               brandClass = 'soft';
+  else if (brand)                                                                        brandClass = 'chain';
+
+  // market_id is optional; the prospects UI lets an admin assign it later.
+  const marketId = req.body?.market_id ? String(req.body.market_id).slice(0, 80) : null;
+
+  try {
+    const r = await db.run(
+      `INSERT INTO prospects (
+         market_id, status, name, address, brand, brand_class, keys, stars,
+         signal, source, research_date
+       ) VALUES (?, 'staged', ?, ?, ?, ?, ?, ?, ?, 'ai_research', datetime('now'))`,
+      [
+        marketId,
+        hotel.name,
+        hotel.address,
+        hotel.brand,
+        brandClass,
+        hotel.rooms,
+        hotel.stars,
+        hotel.submarket || null,        // signal field — repurposed for our submarket tag
+      ],
+    );
+    const prospectId = r.lastInsertRowid;
+    await db.run("UPDATE hotels_saved SET prospect_id = ?, status = 'qualified', updated_at = datetime('now') WHERE id = ?", [prospectId, id]);
+    res.status(201).json({ ok: true, prospect_id: prospectId });
+  } catch (err) {
+    console.error('[hotel-research] graduate failed:', err);
+    res.status(500).json({ error: 'Failed to graduate to prospect — ' + err.message });
   }
 });
 
