@@ -969,10 +969,11 @@
   .chip:hover { color: var(--text); }
   .chip.active { background: var(--accent-deep); color: white; border-color: var(--accent-deep); }
 
-  /* Modal */
+  /* Modal — z-index sits ABOVE the triage-game overlay (999) so briefings
+     opened from the bezel rail don't have side panels bleeding through. */
   .modal-backdrop {
-    display: none; position: fixed; inset: 0; z-index: 100;
-    background: rgba(15,23,42,0.55); align-items: flex-start; justify-content: center;
+    display: none; position: fixed; inset: 0; z-index: 1100;
+    background: rgba(15,23,42,0.78); align-items: flex-start; justify-content: center;
     padding: 60px 16px; overflow-y: auto;
   }
   .modal-backdrop.open { display: flex; }
@@ -4284,9 +4285,14 @@ function buildPopupHtml(h) {
 }
 
 window._openEditFromMap = function(id) {
-  // Switch to Saved tab + open the modal for this hotel.
-  document.querySelector('.tab[data-panel="saved"]').click();
-  setTimeout(() => openModal(id), 250);
+  // The page is stacked (no tabs), so just scroll to the saved panel +
+  // open the edit modal directly. The previous .tab[data-panel="saved"]
+  // selector returned null in stacked mode and broke the whole flow.
+  const panel = document.getElementById('panel-saved');
+  if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => {
+    if (typeof openModal === 'function') openModal(id);
+  }, 250);
 };
 
 // ── Cover photo fallback — every card gets SOMETHING ────────────────

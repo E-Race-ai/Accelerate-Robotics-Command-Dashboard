@@ -15,50 +15,107 @@
 // Score range: 0–100 (clamped). 70+ = top-tier, 40–69 = worth a call,
 // 0–39 = deprioritize. Reasoning is a short array of human strings.
 
-const { brandClass } = require('./hotel-research-utils');
+// Goldilocks scoring derives brand tier directly from CHAIN_TIER buckets
+// below — `brandClass` from hotel-research-utils is intentionally not used
+// here because its luxury/upper_upscale split treats Ritz and Marriott as
+// equally good; we want the curve to peak in the middle instead.
 
-// Major chains we know hire enterprise tech. Used for the operator bonus.
-// Match is case-insensitive substring.
-const ENTERPRISE_CHAINS = [
-  'marriott', 'hilton', 'hyatt', 'ihg', 'accor', 'four seasons', 'ritz',
-  'wyndham', 'choice', 'best western', 'kimpton', 'westin', 'sheraton',
-  'sofitel', 'fairmont', 'st regis', 'st. regis', 'edition', 'w hotel',
-  'aman', 'mandarin', 'rosewood', 'loews', 'omni', 'fontainebleau',
-];
+// ─── Chain classification — Goldilocks curve ───────────────────────
+//
+// The Accelerate Robotics fit ISN'T monotonically rising with luxury.
+// The sweet spot is mid-tier: full-service brands with real ops pain,
+// budget for software, and decision-makers who can move fast. Both
+// extremes underperform:
+//   • TOO LUXURY (Ritz, St Regis, Four Seasons, Aman, Mandarin) — long
+//     corporate sales cycles, ultra-conservative on guest-facing tech,
+//     rarely pilot anything not vendor-locked.
+//   • TOO BUDGET (Days Inn, Super 8, Motel 6, Econo Lodge) — no software
+//     budget, no F&B, single-shift staffing, no robotics ROI story.
+// The fit peaks in the upper-upscale + upscale chains (Marriott full-
+// service, Hilton, Hyatt Regency, Sheraton, Westin, DoubleTree, Embassy
+// Suites, Kimpton, Autograph, Curio, Loews) and well-priced boutiques.
+const CHAIN_TIER = {
+  luxury_top: [
+    'four seasons', 'aman', 'mandarin', 'rosewood', 'st regis', 'st. regis',
+    'ritz-carlton', 'ritz carlton', 'the ritz', 'park hyatt',
+    'waldorf astoria', 'edition',
+  ],
+  sweet_spot: [
+    'jw marriott', 'marriott', 'hilton', 'hyatt regency', 'grand hyatt',
+    'sheraton', 'westin', 'renaissance', 'doubletree', 'embassy suites',
+    'kimpton', 'autograph', 'curio', 'tribute', 'loews', 'fontainebleau',
+    'eden roc', 'sofitel', 'fairmont', '1 hotel', 'conrad', 'andaz',
+    'crowne plaza', 'intercontinental', 'w hotel', 'omni', 'delano',
+    'mondrian',
+  ],
+  good_upscale: [
+    'hilton garden inn', 'courtyard', 'ac hotels', 'aloft', 'cambria',
+    'hyatt place', 'four points', 'springhill suites', 'residence inn',
+    'element', 'homewood suites', 'home2 suites', 'hyatt house',
+    'citizenm', 'autograph collection', 'graduate hotel', 'hotel indigo',
+  ],
+  midscale: [
+    'holiday inn express', 'holiday inn', 'hampton inn', 'best western plus',
+    'fairfield', 'wingate', 'avid hotel', 'la quinta',
+  ],
+  budget_too_low: [
+    'days inn', 'super 8', 'travelodge', 'econolodge', 'econ lodge',
+    'econo lodge', 'red roof', 'motel 6', 'days hotel', 'best western',
+    'quality inn', 'comfort inn', 'comfort suites', 'sleep inn', 'baymont',
+    'rodeway', 'americas best value', 'studio 6', 'extended stay',
+  ],
+};
 
-// Weights tuned for the Miami pilot — knobs we can re-balance after the
-// first batch of triage decisions teaches us which signals predict YES.
-const W_ROOMS_XL    = 25; // 300+ rooms — big property, big elevator infra
-const W_ROOMS_L     = 18; // 150–299
-const W_ROOMS_M     = 10; // 75–149
-const W_ROOMS_S     = 4;  // 30–74
-const W_BRAND_LUX   = 20; // luxury
-const W_BRAND_UU    = 17; // upper_upscale
-const W_BRAND_UPS   = 13; // upscale
-const W_BRAND_UM    = 8;  // upper_midscale
-const W_BRAND_MID   = 4;  // midscale
-const W_FLOORS_XL   = 15; // 8+ floors — robot↔elevator value spike
-const W_FLOORS_L    = 8;  // 4–7 floors
-const W_STARS_5     = 10;
-const W_STARS_4     = 7;
-const W_STARS_3     = 3;
-const W_OPERATOR    = 10; // recognized enterprise chain
-const W_ADR_XL      = 15; // $400+ ADR — high revenue density, robotics ROI works
-const W_ADR_L       = 10; // $250–399
-const W_ADR_M       = 5;  // $150–249
-const W_NEW_BUILD   = 6;  // opened ≥ 2018 — modern infra, easier integration
-const W_OWN_LIST    = 4;  // already qualified/contacted — give a small nudge
-
-// Penalties — knock out properties that aren't a fit no matter what
-const P_HOSTEL      = -40;
-const P_MOTEL       = -25;
-const P_TINY        = -15; // <15 rooms
-
-// Now also matches the hotel NAME — many OSM rows lack the operator/brand
-// field but the chain shows up in the name ("Marriott Coral Gables").
-function isEnterpriseOperator(operator, brand, name) {
+function classifyChain(operator, brand, name) {
   const blob = `${operator || ''} ${brand || ''} ${name || ''}`.toLowerCase();
-  return ENTERPRISE_CHAINS.some(c => blob.includes(c));
+  // Order matters — check most-specific buckets first so "Hyatt Regency"
+  // beats generic "Hyatt", and "Hilton Garden Inn" beats generic "Hilton".
+  for (const tier of ['luxury_top', 'sweet_spot', 'good_upscale', 'midscale', 'budget_too_low']) {
+    for (const c of CHAIN_TIER[tier]) {
+      if (blob.includes(c)) return tier;
+    }
+  }
+  return null; // independent / unrecognized
+}
+
+// Weights — tuned to peak in the middle. Both extremes get penalties
+// so reps don't waste time on wrong-tier targets.
+const W_ROOMS_SWEET    = 18; // 100-300 rooms — sweet spot, real ops pain
+const W_ROOMS_LARGE    = 12; // 300-500 — still good, longer sales cycle
+const W_ROOMS_HUGE     = 4;  // 500+ — convention property, slow
+const W_ROOMS_SMALL    = 8;  // 50-99 — workable boutique
+const W_ROOMS_TINY     = 0;  // <50 — too small, no software budget
+const W_BRAND_LUX_TOP  = 4;  // top luxury — slow, conservative, deprioritize
+const W_BRAND_SWEET    = 22; // upper-upscale + upscale — the target
+const W_BRAND_GOOD     = 18; // good upscale (Hilton Garden Inn, Courtyard)
+const W_BRAND_MID      = 8;  // midscale (Hampton Inn, Holiday Inn) — workable
+const W_BRAND_BUDGET   = -12; // budget (Days Inn, Motel 6) — actively penalize
+const W_BRAND_INDIE    = 14; // boutique premium — fast decisions, real pain
+const W_FLOORS_XL      = 12;
+const W_FLOORS_L       = 6;
+const W_STARS_4        = 10; // 4★ — sweet spot
+const W_STARS_3        = 7;  // solid mid-market
+const W_STARS_5        = 4;  // luxury — moderate; extremely high-end is too slow
+const W_ADR_SWEET      = 18; // $200-400 — peak fit
+const W_ADR_GOOD       = 14; // $150-200 OR $400-600
+const W_ADR_OK         = 8;  // $100-150 OR $600-800
+const W_ADR_TOO_LUX    = 2;  // $800+ — over-the-top, deprioritize
+const W_ADR_BUDGET     = -8; // <$80 — no software budget
+const W_NEW_BUILD      = 6;
+const W_OWN_LIST       = 4;
+
+const P_HOSTEL         = -40;
+const P_MOTEL          = -25;
+const P_TINY           = -15; // <15 rooms
+
+// Backward-compat helpers — kept so any external caller still works.
+const ENTERPRISE_CHAINS = [
+  ...CHAIN_TIER.sweet_spot, ...CHAIN_TIER.good_upscale,
+  ...CHAIN_TIER.luxury_top,
+];
+function isEnterpriseOperator(operator, brand, name) {
+  const tier = classifyChain(operator, brand, name);
+  return tier && tier !== 'budget_too_low';
 }
 
 // Name-pattern signals — words that hint at scale + service tier when the
@@ -87,24 +144,40 @@ function namePatternBonus(name) {
 }
 
 // Categorize size, brand, floors, ADR — used both for scoring and for the
-// reason strings so the reasoning matches what was rewarded.
+// reason strings so the reasoning matches what was rewarded. All curves are
+// peak-in-middle: extremes (too small / too luxe / too budget) get little
+// or negative weight so reps don't waste time on wrong-tier targets.
 function bucketSize(rooms) {
   const r = Number(rooms) || 0;
-  if (r >= 300) return ['xl', `${r} rooms (XL)`,    W_ROOMS_XL];
-  if (r >= 150) return ['l',  `${r} rooms (large)`, W_ROOMS_L];
-  if (r >= 75)  return ['m',  `${r} rooms`,         W_ROOMS_M];
-  if (r >= 30)  return ['s',  `${r} rooms`,         W_ROOMS_S];
+  // Sweet spot: 100-300 rooms. Real ops pain, real software budget.
+  if (r >= 500) return ['huge',  `${r} rooms (very large)`,  W_ROOMS_HUGE];
+  if (r >= 300) return ['large', `${r} rooms (large)`,       W_ROOMS_LARGE];
+  if (r >= 100) return ['sweet', `${r} rooms — sweet spot`,  W_ROOMS_SWEET];
+  if (r >= 50)  return ['small', `${r} rooms (boutique)`,    W_ROOMS_SMALL];
+  if (r >= 15)  return ['tiny',  `${r} rooms (small inn)`,   W_ROOMS_TINY];
   return [null, null, 0];
 }
 
-function bucketBrand(cls) {
-  switch (cls) {
-    case 'luxury':         return ['lux', 'Luxury class',         W_BRAND_LUX];
-    case 'upper_upscale':  return ['uu',  'Upper-upscale brand',  W_BRAND_UU];
-    case 'upscale':        return ['ups', 'Upscale brand',        W_BRAND_UPS];
-    case 'upper_midscale': return ['um',  'Upper-midscale brand', W_BRAND_UM];
-    case 'midscale':       return ['mid', 'Midscale brand',       W_BRAND_MID];
-    default:               return [null, null, 0];
+// Goldilocks brand weights: top luxury and bottom-budget both penalized,
+// the upper-upscale + upscale tiers reward the most. Independents that
+// weren't matched as a chain still get a positive nudge (W_BRAND_INDIE)
+// because boutiques can move fast and have real ops pain.
+function bucketBrand(operator, brand, name) {
+  const tier = classifyChain(operator, brand, name);
+  switch (tier) {
+    case 'luxury_top':
+      return ['lux_top', 'Top-luxury (slow sales cycle)',  W_BRAND_LUX_TOP];
+    case 'sweet_spot':
+      return ['sweet',   'Upper-upscale brand — sweet spot', W_BRAND_SWEET];
+    case 'good_upscale':
+      return ['good',    'Upscale brand',                  W_BRAND_GOOD];
+    case 'midscale':
+      return ['mid',     'Midscale brand',                 W_BRAND_MID];
+    case 'budget_too_low':
+      return ['budget',  'Budget tier (no software ROI)',  W_BRAND_BUDGET];
+    default:
+      // No chain match — independent / boutique / unknown
+      return [null, null, 0];
   }
 }
 
@@ -115,12 +188,29 @@ function bucketFloors(floors) {
   return [null, null, 0];
 }
 
+// Peak-in-middle ADR curve: $200-400 is the sweet spot.
+// <$80 = budget, no software money. $800+ = too luxe, too slow.
 function bucketAdr(adr) {
   const a = Number(adr) || 0;
-  if (a >= 400) return ['xl', `~$${a}/night ADR`, W_ADR_XL];
-  if (a >= 250) return ['l',  `~$${a}/night ADR`, W_ADR_L];
-  if (a >= 150) return ['m',  `~$${a}/night ADR`, W_ADR_M];
-  return [null, null, 0];
+  if (a <= 0) return [null, null, 0];
+  if (a >= 800) return ['too_lux', `~$${a}/night ADR (very high-end)`, W_ADR_TOO_LUX];
+  if (a >= 600) return ['ok_high', `~$${a}/night ADR`,                 W_ADR_OK];
+  if (a >= 400) return ['good_h',  `~$${a}/night ADR`,                 W_ADR_GOOD];
+  if (a >= 200) return ['sweet',   `~$${a}/night ADR — sweet spot`,    W_ADR_SWEET];
+  if (a >= 150) return ['good_l',  `~$${a}/night ADR`,                 W_ADR_GOOD];
+  if (a >= 100) return ['ok_low',  `~$${a}/night ADR`,                 W_ADR_OK];
+  if (a >= 80)  return ['mid',     `~$${a}/night ADR`,                 4];
+  return ['budget', `~$${a}/night ADR (budget)`, W_ADR_BUDGET];
+}
+
+// Independent / boutique nudge — paid only when no chain matched and the
+// hotel still looks like a real property (not a hostel or motel).
+function bucketIndie(operator, brand, name) {
+  const tier = classifyChain(operator, brand, name);
+  if (tier) return [null, null, 0]; // it's a chain, handled by bucketBrand
+  const n = (name || '').toLowerCase();
+  if (/\b(hostel|motel|guesthouse|guest house)\b/.test(n)) return [null, null, 0];
+  return ['indie', 'Independent / boutique', W_BRAND_INDIE];
 }
 
 function nameNegatives(name) {
@@ -140,14 +230,17 @@ function fitScoreFor(hotel) {
   const [, sizeLabel, sizePts] = bucketSize(hotel.rooms);
   if (sizePts > 0) { score += sizePts; reasons.push({ label: sizeLabel, pts: sizePts }); }
 
-  // ── Brand class — derive from the same util the rest of the app uses
-  const cls = brandClass({
-    brand: hotel.brand,
-    stars: hotel.stars,
-    est_adr: hotel.est_adr_dollars,
-  });
-  const [, brandLabel, brandPts] = bucketBrand(cls);
-  if (brandPts > 0) { score += brandPts; reasons.push({ label: brandLabel, pts: brandPts }); }
+  // ── Brand tier (Goldilocks — peaks in upper-upscale + upscale)
+  const [, brandLabel, brandPts] = bucketBrand(hotel.operator, hotel.brand, hotel.name);
+  if (brandPts !== 0) {
+    if (brandPts > 0) reasons.push({ label: brandLabel, pts: brandPts });
+    else negatives.push({ label: brandLabel, pts: brandPts });
+    score += brandPts;
+  }
+
+  // ── Indie nudge — only paid when no chain matched
+  const [, indieLabel, indiePts] = bucketIndie(hotel.operator, hotel.brand, hotel.name);
+  if (indiePts > 0) { score += indiePts; reasons.push({ label: indieLabel, pts: indiePts }); }
 
   // ── Floors
   const [, floorLabel, floorPts] = bucketFloors(hotel.total_floors);
@@ -159,15 +252,6 @@ function fitScoreFor(hotel) {
   else if (stars >= 4) { score += W_STARS_4; reasons.push({ label: '4★ rating',  pts: W_STARS_4 }); }
   else if (stars >= 3) { score += W_STARS_3; reasons.push({ label: '3★ rating',  pts: W_STARS_3 }); }
 
-  // ── Enterprise chain (operator, brand, OR name)
-  if (isEnterpriseOperator(hotel.operator, hotel.brand, hotel.name)) {
-    score += W_OPERATOR;
-    reasons.push({
-      label: `${hotel.operator || hotel.brand || 'Recognized chain'} (enterprise chain)`,
-      pts: W_OPERATOR,
-    });
-  }
-
   // ── Name-pattern bonuses — fills in for sparse OSM data
   const np = namePatternBonus(hotel.name);
   if (np.pts > 0) {
@@ -175,9 +259,13 @@ function fitScoreFor(hotel) {
     reasons.push({ label: np.labels.slice(0, 2).join(' · '), pts: np.pts });
   }
 
-  // ── ADR
+  // ── ADR (Goldilocks — peaks at $200-400)
   const [, adrLabel, adrPts] = bucketAdr(hotel.est_adr_dollars);
-  if (adrPts > 0) { score += adrPts; reasons.push({ label: adrLabel, pts: adrPts }); }
+  if (adrPts !== 0) {
+    if (adrPts > 0) reasons.push({ label: adrLabel, pts: adrPts });
+    else negatives.push({ label: adrLabel, pts: adrPts });
+    score += adrPts;
+  }
 
   // ── Newly built / renovated
   const yr = Number(hotel.year_opened) || 0;
