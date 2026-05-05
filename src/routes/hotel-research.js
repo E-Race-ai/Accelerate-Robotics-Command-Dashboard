@@ -1040,6 +1040,152 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
   }
 });
 
+// ─── Multi-day visit plan — pre-build a saved itinerary ───────────────
+//
+// Body:
+//   { name?: 'Ben May 11-14',
+//     days: [
+//       { date: '2026-05-11', label: 'Day 1 — Brickell + Downtown',
+//         submarkets: [{key:'Brickell', cap:6}, {key:'Downtown Miami', cap:6}],
+//         mode: 'driving' },
+//       { date: '2026-05-12', label: 'Day 2 — South Beach walking tour',
+//         submarkets: [{key:'South Beach', cap:22}],
+//         mode: 'walking' },
+//       …
+//     ]
+//   }
+//
+// For each day, picks top-N hotels per submarket by AI fit (excluding
+// triage='no'), orders them with a simple nearest-neighbor TSP starting
+// from the southernmost point (walking) or easternmost (driving — closer
+// to highway access on the Florida east coast). Saves one bdr_route per
+// day, persistent across reloads.
+//
+// WHY a dedicated endpoint instead of repeated /routes calls: lets us
+// idempotently rebuild a named tour (e.g. wipe + rebuild "Ben May 11-14"
+// when fit scores or triage decisions change) and ensures the whole plan
+// shows up as one coherent set of routes in the schedule panel.
+router.post('/routes/visit-plan', requireAuth, async (req, res) => {
+  const planName = String(req.body?.name || 'Visit plan').slice(0, 80);
+  const days = Array.isArray(req.body?.days) ? req.body.days : [];
+  if (!days.length) return res.status(400).json({ error: 'days array required' });
+  if (days.length > 14) return res.status(400).json({ error: 'max 14 days per plan' });
+  // Optional: ?wipe=1 deletes any existing routes that match this plan's
+  // name prefix before rebuilding (idempotent re-runs)
+  const wipe = req.query.wipe === '1' || req.body?.wipe === true;
+
+  try {
+    if (wipe) {
+      await db.run(
+        `DELETE FROM bdr_routes WHERE name LIKE ?`,
+        [`${planName}%`],
+      );
+    }
+
+    const created = [];
+    for (const day of days) {
+      const date = String(day.date || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      const label = String(day.label || `Day · ${date}`).slice(0, 100);
+      const mode = day.mode === 'walking' ? 'walking' : 'driving';
+      const submarkets = Array.isArray(day.submarkets) ? day.submarkets : [];
+      if (!submarkets.length) {
+        created.push({ date, label, route_id: null, stops_added: 0, note: 'no submarkets given' });
+        continue;
+      }
+
+      // Gather candidates per submarket — top-N by AI fit, excluding
+      // hotels the rep already triaged as a hard 'no' or that have been
+      // graduated to prospects (already in funnel, no need to drop in).
+      const allCandidates = [];
+      for (const sm of submarkets) {
+        const key = String(sm?.key || '').trim();
+        if (!key) continue;
+        const cap = Math.max(1, Math.min(30, Number(sm?.cap) || 6));
+        const rows = await db.all(
+          `SELECT h.id, h.name, h.lat, h.lng, h.submarket, h.ai_fit_score
+           FROM hotels_saved h
+           WHERE h.submarket = ?
+             AND h.lat IS NOT NULL AND h.lng IS NOT NULL
+             AND (h.triage IS NULL OR h.triage != 'no')
+             AND h.prospect_id IS NULL
+           ORDER BY h.ai_fit_score DESC NULLS LAST, h.id ASC
+           LIMIT ?`,
+          [key, cap],
+        );
+        for (const r of rows) allCandidates.push(r);
+      }
+
+      if (!allCandidates.length) {
+        created.push({ date, label, route_id: null, stops_added: 0, note: 'no candidates' });
+        continue;
+      }
+
+      // Order optimization. Walking: anchor at the southernmost stop and
+      // greedily march north (linear corridor — good for South Beach where
+      // hotels line a ~3mi strip on Collins Ave). Driving: anchor at the
+      // easternmost (closer to I-95 onramps for next-day reposition) and
+      // run nearest-neighbor TSP.
+      const orderedIds = optimizeRouteStops(allCandidates, mode);
+
+      const r = await db.run(
+        `INSERT INTO bdr_routes (name, scheduled_date, zone, notes, mode, created_by)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [`${planName} · ${label}`, date, submarkets.map(s => s.key).join(' + '),
+         `Auto-generated. ${allCandidates.length} stops, mode=${mode}.`,
+         mode, req.admin?.email || null],
+      );
+      const routeId = r.lastInsertRowid ?? r.lastID ?? null;
+      let ord = 0;
+      for (const hid of orderedIds) {
+        await db.run(
+          `INSERT INTO bdr_route_stops (route_id, hotel_saved_id, sort_order) VALUES (?, ?, ?)`,
+          [routeId, hid, ord++],
+        );
+      }
+      created.push({ date, label, route_id: routeId, stops_added: orderedIds.length, mode });
+    }
+
+    res.status(201).json({ ok: true, plan_name: planName, days: created });
+  } catch (err) {
+    console.error('[hotel-research] visit-plan failed:', err);
+    res.status(500).json({ error: 'Failed to build visit plan — ' + err.message });
+  }
+});
+
+// Tiny haversine + greedy nearest-neighbor — keeps the route close to
+// optimal for short multi-stop runs without pulling in an OR-Tools dep.
+function haversineMi(lat1, lng1, lat2, lng2) {
+  const R = 3958.8;
+  const toRad = d => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+function optimizeRouteStops(stops, mode) {
+  if (stops.length <= 1) return stops.map(s => s.id);
+  // Anchor pick: walking → southernmost; driving → easternmost
+  const anchor = mode === 'walking'
+    ? stops.reduce((a, b) => (a.lat < b.lat ? a : b))
+    : stops.reduce((a, b) => (a.lng > b.lng ? a : b));
+  const remaining = stops.filter(s => s.id !== anchor.id);
+  const ordered = [anchor];
+  let current = anchor;
+  while (remaining.length) {
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < remaining.length; i++) {
+      const d = haversineMi(current.lat, current.lng, remaining[i].lat, remaining[i].lng);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    current = remaining.splice(bestIdx, 1)[0];
+    ordered.push(current);
+  }
+  return ordered.map(s => s.id);
+}
+
 // ─── Triage — one-tap BDR decision (the game-mode endpoint) ─────────────
 // POST /saved/:id/triage  body: { decision: 'yes'|'no'|'maybe'|'needs_research' }
 // Single-purpose endpoint optimized for fast clicks. Optionally also flips

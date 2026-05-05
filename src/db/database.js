@@ -741,6 +741,12 @@ async function initSchema() {
   // summary (pulled from Wikipedia of the chain) so independent properties
   // of a known chain still get useful context even when their own page
   // doesn't exist.
+  // WHY: routes can be driven (Tesla / car) or walked (e.g. South Beach
+  // hotel-row tours). The mode flag changes the optimizer + the icon shown
+  // in the schedule panel + how stops are ordered (linear-along-corridor
+  // for walking vs nearest-neighbor TSP for driving).
+  await additiveAlterIfMissing("ALTER TABLE bdr_routes ADD COLUMN mode TEXT DEFAULT 'driving'");
+
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN enrichment_depth TEXT");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN chain_description TEXT");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN chain_url TEXT");
