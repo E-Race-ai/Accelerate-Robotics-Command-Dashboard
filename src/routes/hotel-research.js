@@ -775,9 +775,16 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
 // drive sequence — and a `done` flag they tick off in the field.
 
 // GET /routes — list, optionally filter by date range
-// Query: ?from=YYYY-MM-DD&to=YYYY-MM-DD&undated_too=1
+// Query: ?from=YYYY-MM-DD&to=YYYY-MM-DD&undated_too=1&owner=mine|all
+//
+// Per-user by default: each rep sees ONLY routes they created. Eric can plan
+// a Brickell day for Monday while Ben plans Coconut Grove for the same day,
+// and they don't trample each other's schedules. Pass ?owner=all to see the
+// full team's routes (useful for ops oversight).
 router.get('/routes', requireAuth, async (req, res) => {
   const { from, to, undated_too } = req.query;
+  const owner = String(req.query.owner || 'mine').toLowerCase();
+  const myEmail = (req.admin?.email || '').toLowerCase();
   const where = [];
   const args = [];
   if (from) { where.push('(scheduled_date IS NULL OR scheduled_date >= ?)'); args.push(from); }
@@ -785,6 +792,11 @@ router.get('/routes', requireAuth, async (req, res) => {
   if (!undated_too && from) {
     // If a date range is specified and we don't want undated, drop the IS NULL clauses
     where[where.length - 1] = where[where.length - 1].replace('scheduled_date IS NULL OR ', '');
+  }
+  // Per-user filter — default to "mine" so every BDR has their own clean view
+  if (owner !== 'all' && myEmail) {
+    where.push('(LOWER(created_by) = ? OR created_by IS NULL)');
+    args.push(myEmail);
   }
   try {
     const routes = await db.all(
@@ -796,7 +808,7 @@ router.get('/routes', requireAuth, async (req, res) => {
        ORDER BY scheduled_date IS NULL, scheduled_date ASC, r.id DESC`,
       args,
     );
-    res.json({ routes });
+    res.json({ routes, owner_filter: owner });
   } catch (err) {
     console.error('[hotel-research] /routes list failed:', err);
     res.status(500).json({ error: 'Failed to load routes' });
@@ -909,11 +921,27 @@ router.patch('/routes/:id', requireAuth, async (req, res) => {
 // DELETE /routes/all — bulk-delete every route. MUST be registered before
 // /routes/:id or Express matches it as id='all' and 400s. Cascade deletes
 // route stops via FK.
-router.delete('/routes/all', requireAuth, async (_req, res) => {
+// Per-user by default — clears only the caller's routes. ?owner=all wipes
+// everyone's (admin operation).
+router.delete('/routes/all', requireAuth, async (req, res) => {
+  const owner = String(req.query.owner || 'mine').toLowerCase();
+  const myEmail = (req.admin?.email || '').toLowerCase();
   try {
-    const count = await db.one(`SELECT COUNT(*) AS n FROM bdr_routes`);
-    await db.run(`DELETE FROM bdr_routes`);
-    res.json({ ok: true, deleted: Number(count?.n || 0) });
+    let count, deleted;
+    if (owner === 'all') {
+      count = await db.one(`SELECT COUNT(*) AS n FROM bdr_routes`);
+      await db.run(`DELETE FROM bdr_routes`);
+    } else {
+      count = await db.one(
+        `SELECT COUNT(*) AS n FROM bdr_routes WHERE LOWER(created_by) = ? OR created_by IS NULL`,
+        [myEmail],
+      );
+      await db.run(
+        `DELETE FROM bdr_routes WHERE LOWER(created_by) = ? OR created_by IS NULL`,
+        [myEmail],
+      );
+    }
+    res.json({ ok: true, deleted: Number(count?.n || 0), scope: owner });
   } catch (err) {
     console.error('[hotel-research] delete all routes failed:', err);
     res.status(500).json({ error: 'Failed to delete routes' });
@@ -1203,15 +1231,22 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
 // stay. The "winner" per group is the route with the most stops (or, on
 // tie, the most recent ID — assumes the latest auto-plan run had the
 // best data). Cascade-deletes route stops via FK.
-router.post('/routes/dedupe', requireAuth, async (_req, res) => {
+// Per-user by default — only dedupes the caller's routes.
+router.post('/routes/dedupe', requireAuth, async (req, res) => {
+  const owner = String(req.query.owner || 'mine').toLowerCase();
+  const myEmail = (req.admin?.email || '').toLowerCase();
   try {
+    const ownerWhere = owner === 'all'
+      ? ''
+      : ` AND (LOWER(created_by) = ? OR created_by IS NULL)`;
+    const ownerArgs = owner === 'all' ? [] : [myEmail];
     const groups = await db.all(
       `SELECT scheduled_date, zone, COUNT(*) AS n
        FROM bdr_routes
-       WHERE scheduled_date IS NOT NULL AND zone IS NOT NULL
+       WHERE scheduled_date IS NOT NULL AND zone IS NOT NULL ${ownerWhere}
        GROUP BY scheduled_date, zone
        HAVING COUNT(*) > 1`,
-      [],
+      ownerArgs,
     );
     let deleted = 0;
     for (const g of groups) {
@@ -1219,18 +1254,17 @@ router.post('/routes/dedupe', requireAuth, async (_req, res) => {
         `SELECT r.id,
                 (SELECT COUNT(*) FROM bdr_route_stops s WHERE s.route_id = r.id) AS stop_count
          FROM bdr_routes r
-         WHERE r.scheduled_date = ? AND r.zone = ?
+         WHERE r.scheduled_date = ? AND r.zone = ? ${ownerWhere}
          ORDER BY stop_count DESC, r.id DESC`,
-        [g.scheduled_date, g.zone],
+        [g.scheduled_date, g.zone, ...ownerArgs],
       );
-      // Keep the first (most stops, then newest); delete the rest.
       const losers = candidates.slice(1).map(c => c.id);
       for (const id of losers) {
         await db.run('DELETE FROM bdr_routes WHERE id = ?', [id]);
         deleted++;
       }
     }
-    res.json({ ok: true, deleted, groups_collapsed: groups.length });
+    res.json({ ok: true, deleted, groups_collapsed: groups.length, scope: owner });
   } catch (err) {
     console.error('[hotel-research] dedupe routes failed:', err);
     res.status(500).json({ error: 'Failed to dedupe routes' });

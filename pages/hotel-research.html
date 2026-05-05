@@ -6187,14 +6187,17 @@ window._openScheduleDayRoute = function(routeId) {
   openRoutePickerDialog(stops, r.name || 'Route');
 };
 
-function _mondayOf(d) {
+// Eric: schedule weeks should start Sunday + end Saturday (US-standard
+// calendar). _mondayOf is kept as an alias to _sundayOf so existing
+// callers don't break — the actual week now begins Sunday.
+function _sundayOf(d) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
-  // JavaScript: Sun=0, Mon=1, ..., Sat=6. Shift so Mon=0.
-  const day = (x.getDay() + 6) % 7;
-  x.setDate(x.getDate() - day);
+  // JS: Sun=0, Mon=1, …, Sat=6. To roll back to Sunday, subtract getDay().
+  x.setDate(x.getDate() - x.getDay());
   return x;
 }
+const _mondayOf = _sundayOf;
 function _isoDate(d) {
   // Local-time YYYY-MM-DD so the schedule lines up with the rep's wall clock.
   const y = d.getFullYear();
