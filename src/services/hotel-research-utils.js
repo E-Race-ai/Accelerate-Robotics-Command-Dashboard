@@ -174,24 +174,80 @@ function shapeHotel(el, centerLat, centerLng) {
   };
 }
 
-// Revenue + deal-size sizing — quick BDR triage. Annual room revenue =
-// ADR × rooms × 0.70 (industry-rough U.S. urban occupancy) × 365.
-// Service spend potential is roughly 1-3% of room revenue for high-touch
-// guest services (cleaning, turn-down, lobby). Tier banding is intentionally
-// coarse: XS → independent / motel-tier; XL → flagship metro luxury.
-function revenuePotential({ rooms, est_adr_dollars }) {
+// ── Accelerate Robotics RaaS revenue model ──────────────────────────
+// $/month per mid-grade robot. We charge $1500-$2500/month per bot
+// depending on tier; $2000 is the midpoint we use for sizing the pipeline
+// so reps see one consistent number across the funnel. The actual deal
+// price is set per-property at proposal time.
+const RAAS_MONTHLY_PER_BOT_USD = 2000;
+
+// Robot count scales with property size + service complexity. Anchors
+// (per Eric's deal-cycle model):
+//   • Pilot                  → 3 bots
+//   • Bigger pilot           → 5-7 bots
+//   • Full deployment        → 10+ bots
+// Rooms drives the base count; luxury (more service touchpoints), F&B
+// outlets, and large event space each add 1-2 bots. The final number
+// stays bounded so a Fontainebleau-class property doesn't price itself
+// out of believability.
+function estimatedRobotCount({
+  rooms, stars, restaurant_count, event_sqft, ballroom_capacity,
+}) {
   const r = Number(rooms);
-  const adr = Number(est_adr_dollars);
-  if (!Number.isFinite(r) || !Number.isFinite(adr) || r <= 0 || adr <= 0) return null;
-  return Math.round(r * adr * 0.70 * 365);
+  if (!Number.isFinite(r) || r <= 0) return null;
+  let bots;
+  if (r >= 1000)      bots = 30;
+  else if (r >= 500)  bots = 16;
+  else if (r >= 300)  bots = 10;  // anchor: full-deployment threshold
+  else if (r >= 150)  bots = 6;   // anchor: bigger-pilot threshold
+  else if (r >= 50)   bots = 3;   // anchor: pilot threshold
+  else if (r >= 20)   bots = 2;
+  else                bots = 1;
+  // Luxury bump: 5★ properties run more high-touch service flows
+  // (turn-down, in-room dining at 11pm, lobby valet runner).
+  const s = Number(stars) || 0;
+  if (s >= 5) bots = Math.round(bots * 1.3);
+  // F&B outlets add food-runner use cases; event space adds banquet
+  // setup runners. Caps prevent stacking from blowing the count up.
+  const restaurants = Number(restaurant_count) || 0;
+  if (restaurants >= 3)      bots += 2;
+  else if (restaurants >= 1) bots += 1;
+  const events = Number(event_sqft) || 0;
+  if (events >= 50_000)      bots += 3;
+  else if (events >= 20_000) bots += 2;
+  else if (events >= 5_000)  bots += 1;
+  const ballroom = Number(ballroom_capacity) || 0;
+  if (ballroom >= 1000) bots += 1;
+  // Floor + sanity ceiling — don't promise a 50-bot deployment to a
+  // 12-room boutique because it has 3 restaurants.
+  return Math.max(1, Math.min(bots, 40));
 }
 
+// Annual revenue for the deal in our pipeline = bots × monthly × 12.
+// Returns null when we don't have enough info (no rooms data) so the UI
+// can hide the field rather than show a fake number.
+function revenuePotential({
+  rooms, stars, restaurant_count, event_sqft, ballroom_capacity,
+}) {
+  const bots = estimatedRobotCount({ rooms, stars, restaurant_count, event_sqft, ballroom_capacity });
+  if (!bots) return null;
+  return bots * RAAS_MONTHLY_PER_BOT_USD * 12;
+}
+
+// Deal-size tier — banded against the new RaaS-based revenue. Anchor
+// points map to the user's deal-cycle vocabulary so the badge means
+// the same thing at-a-glance:
+//   XS  <  $30k   — sub-pilot exploration (1 bot, tiny boutique)
+//   S   $30-75k   — mini-pilot (2-3 bots)
+//   M   $75-150k  — pilot+ (3-5 bots)
+//   L   $150-300k — bigger pilot (6-10 bots)
+//   XL  $300k+    — full deployment (10+ bots)
 function dealSizeTier(rev) {
   if (!Number.isFinite(rev) || rev <= 0) return null;
-  if (rev >= 50_000_000) return 'XL';
-  if (rev >= 20_000_000) return 'L';
-  if (rev >=  8_000_000) return 'M';
-  if (rev >=  3_000_000) return 'S';
+  if (rev >= 300_000) return 'XL';
+  if (rev >= 150_000) return 'L';
+  if (rev >=  75_000) return 'M';
+  if (rev >=  30_000) return 'S';
   return 'XS';
 }
 
@@ -257,6 +313,8 @@ module.exports = {
   shapeHotel,
   brandClass,
   BRAND_CLASS_LABELS,
+  RAAS_MONTHLY_PER_BOT_USD,
+  estimatedRobotCount,
   revenuePotential,
   dealSizeTier,
   fmtRevenue,
