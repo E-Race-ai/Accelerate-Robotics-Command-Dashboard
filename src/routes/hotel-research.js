@@ -423,6 +423,9 @@ router.get('/saved', requireAuth, async (req, res) => {
               h.ai_fit_score, h.ai_fit_tier, h.ai_fit_reasoning,
               h.enrichment_depth, h.chain_description, h.chain_url,
               h.description, h.wikipedia_url,
+              h.restaurant_count, h.bar_count, h.event_sqft,
+              h.meeting_room_count, h.ballroom_capacity,
+              h.spa_count, h.pool_count,
               h.created_at, h.updated_at,
               (SELECT COUNT(*) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) AS visit_count,
               (SELECT MAX(visit_date) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) AS last_visit_date
@@ -504,7 +507,14 @@ router.patch('/saved/:id', requireAuth, async (req, res) => {
       args.push(b[field] ? String(b[field]).slice(0, max) : null);
     }
   }
-  const INT_FIELDS = ['year_opened', 'total_floors', 'opportunity_score'];
+  const INT_FIELDS = [
+    'year_opened', 'total_floors', 'opportunity_score',
+    // F&B + event-space intel — manually captured by reps
+    'restaurant_count', 'bar_count', 'event_sqft',
+    'meeting_room_count', 'ballroom_capacity',
+    'spa_count', 'pool_count',
+    // Allow clearing/updating description + photo from the rail edit form
+  ];
   for (const f of INT_FIELDS) {
     if (b[f] !== undefined) {
       const v = b[f];
@@ -1003,14 +1013,26 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
       const zone = String(cfg?.zone || '').trim();
       if (!zone) continue;
       const cap = Math.max(1, Math.min(15, Number(cfg?.cap) || 8));
-      // Pull untouched hotels (no visits yet) in this zone with coords. Default
-      // ordering: most recently saved first — close enough until we have
-      // smarter scoring.
+
+      // ── Dedupe: nuke any prior route for this exact (date, zone) before
+      // creating a new one. Without this, repeated wizard clicks pile up
+      // duplicate Mon/Tue cards in the schedule view (the visual mess Eric
+      // saw — 3x Coral Gables, 3x Coconut Grove, etc.).
+      await db.run(
+        `DELETE FROM bdr_routes WHERE scheduled_date = ? AND zone = ?`,
+        [date, zone],
+      );
+
+      // Pick by AI fit score DESC (best targets first) instead of recency
+      // (which surfaces junky motels that happened to be saved last).
+      // Untouched-only — already-visited hotels stay in their own funnel.
       const candidates = await db.all(
-        `SELECT h.id, h.lat, h.lng FROM hotels_saved h
+        `SELECT h.id, h.lat, h.lng, h.ai_fit_score FROM hotels_saved h
          WHERE h.submarket = ? AND h.lat IS NOT NULL AND h.lng IS NOT NULL
            AND (SELECT COUNT(*) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) = 0
-         ORDER BY h.id DESC LIMIT ?`,
+           AND (h.triage IS NULL OR h.triage != 'no')
+         ORDER BY (h.ai_fit_score IS NULL) ASC, h.ai_fit_score DESC, h.id ASC
+         LIMIT ?`,
         [zone, cap],
       );
       if (!candidates.length) {
@@ -1037,6 +1059,21 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[hotel-research] auto-week failed:', err);
     res.status(500).json({ error: 'Failed to build week — ' + err.message });
+  }
+});
+
+// DELETE /routes/all — bulk-delete every route in the system. The schedule
+// panel can become a mess after repeated wizard clicks; this is the "wipe
+// the slate" button. Cascade deletes route stops automatically (FK ON
+// DELETE CASCADE on bdr_route_stops).
+router.delete('/routes/all', requireAuth, async (req, res) => {
+  try {
+    const count = await db.one(`SELECT COUNT(*) AS n FROM bdr_routes`);
+    await db.run(`DELETE FROM bdr_routes`);
+    res.json({ ok: true, deleted: Number(count?.n || 0) });
+  } catch (err) {
+    console.error('[hotel-research] delete all routes failed:', err);
+    res.status(500).json({ error: 'Failed to delete routes' });
   }
 });
 

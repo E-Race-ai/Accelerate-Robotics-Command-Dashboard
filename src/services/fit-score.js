@@ -189,6 +189,40 @@ function fitScoreFor(hotel) {
     reasons.push({ label: `Already ${hotel.status}`, pts: W_OWN_LIST });
   }
 
+  // ── F&B + event-space intel — only counted when the rep has captured it.
+  // These are stronger deal-size signals than rooms alone: a 200-key hotel
+  // with 50k sqft of event space is a *much* bigger software opportunity
+  // than a 200-key limited-service property. Capped per-field so a single
+  // huge value doesn't dominate.
+  const restaurants = Number(hotel.restaurant_count) || 0;
+  if (restaurants >= 1) {
+    const pts = Math.min(restaurants * 3, 12); // 3 each, cap at 12 (4 restaurants)
+    score += pts;
+    reasons.push({ label: `${restaurants} restaurant${restaurants === 1 ? '' : 's'}`, pts });
+  }
+  const eventSqft = Number(hotel.event_sqft) || 0;
+  if (eventSqft >= 5000) {
+    const pts = eventSqft >= 50000 ? 12 : eventSqft >= 20000 ? 8 : eventSqft >= 10000 ? 5 : 3;
+    score += pts;
+    reasons.push({ label: `${eventSqft.toLocaleString()} sqft event space`, pts });
+  }
+  const meetingRooms = Number(hotel.meeting_room_count) || 0;
+  if (meetingRooms >= 3) {
+    const pts = Math.min(Math.floor(meetingRooms / 2), 6);
+    score += pts;
+    reasons.push({ label: `${meetingRooms} meeting rooms`, pts });
+  }
+  const ballroomCap = Number(hotel.ballroom_capacity) || 0;
+  if (ballroomCap >= 200) {
+    const pts = ballroomCap >= 1000 ? 8 : ballroomCap >= 500 ? 5 : 3;
+    score += pts;
+    reasons.push({ label: `Ballroom seats ${ballroomCap.toLocaleString()}`, pts });
+  }
+  const spas = Number(hotel.spa_count) || 0;
+  if (spas >= 1) { score += 3; reasons.push({ label: `${spas} spa`, pts: 3 }); }
+  const pools = Number(hotel.pool_count) || 0;
+  if (pools >= 2) { score += 3; reasons.push({ label: `${pools} pools`, pts: 3 }); }
+
   // ── Negatives — name-based knockouts
   const [, negLabel, negPts] = nameNegatives(hotel.name);
   if (negPts < 0) { score += negPts; negatives.push({ label: negLabel, pts: negPts }); }
