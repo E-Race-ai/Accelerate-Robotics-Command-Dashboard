@@ -9,6 +9,13 @@
 <link rel="stylesheet" href="/css/brand.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- WHY: leaflet.heat is the de-facto density-heatmap plugin. ~5KB. We weight
+     each point by ai_fit_score / ADR / rooms depending on the user's pick. -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<!-- WHY: markercluster groups dense pin clusters into expandable bubbles. -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
   :root {
     --bg: #f7f8fc;
@@ -122,6 +129,350 @@
   .hero-stat.alert .h-value   { color: var(--danger); }
   .hero-stat.success .h-value { color: var(--green); }
   .hero-stat.accent .h-value  { color: var(--accent-deep); }
+
+  /* ─── Triage launcher (above-the-fold CTA) ────────────────── */
+  .triage-launcher {
+    background: linear-gradient(135deg, #fef3c7 0%, #fff7ed 100%);
+    border: 2px solid var(--accent);
+    border-radius: 14px; padding: 14px 18px; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .triage-launcher .tl-eyebrow {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 700; color: var(--accent-deep);
+  }
+  .triage-launcher .tl-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.1rem; color: var(--text);
+    margin-top: 2px;
+  }
+  .triage-launcher .tl-sub { color: var(--text-dim); font-size: 0.84rem; margin-top: 2px; }
+  .triage-launcher .tl-btn {
+    background: var(--accent); color: white; border: 0; cursor: pointer;
+    padding: 12px 20px; border-radius: 10px;
+    font: inherit; font-weight: 700; font-size: 0.95rem;
+    box-shadow: 0 2px 6px rgba(217,119,6,0.30); margin-left: auto;
+  }
+  .triage-launcher .tl-btn:hover { background: var(--accent-deep); }
+
+  /* ─── Top calls tile — curated daily call list ──────────────── */
+  .top-calls-tile {
+    background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%);
+    border: 1px solid #fbbf24; border-left: 4px solid #f59e0b;
+    border-radius: 14px; padding: 14px 18px; margin-bottom: 12px;
+  }
+  .top-calls-tile .tc-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .top-calls-tile .tc-eyebrow {
+    background: #f59e0b; color: white;
+    padding: 2px 10px; border-radius: 100px;
+    font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em;
+  }
+  .top-calls-tile h3 {
+    margin: 0; font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.1rem; color: #78350f;
+  }
+  .top-calls-tile .tc-sub { font-size: 0.84rem; color: #92400e; margin-top: 2px; }
+  .top-calls-list {
+    display: grid; grid-template-columns: 1fr; gap: 6px;
+  }
+  .top-call-row {
+    display: grid; grid-template-columns: 40px 1fr auto auto;
+    gap: 10px; align-items: center;
+    background: white; border: 1px solid #fcd34d;
+    border-radius: 10px; padding: 8px 12px;
+    cursor: pointer;
+    transition: transform 0.08s, box-shadow 0.12s;
+  }
+  .top-call-row:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.20);
+    border-color: #f59e0b;
+  }
+  .top-call-row .tc-fit {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 0.86rem;
+    color: white;
+  }
+  .top-call-row .tc-name {
+    font-weight: 700; color: var(--text); font-size: 0.92rem; line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .top-call-row .tc-meta {
+    font-size: 0.74rem; color: var(--text-dim); margin-top: 2px;
+  }
+  .top-call-row .tc-action {
+    background: #f59e0b; color: white; border: 0;
+    padding: 6px 12px; border-radius: 8px;
+    font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+  }
+  .top-call-row .tc-action:hover { background: #d97706; }
+  .top-call-row .tc-phone {
+    color: #16a34a; font-size: 0.78rem; text-decoration: none;
+    background: white; border: 1px solid #86efac; padding: 5px 10px; border-radius: 6px;
+  }
+  .top-call-row .tc-phone:hover { background: #dcfce7; }
+
+  /* ─── Triage Game overlay ─────────────────────────────────── */
+  .triage-game {
+    display: none;
+    position: fixed; inset: 0; z-index: 999;
+    background: radial-gradient(ellipse at center, #1e293b 0%, #0a0a0f 80%);
+    color: white;
+    padding: 20px 24px;
+    flex-direction: column; align-items: center; justify-content: center;
+  }
+
+  /* iPhone 15 Pro Max-style bezel — pure CSS, no PNG asset.
+     Renders the embedded triage.html inside a realistic phone shell so the
+     desktop view feels like Ben/Celia are using the actual phone app. */
+  .iphone-bezel {
+    /* Logical viewport for iPhone 15 Pro Max: 430 × 932 */
+    width: min(430px, 92vw);
+    aspect-ratio: 430 / 932;
+    max-height: calc(100vh - 100px);
+    background: linear-gradient(135deg, #2d2d2f 0%, #1a1a1c 60%, #0a0a0c 100%);
+    border-radius: 56px;
+    padding: 14px;
+    position: relative;
+    box-shadow:
+      0 30px 80px rgba(0, 0, 0, 0.55),
+      0 8px 24px rgba(0, 0, 0, 0.40),
+      inset 0 0 0 1.5px rgba(255, 255, 255, 0.10),
+      inset 0 0 0 3px #0a0a0c;
+  }
+  /* Faint titanium edge highlight along the right side — subtle realism */
+  .iphone-bezel::after {
+    content: ''; position: absolute;
+    inset: 0; border-radius: 56px;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, transparent 8%, transparent 92%, rgba(255,255,255,0.10) 100%);
+  }
+  /* Side button silhouettes — pure CSS dimples, no images */
+  .iphone-bezel .ip-btn {
+    position: absolute; background: #1a1a1c;
+    width: 4px; border-radius: 2px;
+    box-shadow: inset 1px 0 0 rgba(255,255,255,0.05);
+  }
+  .iphone-bezel .ip-btn.power  { right: -3px; top: 22%; height: 90px; }
+  .iphone-bezel .ip-btn.vol-up { left: -3px; top: 21%; height: 56px; }
+  .iphone-bezel .ip-btn.vol-dn { left: -3px; top: 30%; height: 56px; }
+  .iphone-bezel .ip-btn.mute   { left: -3px; top: 16%; height: 28px; }
+
+  /* Dynamic Island — black pill at the top, sits on top of the iframe */
+  .iphone-bezel .dynamic-island {
+    position: absolute;
+    top: 24px; left: 50%;
+    width: 122px; height: 35px;
+    background: #000;
+    border-radius: 50px;
+    transform: translateX(-50%);
+    z-index: 10;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  }
+
+  /* The inner screen — iframe to /triage.html */
+  .iphone-screen {
+    position: relative;
+    width: 100%; height: 100%;
+    border-radius: 44px;
+    overflow: hidden;
+    background: #0f172a;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  .iphone-screen iframe {
+    width: 100%; height: 100%;
+    border: 0;
+    background: #0f172a;
+  }
+
+  /* Floating close button outside the bezel */
+  .iphone-close {
+    position: absolute;
+    top: 24px; right: 24px;
+    background: rgba(255,255,255,0.10);
+    color: white; border: 0;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s;
+    z-index: 1000;
+  }
+  .iphone-close:hover { background: rgba(255,255,255,0.20); }
+
+  /* Helper text + keyboard hints next to the phone */
+  .iphone-helper {
+    position: absolute;
+    left: 50%; bottom: 32px;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.55);
+    font-size: 0.78rem; text-align: center;
+    pointer-events: none;
+  }
+  .iphone-helper kbd {
+    background: rgba(255,255,255,0.10); color: white;
+    padding: 2px 7px; border-radius: 4px;
+    font-family: 'Space Grotesk', monospace; font-size: 0.72rem;
+    margin: 0 2px;
+  }
+
+  /* On narrow viewports (true mobile), drop the bezel and use full screen */
+  @media (max-width: 480px) {
+    .iphone-bezel {
+      width: 100vw; max-height: 100vh; aspect-ratio: auto;
+      height: 100vh; border-radius: 0; padding: 0;
+      box-shadow: none;
+    }
+    .iphone-bezel::after,
+    .iphone-bezel .ip-btn,
+    .iphone-bezel .dynamic-island { display: none; }
+    .iphone-screen { border-radius: 0; }
+    .iphone-helper { display: none; }
+  }
+  .triage-game.open { display: flex; }
+  .tg-close {
+    position: absolute; top: 16px; right: 18px;
+    background: rgba(255,255,255,0.1); color: white; border: 0;
+    width: 36px; height: 36px; border-radius: 50%;
+    cursor: pointer; font-size: 1.1rem; line-height: 1;
+  }
+  .tg-close:hover { background: rgba(255,255,255,0.2); }
+
+  .tg-progress-wrap {
+    width: 100%; max-width: 720px; margin-bottom: 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .tg-progress-track {
+    height: 10px; background: rgba(255,255,255,0.12); border-radius: 100px;
+    overflow: hidden;
+  }
+  .tg-progress-fill {
+    height: 100%; background: linear-gradient(90deg, #fbbf24, #d97706);
+    border-radius: 100px; transition: width 0.3s ease;
+  }
+  .tg-progress-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.1rem; text-align: center;
+  }
+  .tg-decision-counts {
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    font-size: 0.84rem;
+  }
+  .tg-decision-counts .tdc-pill {
+    padding: 4px 10px; border-radius: 100px;
+    background: rgba(255,255,255,0.1);
+  }
+  .tg-decision-counts .tdc-pill.yes   { background: rgba(34,197,94,0.25); }
+  .tg-decision-counts .tdc-pill.maybe { background: rgba(251,191,36,0.25); }
+  .tg-decision-counts .tdc-pill.rsch  { background: rgba(59,130,246,0.25); }
+  .tg-decision-counts .tdc-pill.no    { background: rgba(239,68,68,0.25); }
+
+  .tg-card-stack {
+    flex: 1; width: 100%; max-width: 600px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 14px 0;
+    position: relative; overflow: hidden;
+  }
+  .tg-card {
+    background: white; color: var(--text);
+    border-radius: 18px; padding: 28px 32px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    width: 100%;
+    animation: tgIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .tg-card.flip-yes   { animation: tgFlipYes 0.4s ease-in forwards; }
+  .tg-card.flip-no    { animation: tgFlipNo 0.4s ease-in forwards; }
+  .tg-card.flip-maybe { animation: tgFlipMaybe 0.4s ease-in forwards; }
+  .tg-card.flip-rsch  { animation: tgFlipRsch 0.4s ease-in forwards; }
+  @keyframes tgIn       { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  @keyframes tgFlipYes  { to { opacity: 0; transform: translateX(120%) rotate(20deg); } }
+  @keyframes tgFlipNo   { to { opacity: 0; transform: translateX(-120%) rotate(-20deg); } }
+  @keyframes tgFlipMaybe { to { opacity: 0; transform: translateY(-120%) rotate(8deg); } }
+  @keyframes tgFlipRsch  { to { opacity: 0; transform: translateY(120%) rotate(-8deg); } }
+  .tg-card-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 1.6rem; line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .tg-card-meta { font-size: 0.86rem; color: var(--text-dim); margin-bottom: 12px; }
+  .tg-card-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px;
+    background: #f8fafc; border-radius: 10px; padding: 12px 14px;
+    font-size: 0.86rem; margin-bottom: 12px;
+  }
+  .tg-card-grid .label {
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 0.62rem; font-weight: 700; color: var(--text-faint);
+  }
+  .tg-card-grid .val { font-weight: 600; color: var(--text); }
+  .tg-card-links {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+    font-size: 0.84rem;
+  }
+  .tg-card-links a {
+    background: var(--accent-soft); color: var(--accent-deep);
+    padding: 5px 12px; border-radius: 8px; text-decoration: none;
+    font-weight: 600;
+  }
+  .tg-card-links a:hover { background: var(--accent); color: white; }
+
+  .tg-actions {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    width: 100%; max-width: 720px; margin-top: 8px;
+  }
+  .tg-btn {
+    background: white; border: 0; cursor: pointer;
+    border-radius: 14px; padding: 16px 12px;
+    font: inherit; font-weight: 700; font-size: 1rem;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20);
+    transition: transform 0.08s, box-shadow 0.12s;
+  }
+  .tg-btn:hover  { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.30); }
+  .tg-btn:active { transform: translateY(0); }
+  .tg-btn span  { font-size: 0.86rem; }
+  .tg-btn kbd {
+    display: inline-block; margin-top: 2px;
+    background: rgba(0,0,0,0.08); padding: 1px 6px; border-radius: 4px;
+    font-size: 0.7rem; font-family: 'SF Mono', Menlo, monospace; color: var(--text-dim);
+  }
+  .tg-btn-yes   { color: #166534; }
+  .tg-btn-maybe { color: #92400e; }
+  .tg-btn-rsch  { color: #1e40af; }
+  .tg-btn-no    { color: #991b1b; }
+  .tg-btn-yes:hover   { background: #dcfce7; }
+  .tg-btn-maybe:hover { background: #fef3c7; }
+  .tg-btn-rsch:hover  { background: #dbeafe; }
+  .tg-btn-no:hover    { background: #fee2e2; }
+
+  .tg-empty {
+    background: white; color: var(--text);
+    border-radius: 18px; padding: 40px 32px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    text-align: center; width: 100%;
+  }
+  .tg-empty-headline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 1.8rem; margin-bottom: 6px;
+  }
+  .tg-empty-body { color: var(--text-dim); font-size: 0.95rem; }
+
+  /* Triage badge surfaced on saved cards */
+  .triage-badge {
+    padding: 2px 8px; border-radius: 100px; font-size: 0.7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .triage-badge.yes   { background: #dcfce7; color: #14532d; }
+  .triage-badge.maybe { background: #fef3c7; color: #78350f; }
+  .triage-badge.needs_research { background: #dbeafe; color: #1e40af; }
+  .triage-badge.no    { background: #fee2e2; color: #991b1b; }
 
   /* Preset markets */
   .preset-card {
@@ -361,12 +712,154 @@
   }
 
   /* ─── Map workspace ─────────────────────────────────────────── */
-  .hotel-map-wrap { position: relative; }
+  /* Layout: map fills the available width; when the drill-down rail is
+     open it slides in from the right and the map shrinks to make room. */
+  .hotel-map-wrap {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 0;
+    transition: grid-template-columns 0.22s ease;
+    gap: 0;
+  }
+  .hotel-map-wrap.rail-open { grid-template-columns: 1fr 380px; }
   .hotel-map {
     height: 70vh; min-height: 500px; width: 100%;
     border-radius: 14px; overflow: hidden;
     border: 1px solid var(--border);
   }
+
+  /* ─── Drill-down rail (right side of the map) ──────────────── */
+  .pin-rail {
+    height: 70vh; min-height: 500px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; margin-left: 12px;
+    overflow-y: auto; overflow-x: hidden;
+    display: none;
+  }
+  .hotel-map-wrap.rail-open .pin-rail { display: block; }
+  .pin-rail-photo {
+    height: 160px;
+    background-size: cover; background-position: center;
+    background-color: #e2e8f0;
+    border-top-left-radius: 13px; border-top-right-radius: 13px;
+    position: relative;
+  }
+  .pin-rail-photo.placeholder {
+    display: flex; align-items: center; justify-content: center;
+    color: #94a3b8; font-size: 2.4rem;
+    background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
+  }
+  .pin-rail-close {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.55); color: white; border: 0;
+    width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer; font-weight: 700; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pin-rail-fit {
+    position: absolute; top: 10px; left: 10px;
+    background: white; padding: 4px 10px; border-radius: 100px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  }
+  .pin-rail-fit.top  { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; }
+  .pin-rail-fit.high { background: linear-gradient(135deg, #0891b2, #06b6d4); color: white; }
+  .pin-rail-fit.mid  { background: linear-gradient(135deg, #d97706, #f59e0b); color: white; }
+  .pin-rail-fit.low  { color: #475569; }
+  .pin-rail-body { padding: 14px 16px; }
+  .pin-rail-name {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800;
+    font-size: 1.15rem; line-height: 1.25; margin-bottom: 4px; color: var(--text);
+  }
+  .pin-rail-addr { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 10px; }
+  .pin-rail-pills {
+    display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px;
+  }
+  .pin-rail-pill {
+    background: #e0e7ff; color: #3730a3;
+    padding: 3px 10px; border-radius: 100px;
+    font-size: 0.72rem; font-weight: 700;
+  }
+  .pin-rail-pill.airport { background: #fef3c7; color: #78350f; }
+  .pin-rail-pill.tier-XL { background: #fef3c7; color: #78350f; }
+  .pin-rail-pill.tier-L  { background: #ede9fe; color: #5b21b6; }
+  .pin-rail-pill.tier-M  { background: #cffafe; color: #155e75; }
+  .pin-rail-pill.tier-S  { background: #dcfce7; color: #166534; }
+  .pin-rail-pill.tier-XS { background: #f1f5f9; color: #475569; }
+  .pin-rail-reasons { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+  .pin-rail-reason {
+    background: #f0f9ff; color: #075985; border: 1px solid #bae6fd;
+    padding: 3px 8px; border-radius: 100px;
+    font-size: 0.7rem; font-weight: 600;
+  }
+  .pin-rail-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    background: #f8fafc; border-radius: 10px; padding: 10px 12px;
+    font-size: 0.82rem; margin-bottom: 12px;
+  }
+  .pin-rail-grid .lbl {
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 0.6rem; font-weight: 700; color: #94a3b8;
+  }
+  .pin-rail-grid .val { font-weight: 600; color: #111827; word-break: break-word; }
+  .pin-rail-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .pin-rail-actions a, .pin-rail-actions button {
+    padding: 8px 10px; border-radius: 8px;
+    font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    text-decoration: none; text-align: center;
+    border: 1px solid var(--border); background: white; color: var(--text);
+  }
+  .pin-rail-actions a:hover, .pin-rail-actions button:hover { background: #f8fafc; }
+  .pin-rail-actions .primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .pin-rail-actions .primary:hover { background: var(--accent-deep); }
+  .pin-rail-triage-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 12px;
+  }
+  .pin-rail-triage-row button {
+    padding: 8px 4px; border-radius: 8px; border: 1px solid var(--border);
+    background: white; cursor: pointer; font: inherit; font-size: 0.72rem; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .pin-rail-triage-row button .emoji { font-size: 1.05rem; }
+  .pin-rail-triage-row button.yes:hover   { background: #dcfce7; color: #14532d; border-color: #86efac; }
+  .pin-rail-triage-row button.maybe:hover { background: #fef3c7; color: #78350f; border-color: #fcd34d; }
+  .pin-rail-triage-row button.rsch:hover  { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+  .pin-rail-triage-row button.no:hover    { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+  .pin-rail-bio {
+    font-size: 0.82rem; color: var(--text-dim); line-height: 1.45;
+    font-style: italic; margin-bottom: 12px;
+  }
+  .pin-rail-section-title {
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.66rem; font-weight: 700; color: #94a3b8;
+    margin: 12px 0 6px;
+  }
+  .pin-rail-nearby-row {
+    display: flex; gap: 8px; padding: 6px 8px;
+    border-radius: 8px; cursor: pointer; align-items: center;
+  }
+  .pin-rail-nearby-row:hover { background: #f1f5f9; }
+  .pin-rail-nearby-row .nb-fit {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 0.78rem;
+    color: white; flex-shrink: 0;
+  }
+  .pin-rail-nearby-row .nb-name { font-size: 0.84rem; font-weight: 600; line-height: 1.25; flex: 1; min-width: 0; }
+  .pin-rail-nearby-row .nb-name .meta { font-size: 0.7rem; color: var(--text-dim); font-weight: 500; }
+  .pin-rail-nearby-row .nb-dist { font-size: 0.72rem; color: var(--text-faint); white-space: nowrap; }
+
+  /* "Click anywhere" area panel — same rail but title says "X hotels near here" */
+  .pin-rail-area-header {
+    background: var(--accent-soft); padding: 14px 16px;
+    border-top-left-radius: 13px; border-top-right-radius: 13px;
+  }
+  .pin-rail-area-header h3 {
+    margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 1rem;
+    color: var(--accent-deep);
+  }
+  .pin-rail-area-header .sub { font-size: 0.78rem; color: var(--text-dim); margin-top: 3px; }
   .hotel-map-empty {
     position: absolute; inset: 0;
     background: #f1f5f9; border-radius: 14px;
@@ -438,6 +931,47 @@
     font-weight: 800; font-size: 0.85rem;
     display: flex; align-items: center; justify-content: center;
   }
+  /* Score-badge pin — used inside heatmap mode so individual hotels are still
+     clickable and you can read their fit score at a glance over the heat blobs. */
+  .score-pin {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.40);
+    color: white; font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 0.74rem;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .score-pin.no-score { background: #cbd5e1; color: #475569; font-size: 0.6rem; }
+  /* Cluster bubbles in heat mode — matches the heat gradient palette */
+  .heat-cluster {
+    background: rgba(255,255,255,0.92);
+    border: 3px solid #f97316;
+    border-radius: 50%;
+    color: #1e293b; font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.30);
+  }
+  .heat-cluster .count { font-size: 0.92rem; line-height: 1; }
+  .heat-cluster .avg   { font-size: 0.6rem; color: #64748b; margin-top: 1px; font-weight: 600; }
+  .heat-cluster.cl-top  { border-color: #16a34a; }
+  .heat-cluster.cl-high { border-color: #0891b2; }
+  .heat-cluster.cl-mid  { border-color: #f59e0b; }
+  .heat-cluster.cl-low  { border-color: #dc2626; }
+
+  /* Charger pin — lightning-bolt marker for Tesla (red) + general EV (green).
+     Smaller than hotel pins so the territory dots stay visually dominant. */
+  .charger-pin {
+    width: 18px; height: 18px; border-radius: 4px;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.30);
+    color: white; font-size: 0.72rem;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+  }
+  .charger-pin.tesla { background: #dc2626; }
+  .charger-pin.ev    { background: #16a34a; }
 
   /* ─── Market planning panel ─────────────────────────────── */
   .market-panel {
@@ -1009,64 +1543,53 @@
          tile to jump to the relevant section below. -->
     <div class="hero-stats" id="heroStats"></div>
 
+    <!-- Curated call list — top fits the rep should hit first today -->
+    <div id="topCallsTile" class="top-calls-tile" style="display:none;"></div>
+
+    <!-- 🎮 Triage Game launcher — visible only when there are unsorted hotels -->
+    <div id="triageLauncher" class="triage-launcher" style="display:none;">
+      <div>
+        <div class="tl-eyebrow">🎮 Triage game</div>
+        <div class="tl-title" id="tlTitle">— hotels need a Yes / Maybe / No decision</div>
+        <div class="tl-sub">Sweep through the territory one card at a time. Y / M / R / N keys work too.</div>
+      </div>
+      <button class="tl-btn" type="button" onclick="window._openTriage()">▶ Start triage</button>
+    </div>
+
+    <!-- Triage Game overlay — iPhone 15 Pro Max bezel embedding /triage.html -->
+    <div class="triage-game" id="triageGame" aria-hidden="true">
+      <button class="iphone-close" type="button" onclick="window._closeTriage()" title="Close (Esc)">✕</button>
+
+      <div class="iphone-bezel" role="dialog" aria-label="Hotel Triage on iPhone">
+        <span class="ip-btn mute"></span>
+        <span class="ip-btn vol-up"></span>
+        <span class="ip-btn vol-dn"></span>
+        <span class="ip-btn power"></span>
+        <span class="dynamic-island"></span>
+        <div class="iphone-screen">
+          <iframe id="triageIframe" title="Hotel Triage" loading="lazy"></iframe>
+        </div>
+      </div>
+
+      <div class="iphone-helper">
+        Drag a card to swipe · or use <kbd>Y</kbd> Yes <kbd>M</kbd> Maybe <kbd>R</kbd> Research <kbd>N</kbd> No · <kbd>U</kbd> Undo · <kbd>Esc</kbd> close
+      </div>
+    </div>
+
     <!-- Sticky nav — jumps between dashboard sections (no longer hides them) -->
     <nav class="tabs" aria-label="Jump to section">
-      <a class="tab" href="#panel-search">Search</a>
       <a class="tab" href="#panel-map">🗺️ Map</a>
       <a class="tab" href="#panel-saved">My Saved <span class="badge" id="savedCount">0</span></a>
+      <a class="tab" href="#panel-search">Search</a>
       <a class="tab" href="#panel-schedule">📅 Schedule</a>
     </nav>
 
-    <!-- ─── Search panel ──────────────────────────────────────── -->
-    <div class="panel" id="panel-search" role="region" aria-label="Search">
-      <div class="panel-head">
-        <span class="panel-eyebrow">Step 1 · Find</span>
-        <h2>Search hotels in any market</h2>
-        <span class="panel-sub">Pulls live from OpenStreetMap. Save candidates as you go.</span>
-      </div>
-      <!-- Preset markets — one-click submarket prospecting -->
-      <div class="preset-card" id="presetCard">
-        <div class="preset-head">
-          <div>
-            <div class="preset-eyebrow">Quick markets</div>
-            <div class="preset-sub">One click runs the search for that submarket. Saved hotels get tagged so you can filter later.</div>
-          </div>
-          <div id="presetMaster"></div>
-        </div>
-        <div class="preset-chips" id="presetChips"></div>
-      </div>
-
-      <div class="search-card">
-        <form id="searchForm" onsubmit="return runSearch(event)">
-          <div class="search-row">
-            <div>
-              <label for="f_location">City, state or 5-digit zip</label>
-              <input id="f_location" type="text" placeholder='e.g. "Boston, MA" or "02108"' autocomplete="off" required>
-            </div>
-            <div>
-              <label for="f_radius">Radius (miles)</label>
-              <input id="f_radius" type="number" value="5" min="1" max="25" step="1">
-            </div>
-            <div>
-              <button type="submit" class="btn btn-primary" id="searchBtn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                Search
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-
-      <div id="searchMeta"></div>
-      <div id="searchContent"></div>
-    </div>
-
-    <!-- ─── Map panel — visual research workspace ─────────────── -->
+    <!-- ─── Map panel — primary BDR view, hoisted to top ──────── -->
     <div class="panel" id="panel-map" role="region" aria-label="Map">
       <div class="panel-head">
-        <span class="panel-eyebrow">Step 2 · See your territory</span>
-        <h2>🗺️ Map · routes · market planning</h2>
-        <span class="panel-sub">Click a pin to view. Toggle Route mode to plan a drive.</span>
+        <span class="panel-eyebrow">Step 1 · See your territory</span>
+        <h2>🗺️ Map · routes · drive time</h2>
+        <span class="panel-sub">Click a pin to view. Toggle Route mode to plan a drive between stops.</span>
       </div>
       <!-- Market planning stats card — at-a-glance health of the territory -->
       <div class="market-panel" id="marketPanel">
@@ -1098,22 +1621,84 @@
           </label>
           <label class="adr-range-label">ADR ≥ <input id="mapAdrMin" type="number" min="0" step="50" value="0" style="width:74px"> $</label>
           <label class="adr-range-label">≤ <input id="mapAdrMax" type="number" min="0" step="50" value="9999" style="width:78px"> $</label>
+          <label>View
+            <select id="mapViewMode" title="How to render the territory">
+              <option value="pins">📍 Pins</option>
+              <option value="heat">🔥 Heatmap</option>
+              <option value="cluster">🎨 Cluster</option>
+            </select>
+          </label>
+          <label>Color by
+            <select id="mapColorBy" title="What signal to color the pins by">
+              <option value="status">Status</option>
+              <option value="fit_score">AI fit score</option>
+              <option value="brand_class">Brand class</option>
+              <option value="submarket">Submarket</option>
+              <option value="adr_tier">ADR tier</option>
+              <option value="chain">Chain / operator</option>
+            </select>
+          </label>
+          <label id="heatWeightWrap" style="display:none">Weight
+            <select id="mapHeatWeight" title="What to weight heatmap density by">
+              <option value="count">Count (uniform)</option>
+              <option value="fit_score" selected>Fit score</option>
+              <option value="adr">ADR</option>
+              <option value="rooms">Rooms</option>
+            </select>
+          </label>
+          <label class="toggle-label" title="Show Tesla Superchargers + other EV chargers within the map view">
+            <input id="mapShowChargers" type="checkbox"> ⚡ Chargers
+          </label>
+          <label class="toggle-label" title="Show Miami International + Fort Lauderdale + Opa-locka airports">
+            <input id="mapShowAirports" type="checkbox" checked> ✈️ Airports
+          </label>
           <button class="btn-ghost btn-route-toggle" id="mapRouteToggle" type="button" onclick="window._toggleMapRouteMode()">🗺️ Route mode</button>
         </div>
+        <!-- Slice the territory by chain / city / zip — auto-populated from saved data -->
+        <div class="map-toolbar-filters" style="width:100%;border-top:1px dashed var(--border);padding-top:10px;margin-top:6px">
+          <label>Chain
+            <select id="mapChainFilter"><option value="all">All chains</option></select>
+          </label>
+          <label>City
+            <select id="mapCityFilter"><option value="all">All cities</option></select>
+          </label>
+          <label>Zip
+            <select id="mapZipFilter"><option value="all">All zips</option></select>
+          </label>
+          <label>Fit ≥
+            <input id="mapFitMin" type="number" min="0" max="100" value="0" style="width:64px">
+          </label>
+          <label>Within
+            <select id="mapAirportRadius">
+              <option value="0">any distance to airport</option>
+              <option value="5">5mi of an airport</option>
+              <option value="10">10mi</option>
+              <option value="20">20mi</option>
+            </select>
+          </label>
+          <label class="toggle-label" title="Show only hotels that have received deep research treatment (top-fit cohort)">
+            <input id="mapDeepOnly" type="checkbox"> 📚 Deep researched only
+          </label>
+        </div>
       </div>
-      <div class="hotel-map-wrap">
-        <div id="mapEl" class="hotel-map"></div>
-        <div id="mapEmptyOverlay" class="hotel-map-empty">
-          <div>
-            <div style="font-size:2rem;margin-bottom:8px;">🗺️</div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:6px;">No hotels on the map yet</div>
-            <div style="font-size:0.88rem;line-height:1.5;color:var(--text-dim);">
-              Go to the <strong>Search</strong> tab and run a city search or hit a Quick-market preset
-              (e.g. <strong>Run all 11 Miami-Dade submarkets</strong>), then save the hotels you want
-              to track. They'll appear as pins here.
+      <div class="hotel-map-wrap" id="mapWrap">
+        <div style="position:relative">
+          <div id="mapEl" class="hotel-map"></div>
+          <div id="mapEmptyOverlay" class="hotel-map-empty">
+            <div>
+              <div style="font-size:2rem;margin-bottom:8px;">🗺️</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:6px;">No hotels on the map yet</div>
+              <div style="font-size:0.88rem;line-height:1.5;color:var(--text-dim);">
+                Go to the <strong>Search</strong> tab and run a city search or hit a Quick-market preset
+                (e.g. <strong>Run all 11 Miami-Dade submarkets</strong>), then save the hotels you want
+                to track. They'll appear as pins here.
+              </div>
             </div>
           </div>
         </div>
+        <!-- Drill-down side rail — toggled by .rail-open on the wrap. Populated
+             from JS when a pin is clicked or the user clicks the map background. -->
+        <aside class="pin-rail" id="pinRail" aria-hidden="true"></aside>
       </div>
       <div class="map-legend">
         <span class="map-legend-pin" style="background:#94a3b8"></span>Lead
@@ -1123,10 +1708,12 @@
         <span class="map-legend-pin" style="background:#16a34a"></span>Won
         <span class="map-legend-pin" style="background:#dc2626"></span>Lost
         <span class="map-legend-pin" style="background:#d97706;border:none;font-size:0.65rem;color:white;display:inline-flex;align-items:center;justify-content:center;font-weight:700;width:14px;height:14px;">N</span>route stop
+        <span class="map-legend-pin" style="background:#dc2626;color:white;border:none;font-size:0.7rem;display:inline-flex;align-items:center;justify-content:center;font-weight:700;width:14px;height:14px;">⚡</span>Tesla
+        <span class="map-legend-pin" style="background:#16a34a;color:white;border:none;font-size:0.7rem;display:inline-flex;align-items:center;justify-content:center;font-weight:700;width:14px;height:14px;">⚡</span>EV charger
         <span style="margin-left:auto;color:var(--text-faint);font-size:0.78rem;" id="mapClickHint">📌 click a pin to view</span>
       </div>
 
-      <!-- Route bar — sticky bottom bar shared between Saved + Map tabs -->
+      <!-- Route bar — sticky bottom bar with stops + drive-time totals -->
       <div id="mapRouteBar" class="map-route-bar">
         <div class="map-route-bar-header">
           <strong id="mapRouteCount">0 stops</strong>
@@ -1144,7 +1731,7 @@
     <!-- ─── Saved panel ───────────────────────────────────────── -->
     <div class="panel" id="panel-saved" role="region" aria-label="My saved hotels">
       <div class="panel-head">
-        <span class="panel-eyebrow">Step 3 · Work the list</span>
+        <span class="panel-eyebrow">Step 2 · Work the list</span>
         <h2>My saved hotels</h2>
         <span class="panel-sub">Sort, filter, drill down. Edit any property to add visits + sales intel.</span>
       </div>
@@ -1202,6 +1789,50 @@
           <button class="btn btn-primary" type="button" id="openInMapsBtn" onclick="window._openRouteInMaps()" disabled>📍 Open in Google Maps</button>
         </div>
       </div>
+    </div>
+
+    <!-- ─── Search panel ──────────────────────────────────────── -->
+    <div class="panel" id="panel-search" role="region" aria-label="Search">
+      <div class="panel-head">
+        <span class="panel-eyebrow">Step 3 · Find more</span>
+        <h2>Search hotels in any market</h2>
+        <span class="panel-sub">Pulls live from OpenStreetMap. Save candidates as you go.</span>
+      </div>
+      <!-- Preset markets — one-click submarket prospecting -->
+      <div class="preset-card" id="presetCard">
+        <div class="preset-head">
+          <div>
+            <div class="preset-eyebrow">Quick markets</div>
+            <div class="preset-sub">One click runs the search and <strong>auto-saves</strong> every hotel — they show up in <em>My saved hotels</em> + on the map immediately, no extra click. Re-running is safe; already-saved hotels are skipped.</div>
+          </div>
+          <div id="presetMaster"></div>
+        </div>
+        <div class="preset-chips" id="presetChips"></div>
+      </div>
+
+      <div class="search-card">
+        <form id="searchForm" onsubmit="return runSearch(event)">
+          <div class="search-row">
+            <div>
+              <label for="f_location">City, state or 5-digit zip</label>
+              <input id="f_location" type="text" placeholder='e.g. "Boston, MA" or "02108"' autocomplete="off" required>
+            </div>
+            <div>
+              <label for="f_radius">Radius (miles)</label>
+              <input id="f_radius" type="number" value="5" min="1" max="25" step="1">
+            </div>
+            <div>
+              <button type="submit" class="btn btn-primary" id="searchBtn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Search
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div id="searchMeta"></div>
+      <div id="searchContent"></div>
     </div>
 
     <!-- ─── Schedule panel — BDR weekly territory plan ────────── -->
@@ -1539,6 +2170,244 @@ const _lazyObserver = new IntersectionObserver(entries => {
   if (el) _lazyObserver.observe(el);
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// TRIAGE GAME — Tinder-style sweep over the saved-hotels queue
+// ═══════════════════════════════════════════════════════════════════
+let TG_QUEUE = [];          // unsorted hotels (server order: by submarket, then id)
+let TG_TOTALS = null;        // { total, sorted, yes, maybe, needs_research, no }
+let TG_INDEX = 0;            // pointer into the queue
+let TG_LOCK = false;         // re-entrancy guard during animations
+const TRIAGE_LABELS = { yes: '✅ Yes', maybe: '🤔 Maybe', needs_research: '🔬 More research', no: '❌ No' };
+
+async function loadTriageQueue() {
+  try {
+    const res = await fetch('/api/hotel-research/triage/queue', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    TG_QUEUE = data.queue || [];
+    TG_TOTALS = data.totals || { total: 0, sorted: 0, yes: 0, maybe: 0, needs_research: 0, no: 0 };
+    TG_INDEX = 0;
+    renderTriageLauncher();
+  } catch (err) {
+    console.warn('triage queue load failed', err);
+  }
+}
+
+function renderTriageLauncher() {
+  const launcher = document.getElementById('triageLauncher');
+  if (!launcher) return;
+  if (!TG_QUEUE || TG_QUEUE.length === 0) { launcher.style.display = 'none'; return; }
+  launcher.style.display = 'flex';
+  document.getElementById('tlTitle').textContent = `${TG_QUEUE.length} hotels need a Yes / Maybe / No decision`;
+}
+
+// Triage launcher — opens the iPhone bezel + iframes /triage.html so the
+// desktop view feels like Ben/Celia are using the actual phone app. Same
+// code (and same swipe gestures, undo, leaderboard) runs in both contexts.
+window._openTriage = async function() {
+  await loadTriageQueue();
+  if (!TG_QUEUE.length) {
+    alert("Nothing to triage — every saved hotel already has a decision. Save more hotels from Search to refill the queue.");
+    return;
+  }
+  const overlay = document.getElementById('triageGame');
+  const iframe = document.getElementById('triageIframe');
+  // Cache-bust on every open so the iframe reloads fresh state from the
+  // server (in case another rep just made decisions).
+  iframe.src = `/triage?ts=${Date.now()}`;
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+};
+
+window._closeTriage = function() {
+  const overlay = document.getElementById('triageGame');
+  const iframe = document.getElementById('triageIframe');
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  // Stop the iframe so any in-flight fetches don't keep firing while the
+  // overlay is hidden, and free its memory.
+  iframe.src = 'about:blank';
+  // Reload saved data so the cards/list reflect new triage decisions made
+  // inside the iframe.
+  loadSaved({ silent: true });
+};
+
+// Esc closes the overlay (matches the helper text under the bezel)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('triageGame').classList.contains('open')) {
+    window._closeTriage();
+  }
+});
+
+function renderTriageCard() {
+  const stack = document.getElementById('tgCardStack');
+  // Strip any previous .tg-card without removing the empty placeholder
+  stack.querySelectorAll('.tg-card').forEach(el => el.remove());
+  // Update progress
+  const total = TG_TOTALS?.total || TG_QUEUE.length;
+  const sorted = (TG_TOTALS?.sorted || 0) + TG_INDEX;
+  const pct = total > 0 ? Math.round((sorted / total) * 100) : 0;
+  document.getElementById('tgProgressFill').style.width = pct + '%';
+  document.getElementById('tgProgressText').textContent =
+    `${sorted} of ${total} sorted · ${TG_QUEUE.length - TG_INDEX} to go`;
+  document.getElementById('tgCounts').innerHTML = `
+    <span class="tdc-pill yes">✅ ${TG_TOTALS?.yes || 0}</span>
+    <span class="tdc-pill maybe">🤔 ${TG_TOTALS?.maybe || 0}</span>
+    <span class="tdc-pill rsch">🔬 ${TG_TOTALS?.needs_research || 0}</span>
+    <span class="tdc-pill no">❌ ${TG_TOTALS?.no || 0}</span>
+  `;
+  // No more cards?
+  if (TG_INDEX >= TG_QUEUE.length) {
+    document.getElementById('tgEmpty').style.display = 'block';
+    document.getElementById('tgActions').style.opacity = '0.4';
+    document.getElementById('tgActions').style.pointerEvents = 'none';
+    if (typeof fireConfetti === 'function') {
+      // Reuse the glossary-game confetti if available; otherwise a quick manual burst
+      try { fireConfetti(150); } catch {}
+    }
+    return;
+  }
+  document.getElementById('tgEmpty').style.display = 'none';
+  document.getElementById('tgActions').style.opacity = '1';
+  document.getElementById('tgActions').style.pointerEvents = 'auto';
+  const h = TG_QUEUE[TG_INDEX];
+  const card = document.createElement('div');
+  card.className = 'tg-card';
+  card.id = 'tgCurrentCard';
+  const adr = h.est_adr_dollars ? '$' + h.est_adr_dollars + '/night' : '—';
+  const websiteSearch = `https://www.google.com/search?q=${encodeURIComponent([h.name, h.city, h.state, 'reviews pricing'].filter(Boolean).join(' '))}`;
+  card.innerHTML = `
+    <div class="tg-card-name">${escapeHtml(h.name)}</div>
+    <div class="tg-card-meta">${escapeHtml(h.address || [h.city, h.state].filter(Boolean).join(', ') || '')}</div>
+    <div class="tg-card-grid">
+      <div><span class="label">Submarket</span><div class="val">${escapeHtml(h.submarket || '—')}</div></div>
+      <div><span class="label">Brand</span><div class="val">${escapeHtml(h.brand || '—')}</div></div>
+      <div><span class="label">Stars</span><div class="val">${h.stars ? '★'.repeat(h.stars) : '—'}</div></div>
+      <div><span class="label">Rooms</span><div class="val">${h.rooms || '—'}</div></div>
+      <div><span class="label">Est ADR</span><div class="val">${adr}</div></div>
+      <div><span class="label">Operator</span><div class="val">${escapeHtml(h.operator || '—')}</div></div>
+      ${h.year_opened ? `<div><span class="label">Opened</span><div class="val">${h.year_opened}</div></div>` : ''}
+      ${h.phone ? `<div><span class="label">Phone</span><div class="val">${escapeHtml(h.phone)}</div></div>` : ''}
+    </div>
+    <div class="tg-card-links">
+      ${h.lat && h.lng ? `<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}">📍 Maps</a>` : ''}
+      <a target="_blank" rel="noopener" href="${websiteSearch}">🔎 Web search</a>
+      ${h.website ? `<a target="_blank" rel="noopener" href="${escapeHtml(h.website)}">🌐 Site</a>` : ''}
+      ${h.phone ? `<a href="tel:${escapeHtml(h.phone)}">📞 Call</a>` : ''}
+    </div>
+  `;
+  stack.insertBefore(card, document.getElementById('tgEmpty'));
+}
+
+window._triage = async function(decision) {
+  if (TG_LOCK) return;
+  if (TG_INDEX >= TG_QUEUE.length) return;
+  const h = TG_QUEUE[TG_INDEX];
+  TG_LOCK = true;
+  // Animate the card off-screen in the direction matching the decision
+  const card = document.getElementById('tgCurrentCard');
+  if (card) {
+    const flipMap = { yes: 'flip-yes', no: 'flip-no', maybe: 'flip-maybe', needs_research: 'flip-rsch' };
+    card.classList.add(flipMap[decision] || 'flip-yes');
+  }
+  // Optimistic counter update
+  if (TG_TOTALS) {
+    TG_TOTALS.sorted++;
+    TG_TOTALS[decision] = (TG_TOTALS[decision] || 0) + 1;
+  }
+  try {
+    await fetch(`/api/hotel-research/saved/${h.id}/triage`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision }),
+    });
+  } catch (err) {
+    console.warn('triage save failed', err);
+  }
+  // After the flip animation, advance to the next card
+  setTimeout(() => {
+    TG_INDEX++;
+    TG_LOCK = false;
+    renderTriageCard();
+  }, 280);
+};
+
+// Keyboard shortcuts — Y / M / R / N + Esc
+document.addEventListener('keydown', e => {
+  const game = document.getElementById('triageGame');
+  if (!game || !game.classList.contains('open')) return;
+  if (e.key === 'Escape') { window._closeTriage(); return; }
+  const keyMap = { y: 'yes', Y: 'yes', m: 'maybe', M: 'maybe', r: 'needs_research', R: 'needs_research', n: 'no', N: 'no' };
+  const decision = keyMap[e.key];
+  if (decision) { e.preventDefault(); window._triage(decision); }
+});
+
+// ─── Top calls today — curated daily list of best fits to call now ──
+// Pulls the highest AI-fit hotels that are still untriaged and untouched
+// (no visit + status = lead). One-click jumps to drill-down or dials.
+function renderTopCallsTile() {
+  const el = document.getElementById('topCallsTile');
+  if (!el) return;
+  if (!SAVED || SAVED.length === 0) { el.style.display = 'none'; return; }
+  const candidates = SAVED
+    .filter(h => h.lat != null && h.lng != null)
+    .filter(h => !h.triage || h.triage === 'maybe' || h.triage === 'yes')
+    .filter(h => (h.visit_count || 0) === 0)
+    .filter(h => h.status === 'lead')
+    .sort((a, b) => (b.ai_fit_score || 0) - (a.ai_fit_score || 0))
+    .slice(0, 10);
+  if (candidates.length === 0) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.innerHTML = `
+    <div class="tc-head">
+      <span class="tc-eyebrow">🔥 TOP 10 CALLS TODAY</span>
+      <div>
+        <h3>Your highest-fit untouched leads</h3>
+        <div class="tc-sub">Click a row to drill into the rail · click 📞 to dial · click 🗺️ to plan a visit</div>
+      </div>
+    </div>
+    <div class="top-calls-list">
+      ${candidates.map((h, i) => {
+        const tier = h.ai_fit_tier || 'low';
+        const bg = tier === 'top' ? '#16a34a' : tier === 'high' ? '#0891b2' : tier === 'mid' ? '#f59e0b' : '#94a3b8';
+        const ap = nearestAirport(h.lat, h.lng);
+        const sub = [
+          h.brand || h.operator || null,
+          h.rooms ? `${h.rooms} rms` : null,
+          h.est_adr_dollars ? `$${h.est_adr_dollars}` : null,
+          h.submarket ? `📍 ${h.submarket}` : null,
+          ap ? `✈️ ${ap.miles.toFixed(1)}mi → ${ap.code}` : null,
+        ].filter(Boolean).join(' · ');
+        return `
+          <div class="top-call-row" onclick="window._jumpToTopCall(${h.id})">
+            <div class="tc-fit" style="background:${bg}">${h.ai_fit_score ?? '–'}</div>
+            <div>
+              <div class="tc-name">${escapeHtml(h.name)}</div>
+              <div class="tc-meta">${escapeHtml(sub)}</div>
+            </div>
+            ${h.phone ? `<a class="tc-phone" href="tel:${escapeHtml(h.phone)}" onclick="event.stopPropagation()">📞 Call</a>` : '<span></span>'}
+            <button class="tc-action" type="button" onclick="event.stopPropagation(); window._jumpToTopCall(${h.id})">Open →</button>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+window._jumpToTopCall = function(id) {
+  const h = SAVED.find(s => s.id === id);
+  if (!h) return;
+  // Scroll to the map, lazy-load it, then center + open the rail
+  document.getElementById('panel-map').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (typeof renderMap === 'function') {
+    if (!_lazyLoaded.has('panel-map')) { _lazyLoaded.add('panel-map'); renderMap(); }
+  }
+  setTimeout(() => {
+    if (h.lat && h.lng && MAP) MAP.setView([h.lat, h.lng], 15);
+    openPinRail(h);
+  }, 350);
+};
+
 // ─── Hero KPI dashboard — at-a-glance health row ──────────────────
 function renderHeroStats() {
   const el = document.getElementById('heroStats');
@@ -1595,7 +2464,29 @@ let MAP = null;        // Leaflet instance (lazy)
 let MAP_PINS = [];     // current Leaflet markers
 let ROUTE_LINE = null; // current route polyline
 let MAP_ROUTE_MODE = false;
-let MAP_FILTERS = { status: 'all', submarket: 'all', adrMin: 0, adrMax: 9999 };
+let MAP_FILTERS = { status: 'all', submarket: 'all', adrMin: 0, adrMax: 9999,
+                    chain: 'all', city: 'all', zip: 'all', fitMin: 0, airportMaxMi: 0,
+                    deepOnly: false };
+let SHOW_CHARGERS = false;     // toggled by the ⚡ Chargers checkbox
+let CHARGER_PINS = [];         // current charger markers, swapped on each refresh
+let CHARGER_FETCH_KEY = '';    // dedupe — last bbox we fetched for
+let MAP_VIEW = 'pins';         // 'pins' | 'heat' | 'cluster'
+let MAP_COLOR_BY = 'status';   // 'status' | 'fit_score' | 'brand_class' | 'submarket' | 'adr_tier' | 'chain'
+let HEAT_WEIGHT = 'fit_score'; // 'count' | 'fit_score' | 'adr' | 'rooms'
+let HEAT_LAYER = null;
+let CLUSTER_GROUP = null;
+let SHOW_AIRPORTS = true;
+let AIRPORT_PINS = [];
+
+// Major Miami-Dade airports — used for visual context + nearest-airport
+// computation. Hand-coded since they don't change and we don't need an API.
+const MIAMI_AIRPORTS = [
+  { code: 'MIA', name: 'Miami International',         lat: 25.7959, lng: -80.2870 },
+  { code: 'FLL', name: 'Fort Lauderdale–Hollywood',   lat: 26.0726, lng: -80.1527 },
+  { code: 'OPF', name: 'Opa-locka Executive',         lat: 25.9070, lng: -80.2784 },
+  { code: 'TMB', name: 'Miami Executive (Tamiami)',   lat: 25.6479, lng: -80.4329 },
+  { code: 'HWO', name: 'North Perry (Hollywood)',     lat: 26.0014, lng: -80.2407 },
+];
 
 function ensureMap() {
   if (MAP) return MAP;
@@ -1605,6 +2496,22 @@ function ensureMap() {
     maxZoom: 19,
     attribution: '© OpenStreetMap contributors',
   }).addTo(MAP);
+  // Refresh chargers on pan/zoom — debounced so a fast drag doesn't fire 20
+  // requests. Only does work when the toggle is on.
+  let chargerDebounce = null;
+  MAP.on('moveend zoomend', () => {
+    if (!SHOW_CHARGERS) return;
+    clearTimeout(chargerDebounce);
+    chargerDebounce = setTimeout(refreshChargers, 400);
+  });
+  // Click anywhere on the map background → open the "Top fits in this area"
+  // panel listing every hotel within ~1mi, sorted by AI fit. Pin clicks
+  // trigger marker handlers first and don't propagate here.
+  MAP.on('click', (e) => {
+    if (MAP_ROUTE_MODE) return; // route mode owns map clicks for path planning
+    if (e.originalEvent && e.originalEvent.target.closest('.leaflet-marker-icon')) return;
+    openAreaRail(e.latlng.lat, e.latlng.lng);
+  });
   return MAP;
 }
 
@@ -1618,6 +2525,123 @@ function pinIcon(color) {
     iconAnchor: [11, 11],
     popupAnchor: [0, -10],
   });
+}
+
+// ── Color-by helpers ────────────────────────────────────────────────
+// Each function maps a hotel → CSS color string for its pin. The lookup is
+// cached per-render so repeat calls (e.g. legend) are cheap.
+const STATUS_COLOR = { lead:'#94a3b8', contacted:'#06b6d4', qualified:'#3b82f6',
+                       proposed:'#f59e0b', won:'#16a34a', lost:'#dc2626', archived:'#6b7280' };
+const BRAND_COLOR  = { luxury:'#7c3aed', upper_upscale:'#0891b2', upscale:'#16a34a',
+                       upper_midscale:'#ca8a04', midscale:'#94a3b8', economy:'#a16207',
+                       independent:'#6b7280' };
+function fitColor(score) {
+  if (score == null) return '#cbd5e1';
+  // Red → amber → green gradient
+  if (score >= 70) return '#16a34a';
+  if (score >= 50) return '#0891b2';
+  if (score >= 30) return '#f59e0b';
+  return '#dc2626';
+}
+function adrTierColor(adr) {
+  if (!adr) return '#cbd5e1';
+  if (adr >= 400) return '#7c3aed';
+  if (adr >= 250) return '#0891b2';
+  if (adr >= 150) return '#16a34a';
+  if (adr >= 75)  return '#f59e0b';
+  return '#94a3b8';
+}
+// Stable hash → palette slot, used for chain + submarket palettes
+const PALETTE_BIG = ['#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d', '#16a34a',
+                     '#0d9488', '#0891b2', '#0284c7', '#2563eb', '#4f46e5', '#7c3aed',
+                     '#a21caf', '#be185d', '#9f1239', '#78350f'];
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function paletteColor(s) {
+  return s ? PALETTE_BIG[hashStr(s) % PALETTE_BIG.length] : '#cbd5e1';
+}
+function colorFor(h) {
+  switch (MAP_COLOR_BY) {
+    case 'fit_score':   return fitColor(h.ai_fit_score);
+    case 'brand_class': return BRAND_COLOR[h.brand_class || 'independent'] || '#94a3b8';
+    case 'submarket':   return paletteColor(h.submarket || '');
+    case 'adr_tier':    return adrTierColor(h.est_adr_dollars);
+    case 'chain':       return paletteColor((h.brand || h.operator || h.name.split(' ')[0]).toLowerCase());
+    case 'status':
+    default:            return STATUS_COLOR[h.status] || '#94a3b8';
+  }
+}
+
+// Heatmap weight per hotel (returned to leaflet.heat as the third tuple element)
+function heatWeight(h) {
+  switch (HEAT_WEIGHT) {
+    case 'fit_score': return Math.max(0.1, (h.ai_fit_score || 10) / 100);
+    case 'adr':       return Math.max(0.1, Math.min(1, (h.est_adr_dollars || 50) / 500));
+    case 'rooms':     return Math.max(0.1, Math.min(1, (h.rooms || 10) / 400));
+    case 'count':
+    default:          return 0.5;
+  }
+}
+
+// Airport pin styling — round black-bordered circle with airplane glyph
+function airportIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:24px;height:24px;border-radius:50%;background:#1e293b;color:#fbbf24;display:flex;align-items:center;justify-content:center;font-size:0.85rem;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4)">✈️</div>`,
+    iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -10],
+  });
+}
+
+function clearAirportPins() {
+  AIRPORT_PINS.forEach(p => MAP && MAP.removeLayer(p));
+  AIRPORT_PINS = [];
+}
+
+function renderAirportPins() {
+  clearAirportPins();
+  if (!SHOW_AIRPORTS || !MAP) return;
+  for (const a of MIAMI_AIRPORTS) {
+    // Proximity rings — only on the two majors (MIA, FLL) so we don't drown
+    // the map in concentric circles. 5/10/20mi gives reps a quick read on
+    // "this hotel is in MIA's catchment vs an outlier."
+    const isMajor = a.code === 'MIA' || a.code === 'FLL';
+    if (isMajor) {
+      const ringSpecs = [
+        { miles: 5,  color: '#fbbf24', opacity: 0.06, weight: 1.5 },
+        { miles: 10, color: '#f59e0b', opacity: 0.05, weight: 1.5 },
+        { miles: 20, color: '#d97706', opacity: 0.04, weight: 1   },
+      ];
+      for (const r of ringSpecs) {
+        const ring = L.circle([a.lat, a.lng], {
+          radius: r.miles * 1609.344, // meters
+          color: r.color, weight: r.weight,
+          fillColor: r.color, fillOpacity: r.opacity,
+          interactive: false,
+        }).addTo(MAP);
+        AIRPORT_PINS.push(ring);
+      }
+    }
+    const m = L.marker([a.lat, a.lng], { icon: airportIcon(), zIndexOffset: 1000 }).addTo(MAP);
+    m.bindPopup(
+      `<strong>${a.code} — ${a.name}</strong>` +
+      `<br><span style="font-size:0.78rem;color:#475569">${isMajor ? 'Major airport · 5/10/20mi catchment rings' : 'Reliever airport'}</span>`,
+    );
+    AIRPORT_PINS.push(m);
+  }
+}
+
+// Distance to nearest airport — used in pin popups so reps can plan
+// "I can hit this hotel before/after a flight"
+function nearestAirport(lat, lng) {
+  let best = null;
+  for (const a of MIAMI_AIRPORTS) {
+    const mi = haversineMi(lat, lng, a.lat, a.lng);
+    if (!best || mi < best.miles) best = { code: a.code, miles: mi };
+  }
+  return best;
 }
 
 // Numbered route-stop marker — used for hotels currently picked into a route.
@@ -1677,6 +2701,18 @@ function renderMap() {
   const filtered = SAVED.filter(h => {
     if (h.lat == null || h.lng == null) return false;
     if (MAP_FILTERS.submarket !== 'all' && h.submarket !== MAP_FILTERS.submarket) return false;
+    if (MAP_FILTERS.city !== 'all' && (h.city || '') !== MAP_FILTERS.city) return false;
+    if (MAP_FILTERS.zip !== 'all' && (h.zip || '') !== MAP_FILTERS.zip) return false;
+    if (MAP_FILTERS.chain !== 'all') {
+      const chainKey = (h.brand || h.operator || '').toLowerCase();
+      if (!chainKey.includes(MAP_FILTERS.chain.toLowerCase())) return false;
+    }
+    if (MAP_FILTERS.fitMin > 0 && (h.ai_fit_score ?? 0) < MAP_FILTERS.fitMin) return false;
+    if (MAP_FILTERS.deepOnly && h.enrichment_depth !== 'deep') return false;
+    if (MAP_FILTERS.airportMaxMi > 0) {
+      const ap = nearestAirport(h.lat, h.lng);
+      if (!ap || ap.miles > MAP_FILTERS.airportMaxMi) return false;
+    }
     const adr = h.est_adr_dollars || 0;
     if (adr < MAP_FILTERS.adrMin) return false;
     if (adr > MAP_FILTERS.adrMax) return false;
@@ -1685,6 +2721,15 @@ function renderMap() {
     if (MAP_FILTERS.status !== 'all'            && h.status !== MAP_FILTERS.status) return false;
     return true;
   });
+
+  // Auto-populate the chain / city / zip dropdowns from the current SAVED set.
+  // Sorted alphabetically; counts shown so reps see "Marriott (38)" not just "Marriott".
+  populateOptionDropdown('mapChainFilter', SAVED, h => {
+    const key = (h.brand || h.operator || '').trim();
+    return key || null;
+  }, MAP_FILTERS.chain, 'All chains');
+  populateOptionDropdown('mapCityFilter', SAVED, h => h.city, MAP_FILTERS.city, 'All cities');
+  populateOptionDropdown('mapZipFilter',  SAVED, h => h.zip,  MAP_FILTERS.zip, 'All zips');
 
   // Submarket dropdown — re-render based on the current saved set
   const subSet = Array.from(new Set(SAVED.map(h => h.submarket).filter(Boolean))).sort();
@@ -1708,28 +2753,153 @@ function renderMap() {
     ? '🗺️ click pins to add/remove from route'
     : '📌 click a pin to view + plan a visit';
 
-  // Pins — picked hotels get the numbered route icon, others the status color
+  // Tear down any prior heatmap / cluster layer before re-rendering
+  if (HEAT_LAYER)    { MAP.removeLayer(HEAT_LAYER);    HEAT_LAYER = null; }
+  if (CLUSTER_GROUP) { MAP.removeLayer(CLUSTER_GROUP); CLUSTER_GROUP = null; }
+
+  // Heatmap mode — Leaflet.heat density, weighted per HEAT_WEIGHT. We still
+  // render numbered pins for any picked route stops so route mode keeps
+  // working alongside the heat layer.
   const pickedSet = new Set(ROUTE_PICKED);
   const bounds = [];
-  for (const h of filtered) {
-    let icon;
-    if (pickedSet.has(h.id)) {
-      const order = ROUTE_PICKED.indexOf(h.id) + 1;
-      icon = routePinIcon(order);
-    } else {
-      const color = STATUS_PIN_COLORS[h.status] || '#94a3b8';
-      icon = pinIcon(color);
+
+  if (MAP_VIEW === 'heat') {
+    if (typeof L.heatLayer !== 'function') {
+      const el = document.getElementById('mapStats');
+      if (el) el.innerHTML = '<span style="color:var(--danger)">⚠ Heatmap plugin failed to load — check network / CSP.</span>';
+      return;
     }
-    const marker = L.marker([h.lat, h.lng], { icon }).addTo(MAP);
-    if (MAP_ROUTE_MODE) {
-      // In route mode, clicking a pin toggles its membership in the route.
-      marker.on('click', () => { _toggleRoutePick(h.id); renderMap(); renderRouteUI(); });
-    } else {
-      marker.bindPopup(buildPopupHtml(h));
+    const points = filtered.map(h => [h.lat, h.lng, heatWeight(h)]);
+    HEAT_LAYER = L.heatLayer(points, {
+      radius: 35,
+      blur: 25,
+      maxZoom: 12,
+      minOpacity: 0.4,
+      max: 1.0,
+      gradient: { 0.2: '#3b82f6', 0.4: '#22c55e', 0.6: '#fbbf24', 0.8: '#f97316', 1.0: '#dc2626' },
+    }).addTo(MAP);
+    // Re-tune radius on zoom so it stays useful at every level
+    if (!MAP._heatZoomBound) {
+      MAP._heatZoomBound = true;
+      MAP.on('zoomend', () => {
+        if (!HEAT_LAYER) return;
+        const z = MAP.getZoom();
+        const r = z >= 14 ? 18 : z >= 12 ? 28 : z >= 10 ? 38 : 48;
+        HEAT_LAYER.setOptions({ radius: r, blur: r * 0.7 });
+      });
     }
-    MAP_PINS.push(marker);
-    bounds.push([h.lat, h.lng]);
+    // ── Layer clickable score-badge pins on top of the heat ────────
+    // WHY: a heatmap shows density but hides the underlying property data.
+    // We layer markercluster bubbles (showing count + avg fit) over the heat
+    // and individual score-badge pins when zoomed in. Best of both worlds:
+    // the heatmap signals where to look, the pins answer "what's there?"
+    CLUSTER_GROUP = L.markerClusterGroup({
+      chunkedLoading: true,
+      showCoverageOnHover: false,
+      maxClusterRadius: 50,
+      // Custom cluster icon — shows count + average fit score, ringed by
+      // the tier color of that average so reps can spot top-fit clusters
+      // (green ring) vs noise (red ring) at a glance.
+      iconCreateFunction: (cluster) => {
+        const markers = cluster.getAllChildMarkers();
+        const scores = markers.map(m => m.options._fit ?? 0).filter(s => s > 0);
+        const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+        const tier = avg == null ? 'low' : avg >= 70 ? 'top' : avg >= 50 ? 'high' : avg >= 30 ? 'mid' : 'low';
+        const count = cluster.getChildCount();
+        const size = count >= 50 ? 60 : count >= 20 ? 52 : count >= 10 ? 46 : 40;
+        return L.divIcon({
+          className: '',
+          html: `<div class="heat-cluster cl-${tier}" style="width:${size}px;height:${size}px;">
+                   <span class="count">${count}</span>
+                   ${avg != null ? `<span class="avg">avg ${avg}</span>` : ''}
+                 </div>`,
+          iconSize: [size, size], iconAnchor: [size/2, size/2],
+        });
+      },
+    });
+    for (const h of filtered) {
+      bounds.push([h.lat, h.lng]);
+      // Picked route stops: numbered pin (route mode owns these)
+      if (pickedSet.has(h.id)) {
+        const order = ROUTE_PICKED.indexOf(h.id) + 1;
+        const marker = L.marker([h.lat, h.lng], { icon: routePinIcon(order), _fit: h.ai_fit_score });
+        if (MAP_ROUTE_MODE) marker.on('click', () => { _toggleRoutePick(h.id); renderMap(); renderRouteUI(); });
+        else marker.on('click', () => openPinRail(h));
+        CLUSTER_GROUP.addLayer(marker);
+        MAP_PINS.push(marker);
+        continue;
+      }
+      // Regular hotels — small score-badge pin colored by fit tier
+      const score = h.ai_fit_score;
+      const bg = score == null ? '#cbd5e1'
+              : score >= 70 ? '#16a34a'
+              : score >= 50 ? '#0891b2'
+              : score >= 30 ? '#f59e0b'
+              :               '#dc2626';
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="score-pin ${score == null ? 'no-score' : ''}" style="background:${bg}">${score ?? '–'}</div>`,
+        iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -10],
+      });
+      const marker = L.marker([h.lat, h.lng], { icon, _fit: score });
+      // Tooltip on hover — name + brand + rooms — readable without clicking
+      marker.bindTooltip(
+        `<strong>${escapeHtml(h.name)}</strong>` +
+        (h.brand ? `<br><span style="color:#64748b">${escapeHtml(h.brand)}</span>` : '') +
+        (h.rooms ? `<br><span style="color:#64748b">${h.rooms} rooms${h.est_adr_dollars ? ' · $' + h.est_adr_dollars + '/nt' : ''}</span>` : ''),
+        { direction: 'top', offset: [0, -10], opacity: 0.95 },
+      );
+      if (MAP_ROUTE_MODE) {
+        marker.on('click', () => { _toggleRoutePick(h.id); renderMap(); renderRouteUI(); });
+      } else {
+        marker.on('click', () => openPinRail(h));
+      }
+      CLUSTER_GROUP.addLayer(marker);
+      MAP_PINS.push(marker);
+    }
+    MAP.addLayer(CLUSTER_GROUP);
+  } else if (MAP_VIEW === 'cluster') {
+    // Cluster mode — collapses dense pin groups into expandable bubbles.
+    CLUSTER_GROUP = L.markerClusterGroup({ chunkedLoading: true, showCoverageOnHover: false });
+    for (const h of filtered) {
+      bounds.push([h.lat, h.lng]);
+      let icon;
+      if (pickedSet.has(h.id)) {
+        const order = ROUTE_PICKED.indexOf(h.id) + 1;
+        icon = routePinIcon(order);
+      } else {
+        icon = pinIcon(colorFor(h));
+      }
+      const marker = L.marker([h.lat, h.lng], { icon });
+      if (MAP_ROUTE_MODE) marker.on('click', () => { _toggleRoutePick(h.id); renderMap(); renderRouteUI(); });
+      else marker.on('click', () => openPinRail(h));
+      CLUSTER_GROUP.addLayer(marker);
+      MAP_PINS.push(marker);
+    }
+    MAP.addLayer(CLUSTER_GROUP);
+  } else {
+    // Default: individual pins, color-by selectable.
+    for (const h of filtered) {
+      let icon;
+      if (pickedSet.has(h.id)) {
+        const order = ROUTE_PICKED.indexOf(h.id) + 1;
+        icon = routePinIcon(order);
+      } else {
+        icon = pinIcon(colorFor(h));
+      }
+      const marker = L.marker([h.lat, h.lng], { icon }).addTo(MAP);
+      if (MAP_ROUTE_MODE) {
+        marker.on('click', () => { _toggleRoutePick(h.id); renderMap(); renderRouteUI(); });
+      } else {
+        marker.on('click', () => openPinRail(h));
+      }
+      MAP_PINS.push(marker);
+      bounds.push([h.lat, h.lng]);
+    }
   }
+
+  // Airport overlay — independent of view mode
+  renderAirportPins();
 
   // Polyline overlay for the picked route
   if (MAP_ROUTE_MODE && ROUTE_PICKED.length >= 2) {
@@ -1755,14 +2925,23 @@ function buildPopupHtml(h) {
   const visitBit = h.visit_count > 0
     ? `<span class="v-pill">${h.visit_count} visit${h.visit_count === 1 ? '' : 's'}</span>`
     : '<span style="color:var(--text-faint);font-size:0.74rem;">no visits yet</span>';
+  // AI fit score badge — colored by tier
+  const tier = h.ai_fit_tier || 'low';
+  const fitBg = tier === 'top' ? '#16a34a' : tier === 'high' ? '#0891b2' : tier === 'mid' ? '#f59e0b' : '#94a3b8';
+  const fitBadge = h.ai_fit_score != null
+    ? `<span style="background:${fitBg};color:white;padding:2px 8px;border-radius:100px;font-size:0.72rem;font-weight:700">FIT ${h.ai_fit_score}</span>`
+    : '';
+  // Nearest airport — useful for "I can hit this on the way to MIA"
+  const ap = (h.lat && h.lng) ? nearestAirport(h.lat, h.lng) : null;
+  const airportBit = ap ? `<span style="color:var(--text-faint);font-size:0.74rem">✈️ ${ap.miles.toFixed(1)}mi to ${ap.code}</span>` : '';
   return `
-    <div class="pop-name">${escapeHtml(h.name)}</div>
+    <div class="pop-name">${escapeHtml(h.name)} ${fitBadge}</div>
     <div class="pop-meta">
       ${h.address ? escapeHtml(h.address) + '<br>' : ''}
       ${h.brand ? escapeHtml(h.brand) + ' · ' : ''}${adr}${h.rooms ? ' · ' + h.rooms + ' rms' : ''}
     </div>
     <div class="pop-meta">${h.submarket ? '📍 ' + escapeHtml(h.submarket) + ' · ' : ''}${h.status}</div>
-    <div class="pop-meta">${visitBit}</div>
+    <div class="pop-meta">${visitBit} ${airportBit ? '· ' + airportBit : ''}</div>
     <div class="pop-actions">
       <button class="primary" onclick="window._openEditFromMap(${h.id})">Open</button>
       ${h.lat && h.lng ? `<a target="_blank" rel="noopener" style="text-decoration:none;" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}"><button>Maps</button></a>` : ''}
@@ -1777,6 +2956,289 @@ window._openEditFromMap = function(id) {
   setTimeout(() => openModal(id), 250);
 };
 
+// ── Cover photo fallback — every card gets SOMETHING ────────────────
+// If the hotel has a real photo URL, use it. Otherwise generate an inline
+// SVG with the property's initials over a tier-colored gradient. Keeps
+// every card visually complete without external assets or broken images.
+function coverPhotoFor(h) {
+  if (h.photo_url) return h.photo_url;
+  return generatedCoverSvg(h);
+}
+function generatedCoverSvg(h) {
+  const name = (h.name || 'Hotel').toString();
+  const initials = name.split(/\s+/)
+    .filter(w => w.length > 1 && !/^(the|of|and|at|on|by|de|la|le)$/i.test(w))
+    .slice(0, 3)
+    .map(w => (w[0] || '').toUpperCase())
+    .join('') || 'H';
+  const tier = h.ai_fit_tier || 'low';
+  const palette = {
+    top:  ['#16a34a', '#22c55e'],
+    high: ['#0891b2', '#06b6d4'],
+    mid:  ['#d97706', '#f59e0b'],
+    low:  ['#64748b', '#94a3b8'],
+  }[tier];
+  const submark = (h.submarket || '').toUpperCase().slice(0, 24);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">` +
+    `<defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">` +
+      `<stop offset="0%" stop-color="${palette[0]}"/>` +
+      `<stop offset="100%" stop-color="${palette[1]}"/>` +
+    `</linearGradient></defs>` +
+    `<rect width="400" height="200" fill="url(#g)"/>` +
+    // Subtle hotel-glyph watermark behind the initials
+    `<text x="92%" y="92%" font-family="system-ui" font-size="48" opacity="0.18" fill="white" text-anchor="end">🏨</text>` +
+    `<text x="50%" y="56%" font-family="Space Grotesk, system-ui" font-size="${initials.length > 2 ? 64 : 80}" font-weight="800" fill="rgba(255,255,255,0.95)" text-anchor="middle">${initials}</text>` +
+    (submark ? `<text x="50%" y="82%" font-family="system-ui" font-size="13" font-weight="700" letter-spacing="2" fill="rgba(255,255,255,0.78)" text-anchor="middle">${submark.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>` : '') +
+    `</svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+// ── Drill-down rail — full hotel card on pin click ─────────────────
+let RAIL_HOTEL_ID = null;
+
+function openPinRail(hotel) {
+  RAIL_HOTEL_ID = hotel.id;
+  const rail = document.getElementById('pinRail');
+  rail.innerHTML = renderPinRailFor(hotel);
+  document.getElementById('mapWrap').classList.add('rail-open');
+  rail.setAttribute('aria-hidden', 'false');
+  // Reflow the map after the layout changes width
+  setTimeout(() => MAP && MAP.invalidateSize(), 230);
+  // Pan/center the clicked pin into the visible area to the left
+  if (hotel.lat && hotel.lng && MAP) {
+    MAP.panTo([hotel.lat, hotel.lng], { animate: true });
+  }
+}
+
+function closePinRail() {
+  RAIL_HOTEL_ID = null;
+  document.getElementById('mapWrap').classList.remove('rail-open');
+  document.getElementById('pinRail').setAttribute('aria-hidden', 'true');
+  setTimeout(() => MAP && MAP.invalidateSize(), 230);
+}
+window._closePinRail = closePinRail;
+
+// Render the full drill-down card. Pulls everything: photo, fit reasoning,
+// stats grid, distance to airport, contact actions, triage row, similar
+// hotels within 1mi.
+function renderPinRailFor(h) {
+  const tier = h.ai_fit_tier || 'low';
+  const fitChip = h.ai_fit_score != null
+    ? `<div class="pin-rail-fit ${tier}">FIT ${h.ai_fit_score}</div>` : '';
+  const cover = coverPhotoFor(h);
+  const depthBadge = h.enrichment_depth === 'deep'
+    ? `<span style="position:absolute;bottom:10px;left:10px;background:rgba(15,23,42,0.85);color:#fbbf24;padding:3px 10px;border-radius:100px;font-size:0.66rem;font-weight:800;letter-spacing:0.05em">📚 DEEP RESEARCH</span>`
+    : '';
+  const photo = `<div class="pin-rail-photo" style="background-image:url(&quot;${cover}&quot;)">
+       <button class="pin-rail-close" type="button" onclick="window._closePinRail()" title="Close">✕</button>
+       ${fitChip}${depthBadge}
+     </div>`;
+
+  const reasons = (() => {
+    let r = h.ai_fit_reasoning;
+    if (typeof r === 'string') { try { r = JSON.parse(r); } catch { r = []; } }
+    return Array.isArray(r) ? r : [];
+  })();
+  const reasonsHtml = reasons.length
+    ? `<div class="pin-rail-reasons">${reasons.map(r => `<span class="pin-rail-reason">${escapeHtml(r)}</span>`).join('')}</div>`
+    : '';
+
+  const ap = (h.lat && h.lng) ? nearestAirport(h.lat, h.lng) : null;
+  const adr = h.est_adr_dollars ? '$' + h.est_adr_dollars + '/night' : '—';
+  const websiteSearch = `https://www.google.com/search?q=${encodeURIComponent([h.name, h.city, h.state, 'reviews pricing'].filter(Boolean).join(' '))}`;
+  const dealTier = h.deal_size_tier || null;
+
+  // Nearby fits — top-fit hotels within 1.5 miles, excluding this one
+  const nearby = (h.lat && h.lng)
+    ? SAVED
+        .filter(o => o.id !== h.id && o.lat != null && o.lng != null)
+        .map(o => ({ ...o, _mi: haversineMi(h.lat, h.lng, o.lat, o.lng) }))
+        .filter(o => o._mi <= 1.5)
+        .sort((a, b) => (b.ai_fit_score || 0) - (a.ai_fit_score || 0))
+        .slice(0, 6)
+    : [];
+  const nearbyHtml = nearby.length ? `
+    <div class="pin-rail-section-title">Top fits within 1.5mi</div>
+    <div>
+      ${nearby.map(o => {
+        const t = o.ai_fit_tier || 'low';
+        const bg = t === 'top' ? '#16a34a' : t === 'high' ? '#0891b2' : t === 'mid' ? '#f59e0b' : '#94a3b8';
+        return `
+          <div class="pin-rail-nearby-row" onclick="window._jumpToPin(${o.id})">
+            <div class="nb-fit" style="background:${bg}">${o.ai_fit_score ?? '–'}</div>
+            <div class="nb-name">
+              ${escapeHtml(o.name)}
+              <div class="meta">${escapeHtml(o.brand || o.operator || o.submarket || '')}${o.rooms ? ' · ' + o.rooms + ' rms' : ''}</div>
+            </div>
+            <div class="nb-dist">${o._mi.toFixed(1)} mi</div>
+          </div>`;
+      }).join('')}
+    </div>` : '';
+
+  return `
+    ${photo}
+    <div class="pin-rail-body">
+      <div class="pin-rail-name">${escapeHtml(h.name)}</div>
+      <div class="pin-rail-addr">${escapeHtml(h.address || [h.city, h.state, h.zip].filter(Boolean).join(', '))}</div>
+      <div class="pin-rail-pills">
+        ${h.submarket ? `<span class="pin-rail-pill">📍 ${escapeHtml(h.submarket)}</span>` : ''}
+        ${h.brand ? `<span class="pin-rail-pill">${escapeHtml(h.brand)}</span>` : ''}
+        ${dealTier ? `<span class="pin-rail-pill tier-${dealTier}">Tier ${dealTier}</span>` : ''}
+        ${ap ? `<span class="pin-rail-pill airport">✈️ ${ap.miles.toFixed(1)}mi → ${ap.code}</span>` : ''}
+      </div>
+      ${reasonsHtml}
+      <div class="pin-rail-grid">
+        <div><span class="lbl">Stars</span><div class="val">${h.stars ? '★'.repeat(h.stars) : '—'}</div></div>
+        <div><span class="lbl">Rooms</span><div class="val">${h.rooms || '—'}</div></div>
+        <div><span class="lbl">Floors</span><div class="val">${h.total_floors || '—'}</div></div>
+        <div><span class="lbl">Est ADR</span><div class="val">${adr}</div></div>
+        <div><span class="lbl">Operator</span><div class="val">${escapeHtml(h.operator || '—')}</div></div>
+        <div><span class="lbl">Year</span><div class="val">${h.year_opened || '—'}</div></div>
+        <div><span class="lbl">Status</span><div class="val">${escapeHtml(h.status || '—')}</div></div>
+        <div><span class="lbl">Visits</span><div class="val">${h.visit_count || 0}</div></div>
+      </div>
+      ${h.description ? `<div class="pin-rail-bio">${escapeHtml(h.description)}</div>` : ''}
+      ${h.chain_description ? `
+        <div class="pin-rail-section-title">About the chain ${h.chain_url ? `· <a target="_blank" rel="noopener" href="${escapeHtml(h.chain_url)}" style="text-decoration:none;color:var(--accent);text-transform:none;letter-spacing:0">↗ wiki</a>` : ''}</div>
+        <div class="pin-rail-bio" style="font-style:normal">${escapeHtml(h.chain_description.slice(0, 320))}${h.chain_description.length > 320 ? '…' : ''}</div>
+      ` : ''}
+      <div class="pin-rail-actions">
+        ${h.lat && h.lng ? `<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}">📍 Maps</a>` : '<span></span>'}
+        <a target="_blank" rel="noopener" href="${websiteSearch}">🔎 Web</a>
+        ${h.website ? `<a target="_blank" rel="noopener" href="${escapeHtml(h.website)}">🌐 Site</a>` : '<span></span>'}
+        ${h.phone ? `<a href="tel:${escapeHtml(h.phone)}">📞 Call</a>` : '<span></span>'}
+        <button class="primary" type="button" style="grid-column:1/-1" onclick="window._openEditFromMap(${h.id})">Open full record →</button>
+      </div>
+      <div class="pin-rail-section-title">Quick triage</div>
+      <div class="pin-rail-triage-row">
+        <button type="button" class="yes"   onclick="window._triageFromRail(${h.id}, 'yes')"><span class="emoji">✅</span>Yes</button>
+        <button type="button" class="maybe" onclick="window._triageFromRail(${h.id}, 'maybe')"><span class="emoji">🤔</span>Maybe</button>
+        <button type="button" class="rsch"  onclick="window._triageFromRail(${h.id}, 'needs_research')"><span class="emoji">🔬</span>Research</button>
+        <button type="button" class="no"    onclick="window._triageFromRail(${h.id}, 'no')"><span class="emoji">❌</span>No</button>
+      </div>
+      ${renderRailDms(h)}
+      ${renderRailSisters(h)}
+      ${nearbyHtml}
+    </div>`;
+}
+
+// Decision-maker LinkedIn shortcuts — only on deep-tier hotels so we don't
+// drown the rail with low-fit noise.
+function linkedinUrl(title, hotel) {
+  const q = `"${title}" "${hotel.name}"`;
+  return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(q)}`;
+}
+function renderRailDms(h) {
+  if (h.enrichment_depth !== 'deep') return '';
+  const titles = ['General Manager', 'Director of Operations', 'Chief Engineer', 'Director of Housekeeping', 'Front Office Manager'];
+  return `
+    <div class="pin-rail-section-title">📇 Decision-makers · LinkedIn search</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">
+      ${titles.map(t => `<a target="_blank" rel="noopener" href="${linkedinUrl(t, h)}" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:3px 9px;border-radius:100px;font-size:0.7rem;font-weight:600;text-decoration:none">${t}</a>`).join('')}
+    </div>`;
+}
+
+// Chain-key helper — same rule used in triage.html so the two views agree.
+function chainKeyForRail(h) {
+  const blob = (h.brand || h.operator || '').toLowerCase().trim();
+  if (blob) return blob;
+  const words = (h.name || '').toLowerCase().split(/\s+/)
+    .filter(w => w.length > 2 && !['the', 'and', 'hotel', 'inn', 'resort', 'suites'].includes(w));
+  return words[0] || null;
+}
+// Sister-property aggregation in the rail — uses the in-memory SAVED set
+// rather than the (smaller) triage queue so we can show "this is 1 of 12
+// Hilton properties saved in your territory."
+function renderRailSisters(h) {
+  const k = chainKeyForRail(h);
+  if (!k) return '';
+  const others = SAVED.filter(o => o.id !== h.id && chainKeyForRail(o) === k);
+  if (others.length === 0) return '';
+  const fits = others.map(o => o.ai_fit_score || 0).filter(s => s > 0);
+  const avgFit = fits.length ? Math.round(fits.reduce((a, b) => a + b, 0) / fits.length) : null;
+  const top = others.sort((a, b) => (b.ai_fit_score || 0) - (a.ai_fit_score || 0)).slice(0, 6);
+  return `
+    <div class="pin-rail-section-title">🏢 ${others.length} sister ${others.length === 1 ? 'property' : 'properties'} in territory · avg fit ${avgFit ?? '–'}</div>
+    <div>
+      ${top.map(o => {
+        const t = o.ai_fit_tier || 'low';
+        const bg = t === 'top' ? '#16a34a' : t === 'high' ? '#0891b2' : t === 'mid' ? '#f59e0b' : '#94a3b8';
+        return `
+          <div class="pin-rail-nearby-row" onclick="window._jumpToPin(${o.id})">
+            <div class="nb-fit" style="background:${bg}">${o.ai_fit_score ?? '–'}</div>
+            <div class="nb-name">
+              ${escapeHtml(o.name)}
+              <div class="meta">${escapeHtml(o.submarket || '')}${o.rooms ? ' · ' + o.rooms + ' rms' : ''}</div>
+            </div>
+          </div>`;
+      }).join('')}
+      ${others.length > 6 ? `<div style="font-size:0.74rem;color:var(--text-faint);padding:6px 8px">+${others.length - 6} more · filter Chain to "${escapeHtml(k)}" to see all</div>` : ''}
+    </div>`;
+}
+
+window._jumpToPin = function(id) {
+  const h = SAVED.find(s => s.id === id);
+  if (!h) return;
+  if (h.lat && h.lng && MAP) MAP.setView([h.lat, h.lng], 15);
+  openPinRail(h);
+};
+
+window._triageFromRail = async function(id, decision) {
+  try {
+    await fetch(`/api/hotel-research/saved/${id}/triage`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision }),
+    });
+    // Bump local saved row + refresh the rail content
+    const h = SAVED.find(s => s.id === id);
+    if (h) h.triage = decision;
+    document.getElementById('pinRail').innerHTML = renderPinRailFor(h) +
+      `<div style="padding:12px 16px;background:#dcfce7;color:#14532d;border-top:1px solid #bbf7d0;font-weight:600;font-size:0.86rem;text-align:center">✓ Triaged as ${decision}</div>`;
+    loadSaved({ silent: true });
+  } catch (err) {
+    console.warn('triage from rail failed', err);
+  }
+};
+
+// ── Click anywhere on the map → "Top fits in this area" panel ──────
+function openAreaRail(lat, lng) {
+  if (!SAVED || !SAVED.length) return;
+  const RADIUS_MI = 1.0;
+  const nearby = SAVED
+    .filter(h => h.lat != null && h.lng != null)
+    .map(h => ({ ...h, _mi: haversineMi(lat, lng, h.lat, h.lng) }))
+    .filter(h => h._mi <= RADIUS_MI)
+    .sort((a, b) => (b.ai_fit_score || 0) - (a.ai_fit_score || 0));
+  if (nearby.length === 0) return; // nothing nearby — leave map unchanged
+  const rail = document.getElementById('pinRail');
+  const ap = nearestAirport(lat, lng);
+  rail.innerHTML = `
+    <div class="pin-rail-area-header">
+      <button class="pin-rail-close" type="button" style="position:absolute;right:14px;top:14px;background:rgba(0,0,0,0.55)" onclick="window._closePinRail()">✕</button>
+      <h3>📍 ${nearby.length} hotel${nearby.length === 1 ? '' : 's'} within 1mi</h3>
+      <div class="sub">Sorted by AI fit · ${ap ? `${ap.miles.toFixed(1)}mi to ${ap.code}` : ''}</div>
+    </div>
+    <div class="pin-rail-body" style="padding-top:8px">
+      ${nearby.map(o => {
+        const t = o.ai_fit_tier || 'low';
+        const bg = t === 'top' ? '#16a34a' : t === 'high' ? '#0891b2' : t === 'mid' ? '#f59e0b' : '#94a3b8';
+        return `
+          <div class="pin-rail-nearby-row" onclick="window._jumpToPin(${o.id})">
+            <div class="nb-fit" style="background:${bg}">${o.ai_fit_score ?? '–'}</div>
+            <div class="nb-name">
+              ${escapeHtml(o.name)}
+              <div class="meta">${escapeHtml(o.brand || o.operator || o.submarket || '')}${o.rooms ? ' · ' + o.rooms + ' rms' : ''}${o.est_adr_dollars ? ' · $' + o.est_adr_dollars : ''}</div>
+            </div>
+            <div class="nb-dist">${o._mi.toFixed(2)} mi</div>
+          </div>`;
+      }).join('')}
+    </div>`;
+  document.getElementById('mapWrap').classList.add('rail-open');
+  rail.setAttribute('aria-hidden', 'false');
+  setTimeout(() => MAP && MAP.invalidateSize(), 230);
+}
+
 document.getElementById('mapStatusFilter')?.addEventListener('change', e => {
   MAP_FILTERS.status = e.target.value; renderMap();
 });
@@ -1789,6 +3251,173 @@ document.getElementById('mapAdrMin')?.addEventListener('change', e => {
 document.getElementById('mapAdrMax')?.addEventListener('change', e => {
   MAP_FILTERS.adrMax = Number(e.target.value) || 9999; renderMap();
 });
+document.getElementById('mapShowChargers')?.addEventListener('change', e => {
+  SHOW_CHARGERS = e.target.checked;
+  if (SHOW_CHARGERS) refreshChargers();
+  else clearChargerPins();
+});
+document.getElementById('mapShowAirports')?.addEventListener('change', e => {
+  SHOW_AIRPORTS = e.target.checked;
+  if (SHOW_AIRPORTS) renderAirportPins();
+  else clearAirportPins();
+});
+document.getElementById('mapViewMode')?.addEventListener('change', e => {
+  MAP_VIEW = e.target.value;
+  // Show the heat-weight selector only when heatmap is active
+  const hw = document.getElementById('heatWeightWrap');
+  if (hw) hw.style.display = MAP_VIEW === 'heat' ? '' : 'none';
+  renderMap();
+});
+document.getElementById('mapColorBy')?.addEventListener('change', e => {
+  MAP_COLOR_BY = e.target.value;
+  renderMap();
+});
+document.getElementById('mapHeatWeight')?.addEventListener('change', e => {
+  HEAT_WEIGHT = e.target.value;
+  if (MAP_VIEW === 'heat') renderMap();
+});
+// Chain / city / zip / fit-min / airport-radius filters — all just bump
+// MAP_FILTERS and re-render. Auto-population happens during renderMap.
+document.getElementById('mapChainFilter') ?.addEventListener('change', e => { MAP_FILTERS.chain = e.target.value; renderMap(); });
+document.getElementById('mapCityFilter')  ?.addEventListener('change', e => { MAP_FILTERS.city  = e.target.value; renderMap(); });
+document.getElementById('mapZipFilter')   ?.addEventListener('change', e => { MAP_FILTERS.zip   = e.target.value; renderMap(); });
+document.getElementById('mapFitMin')      ?.addEventListener('change', e => { MAP_FILTERS.fitMin = Number(e.target.value) || 0; renderMap(); });
+document.getElementById('mapAirportRadius')?.addEventListener('change', e => { MAP_FILTERS.airportMaxMi = Number(e.target.value) || 0; renderMap(); });
+document.getElementById('mapDeepOnly')    ?.addEventListener('change', e => { MAP_FILTERS.deepOnly = e.target.checked; renderMap(); });
+
+// Builds <option> list for a filter dropdown from a key extractor over SAVED.
+// WHY count badges: a "Marriott (38)" option signals immediately how big a
+// slice the rep is about to apply, vs forcing them to click and find out.
+function populateOptionDropdown(elId, rows, keyFn, currentValue, allLabel) {
+  const sel = document.getElementById(elId);
+  if (!sel) return;
+  const counts = new Map();
+  for (const r of rows) {
+    const k = keyFn(r);
+    if (!k) continue;
+    counts.set(k, (counts.get(k) || 0) + 1);
+  }
+  const sorted = [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const opts = [`<option value="all">${allLabel}</option>`].concat(
+    sorted.map(([k, n]) => `<option value="${escapeHtml(k)}"${currentValue === k ? ' selected' : ''}>${escapeHtml(k)} (${n})</option>`),
+  );
+  sel.innerHTML = opts.join('');
+}
+
+// ── Tesla + EV charger overlay ───────────────────────────────────────
+function clearChargerPins() {
+  CHARGER_PINS.forEach(p => MAP && MAP.removeLayer(p));
+  CHARGER_PINS = [];
+}
+
+function chargerIcon(isTesla) {
+  return L.divIcon({
+    className: '',
+    html: `<div class="charger-pin ${isTesla ? 'tesla' : 'ev'}">⚡</div>`,
+    iconSize: [18, 18], iconAnchor: [9, 9], popupAnchor: [0, -8],
+  });
+}
+
+// Rich charger popup — shows stalls, power, address, and the data sources
+// that confirmed the site. Tesla Superchargers show NACS/TPC plug counts and
+// the supercharge.info link.
+function buildChargerPopup(c) {
+  const parts = [];
+  parts.push(`<strong>${escapeHtml(c.name || 'EV charger')}</strong>`);
+  const meta = [];
+  if (c.operator) meta.push(escapeHtml(c.operator));
+  if (c.stall_count) meta.push(`${c.stall_count} stalls`);
+  if (c.power_kw) meta.push(`${c.power_kw} kW`);
+  if (meta.length) parts.push(`<div style="color:#475569;font-size:0.86rem;margin-top:2px">${meta.join(' · ')}</div>`);
+
+  if (c.is_tesla && (c.plugs_nacs != null || c.plugs_tpc != null)) {
+    const plugs = [];
+    if (c.plugs_nacs) plugs.push(`${c.plugs_nacs} NACS`);
+    if (c.plugs_tpc)  plugs.push(`${c.plugs_tpc} legacy TPC`);
+    if (c.open_to_other_evs) plugs.push('open to non-Teslas');
+    if (plugs.length) parts.push(`<div style="color:#475569;font-size:0.78rem;margin-top:2px">${plugs.join(' · ')}</div>`);
+  }
+  if (c.connectors && c.connectors.length) {
+    parts.push(`<div style="color:#475569;font-size:0.78rem;margin-top:2px">${escapeHtml(c.connectors.join(', '))}</div>`);
+  }
+  if (c.address) parts.push(`<div style="color:#475569;font-size:0.78rem;margin-top:4px">${escapeHtml(c.address)}</div>`);
+  if (c.access_days_time) parts.push(`<div style="color:#475569;font-size:0.78rem;margin-top:2px">${escapeHtml(c.access_days_time)}</div>`);
+  if (c.opening_hours) parts.push(`<div style="color:#475569;font-size:0.78rem;margin-top:2px">${escapeHtml(c.opening_hours)}</div>`);
+  if (c.ev_pricing) parts.push(`<div style="color:#475569;font-size:0.78rem;margin-top:2px">${escapeHtml(c.ev_pricing)}</div>`);
+
+  // Source badges — Tesla, NREL, OSM
+  const sources = c.sources && c.sources.length ? c.sources : [c.source];
+  const badge = (s) => {
+    const map = { tesla: ['Tesla', '#dc2626'], nrel: ['NREL', '#2563eb'], osm: ['OSM', '#6b7280'] };
+    const [label, color] = map[s] || [s, '#6b7280'];
+    return `<span style="background:${color};color:white;font-size:0.62rem;padding:1px 6px;border-radius:100px;margin-right:3px;font-weight:700">${label}</span>`;
+  };
+  parts.push(`<div style="margin-top:6px">${sources.map(badge).join('')}</div>`);
+
+  // Action links
+  const links = [];
+  links.push(`<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}" style="color:#0369a1;text-decoration:none;font-size:0.82rem">📍 Maps</a>`);
+  if (c.url) links.push(`<a target="_blank" rel="noopener" href="${escapeHtml(c.url)}" style="color:#0369a1;text-decoration:none;font-size:0.82rem">↗ Details</a>`);
+  parts.push(`<div style="margin-top:6px;display:flex;gap:10px">${links.join('')}</div>`);
+
+  return `<div style="min-width:200px">${parts.join('')}</div>`;
+}
+
+async function refreshChargers() {
+  if (!SHOW_CHARGERS) return;
+  // Ensure the Leaflet instance exists even when the rep has 0 saved hotels —
+  // renderMap() early-returns in that case so MAP would otherwise be null.
+  ensureMap();
+  // Hide the "no hotels yet" overlay so chargers are actually visible
+  const overlay = document.getElementById('mapEmptyOverlay');
+  if (overlay) overlay.classList.add('hidden');
+  // First-time init may not have fitBounds'd anything — recompute layout now
+  // so getBounds() returns a real viewport. Sync call (not setTimeout) so the
+  // bounds we read on the next line reflect the corrected size.
+  MAP.invalidateSize();
+  const b = MAP.getBounds();
+  const south = b.getSouth(), west = b.getWest(), north = b.getNorth(), east = b.getEast();
+  // Cap viewport to ~2.5° to match the backend guard. If the user is zoomed
+  // way out (rare, but possible after a stray scroll), bail with a hint.
+  if ((north - south) > 2.5 || (east - west) > 2.5) {
+    document.getElementById('mapStats').innerHTML += ' · <em>zoom in to load chargers</em>';
+    return;
+  }
+  // Dedupe: skip the fetch if the bbox is the same as last time (rounded to 2dp).
+  const key = `${south.toFixed(2)},${west.toFixed(2)},${north.toFixed(2)},${east.toFixed(2)}`;
+  if (key === CHARGER_FETCH_KEY) return;
+  CHARGER_FETCH_KEY = key;
+  const statsEl = document.getElementById('mapStats');
+  const baseStats = statsEl ? statsEl.innerHTML.replace(/ · ⚡.*$/, '') : '';
+  if (statsEl) statsEl.innerHTML = baseStats + ' · ⚡ loading chargers…';
+  try {
+    const r = await fetch(`/api/hotel-research/chargers?bbox=${south},${west},${north},${east}`,
+      { credentials: 'same-origin' });
+    if (!r.ok) {
+      if (statsEl) statsEl.innerHTML = baseStats + ` · ⚡ <span style="color:var(--danger)">charger lookup failed (HTTP ${r.status})</span>`;
+      return;
+    }
+    const data = await r.json();
+    const chargers = data.chargers || [];
+    const counts = data.counts || {};
+    clearChargerPins();
+    if (chargers.length === 0 && statsEl) {
+      statsEl.innerHTML = baseStats + ' · ⚡ no chargers in view';
+    } else if (statsEl) {
+      const tesla = counts.tesla ?? chargers.filter(c => c.is_tesla).length;
+      statsEl.innerHTML = baseStats +
+        ` · ⚡ <strong>${chargers.length}</strong> chargers (${tesla} Tesla)`;
+    }
+    for (const c of chargers) {
+      const m = L.marker([c.lat, c.lng], { icon: chargerIcon(c.is_tesla) }).addTo(MAP);
+      m.bindPopup(buildChargerPopup(c));
+      CHARGER_PINS.push(m);
+    }
+  } catch (err) {
+    console.warn('chargers fetch failed', err);
+    if (statsEl) statsEl.innerHTML = baseStats + ` · ⚡ <span style="color:var(--danger)">${escapeHtml(err.message)}</span>`;
+  }
+}
 
 // Map route mode — click pins to pick, polyline overlay shows the order
 window._toggleMapRouteMode = function() {
@@ -2277,13 +3906,18 @@ async function saveOne(hotel) {
   }
 }
 
-async function bulkSave() {
-  if (!LAST_RESULTS.length) return;
+async function bulkSave({ silent, onProgress } = {}) {
+  if (!LAST_RESULTS.length) return { saved: 0, errors: [] };
   // Skip already-saved ones
   const savedOsmIds = new Set(SAVED.map(s => s.osm_id).filter(Boolean));
   const toSave = LAST_RESULTS.filter(h => !savedOsmIds.has(h.osm_id));
-  if (!toSave.length) { alert('All of these are already saved.'); return; }
-  if (!confirm(`Save ${toSave.length} hotel${toSave.length === 1 ? '' : 's'} to your follow-up list?`)) return;
+  if (!toSave.length) {
+    if (!silent) alert('All of these are already saved.');
+    return { saved: 0, errors: [] };
+  }
+  if (!silent && !confirm(`Save ${toSave.length} hotel${toSave.length === 1 ? '' : 's'} to your follow-up list?`)) {
+    return { saved: 0, errors: [] };
+  }
 
   // WHY chunk: the server caps each request at 50 hotels (rate-limit safety),
   // and Express's default JSON body limit is ~100KB which a 300+-hotel "Run all"
@@ -2308,18 +3942,21 @@ async function bulkSave() {
       } else {
         savedSoFar += batches[i].length;
       }
+      if (onProgress) onProgress({ savedSoFar, total: toSave.length, batch: i + 1, batches: batches.length });
     }
     await loadSaved({ silent: true });
-    if (LAST_RESULTS.length) renderSearchResults({
+    if (LAST_RESULTS.length && !silent) renderSearchResults({
       hotels: LAST_RESULTS,
       query: { location: document.getElementById('f_location').value, radius_miles: Number(document.getElementById('f_radius').value) || 5 },
       center: { display: '' },
     });
-    if (errors.length) {
+    if (errors.length && !silent) {
       alert(`Saved ${savedSoFar} of ${toSave.length}.\n\nIssues:\n${errors.join('\n')}`);
     }
+    return { saved: savedSoFar, errors };
   } catch (err) {
-    alert(`Bulk save failed after ${savedSoFar} of ${toSave.length}: ${err.message}`);
+    if (!silent) alert(`Bulk save failed after ${savedSoFar} of ${toSave.length}: ${err.message}`);
+    return { saved: savedSoFar, errors: [err.message] };
   }
 }
 
@@ -2335,6 +3972,8 @@ async function loadSaved({ silent } = {}) {
     renderSaved();
     if (typeof renderMarketPanel === 'function') renderMarketPanel();
     if (typeof renderHeroStats   === 'function') renderHeroStats();
+    if (typeof renderTopCallsTile === 'function') renderTopCallsTile();
+    if (typeof loadTriageQueue   === 'function') loadTriageQueue();
     // Always refresh map when data changes — page is one stack now, the map is in view.
     if (typeof renderMap === 'function' && _lazyLoaded.has('panel-map')) renderMap();
   } catch (err) {
@@ -2641,6 +4280,7 @@ function renderSavedCard(h) {
       ${h.address || cityState ? `<div class="card-address">📍 ${escapeHtml(h.address || cityState)}</div>` : ''}
       <div class="card-meta">
         <span class="card-status-pill ${h.status}">${h.status}</span>
+        ${h.triage ? `<span class="triage-badge ${h.triage}">${TRIAGE_LABELS[h.triage] || h.triage}</span>` : ''}
         ${h.deal_size_tier ? `<span class="tier-badge tier-${h.deal_size_tier}" title="Deal-size tier (rev × occupancy × 365)">${h.deal_size_tier}</span>` : ''}
         ${h.submarket ? `<span class="card-meta-pill submarket">📍 ${escapeHtml(h.submarket)}</span>` : ''}
         ${h.brand ? `<span class="card-meta-pill brand">${escapeHtml(h.brand)}</span>` : ''}
@@ -2901,8 +4541,28 @@ async function runPreset(marketKey, idx) {
   if (!sub) return;
   document.getElementById('f_location').value = sub.location;
   document.getElementById('f_radius').value = sub.radius_miles;
-  // Tag every result with this submarket so the eventual save can persist it.
-  await runSearchInternal({ submarketTag: sub.submarket });
+  const chip = document.querySelector(`.preset-chip[data-key="${marketKey}"][data-idx="${idx}"]`);
+  if (chip) chip.classList.add('is-running');
+  try {
+    // Tag every result with this submarket so the eventual save can persist it.
+    await runSearchInternal({ submarketTag: sub.submarket });
+    // ── Auto-save: same UX rule as runAllPresets — preset clicks should
+    // persist results automatically so they don't evaporate on refresh.
+    if (LAST_RESULTS.length) {
+      const summary = await bulkSave({ silent: true });
+      const newSaved = summary.saved;
+      const skipped = LAST_RESULTS.length - newSaved;
+      const meta = document.getElementById('searchMeta');
+      if (meta) {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'margin-top:6px;background:var(--green-soft,#dcfce7);color:var(--green,#15803d);padding:6px 12px;border-radius:8px;font-weight:600;font-size:0.86rem';
+        banner.textContent = `✓ ${newSaved} new saved from ${sub.submarket}${skipped ? ` · ${skipped} already on your list` : ''}`;
+        meta.appendChild(banner);
+      }
+    }
+  } finally {
+    if (chip) chip.classList.remove('is-running');
+  }
 }
 
 async function runAllPresets(marketKey) {
@@ -2947,26 +4607,52 @@ async function runAllPresets(marketKey) {
     if (i < market.submarkets.length - 1) await new Promise(r => setTimeout(r, 1100));
   }
 
+  LAST_RESULTS = Array.from(aggregate.values());
+
+  // ── Auto-save: persist every unique result immediately so the rep doesn't
+  // have to re-run the OSM scrape if they refresh / come back tomorrow.
+  // WHY: previous behavior staged results in memory and required a manual
+  // "Save all" click; if Ben closed the tab before clicking, the entire
+  // territory walk evaporated and had to be re-run. This makes the
+  // territory walk a one-shot persistent action.
+  let saveSummary = { saved: 0, errors: [] };
+  if (LAST_RESULTS.length) {
+    btn.textContent = `Saving 0/${LAST_RESULTS.length} hotels…`;
+    saveSummary = await bulkSave({
+      silent: true,
+      onProgress: ({ savedSoFar, total }) => {
+        btn.textContent = `Saving ${savedSoFar}/${total} hotels…`;
+      },
+    });
+  }
+
   btn.textContent = original;
   btn.disabled = false;
   runAllInProgress = false;
 
-  LAST_RESULTS = Array.from(aggregate.values());
   // Show an aggregate result view
   const meta = document.getElementById('searchMeta');
   const content = document.getElementById('searchContent');
   const adrs = LAST_RESULTS.map(h => h.estimated_adr_dollars).filter(Number.isFinite).sort((a,b) => a-b);
   const median = adrs.length ? adrs[Math.floor(adrs.length / 2)] : null;
+  // Compute how many were already saved before this run so the message is
+  // honest about what just changed vs what was already there.
+  const savedNew = saveSummary.saved;
+  const skipped = LAST_RESULTS.length - savedNew;
   meta.innerHTML = `
     <div class="search-meta">
       <span><strong>${LAST_RESULTS.length}</strong> unique hotel${LAST_RESULTS.length === 1 ? '' : 's'} across <strong>${market.label}</strong> (${perSub.length} submarkets)</span>
       ${median ? `<span>Median est. ADR: <strong>${fmtUsd(median)}</strong></span>` : ''}
-      <div class="actions">
-        ${LAST_RESULTS.length ? `<button class="btn btn-success" onclick="bulkSave()">Save all ${LAST_RESULTS.length}</button>` : ''}
-      </div>
+      <span style="background:var(--green-soft,#dcfce7);color:var(--green,#15803d);padding:2px 10px;border-radius:100px;font-weight:600">
+        ✓ ${savedNew} new saved · ${skipped} already on your list
+      </span>
+      ${saveSummary.errors.length ? `<span style="color:var(--danger);font-weight:600">⚠ ${saveSummary.errors.length} batch error${saveSummary.errors.length===1?'':'s'}</span>` : ''}
     </div>
     <div style="margin-top:8px;font-size:0.8rem;color:var(--text-dim);">
       ${perSub.map(s => `<span class="card-meta-pill submarket" style="margin-right:6px;">${escapeHtml(s.submarket)}: ${s.error ? 'failed' : s.count}</span>`).join(' ')}
+    </div>
+    <div style="margin-top:6px;font-size:0.78rem;color:var(--text-faint);">
+      Saved automatically — head to <strong>My saved hotels</strong> or <strong>🗺️ Map</strong> to triage.
     </div>`;
   if (LAST_RESULTS.length === 0) {
     content.innerHTML = `<div class="empty"><h3>No hotels found</h3><p>Try individual submarkets, or check that the OSM API is reachable.</p></div>`;

@@ -281,6 +281,13 @@ app.get('/api/debug/resend-check', async (req, res) => {
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-command-center.html'));
 });
+
+// WHY: Friendly URL for the standalone Hotel Triage mobile app. Eric and
+// Ben/Celia can navigate to /triage directly on a phone, or it's iframed
+// inside the iPhone bezel on the desktop /hotel-research page.
+app.get('/triage', requireAuthPage, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'pages', 'triage.html'));
+});
 // WHY: Old admin dashboard (inquiries + recipients) moved to /admin/inquiries
 app.get('/admin/inquiries', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
