@@ -760,6 +760,17 @@ async function initSchema() {
   // for walking vs nearest-neighbor TSP for driving).
   await additiveAlterIfMissing("ALTER TABLE bdr_routes ADD COLUMN mode TEXT DEFAULT 'driving'");
 
+  // WHY anchor hotel: per region/day, Ben picks a high-AI-fit hotel where he
+  // STAYS overnight. He runs a deep facility assessment on the night shift,
+  // then drops the report at the front desk in the morning before checking
+  // out. anchor_hotel_id captures which hotel serves as the recon HQ;
+  // assessment_status tracks 'planned' → 'completed' → 'dropped_off';
+  // assessment_notes holds the structured recon write-up.
+  await additiveAlterIfMissing("ALTER TABLE bdr_routes ADD COLUMN anchor_hotel_id INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE bdr_routes ADD COLUMN assessment_status TEXT");
+  await additiveAlterIfMissing("ALTER TABLE bdr_routes ADD COLUMN assessment_notes TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_bdr_routes_anchor ON bdr_routes(anchor_hotel_id)");
+
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN enrichment_depth TEXT");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN chain_description TEXT");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN chain_url TEXT");

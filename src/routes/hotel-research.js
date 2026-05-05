@@ -816,7 +816,17 @@ router.get('/routes/:id', requireAuth, async (req, res) => {
        WHERE s.route_id = ? ORDER BY s.sort_order ASC, s.id ASC`,
       [id],
     );
-    res.json({ route, stops });
+    // Anchor hotel — the place Ben stays overnight on this region day
+    let anchor = null;
+    if (route.anchor_hotel_id) {
+      anchor = await db.one(
+        `SELECT id, name, address, city, state, zip, phone, website, brand,
+                stars, rooms, est_adr_dollars, ai_fit_score, ai_fit_tier, photo_url
+         FROM hotels_saved WHERE id = ?`,
+        [route.anchor_hotel_id],
+      );
+    }
+    res.json({ route, stops, anchor });
   } catch (err) {
     console.error('[hotel-research] /routes/:id failed:', err);
     res.status(500).json({ error: 'Failed to load route' });
@@ -992,6 +1002,116 @@ router.delete('/routes/:id/stops/:stopId', requireAuth, async (req, res) => {
 });
 
 // POST /routes/:id/reorder — body: { stop_ids: [in new order] }
+// POST /routes/:id/auto-anchor — pick a high-fit + reasonably-priced hotel
+// from this route's stops as the anchor (where Ben stays overnight). The
+// chosen hotel becomes the recon HQ for the day; on the night shift Ben
+// runs a deep facility assessment, then drops the report at the front
+// desk in the morning before checking out.
+//
+// Selection criteria:
+//   • Already a stop on this route (so it's in the right submarket)
+//   • ai_fit_score >= 30 (real prospect, not a filler)
+//   • est_adr_dollars between $100 and $400 (bookable on a sales budget)
+//   • Has a phone (for booking confirmation) AND a website
+//   • Triage != 'no'
+// Sort: AI fit DESC, then ADR ASC (lower price wins ties — sales budget)
+router.post('/routes/:id/auto-anchor', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  // Optional: client can pass a specific hotel_id to override auto-pick
+  const explicitHotelId = req.body?.hotel_id ? Number(req.body.hotel_id) : null;
+  // Optional: ADR budget (defaults $400, can be tightened)
+  const budgetMax = Math.max(80, Math.min(800, Number(req.body?.budget_max) || 400));
+  const budgetMin = Math.max(50, Math.min(300, Number(req.body?.budget_min) || 100));
+  try {
+    const route = await db.one('SELECT * FROM bdr_routes WHERE id = ?', [id]);
+    if (!route) return res.status(404).json({ error: 'route not found' });
+
+    let anchorId = explicitHotelId;
+    if (!anchorId) {
+      const candidates = await db.all(
+        `SELECT h.id, h.ai_fit_score, h.est_adr_dollars
+         FROM bdr_route_stops s
+         JOIN hotels_saved h ON h.id = s.hotel_saved_id
+         WHERE s.route_id = ?
+           AND COALESCE(h.ai_fit_score, 0) >= 30
+           AND h.est_adr_dollars IS NOT NULL
+           AND h.est_adr_dollars BETWEEN ? AND ?
+           AND h.phone IS NOT NULL AND h.phone != ''
+           AND (h.triage IS NULL OR h.triage != 'no')
+         ORDER BY h.ai_fit_score DESC, h.est_adr_dollars ASC, h.id ASC
+         LIMIT 1`,
+        [id, budgetMin, budgetMax],
+      );
+      if (!candidates.length) {
+        // Fallback: drop the price ceiling, accept any fit ≥ 20
+        const fallback = await db.all(
+          `SELECT h.id, h.ai_fit_score, h.est_adr_dollars
+           FROM bdr_route_stops s
+           JOIN hotels_saved h ON h.id = s.hotel_saved_id
+           WHERE s.route_id = ?
+             AND COALESCE(h.ai_fit_score, 0) >= 20
+             AND (h.triage IS NULL OR h.triage != 'no')
+           ORDER BY h.ai_fit_score DESC, h.est_adr_dollars ASC, h.id ASC
+           LIMIT 1`,
+          [id],
+        );
+        if (!fallback.length) {
+          return res.status(404).json({ error: 'no eligible anchor candidate found in this route' });
+        }
+        anchorId = fallback[0].id;
+      } else {
+        anchorId = candidates[0].id;
+      }
+    }
+    await db.run(
+      `UPDATE bdr_routes SET anchor_hotel_id = ?, assessment_status = COALESCE(assessment_status, 'planned') WHERE id = ?`,
+      [anchorId, id],
+    );
+    const anchor = await db.one(
+      `SELECT id, name, address, city, state, zip, phone, website, brand,
+              stars, rooms, est_adr_dollars, ai_fit_score, ai_fit_tier, photo_url
+       FROM hotels_saved WHERE id = ?`,
+      [anchorId],
+    );
+    res.json({ ok: true, anchor });
+  } catch (err) {
+    console.error('[hotel-research] auto-anchor failed:', err);
+    res.status(500).json({ error: 'Failed to set anchor: ' + err.message });
+  }
+});
+
+// PATCH /routes/:id/assessment — update the assessment_status / notes for
+// the anchor-stay recon ('planned' | 'completed' | 'dropped_off').
+router.patch('/routes/:id/assessment', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  const fields = [];
+  const args = [];
+  const ALLOWED_ASSESSMENT_STATUS = new Set(['planned', 'completed', 'dropped_off']);
+  if (req.body?.assessment_status !== undefined) {
+    const s = req.body.assessment_status;
+    if (s !== null && !ALLOWED_ASSESSMENT_STATUS.has(s)) {
+      return res.status(400).json({ error: 'assessment_status must be planned / completed / dropped_off / null' });
+    }
+    fields.push('assessment_status = ?'); args.push(s || null);
+  }
+  if (req.body?.assessment_notes !== undefined) {
+    fields.push('assessment_notes = ?');
+    args.push(req.body.assessment_notes ? String(req.body.assessment_notes).slice(0, 8000) : null);
+  }
+  if (!fields.length) return res.status(400).json({ error: 'no fields to update' });
+  args.push(id);
+  try {
+    const r = await db.run(`UPDATE bdr_routes SET ${fields.join(', ')} WHERE id = ?`, args);
+    if (!r.changes) return res.status(404).json({ error: 'route not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[hotel-research] assessment patch failed:', err);
+    res.status(500).json({ error: 'Failed to update assessment' });
+  }
+});
+
 router.post('/routes/:id/reorder', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
