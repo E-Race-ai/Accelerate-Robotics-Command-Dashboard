@@ -19,7 +19,7 @@
 const express = require('express');
 const db = require('../db/database');
 const { requireAuth } = require('../middleware/auth');
-const { estimateAdr, normLocation, distanceMiles, shapeHotel } = require('../services/hotel-research-utils');
+const { estimateAdr, normLocation, distanceMiles, shapeHotel, brandClass } = require('../services/hotel-research-utils');
 
 const router = express.Router();
 
@@ -258,7 +258,12 @@ router.get('/saved', requireAuth, async (req, res) => {
        ORDER BY h.updated_at DESC, h.id DESC`,
       args,
     );
-    res.json({ hotels: rows });
+    // Stamp brand_class so the frontend can filter without re-deriving.
+    const enriched = rows.map(r => ({
+      ...r,
+      brand_class: brandClass({ brand: r.brand, stars: r.stars, est_adr: r.est_adr_dollars }),
+    }));
+    res.json({ hotels: enriched });
   } catch (err) {
     console.error('[hotel-research] list failed:', err);
     res.status(500).json({ error: 'Failed to load saved hotels' });

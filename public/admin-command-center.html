@@ -2838,7 +2838,12 @@
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
       </a>
     </div>
-    <iframe id="toolFrameIframe" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+    <!-- WHY allow-popups-to-escape-sandbox: without it, target="_blank" links inside
+         embedded toolkit pages open new tabs that INHERIT this iframe's sandbox,
+         and many third-party sites (Google, Booking) refuse to render in a sandboxed
+         context, throwing ERR_BLOCKED_BY_RESPONSE. Letting popups escape lets
+         "Open in Google Maps" / "Web search" land normally. -->
+    <iframe id="toolFrameIframe" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
   </div>
 
   <script src="/js/admin-auth.js"></script>

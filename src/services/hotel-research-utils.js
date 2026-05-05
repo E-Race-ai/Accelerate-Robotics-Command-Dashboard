@@ -144,6 +144,50 @@ function shapeHotel(el, centerLat, centerLng) {
   };
 }
 
+// Brand class — coarse tier we surface as a filter dimension. Mirrors STR's
+// brand-class buckets: luxury → upper-upscale → upscale → upper-midscale →
+// midscale → economy → independent. Used by the table-view filter and by the
+// `graduate to prospect` heuristic.
+function brandClass({ brand, stars, est_adr }) {
+  const b = String(brand || '').toLowerCase();
+  if (/four seasons|ritz|st\.? regis|waldorf|mandarin|park hyatt/.test(b)) return 'luxury';
+  if (/jw marriott|w hotel|kimpton|edition|conrad|fairmont/.test(b))         return 'upper_upscale';
+  if (/hyatt regency|renaissance|marriott|hilton(?!\s*garden)|sheraton|westin|crowne plaza|doubletree/.test(b)) return 'upscale';
+  if (/hilton garden|courtyard|hampton|holiday inn(?!\s*express)|hyatt place|fairfield/.test(b)) return 'upper_midscale';
+  if (/holiday inn express|comfort|best western|la quinta|wingate|sleep inn/.test(b)) return 'midscale';
+  if (/super 8|motel 6|days inn|red roof|travelodge|econo lodge/.test(b))    return 'economy';
+  // Star fallback when brand is unknown/independent.
+  if (Number.isInteger(Number(stars))) {
+    const s = Number(stars);
+    if (s >= 5) return 'luxury';
+    if (s === 4) return 'upper_upscale';
+    if (s === 3) return 'upscale';
+    if (s === 2) return 'midscale';
+    if (s === 1) return 'economy';
+  }
+  // ADR fallback when brand + stars both empty.
+  const adr = Number(est_adr);
+  if (Number.isFinite(adr)) {
+    if (adr >= 500) return 'luxury';
+    if (adr >= 280) return 'upper_upscale';
+    if (adr >= 180) return 'upscale';
+    if (adr >= 130) return 'upper_midscale';
+    if (adr >= 100) return 'midscale';
+    if (adr >  0)   return 'economy';
+  }
+  return 'independent';
+}
+
+const BRAND_CLASS_LABELS = {
+  luxury:         'Luxury',
+  upper_upscale:  'Upper Upscale',
+  upscale:        'Upscale',
+  upper_midscale: 'Upper Midscale',
+  midscale:       'Midscale',
+  economy:        'Economy',
+  independent:    'Independent',
+};
+
 module.exports = {
   BRAND_ADR_USD,
   STAR_ADR_USD,
@@ -152,4 +196,6 @@ module.exports = {
   distanceMiles,
   elementCoords,
   shapeHotel,
+  brandClass,
+  BRAND_CLASS_LABELS,
 };

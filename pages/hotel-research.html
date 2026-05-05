@@ -509,6 +509,145 @@
     padding: 12px;
   }
 
+  /* ─── Sortable table view + advanced filters ──────────────── */
+  .view-toggle {
+    display: inline-flex; background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 2px; gap: 2px;
+  }
+  .view-toggle button {
+    background: transparent; border: 0; cursor: pointer;
+    padding: 6px 12px; font: inherit; font-size: 0.82rem; font-weight: 600;
+    color: var(--text-dim); border-radius: 8px;
+  }
+  .view-toggle button.active {
+    background: var(--accent); color: white;
+  }
+
+  .advanced-filters {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 14px; margin-bottom: 14px;
+  }
+  .advanced-filters summary {
+    cursor: pointer; user-select: none;
+    font-size: 0.86rem; font-weight: 600; color: var(--accent-deep);
+    padding: 4px 0;
+  }
+  .advanced-filters[open] summary { margin-bottom: 10px; }
+  .adv-grid {
+    display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+    padding: 4px 0;
+  }
+  .adv-grid label { font-size: 0.82rem; color: var(--text-dim); display: inline-flex; align-items: center; gap: 6px; }
+  .adv-grid label.toggle-label { gap: 4px; }
+  .adv-grid select, .adv-grid input[type="number"] {
+    padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px;
+    font: inherit; font-size: 0.84rem;
+  }
+  .adv-active {
+    margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;
+    font-size: 0.78rem;
+  }
+  .adv-active-chip {
+    background: var(--accent-soft); color: var(--accent-deep);
+    padding: 3px 9px 3px 11px; border-radius: 100px;
+    font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .adv-active-chip button {
+    background: transparent; border: 0; color: var(--accent-deep);
+    cursor: pointer; padding: 0 2px; font-size: 0.9rem; line-height: 1;
+  }
+
+  /* Dense sortable table */
+  .saved-table-wrap {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    overflow: auto; max-width: 100%;
+  }
+  table.saved-table {
+    width: 100%; border-collapse: collapse; font-size: 0.86rem;
+    min-width: 1100px;
+  }
+  table.saved-table th, table.saved-table td {
+    padding: 8px 10px; border-bottom: 1px solid var(--border);
+    text-align: left; vertical-align: middle;
+  }
+  table.saved-table thead th {
+    position: sticky; top: 0; z-index: 1;
+    background: #f8fafc; cursor: pointer; user-select: none;
+    font-weight: 700; color: var(--text); font-size: 0.74rem;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    border-bottom: 2px solid var(--border-strong);
+  }
+  table.saved-table thead th:hover { background: #eef2ff; }
+  table.saved-table thead th .sort-arrow {
+    display: inline-block; margin-left: 4px; opacity: 0.4;
+  }
+  table.saved-table thead th.sort-asc  .sort-arrow,
+  table.saved-table thead th.sort-desc .sort-arrow { opacity: 1; color: var(--accent-deep); }
+  table.saved-table tbody tr:hover { background: #fafbfd; }
+  table.saved-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.saved-table .name-cell { font-weight: 600; color: var(--text); }
+  table.saved-table .name-cell .name-sub { font-size: 0.74rem; color: var(--text-faint); margin-top: 1px; }
+  table.saved-table .drill {
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--accent-deep); font: inherit; font-size: 0.82rem;
+    padding: 0; text-decoration: none;
+  }
+  table.saved-table .drill:hover { text-decoration: underline; }
+  table.saved-table .actions-cell { white-space: nowrap; }
+  table.saved-table .actions-cell button,
+  table.saved-table .actions-cell a {
+    background: transparent; border: 1px solid var(--border); border-radius: 6px;
+    padding: 4px 8px; font-size: 0.74rem; cursor: pointer; margin-right: 3px;
+    color: var(--text-dim); text-decoration: none;
+  }
+  table.saved-table .actions-cell button:hover, table.saved-table .actions-cell a:hover {
+    color: var(--accent-deep); border-color: var(--accent);
+  }
+  table.saved-table .pill-status {
+    padding: 2px 8px; border-radius: 100px; font-size: 0.7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    display: inline-block; min-width: 56px; text-align: center;
+  }
+  table.saved-table .pill-status.lead       { background: #f1f5f9; color: #475569; }
+  table.saved-table .pill-status.contacted  { background: #cffafe; color: #155e75; }
+  table.saved-table .pill-status.qualified  { background: #dbeafe; color: #1e40af; }
+  table.saved-table .pill-status.proposed   { background: #fef3c7; color: #92400e; }
+  table.saved-table .pill-status.won        { background: #dcfce7; color: #166534; }
+  table.saved-table .pill-status.lost       { background: #fee2e2; color: #991b1b; }
+  table.saved-table .pill-status.archived   { background: #f1f5f9; color: var(--text-faint); }
+
+  table.saved-table .pill-class {
+    padding: 2px 7px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;
+  }
+  table.saved-table .pill-class.luxury         { background: #fef3c7; color: #78350f; }
+  table.saved-table .pill-class.upper_upscale  { background: #ede9fe; color: #5b21b6; }
+  table.saved-table .pill-class.upscale        { background: #dbeafe; color: #1e40af; }
+  table.saved-table .pill-class.upper_midscale { background: #cffafe; color: #155e75; }
+  table.saved-table .pill-class.midscale       { background: #dcfce7; color: #166534; }
+  table.saved-table .pill-class.economy        { background: #f1f5f9; color: #475569; }
+  table.saved-table .pill-class.independent    { background: #fff7ed; color: #9a3412; }
+
+  table.saved-table .stars-cell { color: #fbbf24; font-size: 0.85rem; white-space: nowrap; }
+  table.saved-table .stars-cell .empty { color: var(--text-faint); }
+
+  table.saved-table .graduated-marker {
+    background: #dcfce7; color: #14532d; font-size: 0.7rem; font-weight: 700;
+    padding: 2px 6px; border-radius: 4px; white-space: nowrap;
+  }
+  table.saved-table .empty-row {
+    text-align: center; color: var(--text-faint);
+    padding: 30px; font-size: 0.92rem;
+  }
+
+  /* Sticky filter summary — counts the matched set */
+  .filter-summary {
+    background: var(--accent-soft); border: 1px solid rgba(217,119,6,0.20);
+    border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;
+    font-size: 0.84rem; color: var(--accent-deep);
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+  .filter-summary strong { font-weight: 700; }
+
   /* ─── Route builder ────────────────────────────────────────── */
   .saved-toolbar #routeModeToggle.active {
     background: var(--accent); color: white; border-color: var(--accent);
@@ -758,11 +897,46 @@
     <!-- ─── Saved panel ───────────────────────────────────────── -->
     <div class="panel" id="panel-saved" role="tabpanel">
       <div class="saved-toolbar">
-        <input id="savedSearch" type="search" placeholder="Filter by name, city, brand, or notes…" autocomplete="off">
+        <input id="savedSearch" type="search" placeholder="Filter by name, city, brand, notes, or visits…" autocomplete="off">
         <div class="chip-row" id="statusChips"></div>
         <button id="routeModeToggle" class="btn btn-ghost" type="button" onclick="window._toggleRouteMode()">🗺️ Plan route</button>
+        <div class="view-toggle" role="tablist" aria-label="View mode">
+          <button id="viewCardsBtn"   class="active" type="button" onclick="window._setView('cards')">▦ Cards</button>
+          <button id="viewTableBtn"   type="button" onclick="window._setView('table')">≡ Table</button>
+        </div>
       </div>
-      <div class="chip-row" id="submarketChips" style="margin: -8px 0 14px;"></div>
+      <div class="chip-row" id="submarketChips" style="margin: -8px 0 6px;"></div>
+
+      <!-- Advanced filter toolbar — composes with status + submarket chips above -->
+      <details class="advanced-filters" id="advFilters">
+        <summary>🎛️ Advanced filters · sort &amp; drill-down</summary>
+        <div class="adv-grid">
+          <label>Brand class
+            <select id="advBrandClass">
+              <option value="all">All</option>
+              <option value="luxury">Luxury</option>
+              <option value="upper_upscale">Upper Upscale</option>
+              <option value="upscale">Upscale</option>
+              <option value="upper_midscale">Upper Midscale</option>
+              <option value="midscale">Midscale</option>
+              <option value="economy">Economy</option>
+              <option value="independent">Independent</option>
+            </select>
+          </label>
+          <label>Stars ≥ <input id="advStarsMin" type="number" min="0" max="5" step="1" value="0" style="width:60px"></label>
+          <label>Rooms ≥ <input id="advRoomsMin" type="number" min="0" step="10" value="0" style="width:80px"></label>
+          <label>ADR ≥ <input id="advAdrMin" type="number" min="0" step="50" value="0" style="width:80px"> $</label>
+          <label>ADR ≤ <input id="advAdrMax" type="number" min="0" step="50" value="9999" style="width:80px"> $</label>
+          <label class="toggle-label"><input id="advHasPhone" type="checkbox"> Has phone</label>
+          <label class="toggle-label"><input id="advHasWebsite" type="checkbox"> Has website</label>
+          <label class="toggle-label"><input id="advHasVisits" type="checkbox"> Visited</label>
+          <label class="toggle-label"><input id="advUntouched" type="checkbox"> Untouched</label>
+          <label class="toggle-label"><input id="advGraduated" type="checkbox"> Graduated only</label>
+          <button class="btn btn-ghost" type="button" id="advClearBtn">Clear all</button>
+        </div>
+        <div class="adv-active" id="advActive"></div>
+      </details>
+
       <div id="savedContent"></div>
 
       <!-- Route bar — sticky at the bottom of the viewport while route mode is on -->
@@ -905,6 +1079,28 @@ let savedSubmarketFilter = 'all';
 let savedQuery = '';
 let editingId = null;
 let runAllInProgress = false;
+
+// Saved-tab view + sort + advanced filters
+let savedView = 'cards';     // 'cards' | 'table'
+let sortKey = null;          // column key name OR null = default order
+let sortDir = 'asc';         // 'asc' | 'desc'
+const ADV = {
+  brandClass: 'all',
+  starsMin: 0,
+  roomsMin: 0,
+  adrMin: 0,
+  adrMax: 9999,
+  hasPhone: false,
+  hasWebsite: false,
+  hasVisits: false,
+  untouched: false,
+  graduated: false,
+};
+const BRAND_CLASS_LABELS = {
+  luxury: 'Luxury', upper_upscale: 'Upper Upscale', upscale: 'Upscale',
+  upper_midscale: 'Upper Midscale', midscale: 'Midscale',
+  economy: 'Economy', independent: 'Independent',
+};
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1698,6 +1894,68 @@ async function loadSaved({ silent } = {}) {
   }
 }
 
+function applyFilters(rows) {
+  const q = savedQuery.toLowerCase().trim();
+  return rows.filter(s => {
+    if (savedFilter !== 'all' && s.status !== savedFilter) return false;
+    if (savedSubmarketFilter !== 'all' && s.submarket !== savedSubmarketFilter) return false;
+    if (ADV.brandClass !== 'all' && (s.brand_class || 'independent') !== ADV.brandClass) return false;
+    if (ADV.starsMin > 0 && (Number(s.stars) || 0) < ADV.starsMin) return false;
+    if (ADV.roomsMin > 0 && (Number(s.rooms) || 0) < ADV.roomsMin) return false;
+    const adr = Number(s.est_adr_dollars) || 0;
+    if (adr < ADV.adrMin) return false;
+    if (adr > ADV.adrMax) return false;
+    if (ADV.hasPhone   && !s.phone)   return false;
+    if (ADV.hasWebsite && !s.website) return false;
+    if (ADV.hasVisits  && (s.visit_count || 0) === 0) return false;
+    if (ADV.untouched  && (s.visit_count || 0) > 0) return false;
+    if (ADV.graduated  && !s.prospect_id) return false;
+    if (!q) return true;
+    return (`${s.name} ${s.city || ''} ${s.brand || ''} ${s.notes || ''} ${s.submarket || ''} ${s.brand_class || ''}`).toLowerCase().includes(q);
+  });
+}
+
+function applySort(rows) {
+  if (!sortKey) return rows;
+  const dir = sortDir === 'desc' ? -1 : 1;
+  const numeric = new Set(['stars', 'rooms', 'est_adr_dollars', 'visit_count']);
+  const sorted = rows.slice().sort((a, b) => {
+    const va = a[sortKey], vb = b[sortKey];
+    if (numeric.has(sortKey)) {
+      const na = Number.isFinite(Number(va)) ? Number(va) : -Infinity;
+      const nb = Number.isFinite(Number(vb)) ? Number(vb) : -Infinity;
+      return (na - nb) * dir;
+    }
+    const sa = (va == null ? '' : String(va)).toLowerCase();
+    const sb = (vb == null ? '' : String(vb)).toLowerCase();
+    if (sa < sb) return -1 * dir;
+    if (sa > sb) return  1 * dir;
+    return 0;
+  });
+  return sorted;
+}
+
+function renderActiveAdvChips() {
+  const chips = [];
+  if (ADV.brandClass !== 'all') chips.push(['Class', BRAND_CLASS_LABELS[ADV.brandClass] || ADV.brandClass, () => { ADV.brandClass = 'all'; document.getElementById('advBrandClass').value = 'all'; renderSaved(); }]);
+  if (ADV.starsMin > 0)         chips.push(['Stars ≥', ADV.starsMin, () => { ADV.starsMin = 0; document.getElementById('advStarsMin').value = 0; renderSaved(); }]);
+  if (ADV.roomsMin > 0)         chips.push(['Rooms ≥', ADV.roomsMin, () => { ADV.roomsMin = 0; document.getElementById('advRoomsMin').value = 0; renderSaved(); }]);
+  if (ADV.adrMin > 0)           chips.push(['ADR ≥', '$' + ADV.adrMin, () => { ADV.adrMin = 0; document.getElementById('advAdrMin').value = 0; renderSaved(); }]);
+  if (ADV.adrMax < 9999)        chips.push(['ADR ≤', '$' + ADV.adrMax, () => { ADV.adrMax = 9999; document.getElementById('advAdrMax').value = 9999; renderSaved(); }]);
+  if (ADV.hasPhone)             chips.push(['Has phone', '✓', () => { ADV.hasPhone = false; document.getElementById('advHasPhone').checked = false; renderSaved(); }]);
+  if (ADV.hasWebsite)           chips.push(['Has website', '✓', () => { ADV.hasWebsite = false; document.getElementById('advHasWebsite').checked = false; renderSaved(); }]);
+  if (ADV.hasVisits)            chips.push(['Visited', '✓', () => { ADV.hasVisits = false; document.getElementById('advHasVisits').checked = false; renderSaved(); }]);
+  if (ADV.untouched)            chips.push(['Untouched', '✓', () => { ADV.untouched = false; document.getElementById('advUntouched').checked = false; renderSaved(); }]);
+  if (ADV.graduated)            chips.push(['Graduated', '✓', () => { ADV.graduated = false; document.getElementById('advGraduated').checked = false; renderSaved(); }]);
+  const wrap = document.getElementById('advActive');
+  if (!wrap) return;
+  if (chips.length === 0) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = chips.map((c, i) => `<span class="adv-active-chip" data-i="${i}">${escapeHtml(c[0])}: ${escapeHtml(String(c[1]))}<button data-i="${i}" type="button">✕</button></span>`).join('');
+  wrap.querySelectorAll('button[data-i]').forEach(btn => {
+    btn.onclick = () => chips[Number(btn.dataset.i)][2]();
+  });
+}
+
 function renderSaved() {
   // Status chips with counts
   const counts = { all: SAVED.length };
@@ -1724,13 +1982,9 @@ function renderSaved() {
       `).join('')}`;
   }
 
-  const q = savedQuery.toLowerCase().trim();
-  const filtered = SAVED.filter(s => {
-    if (savedFilter !== 'all' && s.status !== savedFilter) return false;
-    if (savedSubmarketFilter !== 'all' && s.submarket !== savedSubmarketFilter) return false;
-    if (!q) return true;
-    return (`${s.name} ${s.city || ''} ${s.brand || ''} ${s.notes || ''} ${s.submarket || ''}`).toLowerCase().includes(q);
-  });
+  renderActiveAdvChips();
+
+  const filtered = applySort(applyFilters(SAVED));
 
   const content = document.getElementById('savedContent');
   if (SAVED.length === 0) {
@@ -1741,12 +1995,131 @@ function renderSaved() {
       </div>`;
     return;
   }
+
+  // Filter summary banner — shows count + sum of effective filters
+  const summaryBits = [];
+  if (savedFilter !== 'all') summaryBits.push(savedFilter);
+  if (savedSubmarketFilter !== 'all') summaryBits.push('📍 ' + savedSubmarketFilter);
+  if (ADV.brandClass !== 'all') summaryBits.push(BRAND_CLASS_LABELS[ADV.brandClass] || ADV.brandClass);
+  if (ADV.untouched) summaryBits.push('untouched');
+  if (ADV.hasVisits) summaryBits.push('visited');
+  if (ADV.graduated) summaryBits.push('graduated');
+  const adrs = filtered.map(h => h.est_adr_dollars).filter(Number.isFinite).sort((a, b) => a - b);
+  const median = adrs.length ? adrs[Math.floor(adrs.length / 2)] : null;
+  const totalRooms = filtered.reduce((s, h) => s + (Number(h.rooms) || 0), 0);
+  const summary = `<div class="filter-summary">
+    <strong>${filtered.length}</strong> hotel${filtered.length === 1 ? '' : 's'} match
+    ${summaryBits.length ? '· ' + summaryBits.map(escapeHtml).join(' · ') : ''}
+    ${median ? '· median ADR <strong>$' + median + '</strong>' : ''}
+    ${totalRooms > 0 ? '· <strong>' + totalRooms.toLocaleString() + '</strong> total rooms' : ''}
+  </div>`;
+
   if (filtered.length === 0) {
-    content.innerHTML = `<div class="empty"><h3>No matches</h3><p>Try a different filter or search term.</p></div>`;
+    content.innerHTML = summary + `<div class="empty"><h3>No matches</h3><p>Adjust filters or hit <strong>Clear all</strong> to start over.</p></div>`;
     return;
   }
-  content.innerHTML = `<div class="grid">${filtered.map(renderSavedCard).join('')}</div>`;
+
+  if (savedView === 'table') {
+    content.innerHTML = summary + renderSavedTable(filtered);
+    attachTableHandlers();
+  } else {
+    content.innerHTML = summary + `<div class="grid">${filtered.map(renderSavedCard).join('')}</div>`;
+  }
 }
+
+const TABLE_COLS = [
+  { key: 'name',             label: 'Hotel' },
+  { key: 'submarket',        label: 'Submarket' },
+  { key: 'brand_class',      label: 'Class' },
+  { key: 'brand',            label: 'Brand' },
+  { key: 'stars',            label: 'Stars',     align: 'num' },
+  { key: 'rooms',            label: 'Rooms',     align: 'num' },
+  { key: 'est_adr_dollars',  label: 'Est ADR',   align: 'num' },
+  { key: 'status',           label: 'Status' },
+  { key: 'visit_count',      label: 'Visits',    align: 'num' },
+  { key: 'last_visit_date',  label: 'Last visit' },
+  { key: '_actions',         label: '',          sortable: false },
+];
+
+function renderSavedTable(rows) {
+  const head = TABLE_COLS.map(c => {
+    const isSorted = sortKey === c.key;
+    const sortClass = isSorted ? (sortDir === 'desc' ? 'sort-desc' : 'sort-asc') : '';
+    const arrow = isSorted ? (sortDir === 'desc' ? '↓' : '↑') : '↕';
+    const sortable = c.sortable !== false;
+    return `<th class="${sortClass} ${c.align || ''}" ${sortable ? `data-sortkey="${c.key}"` : ''}>
+      ${escapeHtml(c.label)}${sortable ? ` <span class="sort-arrow">${arrow}</span>` : ''}
+    </th>`;
+  }).join('');
+
+  const body = rows.map(h => {
+    const stars = Number.isInteger(Number(h.stars)) && h.stars >= 1 && h.stars <= 5
+      ? '★'.repeat(h.stars) + '<span class="empty">' + '★'.repeat(5 - h.stars) + '</span>'
+      : '<span class="empty">—</span>';
+    const adr = h.est_adr_dollars ? '$' + h.est_adr_dollars : '—';
+    return `
+      <tr data-id="${h.id}">
+        <td class="name-cell">
+          <a href="#" class="drill" data-action="open" data-id="${h.id}">${escapeHtml(h.name)}</a>
+          ${h.address ? `<div class="name-sub">${escapeHtml(h.address)}</div>` : ''}
+          ${h.prospect_id ? `<span class="graduated-marker" title="Graduated to Prospect #${h.prospect_id}">✓ #${h.prospect_id}</span>` : ''}
+        </td>
+        <td>${h.submarket ? `<button class="drill" data-action="filter-submarket" data-val="${escapeHtml(h.submarket)}">${escapeHtml(h.submarket)}</button>` : '—'}</td>
+        <td><button class="drill pill-class ${h.brand_class || 'independent'}" data-action="filter-class" data-val="${h.brand_class || 'independent'}">${BRAND_CLASS_LABELS[h.brand_class] || 'Independent'}</button></td>
+        <td>${h.brand ? `<button class="drill" data-action="filter-brand" data-val="${escapeHtml(h.brand)}">${escapeHtml(h.brand)}</button>` : '—'}</td>
+        <td class="num stars-cell">${stars}</td>
+        <td class="num">${h.rooms || '—'}</td>
+        <td class="num">${adr}</td>
+        <td><button class="drill pill-status ${h.status}" data-action="filter-status" data-val="${h.status}">${h.status}</button></td>
+        <td class="num">${h.visit_count || 0}</td>
+        <td>${h.last_visit_date || '—'}</td>
+        <td class="actions-cell">
+          <button data-action="open" data-id="${h.id}">Edit</button>
+          ${h.lat && h.lng ? `<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" title="Maps">🗺️</a>` : ''}
+          ${h.phone ? `<a href="tel:${escapeHtml(h.phone)}" title="Call">📞</a>` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  return `<div class="saved-table-wrap"><table class="saved-table">
+    <thead><tr>${head}</tr></thead>
+    <tbody>${body}</tbody>
+  </table></div>`;
+}
+
+function attachTableHandlers() {
+  // Header sort clicks
+  document.querySelectorAll('table.saved-table th[data-sortkey]').forEach(th => {
+    th.onclick = () => {
+      const k = th.dataset.sortkey;
+      if (sortKey === k) sortDir = (sortDir === 'asc' ? 'desc' : 'asc');
+      else { sortKey = k; sortDir = 'asc'; }
+      renderSaved();
+    };
+  });
+  // Drill-down + open clicks (delegated)
+  document.querySelectorAll('table.saved-table .drill, table.saved-table .actions-cell button').forEach(el => {
+    el.onclick = (e) => {
+      e.preventDefault();
+      const action = el.dataset.action;
+      const val = el.dataset.val;
+      const id = el.dataset.id;
+      if (action === 'open' && id)              openModal(Number(id));
+      else if (action === 'filter-submarket')   { savedSubmarketFilter = val; renderSaved(); }
+      else if (action === 'filter-class')       { ADV.brandClass = val; document.getElementById('advBrandClass').value = val; document.getElementById('advFilters').open = true; renderSaved(); }
+      else if (action === 'filter-brand')       { savedQuery = val; document.getElementById('savedSearch').value = val; renderSaved(); }
+      else if (action === 'filter-status')      { savedFilter = val; renderSaved(); }
+    };
+  });
+}
+
+window._setView = function(v) {
+  savedView = v;
+  document.getElementById('viewCardsBtn').classList.toggle('active', v === 'cards');
+  document.getElementById('viewTableBtn').classList.toggle('active', v === 'table');
+  renderSaved();
+};
 
 function setSavedFilter(s) { savedFilter = s; renderSaved(); }
 function setSavedSubmarketFilter(s) { savedSubmarketFilter = s; renderSaved(); }
@@ -1755,6 +2128,37 @@ document.getElementById('savedSearch').addEventListener('input', e => {
   savedQuery = e.target.value;
   renderSaved();
 });
+
+// Advanced filters — wire each control to ADV state + re-render
+function wireAdvFilters() {
+  const $ = id => document.getElementById(id);
+  $('advBrandClass') ?.addEventListener('change', e => { ADV.brandClass = e.target.value; renderSaved(); });
+  $('advStarsMin')   ?.addEventListener('change', e => { ADV.starsMin = Number(e.target.value) || 0; renderSaved(); });
+  $('advRoomsMin')   ?.addEventListener('change', e => { ADV.roomsMin = Number(e.target.value) || 0; renderSaved(); });
+  $('advAdrMin')     ?.addEventListener('change', e => { ADV.adrMin = Number(e.target.value) || 0; renderSaved(); });
+  $('advAdrMax')     ?.addEventListener('change', e => { ADV.adrMax = Number(e.target.value) || 9999; renderSaved(); });
+  $('advHasPhone')   ?.addEventListener('change', e => { ADV.hasPhone = e.target.checked; renderSaved(); });
+  $('advHasWebsite') ?.addEventListener('change', e => { ADV.hasWebsite = e.target.checked; renderSaved(); });
+  $('advHasVisits')  ?.addEventListener('change', e => { ADV.hasVisits = e.target.checked; renderSaved(); });
+  $('advUntouched')  ?.addEventListener('change', e => { ADV.untouched = e.target.checked; renderSaved(); });
+  $('advGraduated')  ?.addEventListener('change', e => { ADV.graduated = e.target.checked; renderSaved(); });
+  $('advClearBtn')   ?.addEventListener('click', () => {
+    Object.assign(ADV, {
+      brandClass: 'all', starsMin: 0, roomsMin: 0, adrMin: 0, adrMax: 9999,
+      hasPhone: false, hasWebsite: false, hasVisits: false, untouched: false, graduated: false,
+    });
+    document.getElementById('advBrandClass').value = 'all';
+    document.getElementById('advStarsMin').value = 0;
+    document.getElementById('advRoomsMin').value = 0;
+    document.getElementById('advAdrMin').value = 0;
+    document.getElementById('advAdrMax').value = 9999;
+    ['advHasPhone','advHasWebsite','advHasVisits','advUntouched','advGraduated'].forEach(id => { document.getElementById(id).checked = false; });
+    savedFilter = 'all'; savedSubmarketFilter = 'all'; savedQuery = ''; document.getElementById('savedSearch').value = '';
+    sortKey = null; sortDir = 'asc';
+    renderSaved();
+  });
+}
+wireAdvFilters();
 
 function renderSavedCard(h) {
   const adr = h.est_adr_dollars;
