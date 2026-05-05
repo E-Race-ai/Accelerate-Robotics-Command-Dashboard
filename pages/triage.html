@@ -473,9 +473,10 @@
   @keyframes confettiFall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
   @keyframes streakPop {
     0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
-    20%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
-    40%  { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
-    100% { transform: translate(-50%, -120%) scale(0.95); opacity: 0; }
+    8%   { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    14%  { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+    85%  { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+    100% { transform: translate(-50%, -90%) scale(0.95); opacity: 0; }
   }
   /* Tappable / cliquey card pills — press feedback */
   .card-pill, .fit-reason, .sib-chip, .card-dm-row a {
@@ -763,16 +764,16 @@ function showStreakBanner() {
     position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%) scale(0.6);
     background: ${colorBg}; color: white;
     font-family: 'Space Grotesk', sans-serif; font-weight: 800;
-    font-size: 1.4rem; padding: 14px 22px; border-radius: 16px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.40);
+    font-size: 1.6rem; padding: 18px 28px; border-radius: 18px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.45);
     z-index: 90; pointer-events: none;
-    animation: streakPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.25);
-    text-align: center;
+    animation: streakPop 2.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.28);
+    text-align: center; min-width: 220px;
   `;
-  banner.innerHTML = `${label}<div style="font-size:0.78rem;font-weight:600;margin-top:2px;opacity:0.92">${STREAK} yes in a row${STREAK_BEST > STREAK ? ` · best: ${STREAK_BEST}` : ' · personal best 🏆'}</div>`;
+  banner.innerHTML = `${label}<div style="font-size:0.92rem;font-weight:600;margin-top:6px;opacity:0.94">${STREAK} yes in a row${STREAK_BEST > STREAK ? ` · best: ${STREAK_BEST}` : ' · personal best 🏆'}</div>`;
   document.body.appendChild(banner);
-  setTimeout(() => banner.remove(), 1100);
+  setTimeout(() => banner.remove(), 2700);
 }
 
 // Tappable reasoning chip — shows a tooltip with WHICH weight category
@@ -927,7 +928,10 @@ function toggleAdvanced() {
 // ── Queue + render ───────────────────────────────────────────────
 async function loadQueue() {
   try {
-    const res = await fetch('/api/hotel-research/triage/queue', { credentials: 'same-origin' });
+    // Pass the player so the server filters out hotels THIS person already
+    // voted on — every player gets their own queue, votes don't collide.
+    const url = '/api/hotel-research/triage/queue' + (PLAYER ? `?player=${encodeURIComponent(PLAYER)}` : '');
+    const res = await fetch(url, { credentials: 'same-origin' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     QUEUE = data.queue || [];
@@ -1147,6 +1151,17 @@ function renderTopCard() {
   `;
   stack.appendChild(card);
   initCardMiniMap(card, h);
+  // Tell the parent (when iframed in the bezel overlay) which hotel is on
+  // top so the desktop side panels can sync their map + insights views.
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'triage:cardActive',
+        hotel: h,
+        progress: { sorted: TOTALS.sorted, total: TOTALS.total },
+      }, '*');
+    }
+  } catch {}
 
   // Wire up the inline expander; also auto-expand if Advanced mode is on.
   const moreBtn = card.querySelector('#moreBtn');

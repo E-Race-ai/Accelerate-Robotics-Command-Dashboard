@@ -1414,6 +1414,14 @@ router.post('/saved/:id/triage', requireAuth, async (req, res) => {
         "UPDATE hotels_saved SET triage = NULL, triage_by = NULL, triage_player = NULL, triage_at = NULL, updated_at = datetime('now') WHERE id = ?",
         [id],
       );
+      // Also remove this player's vote from the master per-user log when
+      // they undo. Other players' votes stay intact.
+      if (player) {
+        await db.run(
+          `DELETE FROM hotel_triage_votes WHERE hotel_saved_id = ? AND player = ?`,
+          [id, player],
+        );
+      }
     } else if (newStatus) {
       await db.run(
         `UPDATE hotels_saved
@@ -1427,6 +1435,20 @@ router.post('/saved/:id/triage', requireAuth, async (req, res) => {
          SET triage = ?, triage_by = ?, triage_player = ?, triage_at = datetime('now'), updated_at = datetime('now')
          WHERE id = ?`,
         [triageVal, req.admin?.email || null, player, id],
+      );
+    }
+    // Also record the per-player vote in the master log so two players
+    // voting differently on the same hotel are both preserved (UPSERT
+    // pattern: INSERT ... ON CONFLICT DO UPDATE).
+    if (player && triageVal) {
+      await db.run(
+        `INSERT INTO hotel_triage_votes (hotel_saved_id, player, decision, voted_by_email, voted_at)
+         VALUES (?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(hotel_saved_id, player) DO UPDATE SET
+           decision = excluded.decision,
+           voted_by_email = excluded.voted_by_email,
+           voted_at = excluded.voted_at`,
+        [id, player, triageVal, req.admin?.email || null],
       );
     }
     res.json({ ok: true, triage: triageVal, status: newStatus, player });
@@ -1460,30 +1482,122 @@ router.get('/triage/leaderboard', requireAuth, async (_req, res) => {
   }
 });
 
+// GET /triage/alignment — Ben + Celia + Eric all-vote summary.
+// Shows how many hotels each player has voted on, where they agree, and
+// the contested hotels for review-together sessions.
+router.get('/triage/alignment', requireAuth, async (_req, res) => {
+  try {
+    // Per-player vote counts
+    const players = await db.all(
+      `SELECT player, COUNT(*) AS total,
+              SUM(CASE WHEN decision = 'yes'            THEN 1 ELSE 0 END) AS yes_count,
+              SUM(CASE WHEN decision = 'maybe'          THEN 1 ELSE 0 END) AS maybe_count,
+              SUM(CASE WHEN decision = 'needs_research' THEN 1 ELSE 0 END) AS needs_research_count,
+              SUM(CASE WHEN decision = 'no'             THEN 1 ELSE 0 END) AS no_count,
+              MAX(voted_at) AS last_at
+       FROM hotel_triage_votes
+       GROUP BY player
+       ORDER BY total DESC`,
+      [],
+    );
+    // Hotels that 2+ players voted on
+    const multiVoted = await db.all(
+      `SELECT v.hotel_saved_id AS hotel_id, h.name, h.submarket, h.ai_fit_score,
+              h.ai_fit_tier, h.brand, h.rooms, h.est_adr_dollars,
+              GROUP_CONCAT(v.player || ':' || v.decision, '|') AS votes,
+              COUNT(*) AS vote_count,
+              COUNT(DISTINCT v.decision) AS distinct_decisions
+       FROM hotel_triage_votes v
+       JOIN hotels_saved h ON h.id = v.hotel_saved_id
+       GROUP BY v.hotel_saved_id
+       HAVING vote_count >= 2
+       ORDER BY distinct_decisions DESC, h.ai_fit_score DESC, h.id ASC`,
+      [],
+    );
+    // Split into agreements vs. disagreements
+    const agreements = [];
+    const disagreements = [];
+    for (const r of multiVoted) {
+      const votes = (r.votes || '').split('|').filter(Boolean).map(s => {
+        const [player, decision] = s.split(':');
+        return { player, decision };
+      });
+      const decisions = new Set(votes.map(v => v.decision));
+      const entry = { ...r, votes };
+      delete entry.distinct_decisions; delete entry.vote_count;
+      if (decisions.size === 1) agreements.push(entry);
+      else disagreements.push(entry);
+    }
+    // Total saved for the "% covered" stat
+    const total = await db.one('SELECT COUNT(*) AS n FROM hotels_saved');
+    res.json({
+      total_hotels: Number(total?.n || 0),
+      players,
+      agreements,
+      disagreements,
+      summary: {
+        agreed:    agreements.length,
+        disagreed: disagreements.length,
+        total_multi_voted: multiVoted.length,
+      },
+    });
+  } catch (err) {
+    console.error('[hotel-research] alignment failed:', err);
+    res.status(500).json({ error: 'Failed to compute alignment' });
+  }
+});
+
 // GET /triage/queue — returns saved hotels with no triage decision yet,
 // sorted submarket-then-id so reps can sweep zone-by-zone. Powers the
 // game-mode card-stack UI.
-router.get('/triage/queue', requireAuth, async (_req, res) => {
+router.get('/triage/queue', requireAuth, async (req, res) => {
+  // Multi-rater alignment: each player swipes through their own queue
+  // independently. The same hotel can be voted on by Ben AND Celia AND
+  // Eric — we filter out hotels THIS player has already voted on, not
+  // hotels anyone has voted on. The legacy h.triage column still drives
+  // the "first vote wins" funnel placement, but the queue is per-player.
+  const player = req.query.player ? String(req.query.player).slice(0, 40).trim() : null;
   try {
-    // Sort: best-fit first (highest ai_fit_score) so reps spend triage time
-    // on the strongest opportunities. NULL scores fall to the bottom — they
-    // get the next score-all sweep but don't push high-fit hotels off-screen.
-    const rows = await db.all(
-      `SELECT h.id, h.name, h.address, h.city, h.state, h.brand, h.stars, h.rooms,
-              h.phone, h.website, h.submarket, h.est_adr_dollars,
-              h.operator, h.year_opened, h.total_floors, h.lat, h.lng, h.notes,
-              h.photo_url, h.description, h.rating, h.review_count, h.wikipedia_url,
-              h.enriched_at,
-              h.ai_fit_score, h.ai_fit_reasoning, h.ai_fit_tier,
-              h.enrichment_depth, h.chain_description, h.chain_url
-       FROM hotels_saved h
-       WHERE h.triage IS NULL
-       ORDER BY (h.ai_fit_score IS NULL) ASC,
-                h.ai_fit_score DESC,
-                h.submarket ASC,
-                h.id ASC`,
-      [],
-    );
+    let rows;
+    if (player) {
+      rows = await db.all(
+        `SELECT h.id, h.name, h.address, h.city, h.state, h.brand, h.stars, h.rooms,
+                h.phone, h.website, h.submarket, h.est_adr_dollars,
+                h.operator, h.year_opened, h.total_floors, h.lat, h.lng, h.notes,
+                h.photo_url, h.description, h.rating, h.review_count, h.wikipedia_url,
+                h.enriched_at,
+                h.ai_fit_score, h.ai_fit_reasoning, h.ai_fit_tier,
+                h.enrichment_depth, h.chain_description, h.chain_url
+         FROM hotels_saved h
+         WHERE NOT EXISTS (
+           SELECT 1 FROM hotel_triage_votes v
+           WHERE v.hotel_saved_id = h.id AND v.player = ?
+         )
+         ORDER BY (h.ai_fit_score IS NULL) ASC,
+                  h.ai_fit_score DESC,
+                  h.submarket ASC,
+                  h.id ASC`,
+        [player],
+      );
+    } else {
+      // No player — fall back to the legacy queue ("hotels nobody voted on")
+      rows = await db.all(
+        `SELECT h.id, h.name, h.address, h.city, h.state, h.brand, h.stars, h.rooms,
+                h.phone, h.website, h.submarket, h.est_adr_dollars,
+                h.operator, h.year_opened, h.total_floors, h.lat, h.lng, h.notes,
+                h.photo_url, h.description, h.rating, h.review_count, h.wikipedia_url,
+                h.enriched_at,
+                h.ai_fit_score, h.ai_fit_reasoning, h.ai_fit_tier,
+                h.enrichment_depth, h.chain_description, h.chain_url
+         FROM hotels_saved h
+         WHERE h.triage IS NULL
+         ORDER BY (h.ai_fit_score IS NULL) ASC,
+                  h.ai_fit_score DESC,
+                  h.submarket ASC,
+                  h.id ASC`,
+        [],
+      );
+    }
     // Tally totals for the progress bar — independent query to be cheap.
     const totals = await db.one(
       `SELECT

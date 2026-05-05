@@ -808,6 +808,25 @@ async function initSchema() {
   // (yes / no / maybe / needs_research) so Ben can sweep 346 cards in a
   // morning. Validation happens in the route layer — SQLite ALTER TABLE
   // can't add a CHECK constraint mid-stream.
+  // Per-player triage votes — Ben + Celia + Eric all swipe on the same
+  // deals; we want to see WHERE THEY DISAGREE, not just one consensus
+  // vote. Each (hotel_saved_id, player) is unique. The legacy `triage`
+  // column on hotels_saved still tracks the most-recent vote for queue
+  // sorting; this table is the master record per user.
+  await client.execute(
+    `CREATE TABLE IF NOT EXISTS hotel_triage_votes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      hotel_saved_id INTEGER NOT NULL REFERENCES hotels_saved(id) ON DELETE CASCADE,
+      player TEXT NOT NULL,
+      decision TEXT NOT NULL CHECK(decision IN ('yes', 'no', 'maybe', 'needs_research')),
+      voted_at TEXT NOT NULL DEFAULT (datetime('now')),
+      voted_by_email TEXT,
+      UNIQUE(hotel_saved_id, player)
+    )`,
+  );
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_triage_votes_hotel ON hotel_triage_votes(hotel_saved_id)`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_triage_votes_player ON hotel_triage_votes(player)`);
+
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage TEXT");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage_by TEXT");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage_player TEXT");
