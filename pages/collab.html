@@ -44,7 +44,197 @@
   }
   .lede { font-size:0.95rem; color:var(--text-dim); max-width:720px; margin-bottom:24px; }
 
-  /* Top bar */
+  /* ── ATC stats strip ─────────────────────────────────────── */
+  .atc-stats {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+  }
+  .atc-stat {
+    display: flex; flex-direction: column; align-items: flex-start;
+    padding-right: 14px;
+    border-right: 1px solid #eef2f7;
+    min-width: 84px;
+  }
+  .atc-stat:last-of-type { border-right: none; }
+  .atc-stat-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .atc-stat-label {
+    font-size: 0.68rem; color: #64748b; text-transform: uppercase;
+    letter-spacing: 0.6px; margin-top: 4px; font-weight: 600;
+  }
+  .atc-stat.urgent .atc-stat-num { color: #dc2626; }
+  .atc-stat.warn   .atc-stat-num { color: #d97706; }
+  .atc-stat.ok     .atc-stat-num { color: #16a34a; }
+  .atc-live-dot {
+    font-size: 0.7rem; font-weight: 700; color: #16a34a;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.6px;
+    animation: atcLivePulse 2s ease-in-out infinite;
+  }
+  @keyframes atcLivePulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+  }
+  .grow { flex: 1; }
+  .new-btn {
+    background: linear-gradient(135deg, #ea580c, #f59e0b); color: white;
+    border: none; padding: 9px 18px; border-radius: 10px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(234,88,12,0.25);
+    transition: transform 0.1s, box-shadow 0.15s;
+  }
+  .new-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(234,88,12,0.35); }
+
+  /* ── ATC lane board (4-col kanban with drag-and-drop) ───── */
+  .atc-board {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  @media (max-width: 1100px) { .atc-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px)  { .atc-board { grid-template-columns: 1fr; } }
+  .atc-lane {
+    display: flex; flex-direction: column;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    min-height: 240px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .atc-lane.drop-target {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    box-shadow: inset 0 0 0 2px rgba(59,130,246,0.20);
+  }
+  .atc-lane-head {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    border-top-left-radius: 12px; border-top-right-radius: 12px;
+    font-size: 0.78rem; font-weight: 700;
+    color: white; letter-spacing: 0.4px;
+  }
+  .atc-lane-open    { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  .atc-lane-claimed { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+  .atc-lane-active  { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+  .atc-lane-done    { background: linear-gradient(90deg, #16a34a, #4ade80); }
+  .atc-lane-count {
+    background: rgba(255,255,255,0.22);
+    padding: 1px 9px; border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  }
+  .atc-lane-body {
+    flex: 1; padding: 10px;
+    display: flex; flex-direction: column; gap: 8px;
+    overflow-y: auto; max-height: 70vh;
+  }
+  .atc-lane-empty {
+    padding: 20px 10px; text-align: center;
+    color: #cbd5e1; font-size: 0.78rem; font-style: italic;
+  }
+  /* Card — compact, draggable */
+  .atc-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-left: 3px solid transparent;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 6px;
+    cursor: grab;
+    transition: transform 0.1s, box-shadow 0.15s, border-color 0.15s, opacity 0.15s;
+  }
+  .atc-card:hover { box-shadow: 0 4px 12px rgba(15,23,42,0.08); transform: translateY(-1px); }
+  .atc-card:active { cursor: grabbing; }
+  .atc-card.dragging { opacity: 0.4; }
+  /* Priority on the left edge — at-a-glance triage */
+  .atc-card[data-priority="urgent"] {
+    border-left-color: #dc2626;
+    box-shadow: 0 0 0 1px rgba(220,38,38,0.18);
+    animation: atcUrgentPulse 2.6s ease-in-out infinite;
+  }
+  @keyframes atcUrgentPulse {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(220,38,38,0.18); }
+    50%      { box-shadow: 0 0 0 2px rgba(220,38,38,0.40), 0 0 14px rgba(220,38,38,0.18); }
+  }
+  .atc-card[data-priority="high"]   { border-left-color: #f59e0b; }
+  .atc-card[data-priority="medium"] { border-left-color: #94a3b8; }
+  .atc-card[data-priority="low"]    { border-left-color: #cbd5e1; }
+  /* ── Security hazard styling — overrides priority colors so security
+     tickets always read as hazard, regardless of how the submitter set priority.
+     The diagonal stripes evoke a workplace hazard barricade and are very hard
+     to miss in a feed of normal-looking cards. */
+  .atc-card[data-security="1"] {
+    border: 1px solid #b45309;
+    border-left: 6px solid #b45309;
+    background:
+      repeating-linear-gradient(135deg,
+        rgba(245,158,11,0.06) 0 8px,
+        rgba(245,158,11,0)    8px 16px),
+      #fffbeb;
+    box-shadow: 0 0 0 1px rgba(180,83,9,0.18);
+    animation: none;
+  }
+  .atc-card[data-security="1"] .atc-card-title { color: #7c2d12; }
+  .atc-pill-security {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: #b45309; color: #fff;
+    padding: 2px 7px; border-radius: 10px;
+    font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .atc-card { position: relative; }
+  .atc-card-archive {
+    position: absolute; top: 6px; right: 6px;
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: none;
+    color: #cbd5e1; font-size: 13px; font-weight: 700;
+    cursor: pointer; opacity: 0;
+    transition: opacity 0.12s, color 0.12s, background 0.12s;
+    border-radius: 50%;
+    line-height: 1;
+  }
+  .atc-card:hover .atc-card-archive { opacity: 1; }
+  .atc-card-archive:hover {
+    color: #b91c1c; background: #fee2e2;
+  }
+  .atc-card-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .atc-card-title {
+    font-size: 0.85rem; font-weight: 700; color: #0f172a; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .atc-card-meta {
+    font-size: 0.68rem; color: #94a3b8;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
+  }
+  .atc-card-meta strong { color: #475569; font-weight: 700; font-family: inherit; }
+  .atc-card-due { color: #d97706; }
+  .atc-card-due.overdue { color: #b91c1c; font-weight: 700; }
+  .atc-card-actions { display: flex; gap: 6px; margin-top: 4px; }
+  .atc-card-btn {
+    flex: 1; font-size: 11px; font-weight: 700;
+    padding: 5px 8px; border-radius: 6px;
+    background: white; color: #475569;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .atc-card-btn:hover { background: #0c1220; color: white; border-color: #0c1220; }
+  .atc-card-btn.primary { background: #0055ff; color: white; border-color: #0055ff; }
+  .atc-card-btn.primary:hover { background: #003ecc; border-color: #003ecc; }
+  .atc-card-btn.success { background: #16a34a; color: white; border-color: #16a34a; }
+  .atc-card-btn.success:hover { background: #108037; border-color: #108037; }
+
+  /* Existing toolbar/board styles — kept for backward compat but unused */
   .toolbar {
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
     margin-bottom:20px;
@@ -210,21 +400,80 @@
     <a href="/admin" class="back-link">← Command Center</a>
   </div>
 
-  <div class="eyebrow">Toolkit · Collaboration</div>
-  <h1><span class="accent">Collab</span> Bulletin Board</h1>
-  <p class="lede">Need a teammate to build a feature, add a tool, wire an integration, or write a doc? Post it here. Tag a specific person if you know who's right, or leave it open and someone will claim it.</p>
+  <div class="eyebrow">Toolkit · Service Operations</div>
+  <h1><span class="accent">Air Traffic</span> Control</h1>
+  <p class="lede">Live status board for service tickets. Each lane is a phase of the workflow — incoming asks, claimed, in flight, and landed. Drag a card between lanes to update status, or claim from the open lane to take a ticket.</p>
 
-  <div class="toolbar">
-    <button class="tab active" data-status="open">Open <span class="count" id="count-open">0</span></button>
-    <button class="tab" data-status="claimed">Claimed <span class="count" id="count-claimed">0</span></button>
-    <button class="tab" data-status="in_progress">In Progress <span class="count" id="count-in_progress">0</span></button>
-    <button class="tab" data-status="done">Done <span class="count" id="count-done">0</span></button>
-    <button class="tab" data-status="all">All</button>
+  <!-- ATC stats strip — at-a-glance state of the board. -->
+  <div class="atc-stats" id="atcStats">
+    <div class="atc-stat">
+      <span class="atc-stat-num" id="atc-total">0</span>
+      <span class="atc-stat-label">total active</span>
+    </div>
+    <div class="atc-stat urgent">
+      <span class="atc-stat-num" id="atc-urgent">0</span>
+      <span class="atc-stat-label">🚨 urgent</span>
+    </div>
+    <div class="atc-stat warn">
+      <span class="atc-stat-num" id="atc-overdue">0</span>
+      <span class="atc-stat-label">⏱ past due</span>
+    </div>
+    <div class="atc-stat ok">
+      <span class="atc-stat-num" id="atc-done24">0</span>
+      <span class="atc-stat-label">✅ landed today</span>
+    </div>
+    <div class="atc-stat">
+      <span class="atc-stat-num" id="atc-oldest">—</span>
+      <span class="atc-stat-label">oldest open</span>
+    </div>
     <span class="grow"></span>
-    <button class="new-btn" id="newBtn">+ New Request</button>
+    <label style="display:flex;align-items:center;gap:6px;color:#64748b;font-size:0.78rem;cursor:pointer;user-select:none;">
+      <input type="checkbox" id="showArchivedToggle" style="accent-color:#64748b;">
+      Show archived
+    </label>
+    <span class="atc-live-dot" title="Auto-refreshes every 20s">● LIVE</span>
+    <button class="new-btn" id="newBtn">+ New Ticket</button>
   </div>
 
-  <div class="board" id="board"></div>
+  <!-- Lane board — 4 columns, drag-and-drop between lanes. -->
+  <div class="atc-board" id="atcBoard">
+    <div class="atc-lane" data-status="open">
+      <div class="atc-lane-head atc-lane-open">
+        <span class="atc-lane-name">📥 Inbound</span>
+        <span class="atc-lane-count" id="lane-count-open">0</span>
+      </div>
+      <div class="atc-lane-body" data-status="open" id="lane-open"></div>
+    </div>
+    <div class="atc-lane" data-status="claimed">
+      <div class="atc-lane-head atc-lane-claimed">
+        <span class="atc-lane-name">🤝 Claimed</span>
+        <span class="atc-lane-count" id="lane-count-claimed">0</span>
+      </div>
+      <div class="atc-lane-body" data-status="claimed" id="lane-claimed"></div>
+    </div>
+    <div class="atc-lane" data-status="in_progress">
+      <div class="atc-lane-head atc-lane-active">
+        <span class="atc-lane-name">✈ In Flight</span>
+        <span class="atc-lane-count" id="lane-count-in_progress">0</span>
+      </div>
+      <div class="atc-lane-body" data-status="in_progress" id="lane-in_progress"></div>
+    </div>
+    <div class="atc-lane" data-status="done">
+      <div class="atc-lane-head atc-lane-done">
+        <span class="atc-lane-name">🛬 Landed</span>
+        <span class="atc-lane-count" id="lane-count-done">0</span>
+      </div>
+      <div class="atc-lane-body" data-status="done" id="lane-done"></div>
+    </div>
+  </div>
+
+  <!-- Archived lane — only shown when "Show archived" toggle is on. -->
+  <div id="archivedSection" hidden style="margin-top:24px;">
+    <h3 style="font-size:0.95rem;color:#475569;font-weight:700;margin:0 0 8px;letter-spacing:0.01em;">
+      📦 Archived <span id="archivedCount" style="font-weight:500;color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:0.78rem;">0</span>
+    </h3>
+    <div id="archivedList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;"></div>
+  </div>
 
 </div>
 
@@ -281,6 +530,13 @@
         <label for="m-due">Due date <span style="color:#94a3b8;font-weight:500;">(optional)</span></label>
         <input type="date" id="m-due">
       </div>
+      <div class="field" style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin-top:6px;">
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer;">
+          <input type="checkbox" id="m-security" style="width:18px;height:18px;accent-color:#b45309;">
+          <span>⚠️ Security issue</span>
+        </label>
+        <span class="hint" style="display:block;margin-top:4px;color:#92400e;">Mark this if it touches authentication, data leakage, dependencies, infra security, or anything the technical team should pick up urgently. Auto-flagged for keywords like XSS, CSP, RCE, no-sandbox, etc.</span>
+      </div>
       <div class="modal-actions">
         <button type="button" id="cancelBtn">Cancel</button>
         <button type="submit" class="primary" id="saveBtn">Post Request</button>
@@ -305,7 +561,9 @@
   }
 
   let allRequests = [];
-  let activeStatus = 'open';
+
+  // Statuses we treat as "active" for the ATC view (the four lanes).
+  const ATC_LANES = ['open', 'claimed', 'in_progress', 'done'];
 
   async function loadTeam() {
     try {
@@ -322,100 +580,180 @@
     } catch (e) { /* non-fatal */ }
   }
 
+  // Toggle for the "show archived" view — when true the board pulls
+  // archived tickets too and renders them in a fifth lane below the four.
+  let _showArchived = false;
+
   async function loadRequests() {
     try {
-      const r = await fetch('/api/collab');
+      const url = _showArchived ? '/api/collab?include_archived=1' : '/api/collab';
+      const r = await fetch(url);
       if (!r.ok) throw new Error('fetch failed');
       allRequests = await r.json();
-      renderTabs();
-      renderBoard();
+      renderATC();
     } catch (e) {
-      $('#board').innerHTML = `<div class="empty">Could not load requests: ${escapeHtml(e.message)}</div>`;
+      const board = document.getElementById('atcBoard');
+      if (board) board.innerHTML = `<div class="atc-lane-empty" style="grid-column:1/-1;">Could not load tickets: ${escapeHtml(e.message)}</div>`;
     }
   }
 
-  function renderTabs() {
-    const counts = { open:0, claimed:0, in_progress:0, done:0 };
-    allRequests.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
-    Object.entries(counts).forEach(([k, v]) => {
-      const el = document.getElementById(`count-${k}`);
-      if (el) el.textContent = v;
-    });
-  }
-
-  function renderBoard() {
-    const filtered = activeStatus === 'all'
-      ? allRequests
-      : allRequests.filter(r => r.status === activeStatus);
-
-    if (filtered.length === 0) {
-      $('#board').innerHTML = `<div class="empty">No ${activeStatus === 'all' ? '' : activeStatus + ' '}requests yet. ${activeStatus === 'open' ? 'Click "+ New Request" to post one.' : ''}</div>`;
-      return;
+  // Render the four lanes + the stats strip in one pass. When _showArchived
+  // is true, also render an Archived section below the four lanes with a
+  // "Restore" button on each row to flip the ticket back to status='open'.
+  function renderATC() {
+    const buckets = { open: [], claimed: [], in_progress: [], done: [] };
+    const archived = [];
+    for (const r of allRequests) {
+      if (r.status === 'archived') archived.push(r);
+      else if (buckets[r.status]) buckets[r.status].push(r);
     }
-
-    $('#board').innerHTML = filtered.map(req => {
-      const skills = (req.skills || '').split(',').map(s => s.trim()).filter(Boolean);
-      const target = req.target_user
-        ? `<div class="row">→ tagged <strong>${escapeHtml(req.target_user.split('@')[0])}</strong></div>`
-        : `<div class="row">→ open to the team</div>`;
-      const claimedRow = req.claimed_by
-        ? `<div class="row">✓ claimed by <strong>${escapeHtml(req.claimed_by.split('@')[0])}</strong></div>`
-        : '';
-      const dueRow = req.due_date
-        ? `<div class="row">⏱ due ${escapeHtml(req.due_date)}</div>`
-        : '';
-
-      // Show different action buttons depending on status
-      let actions = '';
-      if (req.status === 'open') {
-        actions = `<button class="primary" data-action="claim" data-id="${req.id}">Claim</button>`;
-      } else if (req.status === 'claimed') {
-        actions = `<button data-action="status" data-id="${req.id}" data-value="in_progress">Start work</button>`;
-      } else if (req.status === 'in_progress') {
-        actions = `<button class="success" data-action="status" data-id="${req.id}" data-value="done">Mark Done</button>`;
+    // Toggle the archived section + render rows. Most-recently archived first.
+    const archSection = document.getElementById('archivedSection');
+    if (archSection) {
+      archSection.hidden = !_showArchived;
+      if (_showArchived) {
+        document.getElementById('archivedCount').textContent = archived.length;
+        const list = document.getElementById('archivedList');
+        archived.sort((a,b) => new Date((b.archived_at||b.created_at||'')+'Z') - new Date((a.archived_at||a.created_at||'')+'Z'));
+        list.innerHTML = archived.length
+          ? archived.map(_atcCardHtml).map((html, i) => {
+              // Append a Restore button to each archived card. Re-uses the
+              // same delegated handler with action="restore".
+              return html.replace('</article>',
+                `<div class="atc-card-actions"><button class="atc-card-btn" data-action="restore" data-id="${archived[i].id}">Restore to inbox</button></div></article>`);
+            }).join('')
+          : '<div class="atc-lane-empty">Nothing archived.</div>';
       }
+    }
 
-      return `
-        <article class="req-card">
-          <div class="req-head">
-            <span class="pill type-${req.type}">${req.type}</span>
-            <span class="pill prio-${req.priority}">${req.priority}</span>
-            <span class="pill status-${req.status}">${req.status.replace('_', ' ')}</span>
-          </div>
-          <h3>${escapeHtml(req.title)}</h3>
-          <div class="desc">${escapeHtml(req.description)}</div>
-          ${skills.length ? `<div>${skills.map(s => `<span class="skill-chip">${escapeHtml(s)}</span>`).join('')}</div>` : ''}
-          <div class="req-meta">
-            <div class="row">posted by <strong>${escapeHtml((req.requester_name || req.requester_email || '?').split('@')[0])}</strong> · ${timeAgo(req.created_at)}</div>
-            ${target}
-            ${claimedRow}
-            ${dueRow}
-          </div>
-          ${actions ? `<div class="req-actions">${actions}</div>` : ''}
-        </article>
-      `;
-    }).join('');
+    // Per-lane render
+    for (const status of ATC_LANES) {
+      const body = document.getElementById(`lane-${status}`);
+      const countEl = document.getElementById(`lane-count-${status}`);
+      if (countEl) countEl.textContent = buckets[status].length;
+      if (!body) continue;
+      // Newest first inside each lane so freshly-arrived asks surface to the top.
+      // Done lane already feels chronological — show most-recent landings first.
+      const items = [...buckets[status]].sort((a, b) =>
+        new Date((b.created_at||'') + 'Z') - new Date((a.created_at||'') + 'Z')
+      );
+      body.innerHTML = items.length === 0
+        ? `<div class="atc-lane-empty">${ATC_LANE_EMPTY[status]}</div>`
+        : items.map(_atcCardHtml).join('');
+    }
+
+    // Stats strip
+    _renderATCStats(buckets);
   }
 
-  // Tab switching
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeStatus = tab.dataset.status;
-      renderBoard();
-    });
+  const ATC_LANE_EMPTY = {
+    open:        'No incoming tickets',
+    claimed:     'Nothing in the holding pattern',
+    in_progress: 'No tickets in flight',
+    done:        'Nothing has landed yet',
+  };
+
+  function _atcCardHtml(req) {
+    const ago = timeAgo(req.created_at);
+    const requester = (req.requester_name || req.requester_email || '?').toString().split('@')[0];
+    const target = req.target_user ? req.target_user.split('@')[0] : null;
+    const claimedBy = req.claimed_by ? req.claimed_by.split('@')[0] : null;
+    const today = new Date().toISOString().slice(0, 10);
+    const overdue = req.due_date && req.due_date < today && req.status !== 'done';
+
+    // Action button — one primary CTA per status, mirrors the original card
+    // affordances. Drag-and-drop covers everything else.
+    let actionHtml = '';
+    if (req.status === 'open') {
+      actionHtml = `<button class="atc-card-btn primary" data-action="claim" data-id="${req.id}">Claim</button>`;
+    } else if (req.status === 'claimed') {
+      actionHtml = `<button class="atc-card-btn" data-action="status" data-id="${req.id}" data-value="in_progress">Start</button>`;
+    } else if (req.status === 'in_progress') {
+      actionHtml = `<button class="atc-card-btn success" data-action="status" data-id="${req.id}" data-value="done">Land</button>`;
+    }
+
+    // Archive button — soft-delete, available on every card. Hidden behind
+    // a discreet hover-only "✕" so it doesn't dominate the card chrome.
+    const archiveBtn = req.status !== 'archived'
+      ? `<button class="atc-card-archive" data-action="archive" data-id="${req.id}" title="Archive this ticket (recoverable)">✕</button>`
+      : '';
+
+    const sec = req.is_security ? 1 : 0;
+    return `
+      <article class="atc-card" draggable="true" data-id="${req.id}" data-priority="${escapeHtml(req.priority)}" data-security="${sec}">
+        ${archiveBtn}
+        <div class="atc-card-tags">
+          ${sec ? '<span class="atc-pill-security" title="Security issue — needs technical attention">⚠️ Security</span>' : ''}
+          <span class="pill type-${escapeHtml(req.type)}">${escapeHtml(req.type)}</span>
+          <span class="pill prio-${escapeHtml(req.priority)}">${escapeHtml(req.priority)}</span>
+        </div>
+        <div class="atc-card-title">${escapeHtml(req.title)}</div>
+        <div class="atc-card-meta">
+          <span><strong>${escapeHtml(requester)}</strong> · ${ago}</span>
+          ${target ? `<span>· → <strong>${escapeHtml(target)}</strong></span>` : ''}
+          ${claimedBy ? `<span>· 🤝 <strong>${escapeHtml(claimedBy)}</strong></span>` : ''}
+          ${req.due_date ? `<span class="atc-card-due ${overdue ? 'overdue' : ''}">· ⏱ ${escapeHtml(req.due_date)}</span>` : ''}
+        </div>
+        ${actionHtml ? `<div class="atc-card-actions">${actionHtml}</div>` : ''}
+      </article>
+    `;
+  }
+
+  function _renderATCStats(buckets) {
+    const total = buckets.open.length + buckets.claimed.length + buckets.in_progress.length;
+    const urgent = allRequests.filter(r => r.priority === 'urgent' && r.status !== 'done').length;
+    const today = new Date().toISOString().slice(0, 10);
+    const overdue = allRequests.filter(r => r.due_date && r.due_date < today && r.status !== 'done').length;
+    const dayMs = 86400000;
+    const done24 = buckets.done.filter(r =>
+      r.resolved_at && (Date.now() - new Date(r.resolved_at + 'Z').getTime()) < dayMs
+    ).length;
+    // Oldest open age (in days) — a high number is a triage red flag
+    let oldestText = '—';
+    if (buckets.open.length > 0) {
+      const oldest = buckets.open.reduce((acc, r) => {
+        const t = new Date((r.created_at||'') + 'Z').getTime();
+        return (!acc || t < acc) ? t : acc;
+      }, 0);
+      const days = Math.floor((Date.now() - oldest) / dayMs);
+      oldestText = days === 0 ? '<1d' : `${days}d`;
+    }
+    document.getElementById('atc-total').textContent = total;
+    document.getElementById('atc-urgent').textContent = urgent;
+    document.getElementById('atc-overdue').textContent = overdue;
+    document.getElementById('atc-done24').textContent = done24;
+    document.getElementById('atc-oldest').textContent = oldestText;
+  }
+
+  // "Show archived" toggle — re-fetches with include_archived flag and re-renders.
+  document.getElementById('showArchivedToggle').addEventListener('change', async (e) => {
+    _showArchived = e.target.checked;
+    await loadRequests();
   });
 
-  // Card action buttons (claim, status change) — delegated
-  $('#board').addEventListener('click', async (e) => {
+  // Card action buttons (claim, status change, archive, restore) — delegated
+  // at the document level so it covers the main board AND the archived section
+  // (which lives outside #atcBoard) without needing two separate listeners.
+  document.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const id = btn.dataset.id;
     const action = btn.dataset.action;
-    const body = action === 'claim'
-      ? { claim: true }
-      : { status: btn.dataset.value };
+    let body;
+    if (action === 'claim') {
+      body = { claim: true };
+    } else if (action === 'archive') {
+      // Confirm archive — soft-delete is reversible from the archived view, but
+      // the click is easy to misfire on dense cards, so a tiny confirm is worth it.
+      const card = btn.closest('.atc-card');
+      const title = card?.querySelector('.atc-card-title')?.textContent?.trim() || 'this ticket';
+      if (!confirm(`Archive "${title}"?\n\nIt will be hidden from the board but can be restored from the archived view.`)) return;
+      body = { status: 'archived' };
+    } else if (action === 'restore') {
+      body = { status: 'open' };
+    } else {
+      body = { status: btn.dataset.value };
+    }
     btn.disabled = true;
     try {
       const r = await fetch(`/api/collab/${id}`, {
@@ -431,6 +769,63 @@
     } catch (err) {
       alert('Failed: ' + err.message);
       btn.disabled = false;
+    }
+  });
+
+  // ── Drag-and-drop between lanes ───────────────────────────
+  // HTML5 drag/drop. Card sets dragged ID via dataTransfer; lane bodies are
+  // drop targets that PATCH the request to the lane's status when dropped.
+  const board = document.getElementById('atcBoard');
+  board.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.atc-card');
+    if (!card) return;
+    e.dataTransfer.setData('text/plain', card.dataset.id);
+    e.dataTransfer.effectAllowed = 'move';
+    card.classList.add('dragging');
+  });
+  board.addEventListener('dragend', (e) => {
+    const card = e.target.closest('.atc-card');
+    if (card) card.classList.remove('dragging');
+    document.querySelectorAll('.atc-lane.drop-target').forEach(l => l.classList.remove('drop-target'));
+  });
+  board.addEventListener('dragover', (e) => {
+    const lane = e.target.closest('.atc-lane');
+    if (!lane) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.atc-lane.drop-target').forEach(l => l.classList.remove('drop-target'));
+    lane.classList.add('drop-target');
+  });
+  board.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const lane = e.target.closest('.atc-lane');
+    document.querySelectorAll('.atc-lane.drop-target').forEach(l => l.classList.remove('drop-target'));
+    if (!lane) return;
+    const id = e.dataTransfer.getData('text/plain');
+    const newStatus = lane.dataset.status;
+    if (!id || !ATC_LANES.includes(newStatus)) return;
+    // Find the dragged item; bail if it's already in this lane (no-op).
+    const item = allRequests.find(r => String(r.id) === String(id));
+    if (!item || item.status === newStatus) return;
+    try {
+      // "Open → Claimed" via drag is shorthand for the claim action
+      // (server records claimed_by and timestamp). All other transitions
+      // are plain status updates.
+      const body = (item.status === 'open' && newStatus === 'claimed')
+        ? { claim: true }
+        : { status: newStatus };
+      const r = await fetch(`/api/collab/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${r.status}`);
+      }
+      await loadRequests();
+    } catch (err) {
+      alert('Move failed: ' + err.message);
     }
   });
 
@@ -456,6 +851,7 @@
       skills: $('#m-skills').value,
       target_user: $('#m-target').value,
       due_date: $('#m-due').value || null,
+      is_security: $('#m-security').checked,
     };
     try {
       const r = await fetch('/api/collab', {
@@ -478,6 +874,9 @@
 
   loadTeam();
   loadRequests();
+  // Auto-refresh every 20s — reinforces the "live air traffic control" feel
+  // and surfaces newly-posted tickets without requiring a manual reload.
+  setInterval(loadRequests, 20000);
 </script>
 </body>
 </html>

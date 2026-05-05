@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Command — Creative Labs</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #0a0e1a; color: #e2e8f0; font-family: -apple-system, system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; }
+
+  .embed-wrap { flex: 1; position: relative; background: #000; }
+  iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  .fallback {
+    position: absolute; inset: 0; display: none;
+    align-items: center; justify-content: center; padding: 32px;
+    background: linear-gradient(135deg, #0a0e1a 0%, #111827 100%);
+  }
+  .fallback.show { display: flex; }
+  .fallback-card {
+    max-width: 560px; padding: 32px 36px; border-radius: 14px;
+    background: rgba(15,23,42,0.7); border: 1px solid rgba(34,211,238,0.2);
+  }
+  .fallback h1 { font-size: 22px; color: #22d3ee; margin-bottom: 12px; font-weight: 700; }
+  .fallback p { line-height: 1.55; color: #cbd5e1; margin-bottom: 14px; }
+  .fallback code {
+    display: block; padding: 12px 14px; background: #020617;
+    color: #5eead4; font-family: 'JetBrains Mono', Menlo, monospace;
+    font-size: 12px; border-radius: 6px; margin: 14px 0;
+    border: 1px solid rgba(34,211,238,0.15); word-break: break-all;
+  }
+  .fallback .muted { color: #64748b; font-size: 13px; }
+  .fallback a { color: #22d3ee; text-decoration: none; }
+  .fallback a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="embed-wrap">
+    <!-- WHY: Same-origin /cl/* proxy → no DNS filter, no CSP issues, auth piggybacks on the existing JWT. -->
+    <iframe id="frame" src="/cl/?zone=command" title="Robot Command (home-dashboard)"></iframe>
+    <div class="fallback" id="fallback">
+      <div class="fallback-card">
+        <h1 id="fallbackHeading">Creative Labs unavailable</h1>
+        <p id="fallbackBody">The proxy could not reach home-dashboard.</p>
+        <p class="muted">If the tunnel just rotated, paste the new URL into <code>/admin/settings</code> → System tab.</p>
+        <p class="muted">On the MacBook: <code>pm2 logs creative-labs-tunnel</code> shows the current URL.</p>
+      </div>
+    </div>
+  </div>
+
+<script>
+// WHY: Detect proxy errors (503/502 from /cl) by probing the proxy. The iframe
+// itself happily renders an upstream-error response body, so without this the
+// user would see the proxy's plain-text error page inline rather than the
+// styled fallback panel.
+(async function () {
+  const frame = document.getElementById('frame');
+  const fallback = document.getElementById('fallback');
+  const heading = document.getElementById('fallbackHeading');
+  const body = document.getElementById('fallbackBody');
+
+  function showFallback(h, b) {
+    if (h) heading.textContent = h;
+    if (b) body.textContent = b;
+    frame.style.display = 'none';
+    fallback.classList.add('show');
+  }
+
+  try {
+    const r = await fetch('/cl/', { credentials: 'same-origin' });
+    if (r.status === 503) {
+      return showFallback('Creative Labs URL not configured',
+        'An admin needs to paste the cloudflared tunnel URL into Settings → System.');
+    }
+    if (r.status === 502) {
+      return showFallback('Creative Labs tunnel unreachable',
+        'The stored URL did not respond. The tunnel likely rotated — paste the new URL into Settings → System.');
+    }
+    if (!r.ok) {
+      return showFallback('Creative Labs proxy returned an error', `HTTP ${r.status}`);
+    }
+  } catch (e) {
+    return showFallback('Creative Labs proxy error', e.message);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Glossary — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<style>
+  :root {
+    --bg: #f7f8fc;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --text: #111827;
+    --text-dim: #4b5563;
+    --text-faint: #9ca3af;
+    --accent: #f97316;        /* admin orange */
+    --accent-soft: #fff7ed;
+    --accent-deep: #c2410c;
+    --code-bg: #f3f4f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 36px 28px 80px;
+  }
+
+  /* Header */
+  .hdr-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 6px 0 8px;
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    font-size: 1.05rem;
+    color: var(--text-dim);
+    max-width: 620px;
+    margin: 0 0 24px;
+  }
+
+  /* Search */
+  .search-wrap {
+    position: sticky;
+    top: 8px;
+    z-index: 10;
+    margin-bottom: 18px;
+  }
+  .search-box {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 4px 6px 4px 44px;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.06);
+  }
+  .search-box::before {
+    content: '🔍';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    opacity: 0.6;
+  }
+  .search-box input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    padding: 12px 8px;
+    font: inherit;
+    font-size: 1rem;
+    color: var(--text);
+  }
+  .search-box input::placeholder { color: var(--text-faint); }
+  .search-meta {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    padding-left: 4px;
+  }
+
+  /* Section nav (chips) */
+  .chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 26px;
+  }
+  .chips a {
+    text-decoration: none;
+    color: var(--text-dim);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.12s;
+  }
+  .chips a:hover {
+    color: var(--accent-deep);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* Section card */
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 26px 14px;
+    margin-bottom: 22px;
+    scroll-margin-top: 18px;
+  }
+  .section h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .section .section-sub {
+    color: var(--text-dim);
+    font-size: 0.92rem;
+    margin: 0 0 18px;
+  }
+
+  /* Term blocks */
+  .term {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 18px;
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  .term:first-of-type { border-top: 0; padding-top: 4px; }
+  .term-name {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 0.98rem;
+  }
+  .term-name .alias {
+    display: block;
+    font-weight: 500;
+    color: var(--text-faint);
+    font-size: 0.78rem;
+    margin-top: 2px;
+  }
+  .term-body { font-size: 0.95rem; color: var(--text); }
+  .term-body p { margin: 0 0 6px; }
+  .term-body p:last-child { margin-bottom: 0; }
+  .term-body code {
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 0.85em;
+    color: var(--accent-deep);
+  }
+  .term-body .ex {
+    display: block;
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: var(--text-dim);
+  }
+  .term-body .ex strong { color: var(--accent-deep); margin-right: 4px; }
+
+  .term.hidden { display: none; }
+  .section.empty { display: none; }
+  .no-results {
+    display: none;
+    background: var(--card);
+    border: 1px dashed var(--border-strong);
+    border-radius: 14px;
+    padding: 30px;
+    text-align: center;
+    color: var(--text-faint);
+  }
+  .no-results.show { display: block; }
+
+  /* Footer */
+  .foot {
+    margin-top: 36px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--text-faint);
+    font-size: 0.82rem;
+    text-align: center;
+  }
+  .foot a { color: var(--accent-deep); text-decoration: none; }
+  .foot a:hover { text-decoration: underline; }
+
+  @media (max-width: 720px) {
+    .term { grid-template-columns: 1fr; gap: 4px; }
+    .term-name { font-size: 1rem; }
+    h1 { font-size: 1.7rem; }
+    .wrap { padding: 24px 18px 60px; }
+  }
+
+  /* ─── Game UI ─────────────────────────────────────────────── */
+  .game-bar {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin: 8px 0 22px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  }
+  .game-bar-loading { color: var(--text-faint); font-size: 0.86rem; }
+  .gb-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .gb-label {
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.62rem; font-weight: 700; color: var(--text-faint);
+  }
+  .gb-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.05rem; color: var(--text);
+  }
+  .gb-points .gb-value { color: var(--accent-deep); }
+  .gb-streak .gb-value .fire { font-size: 1.1rem; margin-right: 3px; }
+  .gb-progress { flex: 1; min-width: 180px; }
+  .gb-progress-track {
+    height: 8px; background: rgba(217,119,6,0.18); border-radius: 100px;
+    overflow: hidden; margin-top: 4px;
+  }
+  .gb-progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-deep));
+    border-radius: 100px; transition: width 0.4s ease;
+  }
+  .gb-cta { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .gb-btn {
+    background: var(--accent); color: white; border: 0; cursor: pointer;
+    padding: 9px 16px; border-radius: 10px;
+    font: inherit; font-weight: 700; font-size: 0.86rem;
+    box-shadow: 0 1px 3px rgba(217,119,6,0.30);
+    transition: transform 0.08s, background 0.12s;
+  }
+  .gb-btn:hover  { background: var(--accent-deep); transform: translateY(-1px); }
+  .gb-btn:active { transform: translateY(0); }
+  .gb-btn-ghost {
+    background: white; color: var(--text-dim); border: 1px solid var(--border);
+    box-shadow: none;
+  }
+  .gb-btn-ghost:hover { color: var(--accent-deep); border-color: var(--accent); background: var(--accent-soft); }
+  .gb-badges { display: flex; gap: 4px; }
+  .gb-badge {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: white; border: 1px solid var(--border);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+  }
+  .gb-badge[data-empty="true"] { opacity: 0.25; }
+
+  /* First-time intro variant of the game bar */
+  .gb-intro { flex: 1; min-width: 240px; }
+  .gb-intro-eyebrow {
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.7rem; font-weight: 700; color: var(--accent-deep);
+  }
+  .gb-intro-headline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.3rem; color: var(--text);
+    margin: 4px 0 6px;
+  }
+  .gb-intro-body { font-size: 0.86rem; color: var(--text-dim); line-height: 1.55; }
+  .gb-intro-tip {
+    font-size: 0.74rem; color: var(--text-faint);
+    margin-top: 6px; text-align: center;
+  }
+  .gb-btn-big { padding: 11px 18px; font-size: 0.95rem; }
+
+  /* Leaderboard */
+  .leaderboard {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 22px; margin: 0 0 22px;
+  }
+  .leaderboard-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .leaderboard h2 {
+    font-size: 1.1rem; margin: 0;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .leaderboard-team-stats {
+    font-size: 0.78rem; color: var(--text-dim);
+  }
+  .leaderboard-team-stats strong { color: var(--accent-deep); font-weight: 700; }
+  .leaderboard-row {
+    display: grid; grid-template-columns: 32px 1fr auto auto auto; gap: 12px;
+    padding: 8px 0; border-top: 1px solid var(--border);
+    align-items: center;
+  }
+  .leaderboard-row:first-of-type { border-top: 0; }
+  .lb-rank {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 0.95rem; color: var(--text-faint);
+    text-align: center;
+  }
+  .lb-rank.top1 { color: #b45309; font-size: 1.1rem; }
+  .lb-rank.top2 { color: #475569; }
+  .lb-rank.top3 { color: #92400e; }
+  .lb-name {
+    font-weight: 600; color: var(--text); font-size: 0.9rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .lb-name .me-tag {
+    font-size: 0.62rem; background: var(--accent); color: white;
+    padding: 1px 6px; border-radius: 100px; margin-left: 6px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .lb-title {
+    font-size: 0.74rem; color: var(--text-dim);
+    background: #f1f5f9; padding: 3px 9px; border-radius: 100px;
+  }
+  .lb-streak { font-size: 0.78rem; color: #c2410c; font-weight: 600; }
+  .lb-points {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; color: var(--accent-deep); font-size: 0.95rem;
+    text-align: right;
+  }
+
+  /* Quiz modal */
+  .quiz-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(15,23,42,0.65);
+    align-items: center; justify-content: center; padding: 30px 16px;
+  }
+  .quiz-backdrop.open { display: flex; }
+  .quiz-modal {
+    background: white; border-radius: 18px;
+    width: 100%; max-width: 600px; padding: 28px 32px 24px;
+    box-shadow: 0 30px 80px rgba(15,23,42,0.4);
+    animation: quizIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 90vh; overflow-y: auto;
+  }
+  @keyframes quizIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .quiz-progress {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px; font-size: 0.78rem; color: var(--text-dim);
+  }
+  .quiz-progress-bar {
+    flex: 1; height: 6px; background: var(--border); border-radius: 100px;
+    margin: 0 12px; overflow: hidden;
+  }
+  .quiz-progress-fill {
+    height: 100%; background: var(--accent); transition: width 0.3s;
+  }
+  .quiz-prompt-eyebrow {
+    text-transform: uppercase; letter-spacing: 0.1em;
+    font-size: 0.7rem; font-weight: 700; color: var(--accent-deep);
+    margin-bottom: 6px;
+  }
+  .quiz-term {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.7rem; color: var(--text);
+    line-height: 1.2; margin-bottom: 4px;
+  }
+  .quiz-term-alias { font-size: 0.86rem; color: var(--text-faint); margin-bottom: 18px; }
+  .quiz-question { font-size: 0.95rem; color: var(--text-dim); margin-bottom: 14px; }
+  .quiz-choices { display: flex; flex-direction: column; gap: 8px; }
+  .quiz-choice {
+    background: white; border: 2px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; text-align: left; cursor: pointer;
+    font: inherit; font-size: 0.88rem; color: var(--text);
+    transition: border-color 0.12s, background 0.12s, transform 0.08s;
+    line-height: 1.45;
+  }
+  .quiz-choice:hover:not(:disabled) {
+    border-color: var(--accent); background: var(--accent-soft);
+  }
+  .quiz-choice:disabled { cursor: default; }
+  .quiz-choice.correct {
+    border-color: #16a34a; background: #dcfce7; color: #14532d;
+    animation: pulseGreen 0.4s;
+  }
+  .quiz-choice.wrong {
+    border-color: #dc2626; background: #fee2e2; color: #7f1d1d;
+  }
+  .quiz-choice.also-correct {
+    border-color: #16a34a; opacity: 0.6;
+  }
+  @keyframes pulseGreen {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+  .quiz-actions {
+    display: flex; gap: 8px; margin-top: 18px; justify-content: space-between;
+  }
+  .quiz-skip {
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--text-faint); font: inherit; font-size: 0.82rem;
+  }
+  .quiz-skip:hover { color: var(--text-dim); }
+  .quiz-feedback {
+    margin-top: 12px; font-size: 0.84rem; padding: 10px 12px;
+    border-radius: 8px; display: none;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.win  { background: #dcfce7; color: #14532d; border: 1px solid rgba(22,163,74,0.30); }
+  .quiz-feedback.lose { background: #fef3c7; color: #78350f; border: 1px solid rgba(217,119,6,0.30); }
+  .quiz-feedback .pts { font-weight: 700; }
+  .quiz-next-btn {
+    background: var(--accent); color: white; border: 0; cursor: pointer;
+    padding: 9px 16px; border-radius: 10px;
+    font: inherit; font-weight: 700; font-size: 0.86rem;
+  }
+  .quiz-next-btn:hover { background: var(--accent-deep); }
+
+  /* Result screen */
+  .quiz-result-headline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 2rem; color: var(--text);
+    text-align: center; margin: 6px 0 4px;
+  }
+  .quiz-result-score {
+    text-align: center; font-size: 1.2rem; color: var(--accent-deep);
+    margin-bottom: 14px;
+  }
+  .quiz-result-score .nbig {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.6rem; font-weight: 800;
+  }
+  .quiz-result-breakdown {
+    background: var(--accent-soft); border-radius: 10px;
+    padding: 12px 16px; font-size: 0.88rem; margin-bottom: 12px;
+  }
+  .quiz-result-breakdown div {
+    display: flex; justify-content: space-between; padding: 3px 0;
+  }
+  .quiz-result-breakdown .total {
+    border-top: 1px solid rgba(217,119,6,0.30);
+    margin-top: 6px; padding-top: 8px; font-weight: 700;
+    color: var(--accent-deep);
+  }
+  .quiz-new-badges {
+    background: linear-gradient(135deg, #fff7ed, #fef3c7);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 12px;
+    text-align: center;
+  }
+  .quiz-new-badges-label {
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.7rem; font-weight: 700; color: var(--accent-deep);
+    margin-bottom: 6px;
+  }
+  .quiz-new-badges-list {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  }
+  .quiz-new-badge {
+    background: white; border: 2px solid var(--accent);
+    padding: 8px 14px; border-radius: 100px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.84rem; font-weight: 600;
+  }
+  .quiz-new-badge .emoji { font-size: 1.1rem; }
+  .quiz-level-up {
+    background: linear-gradient(90deg, #fbbf24, #d97706);
+    color: white; padding: 10px 16px; border-radius: 10px;
+    font-weight: 700; text-align: center; margin-bottom: 12px;
+    animation: levelUpFlash 1s ease-out;
+  }
+  @keyframes levelUpFlash {
+    0%   { transform: scale(0.9); opacity: 0; }
+    50%  { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Confetti — pure CSS, lightweight */
+  .confetti {
+    position: fixed; inset: 0; pointer-events: none; z-index: 300; overflow: hidden;
+  }
+  .confetti span {
+    position: absolute; top: -20px;
+    width: 8px; height: 14px; opacity: 0.95;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    to { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* Section chip — "Quiz me on Git" inline trigger */
+  .section h2 .quiz-section-btn {
+    margin-left: 12px; font-size: 0.7rem; font-weight: 700;
+    background: var(--accent-soft); color: var(--accent-deep);
+    border: 1px solid rgba(217,119,6,0.30); border-radius: 100px;
+    padding: 4px 10px; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    vertical-align: middle; line-height: 1;
+  }
+  .section h2 .quiz-section-btn:hover {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+
+  @media (max-width: 720px) {
+    .game-bar {
+      padding: 12px 14px; gap: 10px;
+      /* Stack sensibly on phones: each stat block goes 50% wide, badges + CTA full-width below */
+      flex-direction: row; flex-wrap: wrap;
+    }
+    .gb-stat { flex-basis: calc(50% - 6px); min-width: 0; }
+    .gb-progress { flex-basis: 100%; }
+    .gb-badges { order: 90; flex-basis: 100%; justify-content: flex-start; }
+    .gb-cta { order: 100; flex-basis: 100%; margin-left: 0; }
+    .gb-cta .gb-btn { width: 100%; padding: 12px 16px; font-size: 0.95rem; }
+    .gb-intro { flex-basis: 100%; }
+    .gb-intro-headline { font-size: 1.15rem; }
+
+    .quiz-modal { padding: 22px 22px 18px; }
+    .quiz-term { font-size: 1.4rem; }
+
+    .leaderboard-row { grid-template-columns: 28px 1fr auto; row-gap: 4px; }
+    .lb-title, .lb-streak { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr-eyebrow">Team Reference · 🎮 Earn Points</div>
+    <h1>Team Glossary</h1>
+    <p class="lede">Plain-English definitions for the technical terms you'll hear around Accelerate Robotics. Type to search across every section — or hit <strong>Quiz Me</strong> to earn points toward swag.</p>
+
+    <!-- ─── Game stats bar ───────────────────────────────────── -->
+    <div class="game-bar" id="gameBar">
+      <div class="game-bar-loading">Loading your stats…</div>
+    </div>
+
+    <!-- ─── Leaderboard (lives near the top so the team can see momentum) ─── -->
+    <div class="leaderboard" id="leaderboardCard">
+      <div class="leaderboard-head">
+        <h2>🏆 Team Leaderboard</h2>
+        <div class="leaderboard-team-stats" id="teamStats"></div>
+      </div>
+      <div id="leaderboardBody"><div style="color:var(--text-faint);font-size:0.86rem;">Loading…</div></div>
+    </div>
+
+    <div class="search-wrap">
+      <div class="search-box">
+        <input id="q" type="search" placeholder="Search terms — e.g. fork, pull request, deploy…" autocomplete="off" autofocus>
+      </div>
+      <div class="search-meta" id="searchMeta"></div>
+    </div>
+
+    <nav class="chips" aria-label="Jump to section">
+      <a href="#git">Git &amp; GitHub</a>
+      <a href="#process">Code review &amp; deploys</a>
+      <a href="#types">Commit types</a>
+      <a href="#stack">Software &amp; data</a>
+      <a href="#robotics">Robots &amp; elevators</a>
+      <a href="#business">Business</a>
+    </nav>
+
+    <!-- ─── Git & GitHub ─────────────────────────────────────────── -->
+    <section class="section" id="git">
+      <h2>Git &amp; GitHub</h2>
+      <p class="section-sub">Git is the system that tracks every change to our code. GitHub is the website where that history lives so the team can collaborate.</p>
+
+      <div class="term">
+        <div class="term-name">Repository<span class="alias">aka "repo"</span></div>
+        <div class="term-body">
+          <p>The folder of code for one project, plus its full change history. We have several — <code>accelerate-robotics</code>, <code>accelerate-elevator</code>, <code>accelerate-thesis-hotel</code>, <code>accelerate-carts</code>.</p>
+          <span class="ex"><strong>Think of it like:</strong> a Google Doc that remembers every edit anyone has ever made, by anyone, forever.</span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Clone</div>
+        <div class="term-body">
+          <p>Download a full copy of a repo to your laptop so you can read or change the code locally.</p>
+          <span class="ex"><strong>Why we say it:</strong> "I cloned the repo" = "I have the code on my machine now."</span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Fork</div>
+        <div class="term-body">
+          <p>Make your own copy of someone else's repo on GitHub. Used mostly for open-source. Internally we work on branches in the same repo, not forks.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Branch</div>
+        <div class="term-body">
+          <p>A named lane of changes running parallel to the main code. You start a branch, make changes there, then merge it back. Multiple people can work on different branches at once without stepping on each other.</p>
+          <span class="ex"><strong>Think of it like:</strong> a draft that doesn't affect the published version until everyone agrees it's good.</span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name"><code>main</code></div>
+        <div class="term-body">
+          <p>The single branch that represents what's actually live. Production deploys come from here. We never commit directly to <code>main</code> — every change first lives on its own branch and gets reviewed before it merges in.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Fresh branch</div>
+        <div class="term-body">
+          <p>A brand-new branch started from the latest <code>main</code> — a clean slate for one specific piece of work. Starting "fresh" matters because if your branch is based on stale code, your changes could conflict with what's already shipped.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Commit</div>
+        <div class="term-body">
+          <p>A single saved snapshot of changes, with a short message explaining what changed and why. The Activity Calendar on the Command Center counts commits.</p>
+          <span class="ex"><strong>Think of it like:</strong> hitting "Save" with a sticky note attached.</span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Push</div>
+        <div class="term-body">
+          <p>Send your local commits up to GitHub so others can see them and so they're backed up off your laptop.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Pull</div>
+        <div class="term-body">
+          <p>Download new commits from GitHub onto your laptop, so your local copy is up to date with what teammates have shipped.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Pull request<span class="alias">aka "PR"</span></div>
+        <div class="term-body">
+          <p>A formal proposal on GitHub that says "please merge my branch into <code>main</code>." It shows the diff, lets reviewers comment line by line, and runs the test suite. Once it's approved and tests pass, it merges.</p>
+          <span class="ex"><strong>Why "pull":</strong> you're requesting that <code>main</code> pull your changes in.</span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Merge</div>
+        <div class="term-body">
+          <p>Combine the changes from one branch into another. The most common merge is "feature branch → <code>main</code>" at the end of a PR.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Squash</div>
+        <div class="term-body">
+          <p>When merging a PR, collapse all of its commits into one tidy commit on <code>main</code>. Keeps the history readable. We squash-merge by default.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Rebase</div>
+        <div class="term-body">
+          <p>Replay your branch's commits on top of the latest <code>main</code>, so it's "current" before merging. Useful when <code>main</code> has moved while you were working.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Conflict<span class="alias">"merge conflict"</span></div>
+        <div class="term-body">
+          <p>When two branches changed the same line of the same file and Git can't decide which wins. A human resolves it by picking which version to keep (or blending them).</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Stash</div>
+        <div class="term-body">
+          <p>Temporarily set aside uncommitted changes so you can switch branches, then bring them back later. Like a pocket for unfinished work.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Diff</div>
+        <div class="term-body">
+          <p>The line-by-line view of what changed — red lines were removed, green lines were added. PRs and code reviews are mostly about reading diffs.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">HEAD</div>
+        <div class="term-body">
+          <p>Git's word for "where you are right now" — the most recent commit on the branch you're currently on.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Origin</div>
+        <div class="term-body">
+          <p>The default name for the GitHub copy of the repo your laptop talks to when you push or pull.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Tag / release</div>
+        <div class="term-body">
+          <p>A stable label stuck on a specific commit, usually a version number like <code>v1.4.0</code>. Used for cutting versions and for rollbacks.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Process & deployment ─────────────────────────────────── -->
+    <section class="section" id="process">
+      <h2>Code review &amp; deploys</h2>
+      <p class="section-sub">How code gets from a teammate's laptop to the live site.</p>
+
+      <div class="term">
+        <div class="term-name">Code review</div>
+        <div class="term-body">
+          <p>Another teammate reads your PR's diff and either approves it or asks for changes. Required before anything merges to <code>main</code>.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">CI<span class="alias">Continuous Integration</span></div>
+        <div class="term-body">
+          <p>The automated test/lint runner that fires on every PR. Green checkmark = safe to merge. Red X = something broke; fix before merging.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">CD<span class="alias">Continuous Deployment</span></div>
+        <div class="term-body">
+          <p>Auto-deploy to production whenever <code>main</code> advances. No manual "push to prod" step.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Deploy</div>
+        <div class="term-body">
+          <p>Push the new code out to where users can see it. Usually triggered automatically by a merge to <code>main</code>.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Production<span class="alias">"prod"</span></div>
+        <div class="term-body">
+          <p>The live site real users hit. Most cautious changes go through staging first.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Staging</div>
+        <div class="term-body">
+          <p>A near-identical copy of production used for last-mile testing — same code paths, but no real users yet.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Dev / development</div>
+        <div class="term-body">
+          <p>Your laptop — where work-in-progress lives before going to staging or prod.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Hotfix</div>
+        <div class="term-body">
+          <p>An urgent fix that goes straight to <code>main</code> and prod, skipping the usual rhythm because something is on fire.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Rollback</div>
+        <div class="term-body">
+          <p>Re-deploy the previous version because the current one is broken. The fastest way out of a bad release.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Lint</div>
+        <div class="term-body">
+          <p>An auto-checker that flags risky or stylistically inconsistent code patterns. Runs in CI alongside tests.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Test (unit, integration, E2E)</div>
+        <div class="term-body">
+          <p><strong>Unit</strong> tests one function in isolation. <strong>Integration</strong> tests a few pieces working together (e.g. an API endpoint hitting the database). <strong>End-to-End (E2E)</strong> tests the whole app like a real user — clicking buttons in a real browser.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Build</div>
+        <div class="term-body">
+          <p>The step that bundles, compiles, or minifies code for shipping. We have a minimal build — most of our code ships as written.</p>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="term-name">Auto-merge</div>
+        <div class="term-body">
+          <p>Tell GitHub: "merge this PR automatically the moment CI passes and reviewers approve." Saves babysitting.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Commit types ─────────────────────────────────────────── -->
+    <section class="section" id="types">
+      <h2>Commit message types</h2>
+      <p class="section-sub">Every commit message starts with a type so you can scan history at a glance.</p>
+
+      <div class="term">
+        <div class="term-name"><code>feat</code></div>
+        <div class="term-body"><p>A new capability for users — a feature being added.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name"><code>fix</code></div>
+        <div class="term-body"><p>A bug fix.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name"><code>refactor</code></div>
+        <div class="term-body"><p>Internal restructure with no behavior change. Same outcome, cleaner code.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name"><code>docs</code></div>
+        <div class="term-body"><p>Documentation only — no code change.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name"><code>test</code></div>
+        <div class="term-body"><p>Adding or fixing tests.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name"><code>chore</code></div>
+        <div class="term-body"><p>Housekeeping — dependency bumps, config tweaks, file renames.</p></div>
+      </div>
+    </section>
+
+    <!-- ─── Stack ───────────────────────────────────────────────── -->
+    <section class="section" id="stack">
+      <h2>Software &amp; data</h2>
+      <p class="section-sub">Pieces of the app you'll hear named.</p>
+
+      <div class="term">
+        <div class="term-name">API</div>
+        <div class="term-body">
+          <p>The set of URLs the front-end (and other tools) call to read or change data on the server. Each URL is an "endpoint."</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Endpoint</div>
+        <div class="term-body">
+          <p>One specific URL on the server, like <code>/api/deals</code>. Each endpoint does one thing — list deals, create a deal, etc.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Frontend</div>
+        <div class="term-body">
+          <p>The part that runs in your browser — what users see and click.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Backend</div>
+        <div class="term-body">
+          <p>The part that runs on a server. It stores data, sends emails, and serves the frontend.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Database</div>
+        <div class="term-body">
+          <p>Where data is stored permanently. We use SQLite — a single file on disk that the backend reads from and writes to.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Schema</div>
+        <div class="term-body">
+          <p>The shape of the database — which tables exist, what columns each has, and which fields are required.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Migration</div>
+        <div class="term-body">
+          <p>A script that updates the database schema (adds a column, renames a table, etc.) without losing existing data.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Cache</div>
+        <div class="term-body">
+          <p>Saved-aside data so we don't have to recompute or re-fetch it. Faster, but can go stale — gets refreshed on a timer.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">JWT<span class="alias">JSON Web Token</span></div>
+        <div class="term-body">
+          <p>The signed token that proves you're logged in as an admin. Lives in a secure browser cookie, expires after 24 hours.</p>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-name">Edge case</div>
+        <div class="term-body">
+          <p>A rare or unusual scenario that often breaks code if it isn't explicitly handled (empty inputs, two users editing at once, etc.).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Robotics & elevators ─────────────────────────────────── -->
+    <section class="section" id="robotics">
+      <h2>Robots &amp; elevators</h2>
+      <p class="section-sub">Selected terms — full list in <a href="/repos/accelerate-robotics/docs/00-overview/glossary.md">docs/00-overview/glossary.md</a>.</p>
+
+      <div class="term">
+        <div class="term-name">AMR</div>
+        <div class="term-body"><p>Autonomous Mobile Robot — any wheeled floor-going robot that localizes and navigates on its own.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">Button emulator<span class="alias">"the wedge"</span></div>
+        <div class="term-body"><p>Our universal elevator-integration product — a small board that wires in parallel to existing push-buttons and lets a robot "press" them over BLE/LoRa, without touching the elevator's firmware.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">E-Box</div>
+        <div class="term-body"><p>Keenon's proprietary robot-elevator bridge hardware. Master + slave + RFID tags. Vendor-locked.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">LiDAR</div>
+        <div class="term-body"><p>Light Detection and Ranging — a laser scanner robots use to map their surroundings and avoid obstacles.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">LoRa</div>
+        <div class="term-body"><p>Long Range, low-power radio in the 850–930 MHz band. Penetrates elevator shafts where Bluetooth can't.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">SLAM</div>
+        <div class="term-body"><p>Simultaneous Localization and Mapping — how robots build internal floor plans while figuring out where they are inside them.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">Hall call / Car call</div>
+        <div class="term-body"><p><strong>Hall call</strong> = pressing the up/down button at the elevator lobby. <strong>Car call</strong> = pressing a floor number from inside the cab.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">RaaS</div>
+        <div class="term-body"><p>Robot-as-a-Service — leasing robots bundled with management and support, instead of selling them outright.</p></div>
+      </div>
+    </section>
+
+    <!-- ─── Business ─────────────────────────────────────────────── -->
+    <section class="section" id="business">
+      <h2>Business</h2>
+      <p class="section-sub">The acronyms you'll see in pipeline notes and proposals.</p>
+
+      <div class="term">
+        <div class="term-name">ARR / MRR</div>
+        <div class="term-body"><p>Annual / Monthly Recurring Revenue. The portion of revenue that repeats predictably (subscriptions, RaaS).</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">Capex / Opex</div>
+        <div class="term-body"><p><strong>Capex</strong> = capital expenditure (one-time hardware buys, build-outs). <strong>Opex</strong> = ongoing operational expenditure (service, maintenance).</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">KOL</div>
+        <div class="term-body"><p>Key Opinion Leader — a respected expert whose endorsement drives industry adoption.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">LOI</div>
+        <div class="term-body"><p>Letter of Intent — a non-binding signal that someone plans to do business with us.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">POC</div>
+        <div class="term-body"><p>Proof of Concept — a small deployment to demonstrate the idea works before committing to the full project.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">SLA</div>
+        <div class="term-body"><p>Service Level Agreement — the contract clause specifying how fast we respond and how often the system is up.</p></div>
+      </div>
+      <div class="term">
+        <div class="term-name">TAM</div>
+        <div class="term-body"><p>Total Addressable Market — the maximum revenue if we captured 100% of every potential customer.</p></div>
+      </div>
+    </section>
+
+    <div class="no-results" id="noResults">No matches. Try a different word.</div>
+
+    <!-- ─── Quiz modal ──────────────────────────────────────── -->
+    <div class="quiz-backdrop" id="quizBackdrop" onclick="if(event.target===this)closeQuiz()">
+      <div class="quiz-modal" id="quizModal" role="dialog" aria-labelledby="quizTitle">
+        <div id="quizContent"></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      Source of truth: <a href="/repos/accelerate-robotics/docs/00-overview/glossary.md">docs/00-overview/glossary.md</a> · Missing a term? Add it there and the next deploy will pick it up.
+    </div>
+  </div>
+
+<script>
+(function() {
+  const q = document.getElementById('q');
+  const meta = document.getElementById('searchMeta');
+  const noRes = document.getElementById('noResults');
+  const sections = Array.from(document.querySelectorAll('.section'));
+  const terms = Array.from(document.querySelectorAll('.term'));
+
+  // Pre-compute searchable text once. Lowercased, includes name + body so a
+  // search for "github copy" finds "Fork" via its body text.
+  const cache = terms.map(t => ({
+    el: t,
+    text: (t.textContent || '').toLowerCase(),
+    section: t.closest('.section'),
+  }));
+
+  function applyFilter(raw) {
+    const needle = (raw || '').trim().toLowerCase();
+    let visible = 0;
+    if (!needle) {
+      cache.forEach(c => c.el.classList.remove('hidden'));
+      sections.forEach(s => s.classList.remove('empty'));
+      noRes.classList.remove('show');
+      meta.textContent = '';
+      return;
+    }
+    // Word-by-word AND match — every space-separated token must appear.
+    const tokens = needle.split(/\s+/).filter(Boolean);
+    cache.forEach(c => {
+      const hit = tokens.every(t => c.text.includes(t));
+      c.el.classList.toggle('hidden', !hit);
+      if (hit) visible++;
+    });
+    sections.forEach(s => {
+      const anyVisible = s.querySelectorAll('.term:not(.hidden)').length > 0;
+      s.classList.toggle('empty', !anyVisible);
+    });
+    noRes.classList.toggle('show', visible === 0);
+    meta.textContent = `${visible} match${visible === 1 ? '' : 'es'} for "${raw.trim()}"`;
+  }
+
+  q.addEventListener('input', e => applyFilter(e.target.value));
+
+  // Smooth-scroll the chip nav and respect the sticky search bar height.
+  document.querySelectorAll('.chips a').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// GAME MODE — points, levels, streaks, badges, quiz
+// ═══════════════════════════════════════════════════════════════════
+(function() {
+  const SECTION_LABELS = {
+    git: 'Git & GitHub',
+    process: 'Code review & deploys',
+    types: 'Commit types',
+    stack: 'Software & data',
+    robotics: 'Robots & elevators',
+    business: 'Business',
+  };
+  const SECTION_IDS = ['git', 'process', 'types', 'stack', 'robotics', 'business'];
+
+  let ME = null;          // /me payload
+  let SESSION = null;     // active quiz: { session_id, questions: [{q_id, term, choices, answered, was_correct}], idx }
+
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function fireConfetti(count = 60) {
+    const colors = ['#d97706', '#fbbf24', '#22c55e', '#3b82f6', '#ec4899', '#a855f7'];
+    const root = document.createElement('div');
+    root.className = 'confetti';
+    document.body.appendChild(root);
+    for (let i = 0; i < count; i++) {
+      const span = document.createElement('span');
+      span.style.left = (Math.random() * 100) + 'vw';
+      span.style.background = colors[i % colors.length];
+      span.style.animationDuration = (1.8 + Math.random() * 1.4) + 's';
+      span.style.animationDelay = (Math.random() * 0.4) + 's';
+      span.style.transform = `rotate(${Math.random() * 360}deg)`;
+      span.style.borderRadius = Math.random() < 0.5 ? '2px' : '50%';
+      root.appendChild(span);
+    }
+    setTimeout(() => root.remove(), 4000);
+  }
+
+  // ── Stats bar ─────────────────────────────────────────────────
+  async function loadMe() {
+    try {
+      const res = await fetch('/api/glossary-game/me', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      ME = data.me;
+      window._GAME_CFG = { badges_catalog: data.badges_catalog, levels: data.levels, points: data.points_table };
+      renderGameBar();
+    } catch (err) {
+      document.getElementById('gameBar').innerHTML =
+        '<div class="game-bar-loading">Game stats unavailable: ' + escHtml(err.message) + '</div>';
+    }
+  }
+
+  function renderGameBar() {
+    if (!ME) return;
+    const m = ME;
+    const earnedCodes = new Set(m.badges.map(b => b.code));
+    const allBadges = (window._GAME_CFG?.badges_catalog || []);
+    const badgeRow = allBadges.map(b => `
+      <div class="gb-badge" data-empty="${earnedCodes.has(b.code) ? 'false' : 'true'}" title="${escHtml(b.label)} — ${escHtml(b.desc)}">${b.emoji}</div>
+    `).join('');
+
+    const pct = Math.round(m.progress_to_next * 100);
+    const nextSummary = m.next_level_at
+      ? `${m.next_level_at - m.points_total} pts to <strong>${escHtml(m.next_title)}</strong>`
+      : `Max level reached — you're a legend.`;
+
+    // First-time vs returning UI: a brand-new player gets a warmer intro
+    // explaining the loop. Returning players see the standard stats grid.
+    const isNew = m.total_points === 0 && m.quizzes_completed === 0;
+    if (isNew) {
+      document.getElementById('gameBar').innerHTML = `
+        <div class="gb-intro">
+          <div class="gb-intro-eyebrow">👋 Welcome, ${escHtml(m.display_name)}</div>
+          <div class="gb-intro-headline">Earn points → unlock swag.</div>
+          <div class="gb-intro-body">
+            Hit <strong>Quiz Me</strong> to play your first 10-question round. You'll earn
+            <strong>10 pts per right answer</strong>, plus bonuses for completion, perfect runs, and
+            daily streaks. Climb the leaderboard, unlock 6 badges, and reach <strong>Code Sensei</strong> at 6,000 pts.
+          </div>
+        </div>
+        <div class="gb-cta">
+          <button class="gb-btn gb-btn-big" onclick="window._startQuiz(null)">🎮 Start your first quiz</button>
+          <div class="gb-intro-tip">First quiz earns the 🆕 First Steps badge.</div>
+        </div>
+      `;
+      return;
+    }
+
+    document.getElementById('gameBar').innerHTML = `
+      <div class="gb-stat gb-points" title="Total points earned">
+        <span class="gb-label">Points</span>
+        <span class="gb-value">${m.total_points.toLocaleString()}</span>
+      </div>
+      <div class="gb-stat" title="Current level">
+        <span class="gb-label">Level ${m.level}</span>
+        <span class="gb-value">${escHtml(m.title)}</span>
+      </div>
+      <div class="gb-stat gb-streak" title="Quiz once a day to keep your streak">
+        <span class="gb-label">Streak</span>
+        <span class="gb-value"><span class="fire">🔥</span>${m.current_streak} day${m.current_streak === 1 ? '' : 's'}</span>
+      </div>
+      <div class="gb-progress">
+        <span class="gb-label">${nextSummary}</span>
+        <div class="gb-progress-track"><div class="gb-progress-fill" style="width:${pct}%;"></div></div>
+      </div>
+      <div class="gb-badges" title="Badges earned">${badgeRow}</div>
+      <div class="gb-cta">
+        <button class="gb-btn" onclick="window._startQuiz(null)">🎮 Quiz Me</button>
+      </div>
+    `;
+  }
+
+  // ── Leaderboard ────────────────────────────────────────────────
+  async function loadLeaderboard() {
+    try {
+      const res = await fetch('/api/glossary-game/leaderboard', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderTeamStats(data.team || { players: 0, total_points: 0 });
+      renderLeaderboard(data.players || [], data.team || { players: 0 });
+    } catch (err) {
+      document.getElementById('leaderboardBody').innerHTML =
+        `<div style="color:var(--text-faint);font-size:0.86rem;">Leaderboard unavailable: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  function renderTeamStats(team) {
+    const el = document.getElementById('teamStats');
+    if (!el) return;
+    if (team.players === 0) {
+      el.innerHTML = `<span>No one's playing yet — be first! 🥇</span>`;
+    } else {
+      el.innerHTML = `<strong>${team.players}</strong> ${team.players === 1 ? 'player' : 'players'} · <strong>${team.total_points.toLocaleString()}</strong> total pts`;
+    }
+  }
+
+  function renderLeaderboard(players, team) {
+    const body = document.getElementById('leaderboardBody');
+    if (!players.length) {
+      body.innerHTML = `
+        <div style="text-align:center;padding:18px 12px;color:var(--text-dim);font-size:0.92rem;">
+          The board is empty — be the first to score.
+          <div style="margin-top:6px;font-size:0.82rem;color:var(--text-faint);">
+            Click <strong>Quiz Me</strong> above to put your name up here.
+          </div>
+        </div>`;
+      return;
+    }
+    const myEmail = ME?.email;
+    const onBoard = players.some(p => p.email === myEmail);
+    const meRow = (!onBoard && ME && ME.total_points > 0) ? `
+      <div class="leaderboard-row">
+        <div class="lb-rank">—</div>
+        <div class="lb-name">${escHtml(ME.display_name)}<span class="me-tag">you</span></div>
+        <span class="lb-title">${escHtml(ME.title)}</span>
+        ${ME.current_streak > 0 ? `<span class="lb-streak">🔥 ${ME.current_streak}</span>` : '<span></span>'}
+        <div class="lb-points">${ME.total_points.toLocaleString()}</div>
+      </div>
+      <div style="font-size:0.74rem;color:var(--text-faint);text-align:center;padding:6px 0;">↑ keep going to crack the top 10</div>
+    ` : '';
+
+    body.innerHTML = players.map(p => {
+      const rankClass = p.rank === 1 ? 'top1' : p.rank === 2 ? 'top2' : p.rank === 3 ? 'top3' : '';
+      const rankIcon = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : `#${p.rank}`;
+      const isMe = p.email === myEmail;
+      const streakBit = p.current_streak > 0 ? `<span class="lb-streak">🔥 ${p.current_streak}</span>` : '<span></span>';
+      return `
+        <div class="leaderboard-row">
+          <div class="lb-rank ${rankClass}">${rankIcon}</div>
+          <div class="lb-name">${escHtml(p.display_name)}${isMe ? '<span class="me-tag">you</span>' : ''}</div>
+          <span class="lb-title">${escHtml(p.title)}</span>
+          ${streakBit}
+          <div class="lb-points">${p.total_points.toLocaleString()}</div>
+        </div>
+      `;
+    }).join('') + meRow;
+  }
+
+  // ── Quiz flow ─────────────────────────────────────────────────
+  async function startQuiz(sectionId) {
+    try {
+      const res = await fetch('/api/glossary-game/quiz/start', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: 10, sectionId: sectionId || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      SESSION = {
+        session_id: data.session_id,
+        questions: data.questions.map(q => ({ ...q, answered: false, was_correct: false, picked_id: null })),
+        idx: 0,
+      };
+      document.getElementById('quizBackdrop').classList.add('open');
+      renderCurrentQuestion();
+    } catch (err) {
+      alert('Could not start quiz: ' + err.message);
+    }
+  }
+  window._startQuiz = startQuiz;
+
+  function closeQuiz() {
+    document.getElementById('quizBackdrop').classList.remove('open');
+    SESSION = null;
+  }
+  window.closeQuiz = closeQuiz;
+
+  function renderCurrentQuestion() {
+    if (!SESSION) return;
+    const q = SESSION.questions[SESSION.idx];
+    if (!q) return finishQuiz();
+    const total = SESSION.questions.length;
+    const pct = Math.round(((SESSION.idx) / total) * 100);
+    document.getElementById('quizContent').innerHTML = `
+      <div class="quiz-progress">
+        <span>Question ${SESSION.idx + 1} of ${total}</span>
+        <div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:${pct}%;"></div></div>
+        <span>${q.section_label}</span>
+      </div>
+      <div class="quiz-prompt-eyebrow">Match the term to its definition</div>
+      <div class="quiz-term">${escHtml(q.term)}</div>
+      ${q.term_alias ? `<div class="quiz-term-alias">${escHtml(q.term_alias)}</div>` : '<div class="quiz-term-alias"></div>'}
+      <div class="quiz-question">Which definition fits?</div>
+      <div class="quiz-choices">
+        ${q.choices.map(c => `
+          <button class="quiz-choice" data-cid="${c.id}" onclick="window._answer('${c.id}')">${escHtml(c.text)}</button>
+        `).join('')}
+      </div>
+      <div class="quiz-feedback" id="quizFb"></div>
+      <div class="quiz-actions">
+        <button class="quiz-skip" onclick="window.closeQuiz()">Quit quiz</button>
+        <span></span>
+      </div>
+    `;
+  }
+
+  async function answer(choiceId) {
+    if (!SESSION) return;
+    const q = SESSION.questions[SESSION.idx];
+    if (q.answered) return;
+    q.answered = true; q.picked_id = choiceId;
+
+    // Visual lock: disable all buttons.
+    const btns = document.querySelectorAll('.quiz-choice');
+    btns.forEach(b => b.disabled = true);
+
+    try {
+      const res = await fetch('/api/glossary-game/quiz/answer', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: SESSION.session_id, q_id: q.q_id, choice_id: choiceId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      q.was_correct = data.correct;
+      const correctBtn = document.querySelector(`.quiz-choice[data-cid="${data.correct_choice_id}"]`);
+      const pickedBtn  = document.querySelector(`.quiz-choice[data-cid="${choiceId}"]`);
+      if (data.correct) {
+        pickedBtn.classList.add('correct');
+        document.getElementById('quizFb').innerHTML = `<span class="pts">+${data.awarded_points} pts</span> · Nailed it.`;
+        document.getElementById('quizFb').className = 'quiz-feedback win show';
+      } else {
+        pickedBtn.classList.add('wrong');
+        if (correctBtn && correctBtn !== pickedBtn) correctBtn.classList.add('also-correct');
+        document.getElementById('quizFb').innerHTML = `Not quite — the correct answer is highlighted. (${data.correct_so_far}/${data.answered} right so far)`;
+        document.getElementById('quizFb').className = 'quiz-feedback lose show';
+      }
+      // Replace skip with Next
+      const actions = document.querySelector('.quiz-actions');
+      const isLast = SESSION.idx >= SESSION.questions.length - 1;
+      actions.innerHTML = `
+        <button class="quiz-skip" onclick="window.closeQuiz()">Quit quiz</button>
+        <button class="quiz-next-btn" onclick="window._next()">${isLast ? 'See results →' : 'Next question →'}</button>
+      `;
+    } catch (err) {
+      alert('Answer submit failed: ' + err.message);
+    }
+  }
+  window._answer = answer;
+
+  function next() {
+    if (!SESSION) return;
+    SESSION.idx++;
+    if (SESSION.idx >= SESSION.questions.length) finishQuiz();
+    else renderCurrentQuestion();
+  }
+  window._next = next;
+
+  async function finishQuiz() {
+    if (!SESSION) return;
+    try {
+      const res = await fetch('/api/glossary-game/quiz/finish', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: SESSION.session_id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      renderResult(data);
+      // Trigger celebration if score warrants
+      if (data.perfect || data.leveled_up || (data.new_badges && data.new_badges.length)) fireConfetti(140);
+      else if (data.correct >= 7) fireConfetti(60);
+      // Refresh stats + leaderboard for next time
+      loadMe();
+      loadLeaderboard();
+    } catch (err) {
+      alert('Could not finalize quiz: ' + err.message);
+      closeQuiz();
+    }
+  }
+
+  function renderResult(r) {
+    const headline = r.perfect ? '🏆 Perfect Score!' : r.correct >= 8 ? '🔥 Crushed it!' : r.correct >= 5 ? '💪 Solid run' : '📚 Keep going';
+    // Use server-computed totals — they include level-up cascades exactly.
+    const total = r.awarded.total;
+    const html = `
+      ${r.leveled_up ? `<div class="quiz-level-up">🎉 Level up! Welcome to <strong>${escHtml(r.me.title)}</strong> (Level ${r.me.level}).</div>` : ''}
+      ${r.new_badges?.length ? `
+        <div class="quiz-new-badges">
+          <div class="quiz-new-badges-label">New badges earned</div>
+          <div class="quiz-new-badges-list">
+            ${r.new_badges.map(b => `<div class="quiz-new-badge"><span class="emoji">${b.emoji}</span><span>${escHtml(b.label)}</span></div>`).join('')}
+          </div>
+        </div>` : ''}
+      <div class="quiz-result-headline">${headline}</div>
+      <div class="quiz-result-score"><span class="nbig">${r.correct}</span> / ${r.total} correct</div>
+      <div class="quiz-result-breakdown">
+        <div><span>Per-question (${r.correct} × 10)</span><span>+${r.awarded.per_correct_total}</span></div>
+        <div><span>Quiz completion</span><span>+${r.awarded.completion}</span></div>
+        ${r.awarded.perfect_bonus ? `<div><span>Perfect-score bonus</span><span>+${r.awarded.perfect_bonus}</span></div>` : ''}
+        ${r.awarded.streak ? `<div><span>Daily streak (🔥 ${r.me.current_streak})</span><span>+${r.awarded.streak}</span></div>` : ''}
+        ${r.awarded.level_up_bonus ? `<div><span>Level-up bonus</span><span>+${r.awarded.level_up_bonus}</span></div>` : ''}
+        <div class="total"><span>This run</span><span>+${total}</span></div>
+      </div>
+      <div style="text-align:center;color:var(--text-dim);font-size:0.86rem;margin-bottom:14px;">
+        Total points: <strong style="color:var(--accent-deep);">${r.me.total_points.toLocaleString()}</strong> · ${escHtml(r.me.title)}
+      </div>
+      <div class="quiz-actions" style="justify-content:center;">
+        <button class="quiz-skip" onclick="window.closeQuiz()">Done</button>
+        <button class="quiz-next-btn" onclick="window._startQuiz(null)">Play again →</button>
+      </div>
+    `;
+    document.getElementById('quizContent').innerHTML = html;
+  }
+
+  // ── Section quiz buttons ──────────────────────────────────────
+  function injectSectionButtons() {
+    SECTION_IDS.forEach(id => {
+      const sec = document.getElementById(id);
+      const h2 = sec?.querySelector('h2');
+      if (h2 && !h2.querySelector('.quiz-section-btn')) {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-section-btn';
+        btn.textContent = '🎮 Quiz this section';
+        btn.onclick = () => startQuiz(id);
+        h2.appendChild(btn);
+      }
+    });
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('quizBackdrop').classList.contains('open')) closeQuiz();
+  });
+  loadMe();
+  loadLeaderboard();
+  injectSectionButtons();
+})();
+</script>
+</body>
+</html>

@@ -9,6 +9,7 @@ const path = require('path');
 // The libsql-based db module exports a `ready` promise that server.js awaits before listen().
 const db = require('./db/database');
 
+const { requireAuthPage } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const inquiryRoutes = require('./routes/inquiries');
 const recipientRoutes = require('./routes/recipients');
@@ -29,6 +30,11 @@ const feedbackRoutes = require('./routes/feedback');
 const activityRoutes = require('./routes/activities');
 const collabRoutes = require('./routes/collab');
 const improvementRoutes = require('./routes/improvement-requests');
+const whatsappRoutes = require('./routes/whatsapp');
+const hotelResearchRoutes = require('./routes/hotel-research');
+const glossaryGameRoutes = require('./routes/glossary-game');
+const systemSettingsRoutes = require('./routes/system-settings');
+const { creativeLabsProxy } = require('./routes/creative-labs-proxy');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,9 +56,13 @@ app.use(helmet({
       // WHY: Proposal pages embed robot product images from manufacturer CDNs and Google favicons
       // WHY: https: already covers OSM tiles, but explicit entry documents the dependency
       imgSrc: ["'self'", "data:", "https://img.youtube.com", "https:", "http:", "https://tile.openstreetmap.org"],
-      connectSrc: ["'self'"],
+      // WHY: localhost:3100 + *.trycloudflare.com for the Creative Labs embed pages.
+      // The cloudflared quick tunnel (rotates URL when it restarts) lives on
+      // *.trycloudflare.com; localhost:3100 is the fallback for when an admin
+      // is on Eric's MacBook directly.
+      connectSrc: ["'self'", "http://localhost:3100", "https://*.trycloudflare.com"],
       // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) + Creative Labs robot command embed
-      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com", "http://localhost:3100"],
+      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com", "http://localhost:3100", "https://*.trycloudflare.com"],
       // WHY: Helmet defaults script-src-attr to 'none', which blocks ALL inline event
       // handlers (onclick, onchange, etc.) even when script-src allows 'unsafe-inline'.
       // Our admin pages use onclick handlers extensively — allow them.
@@ -97,11 +107,26 @@ const forgotPasswordLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// ── Static files ───────────────��────────────────────────────────
+// ── Auth-gated pages in public/ that must not be publicly accessible ──
+// WHY: These toolkit pages live in public/ but should require login.
+// Explicit routes registered BEFORE express.static so the auth gate wins.
+const PROTECTED_PUBLIC_PAGES = [
+  'financial-analysis.html',
+  'elevator-button-emulator.html',
+  'elevator-install-guide.html',
+];
+for (const page of PROTECTED_PUBLIC_PAGES) {
+  app.get(`/${page}`, requireAuthPage, (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', page));
+  });
+}
+
+// ── Static files ────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
 // WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
+// WHY: requireAuthPage ensures these toolkit pages are only accessible to logged-in users
 // WHY: no-cache ensures dev changes are always picked up — browser still validates with the server
-app.use('/pages', express.static(path.join(__dirname, '..', 'pages'), {
+app.use('/pages', requireAuthPage, express.static(path.join(__dirname, '..', 'pages'), {
   setHeaders: (res) => { res.setHeader('Cache-Control', 'no-cache'); }
 }));
 
@@ -141,8 +166,9 @@ for (const repo of hotelRepos) {
   const siblingPath = path.join(HOTEL_REPOS_SIBLING, repo);
   const bundledPath = path.join(HOTEL_REPOS_BUNDLED, repo);
   // WHY: Prefer sibling (local dev with live edits) over bundled (production fallback)
+  // WHY: requireAuthPage ensures repo pages are only accessible to logged-in users
   const repoPath = fs.existsSync(siblingPath) ? siblingPath : bundledPath;
-  app.use(`/repos/${repo}`, express.static(repoPath));
+  app.use(`/repos/${repo}`, requireAuthPage, express.static(repoPath));
 }
 
 // ── API routes ──────────────────────────────────────────────────
@@ -180,7 +206,13 @@ app.use('/api/feedback', (req, res, next) => {
   if (req.method === 'POST') return inquiryLimiter(req, res, next);
   next();
 }, feedbackRoutes);
-app.use('/api/activities', activityRoutes);
+// WHY: POST /api/activities is public via softAuth so any team member can post
+// a Project Hub update without needing a JWT (matches feedback/collab pattern).
+// Rate-limit POSTs to keep a runaway script from flooding the feed.
+app.use('/api/activities', (req, res, next) => {
+  if (req.method === 'POST' && req.path === '/') return inquiryLimiter(req, res, next);
+  next();
+}, activityRoutes);
 // WHY: POST is public so toolkit users can file collab requests without
 // being logged in (the route uses softAuth — logged-in users still get
 // attribution). Rate-limit submissions to prevent spam.
@@ -196,6 +228,59 @@ app.use('/api/improvement-requests', (req, res, next) => {
   if (req.method === 'POST') return inquiryLimiter(req, res, next);
   next();
 }, improvementRoutes);
+
+// WhatsApp Hub — admin-only directory of company WhatsApp groups.
+// All methods require auth; gated inside the route module via requireAuth.
+app.use('/api/whatsapp', whatsappRoutes);
+
+// Hotel Research Tool — sales-rep prospecting helper.
+// Searches OpenStreetMap (Nominatim + Overpass) by city/zip, returns
+// hotels with rough ADR estimates, and lets reps save candidates.
+// All methods require auth; gated inside the route module via requireAuth.
+app.use('/api/hotel-research', hotelResearchRoutes);
+
+// Glossary Game — gamification of /pages/team-glossary.html. Quiz sessions,
+// points, levels, streaks, badges. All points are server-awarded based on
+// validated activities, so clients can't fake totals.
+app.use('/api/glossary-game', glossaryGameRoutes);
+
+app.use('/api/system-settings', systemSettingsRoutes);
+
+// WHY: Proxy /cl/* to the tunnel URL stored in system_settings.creative_labs_url.
+// This serves home-dashboard (running on Eric's MacBook on localhost:3100) to
+// the team via acceleraterobotics.ai, bypassing Eric's local DNS filter that
+// blocks *.trycloudflare.com. requireAuthPage gates browser access so the
+// proxy isn't a public window into home-dashboard.
+app.use('/cl', requireAuthPage, creativeLabsProxy);
+
+// ── Deploy version endpoint (no auth — used by client banner) ──
+// Tells the dashboard exactly which commit is running. Falls back through:
+//   1. RENDER_GIT_COMMIT — set by Render on every deploy
+//   2. .git/HEAD lookup — works in any git checkout (dev, manual hosts)
+//   3. unknown — last resort if neither is available
+let _versionCache = null;
+app.get('/api/version', (_req, res) => {
+  if (_versionCache) return res.json(_versionCache);
+  let commit = process.env.RENDER_GIT_COMMIT || null;
+  let branch = process.env.RENDER_GIT_BRANCH || null;
+  if (!commit) {
+    try {
+      const { execFileSync } = require('child_process');
+      const repoRoot = path.resolve(__dirname, '..');
+      commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf-8' }).trim();
+      branch = branch || execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: repoRoot, encoding: 'utf-8' }).trim();
+    } catch { /* not a git checkout — leave commit null */ }
+  }
+  // Cache for the lifetime of the process — version doesn't change after boot.
+  _versionCache = {
+    commit: commit ? commit.slice(0, 40) : null,
+    short: commit ? commit.slice(0, 7) : null,
+    branch: branch || null,
+    started_at: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+    uptime_s: Math.round(process.uptime()),
+  };
+  res.json(_versionCache);
+});
 
 // ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
 // WHY: Removed auth requirement temporarily so we can diagnose the API key issue.
@@ -224,6 +309,13 @@ app.get('/api/debug/resend-check', async (req, res) => {
 // WHY: /admin is the master command center — unified dashboard for all tools
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-command-center.html'));
+});
+
+// WHY: Friendly URL for the standalone Hotel Triage mobile app. Eric and
+// Ben/Celia can navigate to /triage directly on a phone, or it's iframed
+// inside the iPhone bezel on the desktop /hotel-research page.
+app.get('/triage', requireAuthPage, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'pages', 'triage.html'));
 });
 // WHY: Old admin dashboard (inquiries + recipients) moved to /admin/inquiries
 app.get('/admin/inquiries', (req, res) => {
@@ -258,7 +350,16 @@ app.get('/reset-password', (req, res) => {
 // ── Start ───────────────────────────────────────────────────────
 // WHY: Await schema init + seeds before binding the port so routes never race against an unready DB.
 db.ready
-  .then(() => {
+  .then(async () => {
+    // Sweep stale collab tickets on boot — anything open + idle for 30+ days
+    // is auto-archived so the daily board doesn't accumulate dead weight.
+    // Failure is logged, not fatal — board still works without the sweep.
+    try {
+      const { archived } = await collabRoutes.sweepStaleTickets();
+      if (archived > 0) console.log(`[collab] auto-archived ${archived} stale ticket(s) on boot`);
+    } catch (e) {
+      console.warn('[collab] stale-ticket sweep failed on boot:', e.message);
+    }
     app.listen(PORT, () => {
       console.log(`[server] Accelerate Robotics running at http://localhost:${PORT}`);
     });
