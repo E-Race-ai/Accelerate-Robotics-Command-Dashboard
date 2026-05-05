@@ -122,6 +122,31 @@ function shapeHotel(el, centerLat, centerLng) {
   const stars = tags.stars ? parseInt(tags.stars, 10) : null;
   const rooms = tags.rooms ? parseInt(tags.rooms, 10) : null;
   const brand = tags.brand || tags.operator || null;
+  const operator = tags.operator || null;
+  const ownership = tags.ownership || null;
+  const totalFloors = tags['building:levels'] ? parseInt(tags['building:levels'], 10) : null;
+
+  // year_opened — OSM uses `start_date` or `construction_year`; both can be a
+  // bare 4-digit year, an ISO date, or a year range. Extract the leading 4 digits.
+  let yearOpened = null;
+  for (const k of ['start_date', 'construction_year', 'opening_date', 'opened']) {
+    if (tags[k]) {
+      const m = String(tags[k]).match(/(\d{4})/);
+      if (m) { yearOpened = parseInt(m[1], 10); break; }
+    }
+  }
+
+  // Pull amenity flags into a compact JSON object — surfaces what the
+  // property has when reps need it without bloating individual columns.
+  const AMENITY_KEYS = [
+    'internet_access', 'wifi', 'fee', 'air_conditioning', 'wheelchair',
+    'smoking', 'parking', 'pool', 'sauna', 'spa', 'restaurant', 'bar',
+    'breakfast', 'gym', 'capacity', 'capacity:persons', 'capacity:rooms',
+  ];
+  const amenities = {};
+  for (const k of AMENITY_KEYS) {
+    if (tags[k] != null) amenities[k] = tags[k];
+  }
 
   return {
     osm_id: `${el.type}/${el.id}`,
@@ -135,13 +160,47 @@ function shapeHotel(el, centerLat, centerLng) {
     lat: coords.lat,
     lng: coords.lng,
     brand,
+    operator,
+    ownership,
     stars: Number.isInteger(stars) ? stars : null,
     rooms: Number.isInteger(rooms) ? rooms : null,
+    total_floors: Number.isInteger(totalFloors) ? totalFloors : null,
+    year_opened: Number.isInteger(yearOpened) ? yearOpened : null,
+    amenities: Object.keys(amenities).length ? amenities : null,
     phone: tags.phone || tags['contact:phone'] || null,
     website: tags.website || tags['contact:website'] || null,
     distance_miles: Number(distanceMiles(centerLat, centerLng, coords.lat, coords.lng).toFixed(2)),
     estimated_adr_dollars: estimateAdr({ brand, stars }),
   };
+}
+
+// Revenue + deal-size sizing — quick BDR triage. Annual room revenue =
+// ADR × rooms × 0.70 (industry-rough U.S. urban occupancy) × 365.
+// Service spend potential is roughly 1-3% of room revenue for high-touch
+// guest services (cleaning, turn-down, lobby). Tier banding is intentionally
+// coarse: XS → independent / motel-tier; XL → flagship metro luxury.
+function revenuePotential({ rooms, est_adr_dollars }) {
+  const r = Number(rooms);
+  const adr = Number(est_adr_dollars);
+  if (!Number.isFinite(r) || !Number.isFinite(adr) || r <= 0 || adr <= 0) return null;
+  return Math.round(r * adr * 0.70 * 365);
+}
+
+function dealSizeTier(rev) {
+  if (!Number.isFinite(rev) || rev <= 0) return null;
+  if (rev >= 50_000_000) return 'XL';
+  if (rev >= 20_000_000) return 'L';
+  if (rev >=  8_000_000) return 'M';
+  if (rev >=  3_000_000) return 'S';
+  return 'XS';
+}
+
+function fmtRevenue(rev) {
+  if (!Number.isFinite(rev) || rev <= 0) return null;
+  if (rev >= 1e9) return '$' + (rev / 1e9).toFixed(1) + 'B';
+  if (rev >= 1e6) return '$' + (rev / 1e6).toFixed(1) + 'M';
+  if (rev >= 1e3) return '$' + (rev / 1e3).toFixed(0) + 'K';
+  return '$' + rev;
 }
 
 // Brand class — coarse tier we surface as a filter dimension. Mirrors STR's
@@ -198,4 +257,7 @@ module.exports = {
   shapeHotel,
   brandClass,
   BRAND_CLASS_LABELS,
+  revenuePotential,
+  dealSizeTier,
+  fmtRevenue,
 };

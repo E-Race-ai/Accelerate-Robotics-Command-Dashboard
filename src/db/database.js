@@ -688,6 +688,27 @@ async function initSchema() {
   // letting the deal-pipeline code pick up where research left off.
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN prospect_id INTEGER");
   await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_prospect ON hotels_saved(prospect_id)");
+
+  // WHY sales-intel + property data columns: turn the saved hotel into a
+  // BDR's full property card. Operator/ownership/year_opened/total_floors
+  // come from OSM enrichment when present; the rest is rep-captured intel
+  // they fill in as they work the territory. Opportunity score is a 1-5
+  // gut check; tags are a free-form taxonomy ("renovation 2025", "owner
+  // operator", "loud lobby"); amenities is the JSON of OSM amenity flags.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN operator TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ownership TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN year_opened INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN total_floors INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN amenities TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN tags TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN dm_name TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN dm_title TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN dm_email TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN dm_phone TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN dm_linkedin TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN existing_vendor TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN opportunity_score INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN photo_url TEXT");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────

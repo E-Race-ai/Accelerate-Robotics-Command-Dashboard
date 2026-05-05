@@ -19,7 +19,10 @@
 const express = require('express');
 const db = require('../db/database');
 const { requireAuth } = require('../middleware/auth');
-const { estimateAdr, normLocation, distanceMiles, shapeHotel, brandClass } = require('../services/hotel-research-utils');
+const {
+  estimateAdr, normLocation, distanceMiles, shapeHotel, brandClass,
+  revenuePotential, dealSizeTier,
+} = require('../services/hotel-research-utils');
 
 const router = express.Router();
 
@@ -204,8 +207,9 @@ router.post('/saved', requireAuth, async (req, res) => {
         `INSERT INTO hotels_saved (
            name, address, city, state, zip, country, lat, lng,
            brand, stars, rooms, phone, website, osm_id, submarket,
-           est_adr_dollars, status, notes, saved_by
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           est_adr_dollars, status, notes, saved_by,
+           operator, ownership, year_opened, total_floors, amenities
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           name,
           h.address || null, h.city || null, h.state || null, h.zip || null, h.country || 'US',
@@ -223,6 +227,11 @@ router.post('/saved', requireAuth, async (req, res) => {
           ALLOWED_STATUS.has(h.status) ? h.status : 'lead',
           h.notes ? String(h.notes).slice(0, 4000) : null,
           req.admin?.email || null,
+          h.operator ? String(h.operator).slice(0, 200) : null,
+          h.ownership ? String(h.ownership).slice(0, 200) : null,
+          Number.isInteger(Number(h.year_opened)) ? Number(h.year_opened) : null,
+          Number.isInteger(Number(h.total_floors)) ? Number(h.total_floors) : null,
+          h.amenities ? JSON.stringify(h.amenities).slice(0, 4000) : null,
         ],
       );
       ids.push(r.lastInsertRowid);
@@ -250,6 +259,9 @@ router.get('/saved', requireAuth, async (req, res) => {
       `SELECT h.id, h.name, h.address, h.city, h.state, h.zip, h.country, h.lat, h.lng,
               h.brand, h.stars, h.rooms, h.phone, h.website, h.osm_id, h.submarket,
               h.est_adr_dollars, h.status, h.notes, h.saved_by, h.prospect_id,
+              h.operator, h.ownership, h.year_opened, h.total_floors, h.amenities,
+              h.tags, h.dm_name, h.dm_title, h.dm_email, h.dm_phone, h.dm_linkedin,
+              h.existing_vendor, h.opportunity_score, h.photo_url,
               h.created_at, h.updated_at,
               (SELECT COUNT(*) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) AS visit_count,
               (SELECT MAX(visit_date) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) AS last_visit_date
@@ -258,11 +270,29 @@ router.get('/saved', requireAuth, async (req, res) => {
        ORDER BY h.updated_at DESC, h.id DESC`,
       args,
     );
-    // Stamp brand_class so the frontend can filter without re-deriving.
-    const enriched = rows.map(r => ({
-      ...r,
-      brand_class: brandClass({ brand: r.brand, stars: r.stars, est_adr: r.est_adr_dollars }),
-    }));
+    // Stamp derived fields the UI uses for filtering, sorting, and display:
+    // brand_class (tier), revenue_potential_annual (room-rev × occupancy ×
+    // 365), deal_size_tier (XS-XL banding), parsed amenities + tags JSON.
+    const enriched = rows.map(r => {
+      // Fall back to brand-based ADR estimate when the rep hasn't captured a real one,
+      // so revenue/tier still surface for new saves.
+      const adrStored = Number(r.est_adr_dollars);
+      const adrForRev = (Number.isFinite(adrStored) && adrStored > 0)
+        ? adrStored
+        : estimateAdr({ brand: r.brand, stars: r.stars });
+      const rev = revenuePotential({ rooms: r.rooms, est_adr_dollars: adrForRev });
+      let amenities = null, tags = null;
+      try { if (r.amenities) amenities = JSON.parse(r.amenities); } catch {}
+      try { if (r.tags) { const t = JSON.parse(r.tags); if (Array.isArray(t)) tags = t; } } catch {}
+      return {
+        ...r,
+        brand_class: brandClass({ brand: r.brand, stars: r.stars, est_adr: r.est_adr_dollars }),
+        revenue_potential_annual: rev,
+        deal_size_tier: dealSizeTier(rev),
+        amenities,
+        tags: tags || [],
+      };
+    });
     res.json({ hotels: enriched });
   } catch (err) {
     console.error('[hotel-research] list failed:', err);
@@ -300,6 +330,43 @@ router.patch('/saved/:id', requireAuth, async (req, res) => {
   if (b.phone !== undefined)     { fields.push('phone = ?');     args.push(b.phone || null); }
   if (b.website !== undefined)   { fields.push('website = ?');   args.push(b.website || null); }
   if (b.submarket !== undefined) { fields.push('submarket = ?'); args.push(b.submarket ? String(b.submarket).slice(0, 80) : null); }
+
+  // ─── Sales-intel + property-data fields (all optional, nullable, free-form) ─
+  const STR_FIELDS = {
+    operator: 200, ownership: 200,
+    dm_name: 200, dm_title: 200, dm_email: 200, dm_phone: 100, dm_linkedin: 500,
+    existing_vendor: 200, photo_url: 1000,
+  };
+  for (const [field, max] of Object.entries(STR_FIELDS)) {
+    if (b[field] !== undefined) {
+      fields.push(`${field} = ?`);
+      args.push(b[field] ? String(b[field]).slice(0, max) : null);
+    }
+  }
+  const INT_FIELDS = ['year_opened', 'total_floors', 'opportunity_score'];
+  for (const f of INT_FIELDS) {
+    if (b[f] !== undefined) {
+      const v = b[f];
+      if (v === null || v === '') { fields.push(`${f} = ?`); args.push(null); }
+      else {
+        const n = Number(v);
+        if (!Number.isInteger(n)) return res.status(400).json({ error: `${f} must be an integer or null` });
+        if (f === 'opportunity_score' && (n < 0 || n > 5)) return res.status(400).json({ error: 'opportunity_score must be 0-5' });
+        fields.push(`${f} = ?`); args.push(n);
+      }
+    }
+  }
+  // Tags: array of short strings, stored as JSON. Caps array length and
+  // each tag length so a runaway client can't blow up the column.
+  if (b.tags !== undefined) {
+    if (b.tags === null) { fields.push('tags = ?'); args.push(null); }
+    else if (Array.isArray(b.tags)) {
+      const clean = b.tags.slice(0, 30).map(t => String(t).trim().slice(0, 60)).filter(Boolean);
+      fields.push('tags = ?'); args.push(JSON.stringify(clean));
+    } else {
+      return res.status(400).json({ error: 'tags must be an array of strings' });
+    }
+  }
   if (b.rooms !== undefined) {
     const n = Number(b.rooms);
     if (b.rooms === null || b.rooms === '') { fields.push('rooms = ?'); args.push(null); }
