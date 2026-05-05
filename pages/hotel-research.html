@@ -648,6 +648,101 @@
   }
   .filter-summary strong { font-weight: 700; }
 
+  /* ─── Schedule panel ──────────────────────────────────────── */
+  .schedule-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .schedule-eyebrow {
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.66rem; font-weight: 700; color: var(--accent-deep);
+  }
+  .schedule-title { font-size: 1.4rem; font-weight: 700; margin: 2px 0 0; font-family: 'Space Grotesk', sans-serif; }
+  .schedule-nav { display: flex; gap: 4px; margin-left: auto; }
+  .schedule-nav .btn { padding: 6px 12px; font-size: 0.84rem; }
+  .schedule-week {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+  @media (max-width: 1100px) { .schedule-week { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 720px)  { .schedule-week { grid-template-columns: 1fr; } }
+  .schedule-day {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    min-height: 200px;
+  }
+  .schedule-day.today {
+    border-color: var(--accent); border-width: 2px; padding: 11px;
+    box-shadow: 0 4px 14px rgba(217,119,6,0.15);
+  }
+  .schedule-day-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+  }
+  .schedule-day-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 0.92rem; color: var(--text);
+  }
+  .schedule-day-date { font-size: 0.74rem; color: var(--text-faint); }
+  .schedule-day-zone {
+    font-size: 0.78rem; font-weight: 700;
+    color: var(--accent-deep); margin-top: 2px;
+  }
+  .schedule-day-zone.empty { color: var(--text-faint); font-weight: 500; font-style: italic; }
+  .schedule-day-stats {
+    font-size: 0.72rem; color: var(--text-dim);
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .schedule-day-stops {
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 0.78rem; flex: 1;
+  }
+  .schedule-day-stop {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 6px; background: #f8fafc; border-radius: 6px;
+    color: var(--text);
+  }
+  .schedule-day-stop.done {
+    text-decoration: line-through; color: var(--text-faint); background: #ecfdf5;
+  }
+  .schedule-day-stop input[type="checkbox"] { margin: 0; flex-shrink: 0; cursor: pointer; }
+  .schedule-day-stop-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .schedule-day-actions {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-top: auto;
+  }
+  .schedule-day-actions .btn {
+    padding: 5px 8px; font-size: 0.74rem; flex: 1;
+    justify-content: center;
+  }
+  .schedule-day-empty {
+    color: var(--text-faint); font-size: 0.78rem; font-style: italic;
+    text-align: center; padding: 12px;
+  }
+  .schedule-day-progress {
+    display: flex; gap: 4px; align-items: center;
+    font-size: 0.7rem; color: var(--text-dim);
+  }
+  .schedule-day-progress-bar {
+    flex: 1; height: 4px; background: var(--border); border-radius: 100px; overflow: hidden;
+  }
+  .schedule-day-progress-fill {
+    height: 100%; background: var(--green); border-radius: 100px;
+  }
+
+  /* Auto-week wizard rows */
+  #awkDays { margin: 8px 0 12px; }
+  .awk-day-row {
+    display: grid; grid-template-columns: 100px 1fr;
+    gap: 10px; padding: 6px 0;
+    align-items: center;
+  }
+  .awk-day-row label { font-size: 0.84rem; font-weight: 600; color: var(--text); }
+  .awk-day-row select {
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+    font: inherit; font-size: 0.86rem;
+  }
+
   /* ─── Route builder ────────────────────────────────────────── */
   .saved-toolbar #routeModeToggle.active {
     background: var(--accent); color: white; border-color: var(--accent);
@@ -775,9 +870,10 @@
     </p>
 
     <div class="tabs" role="tablist">
-      <button class="tab active" data-panel="search" role="tab" aria-selected="true">Search</button>
-      <button class="tab" data-panel="map"   role="tab" aria-selected="false">🗺️ Map</button>
-      <button class="tab" data-panel="saved" role="tab" aria-selected="false">My Saved <span class="badge" id="savedCount">0</span></button>
+      <button class="tab active" data-panel="search"   role="tab" aria-selected="true">Search</button>
+      <button class="tab" data-panel="map"      role="tab" aria-selected="false">🗺️ Map</button>
+      <button class="tab" data-panel="saved"    role="tab" aria-selected="false">My Saved <span class="badge" id="savedCount">0</span></button>
+      <button class="tab" data-panel="schedule" role="tab" aria-selected="false">📅 Schedule</button>
     </div>
 
     <!-- ─── Search panel ──────────────────────────────────────── -->
@@ -949,6 +1045,46 @@
           <button class="btn btn-ghost" type="button" onclick="window._clearRoute()">Clear</button>
           <button class="btn btn-primary" type="button" id="openInMapsBtn" onclick="window._openRouteInMaps()" disabled>📍 Open in Google Maps</button>
         </div>
+      </div>
+    </div>
+
+    <!-- ─── Schedule panel — BDR weekly territory plan ────────── -->
+    <div class="panel" id="panel-schedule" role="tabpanel">
+      <div class="schedule-header">
+        <div>
+          <div class="schedule-eyebrow">Weekly schedule</div>
+          <h2 class="schedule-title" id="scheduleTitle">Week of <span id="scheduleWeekOf">—</span></h2>
+        </div>
+        <div class="schedule-nav">
+          <button class="btn btn-ghost" type="button" onclick="window._scheduleNav(-7)">‹ Prev</button>
+          <button class="btn btn-ghost" type="button" onclick="window._scheduleNav(0)">Today</button>
+          <button class="btn btn-ghost" type="button" onclick="window._scheduleNav(7)">Next ›</button>
+        </div>
+        <button class="btn btn-primary" type="button" onclick="window._openAutoWeekWizard()">⚡ Auto-plan week</button>
+      </div>
+
+      <div id="scheduleWeek" class="schedule-week"></div>
+    </div>
+  </div>
+
+  <!-- Auto-plan week wizard -->
+  <div class="modal-backdrop" id="autoWeekBackdrop" onclick="if(event.target===this)closeAutoWeek()">
+    <div class="modal" style="max-width:560px;" role="dialog">
+      <h2>⚡ Auto-plan a week</h2>
+      <p class="modal-sub">Pick a submarket for each day. We'll create one route per day with up to N untouched hotels in that zone, ordered for an efficient drive.</p>
+      <div class="form-error" id="autoWeekError"></div>
+      <div class="form-row">
+        <label for="awkStart">Week starts (Monday)</label>
+        <input id="awkStart" type="date">
+      </div>
+      <div class="form-row">
+        <label for="awkCap">Stops per day (max)</label>
+        <input id="awkCap" type="number" min="2" max="15" value="8">
+      </div>
+      <div id="awkDays"></div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeAutoWeek()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="awkBuildBtn" onclick="window._buildAutoWeek()">Build week →</button>
       </div>
     </div>
   </div>
@@ -2412,6 +2548,257 @@ async function runAllPresets(marketKey) {
     content.innerHTML = `<div class="grid">${LAST_RESULTS.map(renderSearchCard).join('')}</div>`;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// SCHEDULE — BDR weekly territory plan
+// ═══════════════════════════════════════════════════════════════════
+let SCHEDULE_ANCHOR = null;   // Date object — the Monday of the visible week
+let SCHEDULE_ROUTES = [];     // [{id, name, scheduled_date, zone, notes, stop_count, done_count}]
+
+function _mondayOf(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  // JavaScript: Sun=0, Mon=1, ..., Sat=6. Shift so Mon=0.
+  const day = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - day);
+  return x;
+}
+function _isoDate(d) {
+  // Local-time YYYY-MM-DD so the schedule lines up with the rep's wall clock.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+async function loadScheduleWeek() {
+  if (!SCHEDULE_ANCHOR) SCHEDULE_ANCHOR = _mondayOf(new Date());
+  const monday = SCHEDULE_ANCHOR;
+  const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+  const fmt = { month: 'short', day: 'numeric' };
+  document.getElementById('scheduleWeekOf').textContent =
+    `${monday.toLocaleDateString('en-US', fmt)} – ${sunday.toLocaleDateString('en-US', { ...fmt, year: 'numeric' })}`;
+  try {
+    const res = await fetch(`/api/hotel-research/routes?from=${_isoDate(monday)}&to=${_isoDate(sunday)}`, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    SCHEDULE_ROUTES = data.routes || [];
+    await renderScheduleWeek();
+  } catch (err) {
+    document.getElementById('scheduleWeek').innerHTML = `<div class="empty">Couldn't load schedule: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function renderScheduleWeek() {
+  const wrap = document.getElementById('scheduleWeek');
+  if (!SCHEDULE_ANCHOR) SCHEDULE_ANCHOR = _mondayOf(new Date());
+  const today = _isoDate(new Date());
+
+  // Map routes by date (multiple routes per day are allowed but rare).
+  const byDate = {};
+  for (const r of SCHEDULE_ROUTES) {
+    if (!r.scheduled_date) continue;
+    if (!byDate[r.scheduled_date]) byDate[r.scheduled_date] = [];
+    byDate[r.scheduled_date].push(r);
+  }
+
+  // For each route on screen, fetch its stops in parallel so we can render
+  // names + done-checkboxes inline. Keeps the week-view a single page load.
+  const allRoutes = SCHEDULE_ROUTES.filter(r => r.scheduled_date);
+  const stopsByRoute = {};
+  await Promise.all(allRoutes.map(async r => {
+    try {
+      const res = await fetch(`/api/hotel-research/routes/${r.id}`, { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        stopsByRoute[r.id] = data.stops || [];
+      }
+    } catch {}
+  }));
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(SCHEDULE_ANCHOR); d.setDate(d.getDate() + i);
+    const iso = _isoDate(d);
+    const routes = byDate[iso] || [];
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const dayDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const isToday = iso === today;
+    days.push(renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute));
+  }
+  wrap.innerHTML = days.join('');
+}
+
+function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute) {
+  if (routes.length === 0) {
+    return `
+      <div class="schedule-day ${isToday ? 'today' : ''}" data-date="${iso}">
+        <div class="schedule-day-head">
+          <div>
+            <div class="schedule-day-name">${escapeHtml(dayName)}</div>
+            <div class="schedule-day-date">${escapeHtml(dayDate)}</div>
+          </div>
+        </div>
+        <div class="schedule-day-zone empty">No zone planned</div>
+        <div class="schedule-day-empty">Tap "Auto-plan week" or "+ Plan day" to add stops.</div>
+        <div class="schedule-day-actions">
+          <button class="btn btn-ghost" type="button" onclick="window._planDay('${iso}')">+ Plan day</button>
+        </div>
+      </div>`;
+  }
+  // Render the first route for this day; if there are multiple (rare), stack them.
+  return routes.map(r => {
+    const stops = stopsByRoute[r.id] || [];
+    const total = stops.length;
+    const done = stops.filter(s => s.done).length;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    const stopsHtml = stops.map(s => `
+      <div class="schedule-day-stop ${s.done ? 'done' : ''}" data-stop-id="${s.stop_id}">
+        <input type="checkbox" ${s.done ? 'checked' : ''} onchange="window._toggleStopDone(${r.id}, ${s.stop_id}, this.checked)">
+        <span class="schedule-day-stop-name">${escapeHtml(s.name)}</span>
+      </div>`).join('');
+    const mapsUrl = stops.length >= 2
+      ? 'https://www.google.com/maps/dir/' + stops.filter(s => s.lat && s.lng).map(s => `${s.lat},${s.lng}`).join('/')
+      : null;
+    return `
+      <div class="schedule-day ${isToday ? 'today' : ''}" data-date="${iso}" data-route-id="${r.id}">
+        <div class="schedule-day-head">
+          <div>
+            <div class="schedule-day-name">${escapeHtml(dayName)}</div>
+            <div class="schedule-day-date">${escapeHtml(dayDate)}</div>
+          </div>
+          <button class="visit-row-delete" onclick="window._deleteRoute(${r.id})" title="Delete this day">✕</button>
+        </div>
+        <div class="schedule-day-zone">📍 ${escapeHtml(r.zone || r.name)}</div>
+        <div class="schedule-day-stats">
+          <span><strong>${total}</strong> stop${total === 1 ? '' : 's'}</span>
+          ${total > 0 ? `<span>${done}/${total} done</span>` : ''}
+        </div>
+        ${total > 0 ? `<div class="schedule-day-progress"><div class="schedule-day-progress-bar"><div class="schedule-day-progress-fill" style="width:${pct}%"></div></div><span>${pct}%</span></div>` : ''}
+        <div class="schedule-day-stops">${stopsHtml || '<div class="schedule-day-empty">No stops yet.</div>'}</div>
+        <div class="schedule-day-actions">
+          ${mapsUrl ? `<a class="btn btn-primary" target="_blank" rel="noopener" href="${escapeHtml(mapsUrl)}" style="text-decoration:none;flex:1;text-align:center;">📍 Open</a>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window._scheduleNav = function(deltaDays) {
+  if (deltaDays === 0) {
+    SCHEDULE_ANCHOR = _mondayOf(new Date());
+  } else {
+    if (!SCHEDULE_ANCHOR) SCHEDULE_ANCHOR = _mondayOf(new Date());
+    const next = new Date(SCHEDULE_ANCHOR); next.setDate(next.getDate() + deltaDays);
+    SCHEDULE_ANCHOR = next;
+  }
+  loadScheduleWeek();
+};
+
+window._toggleStopDone = async function(routeId, stopId, done) {
+  try {
+    const res = await fetch(`/api/hotel-research/routes/${routeId}/stops/${stopId}`, {
+      method: 'PATCH', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ done }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    loadScheduleWeek();
+  } catch (err) { alert('Update failed: ' + err.message); }
+};
+
+window._deleteRoute = async function(routeId) {
+  if (!confirm("Delete this day's plan? Stops will be removed but the saved hotels stay.")) return;
+  try {
+    const res = await fetch(`/api/hotel-research/routes/${routeId}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    loadScheduleWeek();
+  } catch (err) { alert('Delete failed: ' + err.message); }
+};
+
+window._planDay = async function(iso) {
+  // Quick-plan: pick a submarket (prompt), default cap=8, build a route for that day
+  const submarkets = Array.from(new Set(SAVED.map(h => h.submarket).filter(Boolean))).sort();
+  if (!submarkets.length) { alert('Save some hotels first — go to Search and run a market preset.'); return; }
+  const choice = prompt(`Which zone for ${iso}?\n\nOptions: ${submarkets.join(', ')}`);
+  if (!choice) return;
+  const matched = submarkets.find(s => s.toLowerCase() === choice.toLowerCase());
+  if (!matched) { alert(`No matching submarket. Pick one of: ${submarkets.join(', ')}`); return; }
+  await buildAutoWeek({ [iso]: { zone: matched, cap: 8 } });
+};
+
+// ── Auto-week wizard ─────────────────────────────────────────────
+window._openAutoWeekWizard = function() {
+  const submarkets = Array.from(new Set(SAVED.map(h => h.submarket).filter(Boolean))).sort();
+  if (!submarkets.length) { alert('Save some hotels first — go to Search and run a market preset.'); return; }
+  // Default the wizard's start to next Monday
+  const monday = _mondayOf(SCHEDULE_ANCHOR || new Date());
+  document.getElementById('awkStart').value = _isoDate(monday);
+  document.getElementById('awkCap').value = 8;
+  // Build day rows with submarket dropdowns
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  document.getElementById('awkDays').innerHTML = days.map((d, i) => {
+    return `
+      <div class="awk-day-row">
+        <label>${d}</label>
+        <select data-awk-day="${i}">
+          <option value="">— skip —</option>
+          ${submarkets.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+        </select>
+      </div>`;
+  }).join('');
+  document.getElementById('autoWeekError').classList.remove('show');
+  document.getElementById('autoWeekBackdrop').classList.add('open');
+};
+
+window.closeAutoWeek = function() {
+  document.getElementById('autoWeekBackdrop').classList.remove('open');
+};
+
+window._buildAutoWeek = async function() {
+  const start = document.getElementById('awkStart').value;
+  const cap = Number(document.getElementById('awkCap').value) || 8;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) { document.getElementById('autoWeekError').textContent = 'Pick a Monday to start the week.'; document.getElementById('autoWeekError').classList.add('show'); return; }
+  const days = {};
+  document.querySelectorAll('select[data-awk-day]').forEach(sel => {
+    const idx = Number(sel.dataset.awkDay);
+    const zone = sel.value;
+    if (!zone) return;
+    const d = new Date(start + 'T12:00:00'); d.setDate(d.getDate() + idx);
+    days[_isoDate(d)] = { zone, cap };
+  });
+  if (!Object.keys(days).length) { document.getElementById('autoWeekError').textContent = 'Pick at least one day.'; document.getElementById('autoWeekError').classList.add('show'); return; }
+  await buildAutoWeek(days);
+  closeAutoWeek();
+};
+
+async function buildAutoWeek(days) {
+  try {
+    const res = await fetch('/api/hotel-research/routes/auto-week', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    // Jump the schedule's anchor to the week containing the earliest day so
+    // the rep sees the just-built plan immediately.
+    const dates = Object.keys(days).sort();
+    if (dates[0]) SCHEDULE_ANCHOR = _mondayOf(new Date(dates[0] + 'T12:00:00'));
+    loadScheduleWeek();
+  } catch (err) {
+    alert('Auto-plan failed: ' + err.message);
+  }
+}
+
+// Boot the schedule when the tab opens (lazy)
+const _origTabHandler = (() => {
+  // Re-bind the tabs handler to also load the schedule when its tab is clicked
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.dataset.panel === 'schedule') {
+      t.addEventListener('click', () => loadScheduleWeek());
+    }
+  });
+})();
 
 // ─── Boot ─────────────────────────────────────────────────────────
 loadPresets();

@@ -505,4 +505,290 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
   }
 });
 
+// ─── BDR Schedule — saved + dated routes ────────────────────────
+//
+// A `bdr_route` is either a saved template (no date) OR a planned day
+// (with a scheduled_date). Both live in the same table so reps can
+// promote a template into a scheduled day with one click. Stops are
+// in `bdr_route_stops` with an explicit sort_order — the rep's intended
+// drive sequence — and a `done` flag they tick off in the field.
+
+// GET /routes — list, optionally filter by date range
+// Query: ?from=YYYY-MM-DD&to=YYYY-MM-DD&undated_too=1
+router.get('/routes', requireAuth, async (req, res) => {
+  const { from, to, undated_too } = req.query;
+  const where = [];
+  const args = [];
+  if (from) { where.push('(scheduled_date IS NULL OR scheduled_date >= ?)'); args.push(from); }
+  if (to)   { where.push('(scheduled_date IS NULL OR scheduled_date <= ?)'); args.push(to); }
+  if (!undated_too && from) {
+    // If a date range is specified and we don't want undated, drop the IS NULL clauses
+    where[where.length - 1] = where[where.length - 1].replace('scheduled_date IS NULL OR ', '');
+  }
+  try {
+    const routes = await db.all(
+      `SELECT r.*,
+              (SELECT COUNT(*) FROM bdr_route_stops s WHERE s.route_id = r.id) AS stop_count,
+              (SELECT COUNT(*) FROM bdr_route_stops s WHERE s.route_id = r.id AND s.done = 1) AS done_count
+       FROM bdr_routes r
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+       ORDER BY scheduled_date IS NULL, scheduled_date ASC, r.id DESC`,
+      args,
+    );
+    res.json({ routes });
+  } catch (err) {
+    console.error('[hotel-research] /routes list failed:', err);
+    res.status(500).json({ error: 'Failed to load routes' });
+  }
+});
+
+// GET /routes/:id — full route with ordered stops + their hotel data
+router.get('/routes/:id', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const route = await db.one('SELECT * FROM bdr_routes WHERE id = ?', [id]);
+    if (!route) return res.status(404).json({ error: 'route not found' });
+    const stops = await db.all(
+      `SELECT s.id AS stop_id, s.hotel_saved_id, s.sort_order, s.done, s.visit_id,
+              h.name, h.address, h.city, h.state, h.zip, h.lat, h.lng, h.brand, h.stars,
+              h.rooms, h.phone, h.website, h.submarket, h.est_adr_dollars, h.status
+       FROM bdr_route_stops s JOIN hotels_saved h ON h.id = s.hotel_saved_id
+       WHERE s.route_id = ? ORDER BY s.sort_order ASC, s.id ASC`,
+      [id],
+    );
+    res.json({ route, stops });
+  } catch (err) {
+    console.error('[hotel-research] /routes/:id failed:', err);
+    res.status(500).json({ error: 'Failed to load route' });
+  }
+});
+
+// POST /routes — create a route (with optional initial stops)
+// Body: { name, scheduled_date?, zone?, notes?, hotel_ids?: [] }
+router.post('/routes', requireAuth, async (req, res) => {
+  const { name, scheduled_date, zone, notes, hotel_ids } = req.body || {};
+  const cleanName = String(name || '').trim().slice(0, 200);
+  if (!cleanName) return res.status(400).json({ error: 'name is required' });
+  const date = scheduled_date && /^\d{4}-\d{2}-\d{2}$/.test(scheduled_date) ? scheduled_date : null;
+  try {
+    const r = await db.run(
+      `INSERT INTO bdr_routes (name, scheduled_date, zone, notes, created_by)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        cleanName, date,
+        zone ? String(zone).slice(0, 100) : null,
+        notes ? String(notes).slice(0, 4000) : null,
+        req.admin?.email || null,
+      ],
+    );
+    const routeId = r.lastInsertRowid;
+    // Bulk insert initial stops if provided.
+    if (Array.isArray(hotel_ids) && hotel_ids.length > 0) {
+      let ord = 0;
+      for (const hid of hotel_ids) {
+        const n = Number(hid);
+        if (!Number.isInteger(n)) continue;
+        await db.run(
+          `INSERT INTO bdr_route_stops (route_id, hotel_saved_id, sort_order) VALUES (?, ?, ?)`,
+          [routeId, n, ord++],
+        );
+      }
+    }
+    res.status(201).json({ ok: true, id: routeId });
+  } catch (err) {
+    console.error('[hotel-research] /routes create failed:', err);
+    res.status(500).json({ error: 'Failed to save route' });
+  }
+});
+
+// PATCH /routes/:id — update metadata (name, date, zone, notes)
+router.patch('/routes/:id', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  const fields = [];
+  const args = [];
+  const b = req.body || {};
+  if (b.name !== undefined) {
+    const v = String(b.name || '').trim();
+    if (!v) return res.status(400).json({ error: 'name cannot be empty' });
+    fields.push('name = ?'); args.push(v.slice(0, 200));
+  }
+  if (b.scheduled_date !== undefined) {
+    const v = b.scheduled_date;
+    if (v === null || v === '')                          { fields.push('scheduled_date = ?'); args.push(null); }
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(String(v)))      { fields.push('scheduled_date = ?'); args.push(String(v)); }
+    else return res.status(400).json({ error: 'scheduled_date must be YYYY-MM-DD or null' });
+  }
+  if (b.zone !== undefined)  { fields.push('zone = ?');  args.push(b.zone ? String(b.zone).slice(0, 100) : null); }
+  if (b.notes !== undefined) { fields.push('notes = ?'); args.push(b.notes ? String(b.notes).slice(0, 4000) : null); }
+  if (fields.length === 0) return res.status(400).json({ error: 'nothing to update' });
+  fields.push("updated_at = datetime('now')");
+  args.push(id);
+  try {
+    const r = await db.run(`UPDATE bdr_routes SET ${fields.join(', ')} WHERE id = ?`, args);
+    if (!r.changes) return res.status(404).json({ error: 'route not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[hotel-research] /routes update failed:', err);
+    res.status(500).json({ error: 'Failed to update route' });
+  }
+});
+
+// DELETE /routes/:id — drop a route + its stops (CASCADE)
+router.delete('/routes/:id', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const r = await db.run('DELETE FROM bdr_routes WHERE id = ?', [id]);
+    if (!r.changes) return res.status(404).json({ error: 'route not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[hotel-research] /routes delete failed:', err);
+    res.status(500).json({ error: 'Failed to delete route' });
+  }
+});
+
+// POST /routes/:id/stops — add hotels to a route (appends to end)
+router.post('/routes/:id/stops', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  const route = await db.one('SELECT id FROM bdr_routes WHERE id = ?', [id]);
+  if (!route) return res.status(404).json({ error: 'route not found' });
+  const ids = Array.isArray(req.body?.hotel_ids) ? req.body.hotel_ids.map(Number).filter(Number.isInteger) : [];
+  if (!ids.length) return res.status(400).json({ error: 'hotel_ids required' });
+  try {
+    const max = await db.one('SELECT COALESCE(MAX(sort_order), -1) AS m FROM bdr_route_stops WHERE route_id = ?', [id]);
+    let ord = (max?.m ?? -1) + 1;
+    const newIds = [];
+    for (const hid of ids) {
+      const r = await db.run(
+        `INSERT INTO bdr_route_stops (route_id, hotel_saved_id, sort_order) VALUES (?, ?, ?)`,
+        [id, hid, ord++],
+      );
+      newIds.push(r.lastInsertRowid);
+    }
+    res.status(201).json({ ok: true, stop_ids: newIds });
+  } catch (err) {
+    console.error('[hotel-research] /routes/:id/stops add failed:', err);
+    res.status(500).json({ error: 'Failed to add stops' });
+  }
+});
+
+// PATCH /routes/:id/stops/:stopId — toggle done flag
+router.patch('/routes/:id/stops/:stopId', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const sid = Number(req.params.stopId);
+  if (!Number.isInteger(id) || !Number.isInteger(sid)) return res.status(400).json({ error: 'invalid id' });
+  const fields = [];
+  const args = [];
+  const b = req.body || {};
+  if (b.done !== undefined)    { fields.push('done = ?');    args.push(b.done ? 1 : 0); }
+  if (b.visit_id !== undefined) {
+    if (b.visit_id === null) { fields.push('visit_id = ?'); args.push(null); }
+    else                     { fields.push('visit_id = ?'); args.push(Number(b.visit_id)); }
+  }
+  if (!fields.length) return res.status(400).json({ error: 'nothing to update' });
+  args.push(sid, id);
+  try {
+    const r = await db.run(
+      `UPDATE bdr_route_stops SET ${fields.join(', ')} WHERE id = ? AND route_id = ?`,
+      args,
+    );
+    if (!r.changes) return res.status(404).json({ error: 'stop not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[hotel-research] /routes/:id/stops/:stopId update failed:', err);
+    res.status(500).json({ error: 'Failed to update stop' });
+  }
+});
+
+// DELETE /routes/:id/stops/:stopId — remove a single stop
+router.delete('/routes/:id/stops/:stopId', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const sid = Number(req.params.stopId);
+  if (!Number.isInteger(id) || !Number.isInteger(sid)) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const r = await db.run('DELETE FROM bdr_route_stops WHERE id = ? AND route_id = ?', [sid, id]);
+    if (!r.changes) return res.status(404).json({ error: 'stop not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[hotel-research] stop delete failed:', err);
+    res.status(500).json({ error: 'Failed to remove stop' });
+  }
+});
+
+// POST /routes/:id/reorder — body: { stop_ids: [in new order] }
+router.post('/routes/:id/reorder', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  const order = Array.isArray(req.body?.stop_ids) ? req.body.stop_ids.map(Number).filter(Number.isInteger) : [];
+  if (!order.length) return res.status(400).json({ error: 'stop_ids required' });
+  try {
+    let i = 0;
+    for (const sid of order) {
+      await db.run('UPDATE bdr_route_stops SET sort_order = ? WHERE id = ? AND route_id = ?', [i++, sid, id]);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[hotel-research] reorder failed:', err);
+    res.status(500).json({ error: 'Failed to reorder' });
+  }
+});
+
+// POST /routes/auto-week — quick weekly schedule builder
+// Body: { days: { '2026-05-11': { zone: 'Coral Gables', cap?: 8 }, '2026-05-12': {...}, ... } }
+// For each (date, zone), creates a bdr_route auto-populated with up to `cap`
+// untouched + lowest-rank-by-distance hotels in that submarket. Saves a whole
+// week of plans in one POST.
+router.post('/routes/auto-week', requireAuth, async (req, res) => {
+  const days = req.body?.days || {};
+  const entries = Object.entries(days);
+  if (!entries.length) return res.status(400).json({ error: 'days map required' });
+  if (entries.length > 7) return res.status(400).json({ error: 'one week max' });
+
+  const created = [];
+  try {
+    for (const [date, cfg] of entries) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      const zone = String(cfg?.zone || '').trim();
+      if (!zone) continue;
+      const cap = Math.max(1, Math.min(15, Number(cfg?.cap) || 8));
+      // Pull untouched hotels (no visits yet) in this zone with coords. Default
+      // ordering: most recently saved first — close enough until we have
+      // smarter scoring.
+      const candidates = await db.all(
+        `SELECT h.id, h.lat, h.lng FROM hotels_saved h
+         WHERE h.submarket = ? AND h.lat IS NOT NULL AND h.lng IS NOT NULL
+           AND (SELECT COUNT(*) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) = 0
+         ORDER BY h.id DESC LIMIT ?`,
+        [zone, cap],
+      );
+      if (!candidates.length) {
+        created.push({ date, zone, route_id: null, stops_added: 0, note: 'no untouched hotels in zone' });
+        continue;
+      }
+      const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const r = await db.run(
+        `INSERT INTO bdr_routes (name, scheduled_date, zone, created_by)
+         VALUES (?, ?, ?, ?)`,
+        [`${zone} · ${dayLabel}`, date, zone, req.admin?.email || null],
+      );
+      const routeId = r.lastInsertRowid;
+      let ord = 0;
+      for (const c of candidates) {
+        await db.run(
+          `INSERT INTO bdr_route_stops (route_id, hotel_saved_id, sort_order) VALUES (?, ?, ?)`,
+          [routeId, c.id, ord++],
+        );
+      }
+      created.push({ date, zone, route_id: routeId, stops_added: candidates.length });
+    }
+    res.status(201).json({ ok: true, created });
+  } catch (err) {
+    console.error('[hotel-research] auto-week failed:', err);
+    res.status(500).json({ error: 'Failed to build week — ' + err.message });
+  }
+});
+
 module.exports = router;
