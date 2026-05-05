@@ -1675,6 +1675,174 @@ router.post('/backfill-facilities', requireAuth, async (_req, res) => {
 // ─── Facility master view — GET /facility/:id ─────────────────────────────
 //
 // Returns the unified record: facility row + all linked artifacts (saved
+// ─── Phone exports — vCard + ICS for the road kit ─────────────────
+//
+// The iPhone + iPad riding along on the Miami tour need (a) every saved
+// hotel as a real Contact card with phone, website, address; (b) the
+// Atlas team as Contacts; (c) Ben's May 11-14 tour as Calendar events
+// that auto-sync via Apple Calendar / Google Calendar / Outlook.
+//
+// vCard 3.0 + ICS RFC 5545 — both plain text, no library needed,
+// supported natively by every iPhone. Once imported they live offline +
+// work in CarPlay.
+
+function vcardEscape(s) {
+  return String(s ?? '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+}
+function icsEscape(s) {
+  return String(s ?? '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+}
+function icsFormatDate(d) {
+  const yr = d.getUTCFullYear();
+  const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const da = String(d.getUTCDate()).padStart(2, '0');
+  return `${yr}${mo}${da}`;
+}
+function icsTimestamp(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+}
+
+// GET /vcard — every saved hotel as one .vcf file. Open on iPhone →
+// "Add All N Contacts." Use ?fit_min=50 to restrict to top fits.
+router.get('/vcard', requireAuth, async (req, res) => {
+  const fitMin = Number(req.query.fit_min) || 0;
+  const submarket = String(req.query.submarket || '').trim();
+  try {
+    const where = ['1=1'];
+    const args = [];
+    if (fitMin > 0)   { where.push('ai_fit_score >= ?'); args.push(fitMin); }
+    if (submarket)    { where.push('submarket = ?'); args.push(submarket); }
+    const rows = await db.all(
+      `SELECT name, address, city, state, zip, phone, website, brand,
+              submarket, ai_fit_score, ai_fit_tier, rooms
+       FROM hotels_saved
+       WHERE ${where.join(' AND ')}
+       ORDER BY ai_fit_score DESC, name ASC`,
+      args,
+    );
+    const lines = [];
+    for (const h of rows) {
+      lines.push('BEGIN:VCARD');
+      lines.push('VERSION:3.0');
+      // FN prefixed with fit score so reps can sort Contacts and see the
+      // best opportunities first.
+      const fitPrefix = h.ai_fit_score != null ? `[${h.ai_fit_score}] ` : '';
+      lines.push(`FN:${vcardEscape(fitPrefix + h.name)}`);
+      lines.push(`N:${vcardEscape(h.name)};;;;`);
+      if (h.brand) lines.push(`ORG:${vcardEscape(h.brand)}`);
+      if (h.phone) lines.push(`TEL;TYPE=WORK,VOICE:${vcardEscape(h.phone)}`);
+      if (h.website) lines.push(`URL:${vcardEscape(h.website)}`);
+      lines.push(`ADR;TYPE=WORK:;;${vcardEscape(h.address || '')};${vcardEscape(h.city || '')};${vcardEscape(h.state || '')};${vcardEscape(h.zip || '')};US`);
+      const notes = [
+        h.submarket ? `📍 ${h.submarket}` : null,
+        h.rooms ? `${h.rooms} rooms` : null,
+        h.ai_fit_score != null ? `AI fit: ${h.ai_fit_score} (${h.ai_fit_tier || '-'})` : null,
+        'via Accelerate Robotics Hotel Research',
+      ].filter(Boolean).join(' · ');
+      lines.push(`NOTE:${vcardEscape(notes)}`);
+      const cats = ['Hotel Prospect'];
+      if (h.submarket) cats.push(h.submarket);
+      lines.push(`CATEGORIES:${cats.map(vcardEscape).join(',')}`);
+      lines.push('END:VCARD');
+    }
+    res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="hotel-prospects-${rows.length}.vcf"`);
+    res.send(lines.join('\r\n'));
+  } catch (err) {
+    console.error('[hotel-research] vcard failed:', err);
+    res.status(500).json({ error: 'Failed to build vCards' });
+  }
+});
+
+// GET /atlas-vcard — Atlas teammates as Contacts. AirDrop into the road kit.
+router.get('/atlas-vcard', requireAuth, async (_req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT email, name, role FROM admin_users
+       WHERE status IS NULL OR status != 'archived'
+       ORDER BY name ASC, email ASC`,
+      [],
+    );
+    const lines = [];
+    for (const u of rows) {
+      const display = u.name || u.email.split('@')[0];
+      lines.push('BEGIN:VCARD');
+      lines.push('VERSION:3.0');
+      lines.push(`FN:${vcardEscape(display)}`);
+      lines.push(`N:${vcardEscape(display)};;;;`);
+      lines.push('ORG:Accelerate Robotics');
+      if (u.role) lines.push(`TITLE:${vcardEscape(u.role)}`);
+      if (u.email) lines.push(`EMAIL;TYPE=WORK:${vcardEscape(u.email)}`);
+      lines.push('CATEGORIES:Atlas Team');
+      lines.push('END:VCARD');
+    }
+    res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="atlas-team-${rows.length}.vcf"`);
+    res.send(lines.join('\r\n'));
+  } catch (err) {
+    console.error('[hotel-research] atlas-vcard failed:', err);
+    res.status(500).json({ error: 'Failed to build atlas vCards' });
+  }
+});
+
+// GET /calendar.ics — every dated route as a calendar event. Subscribe
+// from Apple Calendar / Google Calendar to keep the iPhone + iPad in
+// sync as routes are re-built.
+router.get('/calendar.ics', requireAuth, async (_req, res) => {
+  try {
+    const routes = await db.all(
+      `SELECT id, name, scheduled_date, zone, notes, mode FROM bdr_routes
+       WHERE scheduled_date IS NOT NULL ORDER BY scheduled_date ASC`,
+      [],
+    );
+    const stopCounts = await db.all(
+      `SELECT route_id, COUNT(*) AS n FROM bdr_route_stops GROUP BY route_id`,
+      [],
+    );
+    const countMap = new Map(stopCounts.map(r => [r.route_id, Number(r.n)]));
+
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Accelerate Robotics//Hotel Research//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:Hotel Research Routes',
+      'X-WR-CALDESC:BDR sales routes — Accelerate Robotics',
+    ];
+    const stamp = icsTimestamp(new Date());
+    for (const r of routes) {
+      const start = new Date(r.scheduled_date + 'T12:00:00Z');
+      const end = new Date(start); end.setUTCDate(end.getUTCDate() + 1);
+      const stopN = countMap.get(r.id) || 0;
+      const summary = `${r.mode === 'walking' ? '🚶' : '🚗'} ${r.name}${stopN ? ` · ${stopN} stops` : ''}`;
+      const description = [
+        r.zone ? `Submarket(s): ${r.zone}` : null,
+        r.mode === 'walking' ? 'Walking tour' : 'Driving tour',
+        r.notes || null,
+        `Open in app: https://acceleraterobotics.ai/admin?tool=/hotel-research`,
+      ].filter(Boolean).join('\\n');
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:route-${r.id}@acceleraterobotics.ai`);
+      lines.push(`DTSTAMP:${stamp}`);
+      lines.push(`DTSTART;VALUE=DATE:${icsFormatDate(start)}`);
+      lines.push(`DTEND;VALUE=DATE:${icsFormatDate(end)}`);
+      lines.push(`SUMMARY:${icsEscape(summary)}`);
+      lines.push(`DESCRIPTION:${icsEscape(description)}`);
+      if (r.zone) lines.push(`LOCATION:${icsEscape(r.zone)}, Miami-Dade, FL`);
+      lines.push('END:VEVENT');
+    }
+    lines.push('END:VCALENDAR');
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="hotel-routes.ics"`);
+    res.send(lines.join('\r\n'));
+  } catch (err) {
+    console.error('[hotel-research] calendar.ics failed:', err);
+    res.status(500).json({ error: 'Failed to build calendar' });
+  }
+});
+
 // hotel research, visits, prospects, deals, assessments) so the UI can
 // render a single cohesive "opportunity card."
 router.get('/facility/:id', requireAuth, async (req, res) => {
