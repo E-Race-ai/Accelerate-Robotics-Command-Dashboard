@@ -130,30 +130,116 @@
   .hero-stat.success .h-value { color: var(--green); }
   .hero-stat.accent .h-value  { color: var(--accent-deep); }
 
-  /* ─── Triage launcher (above-the-fold CTA) ────────────────── */
+  /* ─── Triage launcher — Tinder-style swipe-for-deals hero ────── */
   .triage-launcher {
-    background: linear-gradient(135deg, #fef3c7 0%, #fff7ed 100%);
-    border: 2px solid var(--accent);
-    border-radius: 14px; padding: 14px 18px; margin-bottom: 18px;
-    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #ec4899 0%, #f97316 50%, #fbbf24 100%);
+    border-radius: 18px;
+    padding: 22px 24px; margin-bottom: 18px;
+    box-shadow: 0 12px 40px rgba(236, 72, 153, 0.30);
+    display: grid; grid-template-columns: auto 1fr auto;
+    align-items: center; gap: 20px;
+  }
+  /* Subtle shimmer sweep across the gradient */
+  .triage-launcher::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: tl-shimmer 4.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes tl-shimmer {
+    0%, 100% { transform: translateX(-100%); }
+    50% { transform: translateX(120%); }
+  }
+  /* Decorative card-stack on the left — visual metaphor for swiping */
+  .tl-cards {
+    position: relative; width: 64px; height: 80px; flex-shrink: 0;
+  }
+  .tl-cards::before, .tl-cards::after, .tl-cards .tl-top-card {
+    content: ''; position: absolute; left: 0; top: 0;
+    width: 56px; height: 78px; border-radius: 8px;
+    background: white;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+  .tl-cards::before { transform: rotate(-12deg) translateX(-2px); background: rgba(255,255,255,0.55); }
+  .tl-cards::after  { transform: rotate(8deg) translateX(2px);   background: rgba(255,255,255,0.85); }
+  .tl-cards .tl-top-card {
+    z-index: 2;
+    background: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    animation: tl-wiggle 3.2s ease-in-out infinite;
+  }
+  @keyframes tl-wiggle {
+    0%, 100% { transform: rotate(-2deg); }
+    25%      { transform: rotate(8deg) translateX(2px); }
+    50%      { transform: rotate(-6deg) translateX(-1px); }
+    75%      { transform: rotate(4deg); }
   }
   .triage-launcher .tl-eyebrow {
-    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
-    font-weight: 700; color: var(--accent-deep);
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(0,0,0,0.20);
+    color: white;
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.10em;
+    font-weight: 800;
+    padding: 3px 10px; border-radius: 100px;
   }
   .triage-launcher .tl-title {
     font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700; font-size: 1.1rem; color: var(--text);
-    margin-top: 2px;
+    font-weight: 800; font-size: 1.55rem; color: white;
+    line-height: 1.15; margin-top: 8px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.15);
   }
-  .triage-launcher .tl-sub { color: var(--text-dim); font-size: 0.84rem; margin-top: 2px; }
+  .triage-launcher .tl-sub {
+    color: rgba(255,255,255,0.92); font-size: 0.9rem; font-weight: 500;
+    margin-top: 6px;
+  }
+  .triage-launcher .tl-meta {
+    display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px;
+    font-size: 0.78rem; font-weight: 700; color: rgba(255,255,255,0.95);
+  }
+  .triage-launcher .tl-meta-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,0.20);
+    padding: 3px 10px; border-radius: 100px;
+    backdrop-filter: blur(4px);
+  }
   .triage-launcher .tl-btn {
-    background: var(--accent); color: white; border: 0; cursor: pointer;
-    padding: 12px 20px; border-radius: 10px;
-    font: inherit; font-weight: 700; font-size: 0.95rem;
-    box-shadow: 0 2px 6px rgba(217,119,6,0.30); margin-left: auto;
+    background: white; color: #be185d; border: 0; cursor: pointer;
+    padding: 16px 26px; border-radius: 14px;
+    font: inherit; font-weight: 800; font-size: 1.05rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25), 0 0 0 0 rgba(255,255,255,0.7);
+    display: inline-flex; align-items: center; gap: 8px;
+    position: relative; z-index: 1;
+    animation: tl-pulse 2s ease-in-out infinite;
+    transition: transform 0.12s, box-shadow 0.12s;
   }
-  .triage-launcher .tl-btn:hover { background: var(--accent-deep); }
+  @keyframes tl-pulse {
+    0%, 100% { box-shadow: 0 8px 24px rgba(0,0,0,0.25), 0 0 0 0 rgba(255,255,255,0.7); }
+    50%      { box-shadow: 0 8px 24px rgba(0,0,0,0.25), 0 0 0 14px rgba(255,255,255,0); }
+  }
+  .triage-launcher .tl-btn:hover {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.30);
+    animation: none;
+  }
+  .triage-launcher .tl-btn::after {
+    content: '→'; font-size: 1.2rem; transition: transform 0.18s;
+  }
+  .triage-launcher .tl-btn:hover::after { transform: translateX(4px); }
+
+  /* Mobile collapse — stack vertically on narrow screens */
+  @media (max-width: 720px) {
+    .triage-launcher {
+      grid-template-columns: 1fr;
+      text-align: center;
+      padding: 18px 16px;
+    }
+    .tl-cards { margin: 0 auto; }
+    .triage-launcher .tl-meta { justify-content: center; }
+    .triage-launcher .tl-btn { width: 100%; justify-content: center; }
+  }
 
   /* ─── Road kit — phone + iPad provisioning panel ──────────────── */
   .road-kit {
@@ -211,8 +297,8 @@
     display: grid; grid-template-columns: 1fr; gap: 6px;
   }
   .top-call-row {
-    display: grid; grid-template-columns: 40px 1fr auto auto;
-    gap: 10px; align-items: center;
+    display: grid; grid-template-columns: 40px 1fr auto auto auto;
+    gap: 8px; align-items: center;
     background: white; border: 1px solid #fcd34d;
     border-radius: 10px; padding: 8px 12px;
     cursor: pointer;
@@ -1695,12 +1781,18 @@
 
     <!-- 🎮 Triage Game launcher — visible only when there are unsorted hotels -->
     <div id="triageLauncher" class="triage-launcher" style="display:none;">
+      <div class="tl-cards" aria-hidden="true"><div class="tl-top-card">🏨</div></div>
       <div>
-        <div class="tl-eyebrow">🎮 Triage game</div>
-        <div class="tl-title" id="tlTitle">— hotels need a Yes / Maybe / No decision</div>
-        <div class="tl-sub">Sweep through the territory one card at a time. Y / M / R / N keys work too.</div>
+        <div class="tl-eyebrow">💖 SWIPE FOR DEALS</div>
+        <div class="tl-title" id="tlTitle">— deals waiting to land in your DM</div>
+        <div class="tl-sub">It's Tinder, but for 7-figure hotel deals. Swipe right on the ones you want to call.</div>
+        <div class="tl-meta" id="tlMeta">
+          <span class="tl-meta-pill">⚡ Y/M/R/N hotkeys</span>
+          <span class="tl-meta-pill">📱 plays on your phone</span>
+          <span class="tl-meta-pill">🏆 leaderboard with Ben + Celia</span>
+        </div>
       </div>
-      <button class="tl-btn" type="button" onclick="window._openTriage()">▶ Start triage</button>
+      <button class="tl-btn" type="button" onclick="window._openTriage()">Start swiping</button>
     </div>
 
     <!-- Triage Game overlay — iPhone 15 Pro Max bezel embedding /triage.html -->
@@ -2393,8 +2485,23 @@ function renderTriageLauncher() {
   const launcher = document.getElementById('triageLauncher');
   if (!launcher) return;
   if (!TG_QUEUE || TG_QUEUE.length === 0) { launcher.style.display = 'none'; return; }
-  launcher.style.display = 'flex';
-  document.getElementById('tlTitle').textContent = `${TG_QUEUE.length} hotels need a Yes / Maybe / No decision`;
+  launcher.style.display = 'grid';
+  // Tinder-style hype copy — count the deals, sum the territory revenue,
+  // tease the swipe metaphor.
+  const n = TG_QUEUE.length;
+  const topFitInQueue = TG_QUEUE.reduce((m, h) => Math.max(m, h.ai_fit_score || 0), 0);
+  const t = document.getElementById('tlTitle');
+  if (t) t.innerHTML = `<span style="white-space:nowrap">${n} 🔥 deals</span> <span style="opacity:0.85">are waiting to slide into your DM</span>`;
+  // Update the meta pills with live numbers
+  const m = document.getElementById('tlMeta');
+  if (m) {
+    m.innerHTML = `
+      <span class="tl-meta-pill">🎯 top fit in queue: <strong style="margin-left:3px">${topFitInQueue || '–'}</strong></span>
+      <span class="tl-meta-pill">⚡ Y / M / R / N hotkeys</span>
+      <span class="tl-meta-pill">📱 plays on your phone</span>
+      <span class="tl-meta-pill">🏆 leaderboard vs. Ben &amp; Celia</span>
+    `;
+  }
 }
 
 // Triage launcher — opens the iPhone bezel + iframes /triage.html so the
@@ -2610,7 +2717,8 @@ function renderTopCallsTile() {
                   <div class="tc-meta">${escapeHtml(sub)}</div>
                 </div>
                 ${h.phone ? `<a class="tc-phone" href="tel:${escapeHtml(h.phone)}" onclick="event.stopPropagation(); window._coldCallStart(${h.id})">📞 Call</a>` : '<span></span>'}
-                <button class="tc-action" type="button" onclick="event.stopPropagation(); window._jumpToTopCall(${h.id})">Open →</button>
+                <button class="tc-action" type="button" onclick="event.stopPropagation(); window._openPreCallBriefing(${h.id})" title="5-second talking points cheat sheet">📝 Brief</button>
+                <button class="tc-action" type="button" onclick="event.stopPropagation(); window._jumpToTopCall(${h.id})" style="background:#fbbf24">Open →</button>
               </div>`;
           }).join('')}
         </div>
@@ -2687,6 +2795,188 @@ window._openFitScoreExplainer = function() {
   document.body.appendChild(modal);
   const close = () => modal.remove();
   modal.querySelector('button[data-close]').addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+};
+
+// ── Pre-call briefing — 5-second talking-point cheat sheet ─────────────
+//
+// Generated deterministically from the hotel's structured data + the
+// chain Wikipedia summary (when present). Reps see this before every
+// cold call. Bullets are templated, never LLM'd, so the output is
+// instant + free + 100% predictable.
+function buildBriefing(h) {
+  const out = {
+    headline: '',
+    pitchAngles: [],   // strongest talking points, ranked
+    objectionPrep: [],
+    opener: '',
+    chainContext: null,
+    scoreDigest: '',
+  };
+
+  // ── One-line positioning ──────────────────────────────────────────
+  const stars = h.stars ? `${h.stars}★ ` : '';
+  const cls = h.brand_class && h.brand_class !== 'independent' ? h.brand_class.replace('_', '-') + ' ' : '';
+  const rooms = h.rooms ? `${h.rooms}-key ` : '';
+  const submarket = h.submarket || h.city || '';
+  const brand = h.brand || h.operator || '';
+  const where = submarket ? ` in ${submarket}` : '';
+  const named = brand ? ` (${brand})` : '';
+  out.headline = `${escapeHtml(h.name)} — ${stars}${cls}${rooms}property${where}${named}`;
+
+  // ── Strongest pitch angles, derived from data signals ──────────────
+  // Rank order: scale → integration value → revenue density → modern infra
+  if (h.rooms && Number(h.rooms) >= 200) {
+    out.pitchAngles.push({
+      title: `${h.rooms}-key scale`,
+      body: `Lobby + housekeeping + delivery loads compound across ${h.rooms} rooms — robotics ROI is real at this scale, not theoretical.`,
+    });
+  }
+  if (h.total_floors && Number(h.total_floors) >= 8) {
+    out.pitchAngles.push({
+      title: `${h.total_floors}-floor tower`,
+      body: `Vertical hospitality — every back-of-house trip up/down compounds. Robot-elevator integration is the wedge play; this is exactly the property profile where it matters most.`,
+    });
+  }
+  // Brand-specific hooks
+  const blob = `${h.name || ''} ${h.brand || ''} ${h.operator || ''}`.toLowerCase();
+  if (/marriott|ritz|st\.?\s*regis|w hotel|edition|sheraton|westin/.test(blob)) {
+    out.pitchAngles.push({
+      title: 'Marriott portfolio property',
+      body: 'Marriott corporate has been actively piloting robot deliveries at luxury + lifestyle brands. GMs here are familiar with the conversation — start at "we work with [other Marriott property] on robot-elevator integration."',
+    });
+  } else if (/hilton|conrad|waldorf|doubletree|embassy|hampton/.test(blob)) {
+    out.pitchAngles.push({
+      title: 'Hilton portfolio property',
+      body: 'Hilton has been rolling out robotic concierge + delivery at flagship properties. GMs respond to "this is what your sister property in [city] is doing" — frame it as keeping up, not pioneering.',
+    });
+  } else if (/hyatt|park hyatt|grand hyatt|andaz/.test(blob)) {
+    out.pitchAngles.push({
+      title: 'Hyatt portfolio property',
+      body: 'Hyatt\'s focus on guest experience at scale — robotics fits their brand voice. Talk about reducing repetitive tasks so staff can focus on guest interaction.',
+    });
+  } else if (h.brand_class === 'luxury' || (h.stars && Number(h.stars) >= 5)) {
+    out.pitchAngles.push({
+      title: 'Luxury positioning',
+      body: 'Guests at this price point expect the latest tech. Robotics is no longer experimental — it\'s table stakes for properties claiming to lead.',
+    });
+  }
+  // ADR-driven angle
+  const adr = Number(h.est_adr_dollars) || 0;
+  if (adr >= 400) {
+    out.pitchAngles.push({
+      title: `~$${adr}/night ADR`,
+      body: `Revenue density makes labor-saving robotics pay back fast. Even modest savings per stay scale aggressively at this price point.`,
+    });
+  }
+  // F&B / event signals
+  if (Number(h.restaurant_count) >= 2 || Number(h.event_sqft) >= 10000) {
+    out.pitchAngles.push({
+      title: 'Multi-outlet F&B + events',
+      body: 'Event setup, F&B-to-room runners, banquet support — robotics workflows multiply where there\'s diverse operations under one roof.',
+    });
+  }
+  // Renovated / new
+  if (Number(h.year_opened) >= 2018) {
+    out.pitchAngles.push({
+      title: `Opened ${h.year_opened}`,
+      body: 'Modern building infra (network, elevator IoT, BOH layout) makes integration weeks-not-months. They didn\'t plan for legacy.',
+    });
+  }
+  // Cap to 4 strongest
+  out.pitchAngles = out.pitchAngles.slice(0, 4);
+
+  // ── Objection prep ─────────────────────────────────────────────────
+  out.objectionPrep = [
+    { trigger: '"We don\'t have budget for innovation right now"',
+      reply: 'Reframe: this isn\'t innovation, it\'s ops cost reduction. Lead with labor + injury claims, not novelty.' },
+    { trigger: '"We tried robots, they didn\'t work"',
+      reply: 'Most failed pilots used vendor-locked single-purpose units. We\'re a software platform — the brain across whatever robots fit your workflow.' },
+    { trigger: '"Send me materials, I\'ll review"',
+      reply: 'Counter: "I\'d rather not waste your time with a deck. Could I do a 20-min walkthrough of your lobby + back of house when I\'m in town May 11–14?"' },
+  ];
+
+  // ── Opener ─────────────────────────────────────────────────────────
+  // Personalized to the strongest signal
+  const strongest = out.pitchAngles[0];
+  const dmHint = h.dm_name ? ` ${h.dm_name}` : '';
+  if (strongest) {
+    out.opener = `"Hi${dmHint}, this is [name] from Accelerate Robotics — we run the software layer that lets robots work across hotel systems like elevators and PMS. I'm calling because ${escapeHtml(h.name)}${strongest.title.toLowerCase().includes('-key') ? ' is exactly the property profile where ' : ' has '}${strongest.title.toLowerCase()}, which is where this stuff actually pays off. Have you got 60 seconds for me to share why I think you'd be a great pilot site?"`;
+  } else {
+    out.opener = `"Hi${dmHint}, this is [name] from Accelerate Robotics — we run the software layer that lets robots work across hotel systems. I'm in Miami May 11–14 and I'd love to do a quick walkthrough of ${escapeHtml(h.name)}. Got 60 seconds for me to explain what I'm seeing in the market?"`;
+  }
+
+  // ── Chain context (from deep-research enrichment) ──────────────────
+  if (h.chain_description) {
+    out.chainContext = h.chain_description.slice(0, 280) + (h.chain_description.length > 280 ? '…' : '');
+  }
+
+  // ── Score digest ───────────────────────────────────────────────────
+  const reasons = (() => {
+    let r = h.ai_fit_reasoning;
+    if (typeof r === 'string') { try { r = JSON.parse(r); } catch { r = []; } }
+    return Array.isArray(r) ? r : [];
+  })();
+  out.scoreDigest = reasons.slice(0, 4).join(' · ');
+
+  return out;
+}
+
+window._openPreCallBriefing = function(hotelId) {
+  const h = SAVED.find(s => s.id === hotelId);
+  if (!h) return;
+  const b = buildBriefing(h);
+  const tier = h.ai_fit_tier || 'low';
+  const tierBg = tier === 'top' ? '#16a34a' : tier === 'high' ? '#0891b2' : tier === 'mid' ? '#f59e0b' : '#94a3b8';
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:620px;max-height:88vh;overflow-y:auto" role="dialog">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="background:${tierBg};color:white;font-family:'Space Grotesk',sans-serif;font-weight:800;padding:4px 10px;border-radius:100px">FIT ${h.ai_fit_score ?? '–'}</span>
+            <span style="font-size:0.74rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;font-weight:700">📞 PRE-CALL BRIEFING</span>
+          </div>
+          <h2 style="margin:8px 0 0">${b.headline}</h2>
+          ${b.scoreDigest ? `<div style="font-size:0.78rem;color:var(--text-dim);margin-top:4px">${escapeHtml(b.scoreDigest)}</div>` : ''}
+        </div>
+        <button type="button" data-close style="background:transparent;border:0;color:var(--text-dim);cursor:pointer;font-size:1.4rem;padding:0">✕</button>
+      </div>
+
+      ${b.pitchAngles.length ? `
+        <h3 class="fs-section-h">🎯 Strongest pitch angles — lead with these</h3>
+        <ol style="margin:0;padding-left:22px">
+          ${b.pitchAngles.map(a => `
+            <li style="margin-bottom:10px">
+              <strong>${escapeHtml(a.title)}</strong>
+              <div style="color:var(--text-dim);font-size:0.88rem">${escapeHtml(a.body)}</div>
+            </li>`).join('')}
+        </ol>` : ''}
+
+      <h3 class="fs-section-h">📝 Suggested opener</h3>
+      <div style="background:#f0f9ff;border-left:3px solid #0891b2;border-radius:6px;padding:12px 14px;font-size:0.92rem;line-height:1.5;color:#0c4a6e;font-style:italic">${b.opener}</div>
+
+      ${b.chainContext ? `
+        <h3 class="fs-section-h">🏢 Chain context (use sparingly — for credibility, not pitch)</h3>
+        <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;font-size:0.86rem;color:var(--text-dim)">${escapeHtml(b.chainContext)}</div>` : ''}
+
+      <h3 class="fs-section-h">⚠️ Objection prep</h3>
+      <table class="fs-table">
+        ${b.objectionPrep.map(o => `
+          <tr><td style="width:42%"><strong>${escapeHtml(o.trigger)}</strong></td><td>${escapeHtml(o.reply)}</td></tr>`).join('')}
+      </table>
+
+      <div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" class="btn btn-ghost" data-close>Close</button>
+        ${h.phone ? `<a class="btn btn-primary" href="tel:${escapeHtml(h.phone)}" onclick="window._coldCallStart(${h.id})" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">📞 Dial ${escapeHtml(h.phone)}</a>` : '<button class="btn btn-primary" disabled>No phone on file</button>'}
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  const close = () => modal.remove();
+  modal.querySelectorAll('button[data-close]').forEach(b => b.addEventListener('click', close));
   modal.addEventListener('click', e => { if (e.target === modal) close(); });
 };
 
@@ -3697,6 +3987,7 @@ function renderPinRailFor(h) {
         <a target="_blank" rel="noopener" href="${websiteSearch}">🔎 Web</a>
         ${h.website ? `<a target="_blank" rel="noopener" href="${escapeHtml(h.website)}">🌐 Site</a>` : '<span></span>'}
         ${h.phone ? `<a href="tel:${escapeHtml(h.phone)}">📞 Call</a>` : '<span></span>'}
+        <button type="button" style="grid-column:1/-1;background:#fef3c7;color:#78350f;border-color:#fbbf24;font-weight:700" onclick="window._openPreCallBriefing(${h.id})">📝 Pre-call briefing — talking points</button>
         <button class="primary" type="button" style="grid-column:1/-1" onclick="window._openEditFromMap(${h.id})">Open full record →</button>
       </div>
       <div class="pin-rail-section-title">Quick triage</div>
@@ -5565,6 +5856,38 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
       </div>`).join('');
     const stopsWithCoords = stops.filter(s => s.lat && s.lng);
     const hasRoute = stopsWithCoords.length >= 2;
+
+    // Anchor hotel — Ben's overnight stay for the recon assessment
+    const anchorHotel = r.anchor_hotel_id ? stops.find(s => s.hotel_saved_id === r.anchor_hotel_id) : null;
+    const anchorBookSearch = anchorHotel
+      ? `https://www.google.com/search?q=${encodeURIComponent('book ' + anchorHotel.name + ' ' + (anchorHotel.city || '') + ' tonight')}`
+      : null;
+    const assessmentStatus = r.assessment_status || (anchorHotel ? 'planned' : null);
+    const assessmentBadge = assessmentStatus === 'dropped_off'
+      ? '<span style="background:#dcfce7;color:#14532d;padding:2px 7px;border-radius:100px;font-size:0.66rem;font-weight:700">✓ DROPPED OFF</span>'
+      : assessmentStatus === 'completed'
+        ? '<span style="background:#fef3c7;color:#78350f;padding:2px 7px;border-radius:100px;font-size:0.66rem;font-weight:700">📝 ASSESSMENT DONE</span>'
+        : assessmentStatus === 'planned'
+          ? '<span style="background:#e0e7ff;color:#3730a3;padding:2px 7px;border-radius:100px;font-size:0.66rem;font-weight:700">🛏 PLANNED</span>'
+          : '';
+    const anchorHtml = anchorHotel
+      ? `<div class="schedule-day-anchor" style="background:#0c4a6e;color:white;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:0.78rem">
+           <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px">
+             <strong style="color:#7dd3fc;font-size:0.66rem;letter-spacing:0.06em">🏨 ANCHOR — OVERNIGHT</strong>
+             ${assessmentBadge}
+           </div>
+           <div style="font-weight:700;font-size:0.86rem;color:white;line-height:1.25">${escapeHtml(anchorHotel.name)}</div>
+           <div style="color:rgba(255,255,255,0.72);font-size:0.7rem;margin-top:2px">${anchorHotel.est_adr_dollars ? '~$' + anchorHotel.est_adr_dollars + '/nt · ' : ''}fit ${anchorHotel.ai_fit_score ?? '–'}</div>
+           <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+             <a target="_blank" rel="noopener" href="${anchorBookSearch}" style="background:rgba(255,255,255,0.15);color:white;padding:3px 8px;border-radius:6px;font-size:0.7rem;text-decoration:none;font-weight:600">🛏 Book stay</a>
+             ${anchorHotel.website ? `<a target="_blank" rel="noopener" href="${escapeHtml(anchorHotel.website)}" style="background:rgba(255,255,255,0.15);color:white;padding:3px 8px;border-radius:6px;font-size:0.7rem;text-decoration:none;font-weight:600">🌐 Site</a>` : ''}
+             <button type="button" onclick="window._openAssessmentForm(${r.id})" style="background:#fbbf24;color:#1e293b;border:0;padding:3px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer">📝 Assessment</button>
+           </div>
+         </div>`
+      : `<div class="schedule-day-anchor" style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;padding:8px 10px;margin:8px 0">
+           <button type="button" onclick="window._autoPickAnchor(${r.id})" style="width:100%;background:transparent;border:0;color:var(--accent-deep);font-weight:600;font-size:0.78rem;cursor:pointer;padding:4px">🛏 Pick overnight anchor for ${escapeHtml(r.zone || 'this day')}</button>
+         </div>`;
+
     return `
       <div class="schedule-day ${isToday ? 'today' : ''}" data-date="${iso}" data-route-id="${r.id}">
         <div class="schedule-day-head">
@@ -5580,6 +5903,7 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
           ${total > 0 ? `<span>${done}/${total} done</span>` : ''}
         </div>
         ${total > 0 ? `<div class="schedule-day-progress"><div class="schedule-day-progress-bar"><div class="schedule-day-progress-fill" style="width:${pct}%"></div></div><span>${pct}%</span></div>` : ''}
+        ${anchorHtml}
         <div class="schedule-day-stops">${stopsHtml || '<div class="schedule-day-empty">No stops yet.</div>'}</div>
         <div class="schedule-day-actions">
           ${hasRoute ? `<button class="btn btn-primary" type="button" onclick="window._openScheduleDayRoute(${r.id})" style="flex:1">📍 Open</button>` : ''}
@@ -5587,6 +5911,128 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
       </div>`;
   }).join('');
 }
+
+// ── Anchor-hotel auto-pick + manual select ─────────────────────────
+window._autoPickAnchor = async function(routeId) {
+  try {
+    const r = await fetch(`/api/hotel-research/routes/${routeId}/auto-anchor`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
+  } catch (err) {
+    alert('Could not pick anchor: ' + err.message);
+  }
+};
+
+// ── Assessment form — overnight recon checklist Ben fills + drops at front desk
+window._openAssessmentForm = async function(routeId) {
+  // Pull current notes/status to pre-fill
+  let route = SCHEDULE_ROUTES.find(r => r.id === routeId);
+  if (!route) {
+    try {
+      const res = await fetch(`/api/hotel-research/routes/${routeId}`, { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        route = data.route;
+      }
+    } catch {}
+  }
+  if (!route) { alert('Could not load route'); return; }
+  const status = route.assessment_status || 'planned';
+  const notes = route.assessment_notes || '';
+  // Default checklist scaffold so Ben isn't staring at a blank box
+  const defaultTemplate = `=== OVERNIGHT FACILITY ASSESSMENT ===
+
+LOBBY
+- Flooring (carpet / hard / mixed):
+- Square footage estimate:
+- Foot traffic at 11pm-2am:
+- Glass walls / mirror surfaces (LiDAR risk):
+
+ELEVATOR BANK
+- Count + brand:
+- Year of last modernization:
+- Service / freight elevator separate?
+- Time between floors (avg):
+
+BACK OF HOUSE
+- Hallway widths (cm/in):
+- Door types (manual / auto / RFID):
+- Loading dock proximity:
+- WiFi coverage in BOH:
+
+NIGHT-SHIFT STAFFING
+- Front desk count:
+- Housekeeping count:
+- Engineering on call?
+
+TECH FOOTPRINT
+- Existing robots / IoT visible?
+- PMS in use:
+- Recent renovation indicators:
+
+DECISION-MAKER OBSERVATIONS
+- Best time to catch GM:
+- Manager schedule notes:
+- Receptionist receptive to follow-up?
+
+PHOTOS TAKEN (count + locations):
+-
+
+OVERALL FIT TAKE:
+-
+
+TALKING POINTS FOR DROP-OFF MEETING:
+- `;
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:680px;max-height:88vh;overflow-y:auto" role="dialog">
+      <h2 style="margin-top:0">📝 Overnight assessment — ${escapeHtml(route.zone || route.name || '')}</h2>
+      <p class="modal-sub">Run this on the night shift, drop the printout at the front desk in the morning before checking out.</p>
+
+      <label style="font-size:0.84rem;font-weight:600;display:block;margin-top:14px;margin-bottom:6px">Status</label>
+      <select id="aa-status" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font:inherit">
+        <option value="planned" ${status === 'planned' ? 'selected' : ''}>🛏 Planned</option>
+        <option value="completed" ${status === 'completed' ? 'selected' : ''}>📝 Completed (recon done)</option>
+        <option value="dropped_off" ${status === 'dropped_off' ? 'selected' : ''}>✓ Dropped at front desk</option>
+      </select>
+
+      <label style="font-size:0.84rem;font-weight:600;display:block;margin-top:14px;margin-bottom:6px">Recon notes</label>
+      <textarea id="aa-notes" rows="20" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:0.84rem;font-family:Menlo,Consolas,monospace;resize:vertical">${escapeHtml(notes || defaultTemplate)}</textarea>
+
+      <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" class="btn btn-ghost" data-close>Close</button>
+        <button type="button" class="btn btn-primary" id="aa-save">Save assessment</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  const close = () => modal.remove();
+  modal.querySelectorAll('button[data-close]').forEach(b => b.addEventListener('click', close));
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+  modal.querySelector('#aa-save').addEventListener('click', async () => {
+    const newStatus = modal.querySelector('#aa-status').value;
+    const newNotes = modal.querySelector('#aa-notes').value;
+    try {
+      const r = await fetch(`/api/hotel-research/routes/${routeId}/assessment`, {
+        method: 'PATCH', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assessment_status: newStatus, assessment_notes: newNotes }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      close();
+      if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
+    } catch (err) {
+      alert('Save failed: ' + err.message);
+    }
+  });
+};
 
 window._scheduleNav = function(deltaDays) {
   if (deltaDays === 0) {
