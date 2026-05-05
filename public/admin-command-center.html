@@ -1210,6 +1210,90 @@
       background: #0c1220;
       color: white;
     }
+    .dashboard-quicknav .qn-spacer { flex: 1; }
+    .dashboard-quicknav button.qn-toggle {
+      flex-shrink: 0;
+      background: white; border: 1px solid #e5e7eb;
+      color: #475569; font-size: 11.5px; font-weight: 600;
+      padding: 5px 10px; border-radius: 999px; cursor: pointer;
+      transition: all 0.12s; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .dashboard-quicknav button.qn-toggle:hover { color: #0f172a; border-color: #94a3b8; }
+
+    /* ═══ Collapsible section bar ═══
+       Each major section gets a clickable header that toggles its body.
+       State is persisted in localStorage so reps don't have to re-collapse
+       every reload. The bar replaces nothing — it's *prepended* to each
+       section so existing layout stays intact. */
+    .cc-section-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 12px; margin: 0 0 10px;
+      background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px;
+      cursor: pointer; user-select: none;
+      box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .cc-section-bar:hover { border-color: #94a3b8; background: #f8fafc; }
+    .cc-section-bar .cc-chev {
+      width: 18px; height: 18px; flex-shrink: 0;
+      transition: transform 0.18s ease;
+      color: #64748b;
+    }
+    .cc-section-bar.is-collapsed .cc-chev { transform: rotate(-90deg); }
+    .cc-section-bar .cc-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px; font-weight: 800; color: #0f172a;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .cc-section-bar .cc-meta {
+      font-size: 11px; color: #94a3b8; font-weight: 600;
+      margin-left: auto;
+    }
+    /* Hide the section body when its bar is collapsed. We toggle the
+       bar's class and use the adjacent-sibling combinator so we don't
+       have to wrap each section. */
+    .cc-section-body.is-collapsed { display: none; }
+
+    /* ═══ Right-rail minimap ═══
+       Fixed-position vertical list of section names, with the active
+       section highlighted by an IntersectionObserver. Click any item
+       to scroll to that section (auto-expands if collapsed). Hidden
+       on narrow viewports — the top quicknav handles those. */
+    .cc-minimap {
+      position: fixed;
+      right: 12px;
+      top: 50%; transform: translateY(-50%);
+      z-index: 25;
+      display: flex; flex-direction: column; gap: 4px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid #e5e7eb; border-radius: 12px;
+      padding: 10px 8px;
+      box-shadow: 0 8px 22px rgba(15,23,42,0.10);
+      max-height: 80vh; overflow-y: auto;
+    }
+    @media (max-width: 1280px) { .cc-minimap { display: none; } }
+    .cc-minimap-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 10px; border-radius: 8px;
+      font-size: 11.5px; font-weight: 600; color: #64748b;
+      cursor: pointer; user-select: none;
+      transition: all 0.12s;
+      white-space: nowrap;
+    }
+    .cc-minimap-item:hover { background: #f1f5f9; color: #0f172a; }
+    .cc-minimap-item.is-active {
+      background: #0c1220; color: white;
+    }
+    .cc-minimap-item .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #cbd5e1; flex-shrink: 0;
+      transition: background 0.12s;
+    }
+    .cc-minimap-item.is-active .dot { background: #fbbf24; }
+    .cc-minimap-item.is-collapsed .cc-name { opacity: 0.55; }
+    .cc-minimap-item .cc-name { line-height: 1.1; }
     /* WHY: section anchors need scroll-margin so when the sticky nav lands
        on a target, the heading isn't hidden underneath the strip. */
     [id="velocityHero"],
@@ -2296,6 +2380,9 @@
         <a href="#productivityCalendar" data-target="productivityCalendar">Activity</a>
         <a href="#dealMap"          data-target="dealMap">Map</a>
         <a href="#projectHub"       data-target="projectHub">Team Sync</a>
+        <span class="qn-spacer"></span>
+        <button class="qn-toggle" type="button" id="ccCollapseAll" title="Fold every section to its title bar">⊟ Collapse all</button>
+        <button class="qn-toggle" type="button" id="ccExpandAll" title="Expand every section">⊞ Expand all</button>
       </nav>
 
       <!-- ═══ Toolkit Dashboard (top of page — primary navigation) ═══ -->
@@ -6402,6 +6489,172 @@ document.addEventListener('click', (e) => {
     closeToolFrame();
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// Collapsible sections + right-rail minimap.
+// User feedback: "the toolkit is now extremely long to scroll from top
+// to bottom from feature to feature." Solution: fold any section to a
+// 1-line bar; minimap shows everything + scroll position at a glance.
+// State persists in localStorage so reps don't lose their layout on
+// reload.
+// ═══════════════════════════════════════════════════════════════════
+const CC_SECTIONS = [
+  { id: 'toolkitSection',         name: 'Toolkit',     defaultCollapsed: false },
+  { id: 'meetingAgenda',          name: 'Agenda',      defaultCollapsed: false },
+  { id: 'velocityHero',           name: 'Velocity',    defaultCollapsed: false },
+  { id: 'workflowPipeline',       name: 'Pipeline',    defaultCollapsed: false },
+  { id: 'communityBoard',         name: 'Community',   defaultCollapsed: true  },
+  { id: 'gsdSection',             name: 'GSD',         defaultCollapsed: false },
+  // Heavier widgets default collapsed — they fetch on expand if needed.
+  // The user can pin them open by expanding once; state persists.
+  { id: 'productivityCalendar',   name: 'Activity',    defaultCollapsed: true  },
+  { id: 'dealMap',                name: 'Map',         defaultCollapsed: true  },
+  { id: 'projectHub',             name: 'Team Sync',   defaultCollapsed: true  },
+];
+
+const CC_STORAGE_KEY = 'cc:collapsed-sections:v1';
+function _ccLoadState() {
+  try { return JSON.parse(localStorage.getItem(CC_STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+function _ccSaveState(state) {
+  try { localStorage.setItem(CC_STORAGE_KEY, JSON.stringify(state)); } catch {}
+}
+
+function _ccIsCollapsed(id) {
+  const state = _ccLoadState();
+  if (id in state) return !!state[id];
+  // First visit: use defaults from CC_SECTIONS
+  const cfg = CC_SECTIONS.find(s => s.id === id);
+  return !!(cfg && cfg.defaultCollapsed);
+}
+
+function _ccSetCollapsed(id, collapsed) {
+  const state = _ccLoadState();
+  state[id] = !!collapsed;
+  _ccSaveState(state);
+  _ccApplyCollapse(id, collapsed);
+}
+
+function _ccApplyCollapse(id, collapsed) {
+  const section = document.getElementById(id);
+  if (!section) return;
+  const bar = section.querySelector(':scope > .cc-section-bar');
+  const body = section.querySelector(':scope > .cc-section-body');
+  if (bar) bar.classList.toggle('is-collapsed', collapsed);
+  if (body) body.classList.toggle('is-collapsed', collapsed);
+  // Reflect in minimap too
+  document.querySelectorAll(`.cc-minimap-item[data-target="${id}"]`)
+    .forEach(el => el.classList.toggle('is-collapsed', collapsed));
+}
+
+function _ccBuildSectionBar(id, name) {
+  const bar = document.createElement('div');
+  bar.className = 'cc-section-bar';
+  bar.setAttribute('role', 'button');
+  bar.setAttribute('aria-controls', id + '-body');
+  bar.innerHTML = `
+    <svg class="cc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    <span class="cc-title">${name}</span>
+    <span class="cc-meta" data-cc-meta></span>
+  `;
+  bar.addEventListener('click', () => {
+    const section = document.getElementById(id);
+    const isCollapsed = section?.querySelector(':scope > .cc-section-bar')?.classList.contains('is-collapsed');
+    _ccSetCollapsed(id, !isCollapsed);
+  });
+  return bar;
+}
+
+function _ccWrapOneSection(id, name) {
+  const section = document.getElementById(id);
+  if (!section) return;
+  // Skip if already wrapped (idempotent)
+  if (section.querySelector(':scope > .cc-section-bar')) return;
+  // Move all children into a body wrapper
+  const body = document.createElement('div');
+  body.className = 'cc-section-body';
+  body.id = id + '-body';
+  while (section.firstChild) body.appendChild(section.firstChild);
+  // Prepend bar + body
+  const bar = _ccBuildSectionBar(id, name);
+  section.appendChild(bar);
+  section.appendChild(body);
+  // Apply persisted state
+  _ccApplyCollapse(id, _ccIsCollapsed(id));
+
+  // WHY: Some sections (velocityHero, others) get their contents replaced
+  // by JS *after* the initial wrap (renderVelocityHero etc.). When that
+  // happens our wrapper gets blown away. A MutationObserver re-wraps if
+  // the bar disappears.
+  const obs = new MutationObserver(() => {
+    if (!section.querySelector(':scope > .cc-section-bar')) {
+      // Re-wrap with a microtask delay so the replacing code finishes first
+      Promise.resolve().then(() => _ccWrapOneSection(id, name));
+      obs.disconnect();
+    }
+  });
+  obs.observe(section, { childList: true });
+}
+
+function _ccWrapSections() {
+  CC_SECTIONS.forEach(({ id, name }) => _ccWrapOneSection(id, name));
+}
+
+function _ccBuildMinimap() {
+  if (document.getElementById('ccMinimap')) return;
+  const map = document.createElement('div');
+  map.className = 'cc-minimap';
+  map.id = 'ccMinimap';
+  map.setAttribute('aria-label', 'Section minimap');
+  map.innerHTML = CC_SECTIONS.map(s => `
+    <div class="cc-minimap-item ${_ccIsCollapsed(s.id) ? 'is-collapsed' : ''}" data-target="${s.id}" role="button" tabindex="0">
+      <span class="dot"></span>
+      <span class="cc-name">${escapeHtml(s.name)}</span>
+    </div>
+  `).join('');
+  document.body.appendChild(map);
+  map.addEventListener('click', e => {
+    const item = e.target.closest('.cc-minimap-item');
+    if (!item) return;
+    const id = item.dataset.target;
+    // If collapsed, expand first so the rep actually lands on content.
+    if (_ccIsCollapsed(id)) _ccSetCollapsed(id, false);
+    const section = document.getElementById(id);
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  // Highlight whichever section is currently most visible.
+  const observer = new IntersectionObserver(entries => {
+    const visible = entries
+      .filter(e => e.isIntersecting && e.intersectionRatio > 0.05)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (!visible) return;
+    document.querySelectorAll('.cc-minimap-item').forEach(el => {
+      el.classList.toggle('is-active', el.dataset.target === visible.target.id);
+    });
+  }, { rootMargin: '-25% 0px -55% 0px', threshold: [0, 0.1, 0.5, 1] });
+  CC_SECTIONS.forEach(({ id }) => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+}
+
+function _ccWireBulkToggles() {
+  const collapseAll = document.getElementById('ccCollapseAll');
+  const expandAll = document.getElementById('ccExpandAll');
+  if (collapseAll) collapseAll.addEventListener('click', () => CC_SECTIONS.forEach(s => _ccSetCollapsed(s.id, true)));
+  if (expandAll) expandAll.addEventListener('click', () => CC_SECTIONS.forEach(s => _ccSetCollapsed(s.id, false)));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  _ccWrapSections();
+  _ccBuildMinimap();
+  _ccWireBulkToggles();
+});
+// Also fire immediately in case DOMContentLoaded already happened (defer-loaded pages).
+if (document.readyState !== 'loading') {
+  setTimeout(() => { _ccWrapSections(); _ccBuildMinimap(); _ccWireBulkToggles(); }, 0);
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // PRODUCTIVITY CALENDAR — rolling commit-activity grid
