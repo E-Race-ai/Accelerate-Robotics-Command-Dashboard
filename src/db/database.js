@@ -509,6 +509,27 @@ async function initSchema() {
     // existing prod DBs got the table before the submarket column was added,
     // so the index can't run until ALTER TABLE has appended the column.
 
+    // ── Hotel visits — drop-in / drive-by log per saved hotel
+    // WHY: BDRs do live property visits as part of pre-prospecting research.
+    // Each row is one visit: who you talked to, what you learned, what's next.
+    // Surfaces as a timeline on the saved-hotel detail view and as evidence
+    // when graduating to a prospect.
+    `CREATE TABLE IF NOT EXISTS hotel_visits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      hotel_saved_id INTEGER NOT NULL REFERENCES hotels_saved(id) ON DELETE CASCADE,
+      visit_date TEXT NOT NULL,
+      visit_type TEXT NOT NULL DEFAULT 'drop_in'
+        CHECK(visit_type IN ('drop_in', 'drive_by', 'scheduled_meeting', 'phone_call', 'email')),
+      contact_name TEXT,
+      contact_role TEXT,
+      summary TEXT,
+      next_step TEXT,
+      next_step_due TEXT,
+      created_by TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_hotel_visits_hotel ON hotel_visits(hotel_saved_id, visit_date DESC)`,
+
     // ── Glossary game — gamification of /pages/team-glossary.html
     // WHY: Per-user progress (points, level, streak) plus an activity log so
     // teammates can earn points by quizzing and eventually swap them for swag
@@ -632,6 +653,13 @@ async function initSchema() {
   // race on subsequent boots.
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN submarket TEXT");
   await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_submarket ON hotels_saved(submarket)");
+
+  // WHY: prospect_id links a saved-hotel research record to its graduated
+  // prospect row once a BDR confirms the property is qualified. Set by the
+  // /graduate endpoint; preserves the research trail (visits, notes) while
+  // letting the deal-pipeline code pick up where research left off.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN prospect_id INTEGER");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_prospect ON hotels_saved(prospect_id)");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────
