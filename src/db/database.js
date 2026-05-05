@@ -709,6 +709,34 @@ async function initSchema() {
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN existing_vendor TEXT");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN opportunity_score INTEGER");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN photo_url TEXT");
+
+  // ── Facility master record — the unified record per real-world property ─
+  // WHY: BDR research, prospect graduation, deals, assessments, and CRM
+  // activity all describe the same physical hotel — but until now lived in
+  // separate tables with no shared link. This binds them via facility_id
+  // so a single property carries its full lifecycle history.
+  //
+  // facilities is the canonical master (deals already FK to it). We extend
+  // it with location + the OSM dedupe key, then teach hotels_saved + prospects
+  // to FK into it on creation.
+  await additiveAlterIfMissing("ALTER TABLE facilities ADD COLUMN lat REAL");
+  await additiveAlterIfMissing("ALTER TABLE facilities ADD COLUMN lng REAL");
+  await additiveAlterIfMissing("ALTER TABLE facilities ADD COLUMN zip TEXT");
+  await additiveAlterIfMissing("ALTER TABLE facilities ADD COLUMN submarket TEXT");
+  await additiveAlterIfMissing("ALTER TABLE facilities ADD COLUMN osm_id TEXT");
+  await additiveAlterIfMissing("ALTER TABLE facilities ADD COLUMN stars INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE facilities ADD COLUMN year_opened INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE facilities ADD COLUMN est_adr_dollars INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE facilities ADD COLUMN website TEXT");
+  await additiveAlterIfMissing("ALTER TABLE facilities ADD COLUMN phone TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_facilities_osm_id ON facilities(osm_id)");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_facilities_name_city ON facilities(LOWER(name), LOWER(city))");
+
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN facility_id TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_facility ON hotels_saved(facility_id)");
+
+  await additiveAlterIfMissing("ALTER TABLE prospects ADD COLUMN facility_id TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_prospects_facility ON prospects(facility_id)");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────

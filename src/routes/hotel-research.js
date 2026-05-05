@@ -23,6 +23,7 @@ const {
   estimateAdr, normLocation, distanceMiles, shapeHotel, brandClass,
   revenuePotential, dealSizeTier,
 } = require('../services/hotel-research-utils');
+const { findOrCreateFacility } = require('../services/facility-master');
 
 const router = express.Router();
 
@@ -199,17 +200,34 @@ router.post('/saved', requireAuth, async (req, res) => {
   if (items.length > 50) return res.status(400).json({ error: 'save up to 50 hotels per request' });
 
   const ids = [];
+  const facilityIds = [];
   try {
     for (const h of items) {
       const name = String(h.name || '').trim().slice(0, 200);
       if (!name) return res.status(400).json({ error: 'each saved hotel needs a name' });
+
+      // Master-record link: every saved hotel resolves to (or creates) a row
+      // in facilities. The same facility may already exist if another rep
+      // saved it earlier or it came in via the deals UI — dedupe takes care
+      // of that. If anything fails here we DON'T block the hotel save; the
+      // research record is still useful even without the FK and a backfill
+      // endpoint can stitch it later.
+      let facilityId = null;
+      try {
+        const f = await findOrCreateFacility(db, { ...h, name });
+        facilityId = f.facility_id;
+      } catch (fe) {
+        console.warn('[hotel-research] facility find/create failed:', fe.message);
+      }
+
       const r = await db.run(
         `INSERT INTO hotels_saved (
            name, address, city, state, zip, country, lat, lng,
            brand, stars, rooms, phone, website, osm_id, submarket,
            est_adr_dollars, status, notes, saved_by,
-           operator, ownership, year_opened, total_floors, amenities
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           operator, ownership, year_opened, total_floors, amenities,
+           facility_id
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           name,
           h.address || null, h.city || null, h.state || null, h.zip || null, h.country || 'US',
@@ -232,11 +250,13 @@ router.post('/saved', requireAuth, async (req, res) => {
           Number.isInteger(Number(h.year_opened)) ? Number(h.year_opened) : null,
           Number.isInteger(Number(h.total_floors)) ? Number(h.total_floors) : null,
           h.amenities ? JSON.stringify(h.amenities).slice(0, 4000) : null,
+          facilityId,
         ],
       );
       ids.push(r.lastInsertRowid);
+      facilityIds.push(facilityId);
     }
-    res.status(201).json({ ok: true, ids });
+    res.status(201).json({ ok: true, ids, facility_ids: facilityIds });
   } catch (err) {
     console.error('[hotel-research] save failed:', err);
     res.status(500).json({ error: 'Failed to save hotel(s)' });
@@ -261,7 +281,7 @@ router.get('/saved', requireAuth, async (req, res) => {
               h.est_adr_dollars, h.status, h.notes, h.saved_by, h.prospect_id,
               h.operator, h.ownership, h.year_opened, h.total_floors, h.amenities,
               h.tags, h.dm_name, h.dm_title, h.dm_email, h.dm_phone, h.dm_linkedin,
-              h.existing_vendor, h.opportunity_score, h.photo_url,
+              h.existing_vendor, h.opportunity_score, h.photo_url, h.facility_id,
               h.created_at, h.updated_at,
               (SELECT COUNT(*) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) AS visit_count,
               (SELECT MAX(visit_date) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) AS last_visit_date
@@ -546,12 +566,27 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
   // market_id is optional; the prospects UI lets an admin assign it later.
   const marketId = req.body?.market_id ? String(req.body.market_id).slice(0, 80) : null;
 
+  // Master-record link: ensure this hotel has a facility row, then carry the
+  // facility_id onto the prospect so the deal pipeline picks up where research
+  // left off. If the hotel was saved before the facility-master rollout it
+  // may not have one yet — find or create on the fly.
+  let facilityId = hotel.facility_id;
+  if (!facilityId) {
+    try {
+      const f = await findOrCreateFacility(db, hotel);
+      facilityId = f.facility_id;
+      await db.run('UPDATE hotels_saved SET facility_id = ? WHERE id = ?', [facilityId, id]);
+    } catch (fe) {
+      console.warn('[hotel-research] graduate: facility find/create failed:', fe.message);
+    }
+  }
+
   try {
     const r = await db.run(
       `INSERT INTO prospects (
          market_id, status, name, address, brand, brand_class, keys, stars,
-         signal, source, research_date
-       ) VALUES (?, 'staged', ?, ?, ?, ?, ?, ?, ?, 'ai_research', datetime('now'))`,
+         signal, source, research_date, facility_id
+       ) VALUES (?, 'staged', ?, ?, ?, ?, ?, ?, ?, 'ai_research', datetime('now'), ?)`,
       [
         marketId,
         hotel.name,
@@ -561,11 +596,12 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
         hotel.rooms,
         hotel.stars,
         hotel.submarket || null,        // signal field — repurposed for our submarket tag
+        facilityId,
       ],
     );
     const prospectId = r.lastInsertRowid;
     await db.run("UPDATE hotels_saved SET prospect_id = ?, status = 'qualified', updated_at = datetime('now') WHERE id = ?", [prospectId, id]);
-    res.status(201).json({ ok: true, prospect_id: prospectId });
+    res.status(201).json({ ok: true, prospect_id: prospectId, facility_id: facilityId });
   } catch (err) {
     console.error('[hotel-research] graduate failed:', err);
     res.status(500).json({ error: 'Failed to graduate to prospect — ' + err.message });
@@ -855,6 +891,91 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[hotel-research] auto-week failed:', err);
     res.status(500).json({ error: 'Failed to build week — ' + err.message });
+  }
+});
+
+// ─── Backfill — link existing hotels_saved + prospects to facilities ─────
+//
+// One-shot maintenance endpoint. Walks every saved-hotel row that doesn't
+// have a facility_id yet and runs it through findOrCreateFacility. Same
+// for prospects. Safe to re-run — already-linked rows are skipped.
+//
+// Returns a summary so the operator can confirm everything stitched.
+router.post('/backfill-facilities', requireAuth, async (_req, res) => {
+  const summary = { hotels_saved: { scanned: 0, linked: 0, errors: 0 },
+                    prospects:    { scanned: 0, linked: 0, errors: 0 } };
+  try {
+    const hotels = await db.all('SELECT * FROM hotels_saved WHERE facility_id IS NULL');
+    for (const h of hotels) {
+      summary.hotels_saved.scanned++;
+      try {
+        const f = await findOrCreateFacility(db, h);
+        await db.run('UPDATE hotels_saved SET facility_id = ? WHERE id = ?', [f.facility_id, h.id]);
+        summary.hotels_saved.linked++;
+      } catch (e) {
+        summary.hotels_saved.errors++;
+        console.warn('[backfill] hotel', h.id, '→', e.message);
+      }
+    }
+    const prospects = await db.all('SELECT * FROM prospects WHERE facility_id IS NULL');
+    for (const p of prospects) {
+      summary.prospects.scanned++;
+      try {
+        // Prospects have a different shape than hotels — adapt the fields.
+        const f = await findOrCreateFacility(db, {
+          name: p.name, address: p.address, brand: p.brand,
+          stars: p.stars, rooms: p.keys,
+          osm_id: null, // prospects don't carry OSM ids
+        });
+        await db.run('UPDATE prospects SET facility_id = ? WHERE id = ?', [f.facility_id, p.id]);
+        summary.prospects.linked++;
+      } catch (e) {
+        summary.prospects.errors++;
+        console.warn('[backfill] prospect', p.id, '→', e.message);
+      }
+    }
+    res.json({ ok: true, summary });
+  } catch (err) {
+    console.error('[hotel-research] backfill failed:', err);
+    res.status(500).json({ error: 'Backfill failed — ' + err.message });
+  }
+});
+
+// ─── Facility master view — GET /facility/:id ─────────────────────────────
+//
+// Returns the unified record: facility row + all linked artifacts (saved
+// hotel research, visits, prospects, deals, assessments) so the UI can
+// render a single cohesive "opportunity card."
+router.get('/facility/:id', requireAuth, async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!id) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const facility = await db.one('SELECT * FROM facilities WHERE id = ?', [id]);
+    if (!facility) return res.status(404).json({ error: 'facility not found' });
+
+    const hotels = await db.all(
+      `SELECT id, name, status, est_adr_dollars, opportunity_score,
+              dm_name, dm_title, tags, prospect_id, updated_at
+       FROM hotels_saved WHERE facility_id = ? ORDER BY updated_at DESC`, [id],
+    );
+    const visits = await db.all(
+      `SELECT v.* FROM hotel_visits v
+       JOIN hotels_saved h ON h.id = v.hotel_saved_id
+       WHERE h.facility_id = ? ORDER BY v.visit_date DESC, v.id DESC`, [id],
+    );
+    const prospects = await db.all(
+      `SELECT id, status, name, address, brand, brand_class, keys, stars, source, created_at
+       FROM prospects WHERE facility_id = ? ORDER BY created_at DESC`, [id],
+    );
+    const deals = await db.all(
+      `SELECT id, name, stage, owner, value_monthly, value_total, created_at
+       FROM deals WHERE facility_id = ? ORDER BY created_at DESC`, [id],
+    );
+
+    res.json({ facility, hotels_saved: hotels, visits, prospects, deals });
+  } catch (err) {
+    console.error('[hotel-research] facility fetch failed:', err);
+    res.status(500).json({ error: 'Failed to load facility — ' + err.message });
   }
 });
 
