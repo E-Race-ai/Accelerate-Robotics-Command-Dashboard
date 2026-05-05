@@ -939,6 +939,57 @@
     max-height: 110px; overflow-y: auto;
   }
 
+  /* Today's Mission — banner above the saved list with live counts of
+     "what should I do right now" actions. Tappable cells jump to the
+     relevant tool (call queue, schedule, etc). */
+  .todays-mission {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    padding: 14px;
+    margin: 0 0 16px;
+    background: linear-gradient(135deg, #0c1220 0%, #1e293b 100%);
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.18);
+    color: #f8fafc;
+  }
+  .tm-cell {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(148,163,184,0.18);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .tm-cell:hover {
+    background: rgba(255,255,255,0.10);
+    border-color: rgba(251,191,36,0.45);
+    transform: translateY(-1px);
+  }
+  .tm-cell.is-action {
+    background: linear-gradient(135deg, rgba(34,197,94,0.20), rgba(16,185,129,0.10));
+    border-color: rgba(34,197,94,0.45);
+  }
+  .tm-cell.is-empty {
+    opacity: 0.5; cursor: default;
+  }
+  .tm-cell.is-empty:hover { transform: none; border-color: rgba(148,163,184,0.18); background: rgba(255,255,255,0.06); }
+  .tm-cell .tm-eyebrow {
+    font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em;
+    font-weight: 800; color: #94a3b8;
+  }
+  .tm-cell.is-action .tm-eyebrow { color: #4ade80; }
+  .tm-cell .tm-stat {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem; font-weight: 800; color: white;
+    line-height: 1;
+  }
+  .tm-cell .tm-sub {
+    font-size: 0.74rem; color: #cbd5e1; font-weight: 600;
+  }
+  .tm-cell.is-action .tm-stat { color: #fbbf24; }
+
   /* Pagination bar — sits below the grid when more cards are hidden */
   .saved-pagination {
     display: flex; gap: 10px; justify-content: center; align-items: center;
@@ -2282,6 +2333,12 @@
         <h2>My saved hotels</h2>
         <span class="panel-sub">Sort, filter, drill down. Edit any property to add visits + sales intel.</span>
       </div>
+
+      <!-- ─── Today's Mission banner — anchors the rep to today's actions
+           Populated by renderTodaysMission() after SAVED loads. Shows
+           current call-queue size, today's planned visits, and today's
+           wins (calls made, appointments set, graduations) at a glance. -->
+      <div class="todays-mission" id="todaysMission" style="display:none"></div>
       <div class="saved-toolbar">
         <input id="savedSearch" type="search" placeholder="Filter by name, city, brand, notes, or visits…" autocomplete="off">
         <label style="font-size:0.84rem;color:var(--text-dim);display:flex;align-items:center;gap:6px;font-weight:600">Sort by
@@ -5775,6 +5832,103 @@ async function bulkSave({ silent, onProgress } = {}) {
 }
 
 // ─── Saved tab ────────────────────────────────────────────────────
+// ── Today's Mission banner ─────────────────────────────────────────
+// Anchors the rep to "what should I do right now". Shows three live
+// counts: callable prospects, today's planned visits, and today's wins
+// (calls made + appointments set). Each cell is tappable and jumps to
+// the relevant tool.
+async function renderTodaysMission() {
+  const el = document.getElementById('todaysMission');
+  if (!el) return;
+  const todayDate = new Date();
+  const todayStr = todayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const todayIso = todayDate.toISOString().slice(0, 10);
+
+  // Call queue size — same selection rule as _buildCallQueue, mirrored
+  // so we don't need to rely on the queue helper being defined yet.
+  const callQueueSize = SAVED.filter(h =>
+    h.phone &&
+    ['lead', 'qualified', 'contacted'].includes(h.status) &&
+    !h.prospect_id &&
+    !(h.notes || '').includes(`[${todayStr}]`)
+  ).length;
+
+  // Today's wins — disposition stamps in notes from today, plus any
+  // graduations that happened today.
+  let callsToday = 0, appointmentsToday = 0, graduatedToday = 0;
+  for (const h of SAVED) {
+    const noteLines = (h.notes || '').split('\n');
+    for (const line of noteLines) {
+      if (!line.includes(`[${todayStr}]`)) continue;
+      callsToday++;
+      if (line.includes('Appointment set')) appointmentsToday++;
+    }
+    if (h.prospect_id && h.updated_at && h.updated_at.startsWith(todayIso)) graduatedToday++;
+  }
+
+  // Today's planned visits — pull the rep's route for today, if any.
+  // We deliberately fail silent: if the route endpoint 404s or returns
+  // empty we just hide the visits cell.
+  let visitsScheduled = 0;
+  try {
+    const r = await fetch(`/api/hotel-research/routes?from=${todayIso}&to=${todayIso}`, { credentials: 'same-origin' });
+    if (r.ok) {
+      const json = await r.json();
+      const todayRoutes = (json.routes || []).filter(rt => rt.scheduled_date === todayIso);
+      visitsScheduled = todayRoutes.reduce((s, rt) => s + (Number(rt.stop_count) || 0), 0);
+    }
+  } catch {} // network/auth blip — don't break the banner
+
+  // Decide what to show. Hide the banner only if literally nothing is
+  // happening today (no calls to make, no visits scheduled, no wins).
+  if (callQueueSize === 0 && visitsScheduled === 0 && callsToday === 0 && graduatedToday === 0) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = '';
+
+  const cell = (eyebrow, stat, sub, action, isAction) => {
+    const cls = `tm-cell ${isAction ? 'is-action' : ''} ${stat === 0 ? 'is-empty' : ''}`;
+    const onclick = (action && stat > 0) ? `onclick="${action}"` : '';
+    return `<div class="${cls}" ${onclick}>
+      <span class="tm-eyebrow">${eyebrow}</span>
+      <span class="tm-stat">${stat}</span>
+      <span class="tm-sub">${sub}</span>
+    </div>`;
+  };
+
+  el.innerHTML = `
+    ${cell(
+      '📞 Call queue',
+      callQueueSize,
+      callQueueSize > 0 ? 'callable prospects untouched today — start the queue' : 'all touched today',
+      `window._startCallQueue && window._startCallQueue()`,
+      callQueueSize > 0,
+    )}
+    ${cell(
+      '📍 Visits today',
+      visitsScheduled,
+      visitsScheduled > 0 ? 'stops on your route — open schedule' : 'no route built for today',
+      `document.getElementById('panel-schedule')?.scrollIntoView({behavior:'smooth',block:'start'})`,
+      false,
+    )}
+    ${cell(
+      '✅ Calls today',
+      callsToday,
+      callsToday > 0 ? `dispositions logged · ${appointmentsToday} appointment${appointmentsToday === 1 ? '' : 's'} set` : 'first call starts your day',
+      null,
+      false,
+    )}
+    ${cell(
+      '🎓 Graduated today',
+      graduatedToday,
+      graduatedToday > 0 ? 'moved into the deal pipeline' : 'graduate qualified hotels →',
+      null,
+      false,
+    )}
+  `;
+}
+
 async function loadSaved({ silent } = {}) {
   if (!silent) document.getElementById('savedContent').innerHTML = '<div class="loading">Loading…</div>';
   try {
@@ -5788,6 +5942,7 @@ async function loadSaved({ silent } = {}) {
     if (typeof renderHeroStats   === 'function') renderHeroStats();
     if (typeof renderTopCallsTile === 'function') renderTopCallsTile();
     if (typeof renderAlignmentTile === 'function') renderAlignmentTile();
+    renderTodaysMission();
     if (typeof loadTriageQueue   === 'function') loadTriageQueue();
     // Always refresh map when data changes — page is one stack now, the map is in view.
     if (typeof renderMap === 'function' && _lazyLoaded.has('panel-map')) renderMap();
