@@ -21,7 +21,7 @@ const db = require('../db/database');
 const { requireAuth } = require('../middleware/auth');
 const {
   estimateAdr, normLocation, distanceMiles, shapeHotel, brandClass,
-  revenuePotential, dealSizeTier,
+  revenuePotential, dealSizeTier, estimatedRobotCount, RAAS_MONTHLY_PER_BOT_USD,
 } = require('../services/hotel-research-utils');
 const { findOrCreateFacility } = require('../services/facility-master');
 const { enrichHotel, deepEnrichHotel } = require('../services/hotel-enrichment');
@@ -444,7 +444,15 @@ router.get('/saved', requireAuth, async (req, res) => {
       const adrForRev = (Number.isFinite(adrStored) && adrStored > 0)
         ? adrStored
         : estimateAdr({ brand: r.brand, stars: r.stars });
-      const rev = revenuePotential({ rooms: r.rooms, est_adr_dollars: adrForRev });
+      const sizingArgs = {
+        rooms: r.rooms,
+        stars: r.stars,
+        restaurant_count: r.restaurant_count,
+        event_sqft: r.event_sqft,
+        ballroom_capacity: r.ballroom_capacity,
+      };
+      const bots = estimatedRobotCount(sizingArgs);
+      const rev = revenuePotential(sizingArgs);
       let amenities = null, tags = null;
       try { if (r.amenities) amenities = JSON.parse(r.amenities); } catch {}
       try { if (r.tags) { const t = JSON.parse(r.tags); if (Array.isArray(t)) tags = t; } } catch {}
@@ -452,6 +460,12 @@ router.get('/saved', requireAuth, async (req, res) => {
         ...r,
         brand_class: brandClass({ brand: r.brand, stars: r.stars, est_adr: r.est_adr_dollars }),
         revenue_potential_annual: rev,
+        est_bot_count: bots,
+        raas_monthly_per_bot: RAAS_MONTHLY_PER_BOT_USD,
+        // Keep ADR fallback exposed so the card can show the Goldilocks-derived ADR
+        // even when the rep hasn't captured one. WHY: pre-call briefings need a
+        // price point even on a freshly-saved hotel.
+        est_adr_dollars: r.est_adr_dollars ?? adrForRev,
         deal_size_tier: dealSizeTier(rev),
         amenities,
         tags: tags || [],
@@ -723,6 +737,12 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
 
   // market_id is optional; the prospects UI lets an admin assign it later.
   const marketId = req.body?.market_id ? String(req.body.market_id).slice(0, 80) : null;
+  // pilot_tier is set in the new graduate modal — Pilot / Bigger pilot /
+  // Full deployment. It's appended to the `signal` text so the deal-card
+  // surfaces "Bigger pilot · 📍 South Beach" without needing a schema change.
+  const pilotTier = req.body?.pilot_tier ? String(req.body.pilot_tier).slice(0, 40) : null;
+  const signalParts = [hotel.submarket, pilotTier ? `${pilotTier} tier` : null].filter(Boolean);
+  const signalStr = signalParts.length ? signalParts.join(' · ') : null;
 
   // Master-record link: ensure this hotel has a facility row, then carry the
   // facility_id onto the prospect so the deal pipeline picks up where research
@@ -753,7 +773,7 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
         brandClass,
         hotel.rooms,
         hotel.stars,
-        hotel.submarket || null,        // signal field — repurposed for our submarket tag
+        signalStr,                       // signal field — repurposed for submarket + pilot tier
         facilityId,
       ],
     );
