@@ -973,6 +973,35 @@
   .charger-pin.tesla { background: #dc2626; }
   .charger-pin.ev    { background: #16a34a; }
 
+  /* Draw-radius mode — measurement circle label */
+  .radius-label {
+    background: white; border: 2px solid #0891b2;
+    border-radius: 12px;
+    padding: 6px 10px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    cursor: pointer;
+    transition: transform 0.08s, box-shadow 0.12s;
+  }
+  .radius-label:hover { transform: scale(1.04); box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
+  .radius-label.tier-top  { border-color: #16a34a; }
+  .radius-label.tier-mid  { border-color: #f59e0b; }
+  .radius-label.tier-low  { border-color: #dc2626; }
+  .radius-label .rl-count {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800;
+    font-size: 1.15rem; line-height: 1; color: #0e7490;
+  }
+  .radius-label.tier-top .rl-count { color: #15803d; }
+  .radius-label.tier-mid .rl-count { color: #b45309; }
+  .radius-label.tier-low .rl-count { color: #b91c1c; }
+  .radius-label .rl-meta {
+    font-size: 0.66rem; color: #475569; margin-top: 1px; font-weight: 600;
+  }
+  /* Active state for the toggle button */
+  .btn-ghost.active {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+
   /* ─── Market planning panel ─────────────────────────────── */
   .market-panel {
     background: var(--card); border: 1px solid var(--border);
@@ -1232,6 +1261,27 @@
     display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
   }
   .filter-summary strong { font-weight: 700; }
+
+  /* ─── Visit plan strip — multi-day tour preset on the schedule panel ─ */
+  .visit-plan-strip { margin-bottom: 14px; }
+  .vps-card {
+    background: linear-gradient(135deg, #ecfeff 0%, #f0f9ff 100%);
+    border: 1px solid #67e8f9; border-left: 4px solid #06b6d4;
+    border-radius: 12px; padding: 14px 18px;
+  }
+  .vps-eyebrow {
+    font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em;
+    color: #0e7490; text-transform: uppercase;
+  }
+  .vps-title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800;
+    font-size: 1.1rem; color: #164e63; margin-top: 2px;
+  }
+  .vps-sub { color: #475569; font-size: 0.84rem; margin-top: 4px; }
+  .vps-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .vps-status { font-size: 0.78rem; margin-top: 8px; min-height: 1em; }
+  .vps-status.success { color: #15803d; font-weight: 600; }
+  .vps-status.error   { color: var(--danger); font-weight: 600; }
 
   /* ─── Schedule panel ──────────────────────────────────────── */
   .schedule-header {
@@ -1679,6 +1729,8 @@
           <label class="toggle-label" title="Show only hotels that have received deep research treatment (top-fit cohort)">
             <input id="mapDeepOnly" type="checkbox"> 📚 Deep researched only
           </label>
+          <button id="drawRadiusBtn" class="btn-ghost" type="button" onclick="window._toggleDrawRadius()" title="Click anywhere on the map to drop a measurement circle that counts hotels inside">📏 Draw radius</button>
+          <button id="clearRadiusBtn" class="btn-ghost" type="button" onclick="window._clearAllRadii()" style="display:none">✕ Clear circles</button>
         </div>
       </div>
       <div class="hotel-map-wrap" id="mapWrap">
@@ -1842,6 +1894,21 @@
         <h2>📅 This week's plan</h2>
         <span class="panel-sub">Pick a zone per day · auto-fills untouched stops · drive in optimized order.</span>
       </div>
+
+      <!-- Multi-day visit-plan presets — one click, persistent -->
+      <div class="visit-plan-strip" id="visitPlanStrip">
+        <div class="vps-card">
+          <div class="vps-eyebrow">🚗 Multi-day Miami tour</div>
+          <div class="vps-title">Ben Noto · May 11-14</div>
+          <div class="vps-sub">4 days · ~80 stops · Tuesday is South Beach walking tour (22 in a row · the wedge play)</div>
+          <div class="vps-actions">
+            <button class="btn btn-primary" type="button" onclick="window._buildBenTour()" id="benTourBtn">⚡ Build / refresh Ben's tour</button>
+            <button class="btn btn-ghost" type="button" onclick="window._jumpToBenTour()">Open May 11 →</button>
+          </div>
+          <div class="vps-status" id="benTourStatus"></div>
+        </div>
+      </div>
+
       <div class="schedule-header">
         <div>
           <div class="schedule-eyebrow">Weekly schedule</div>
@@ -2478,6 +2545,13 @@ let CLUSTER_GROUP = null;
 let SHOW_AIRPORTS = true;
 let AIRPORT_PINS = [];
 
+// Draw-radius mode — user-placed measurement circles. Each tracks count +
+// avg fit + brand breakdown of hotels inside, persists to localStorage so
+// reps see their territory cuts after reload.
+let DRAW_RADIUS_MODE = false;
+let RADIUS_CIRCLES = []; // [{ id, lat, lng, radiusMi, leafletCircle, leafletLabel }]
+const RADIUS_KEY = 'mapRadiusCircles';
+
 // Major Miami-Dade airports — used for visual context + nearest-airport
 // computation. Hand-coded since they don't change and we don't need an API.
 const MIAMI_AIRPORTS = [
@@ -2504,14 +2578,20 @@ function ensureMap() {
     clearTimeout(chargerDebounce);
     chargerDebounce = setTimeout(refreshChargers, 400);
   });
-  // Click anywhere on the map background → open the "Top fits in this area"
-  // panel listing every hotel within ~1mi, sorted by AI fit. Pin clicks
-  // trigger marker handlers first and don't propagate here.
+  // Click anywhere on the map background → either drop a measurement
+  // circle (when 📏 Draw radius is on) OR open the "Top fits in this area"
+  // panel. Pin/popup clicks fire marker handlers first and don't propagate.
   MAP.on('click', (e) => {
     if (MAP_ROUTE_MODE) return; // route mode owns map clicks for path planning
-    if (e.originalEvent && e.originalEvent.target.closest('.leaflet-marker-icon')) return;
+    if (e.originalEvent && e.originalEvent.target.closest('.leaflet-marker-icon, .leaflet-popup, .radius-label')) return;
+    if (DRAW_RADIUS_MODE) {
+      placeRadiusCircle(e.latlng.lat, e.latlng.lng, 1.0);
+      return; // stay in draw mode so reps can drop multiple circles
+    }
     openAreaRail(e.latlng.lat, e.latlng.lng);
   });
+  // Restore any saved measurement circles from a prior session
+  setTimeout(restoreRadiiFromStorage, 250);
   return MAP;
 }
 
@@ -2598,6 +2678,173 @@ function airportIcon() {
 function clearAirportPins() {
   AIRPORT_PINS.forEach(p => MAP && MAP.removeLayer(p));
   AIRPORT_PINS = [];
+}
+
+// ── Draw-radius circles — measurement + hotel-count overlay ─────────
+window._toggleDrawRadius = function() {
+  DRAW_RADIUS_MODE = !DRAW_RADIUS_MODE;
+  const btn = document.getElementById('drawRadiusBtn');
+  if (btn) {
+    btn.classList.toggle('active', DRAW_RADIUS_MODE);
+    btn.textContent = DRAW_RADIUS_MODE ? '📏 Click map to drop circle' : '📏 Draw radius';
+  }
+  if (MAP) {
+    MAP.getContainer().style.cursor = DRAW_RADIUS_MODE ? 'crosshair' : '';
+  }
+};
+
+window._clearAllRadii = function() {
+  for (const c of RADIUS_CIRCLES) {
+    if (c.leafletCircle) MAP.removeLayer(c.leafletCircle);
+    if (c.leafletLabel)  MAP.removeLayer(c.leafletLabel);
+  }
+  RADIUS_CIRCLES = [];
+  saveRadiiToStorage();
+  document.getElementById('clearRadiusBtn').style.display = 'none';
+};
+
+// Drop a fresh circle at click; default 1mi radius. Subsequent clicks add
+// more circles (so reps can compare South Beach vs Brickell side-by-side).
+function placeRadiusCircle(lat, lng, radiusMi) {
+  const id = 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  const circle = L.circle([lat, lng], {
+    radius: radiusMi * 1609.344,
+    color: '#0891b2', weight: 2,
+    fillColor: '#06b6d4', fillOpacity: 0.10,
+    draggable: false,
+  }).addTo(MAP);
+  // Center label — count + avg fit + radius — kept above the circle. We
+  // bind a popup with editable radius and brand breakdown on click.
+  const label = L.marker([lat, lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div class="radius-label" id="${id}_label">…</div>`,
+      iconSize: [120, 56], iconAnchor: [60, 28],
+    }),
+    interactive: true,
+    keyboard: false,
+  }).addTo(MAP);
+  const entry = { id, lat, lng, radiusMi, leafletCircle: circle, leafletLabel: label };
+  RADIUS_CIRCLES.push(entry);
+
+  const refresh = () => updateRadiusStats(entry);
+  // Click the label to open the editor popup
+  label.on('click', () => {
+    const stats = computeRadiusStats(entry);
+    const popupHtml = buildRadiusPopupHtml(entry, stats);
+    label.bindPopup(popupHtml, { maxWidth: 280, minWidth: 220 }).openPopup();
+    // Hook the slider after popup renders
+    setTimeout(() => {
+      const slider = document.getElementById(`${id}_slider`);
+      if (slider) slider.addEventListener('input', e => {
+        entry.radiusMi = Number(e.target.value);
+        circle.setRadius(entry.radiusMi * 1609.344);
+        const valEl = document.getElementById(`${id}_sliderVal`);
+        if (valEl) valEl.textContent = entry.radiusMi.toFixed(1) + ' mi';
+        refresh();
+        saveRadiiToStorage();
+      });
+    }, 30);
+  });
+  refresh();
+  saveRadiiToStorage();
+  document.getElementById('clearRadiusBtn').style.display = '';
+  return entry;
+}
+
+function computeRadiusStats(entry) {
+  const inside = SAVED.filter(h => h.lat != null && h.lng != null
+    && haversineMi(entry.lat, entry.lng, h.lat, h.lng) <= entry.radiusMi);
+  const fits = inside.map(h => h.ai_fit_score || 0).filter(s => s > 0);
+  const avgFit = fits.length ? Math.round(fits.reduce((a, b) => a + b, 0) / fits.length) : null;
+  // Top 4 chains by count
+  const chainCounts = new Map();
+  for (const h of inside) {
+    const k = (h.brand || h.operator || 'Independent').trim();
+    chainCounts.set(k, (chainCounts.get(k) || 0) + 1);
+  }
+  const topChains = [...chainCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const topFitHotel = inside.length
+    ? inside.slice().sort((a, b) => (b.ai_fit_score || 0) - (a.ai_fit_score || 0))[0]
+    : null;
+  // Submarket breakdown
+  const smCounts = new Map();
+  for (const h of inside) {
+    const k = h.submarket || '—';
+    smCounts.set(k, (smCounts.get(k) || 0) + 1);
+  }
+  const topSubmarkets = [...smCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+  return { count: inside.length, avgFit, topChains, topFitHotel, topSubmarkets };
+}
+
+function updateRadiusStats(entry) {
+  const stats = computeRadiusStats(entry);
+  const el = document.getElementById(`${entry.id}_label`);
+  if (el) {
+    const tier = stats.avgFit == null ? 'low' : stats.avgFit >= 50 ? 'top' : stats.avgFit >= 30 ? 'mid' : 'low';
+    el.className = `radius-label tier-${tier}`;
+    el.innerHTML =
+      `<div class="rl-count">${stats.count}</div>` +
+      `<div class="rl-meta">${entry.radiusMi.toFixed(1)}mi · ${stats.avgFit != null ? 'avg ' + stats.avgFit : 'no fit data'}</div>`;
+  }
+}
+
+function buildRadiusPopupHtml(entry, stats) {
+  const chainsHtml = stats.topChains.length
+    ? stats.topChains.map(([n, c]) => `<span style="background:#f1f5f9;padding:2px 8px;border-radius:100px;font-size:0.74rem;font-weight:600;color:#334155;margin-right:4px">${escapeHtml(n)} (${c})</span>`).join('')
+    : '<span style="color:#94a3b8;font-size:0.78rem">no hotels in radius</span>';
+  const submarketsHtml = stats.topSubmarkets.length
+    ? stats.topSubmarkets.map(([n, c]) => `<span style="background:#fef3c7;padding:2px 8px;border-radius:100px;font-size:0.74rem;font-weight:600;color:#78350f;margin-right:4px">${escapeHtml(n)} (${c})</span>`).join('')
+    : '';
+  return `
+    <div style="min-width:240px">
+      <strong style="font-size:1rem">📏 ${stats.count} hotel${stats.count === 1 ? '' : 's'} within ${entry.radiusMi.toFixed(1)} mi</strong>
+      ${stats.avgFit != null ? `<div style="margin-top:4px;font-size:0.86rem;color:#0e7490;font-weight:600">Avg AI fit: ${stats.avgFit}</div>` : ''}
+      <div style="margin:10px 0">
+        <input type="range" min="0.25" max="15" step="0.25" value="${entry.radiusMi}" id="${entry.id}_slider" style="width:100%">
+        <div style="font-size:0.78rem;color:#475569;text-align:right">Radius: <strong id="${entry.id}_sliderVal">${entry.radiusMi.toFixed(1)} mi</strong></div>
+      </div>
+      ${stats.topSubmarkets.length ? `<div style="font-size:0.7rem;font-weight:700;color:#78350f;text-transform:uppercase;letter-spacing:0.05em;margin:8px 0 4px">Top submarkets</div>${submarketsHtml}` : ''}
+      <div style="font-size:0.7rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.05em;margin:10px 0 4px">Top chains</div>
+      ${chainsHtml}
+      ${stats.topFitHotel ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #e5e7eb"><div style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:700">Best fit inside</div><div style="font-weight:700;font-size:0.86rem;color:#1e293b">${escapeHtml(stats.topFitHotel.name)} (${stats.topFitHotel.ai_fit_score ?? '–'})</div></div>` : ''}
+      <button onclick="window._removeRadiusCircle('${entry.id}')" style="margin-top:10px;background:#fee2e2;color:#991b1b;border:0;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.78rem;font-weight:600;width:100%">Remove this circle</button>
+    </div>`;
+}
+
+window._removeRadiusCircle = function(id) {
+  const idx = RADIUS_CIRCLES.findIndex(c => c.id === id);
+  if (idx < 0) return;
+  const c = RADIUS_CIRCLES[idx];
+  if (c.leafletCircle) MAP.removeLayer(c.leafletCircle);
+  if (c.leafletLabel)  MAP.removeLayer(c.leafletLabel);
+  RADIUS_CIRCLES.splice(idx, 1);
+  saveRadiiToStorage();
+  if (RADIUS_CIRCLES.length === 0) document.getElementById('clearRadiusBtn').style.display = 'none';
+};
+
+// Persist circles across reload — just lat/lng/radius, not Leaflet refs
+function saveRadiiToStorage() {
+  try {
+    const data = RADIUS_CIRCLES.map(c => ({ id: c.id, lat: c.lat, lng: c.lng, radiusMi: c.radiusMi }));
+    localStorage.setItem(RADIUS_KEY, JSON.stringify(data));
+  } catch {}
+}
+function restoreRadiiFromStorage() {
+  try {
+    const raw = localStorage.getItem(RADIUS_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data)) return;
+    for (const c of data) {
+      placeRadiusCircle(c.lat, c.lng, c.radiusMi || 1);
+    }
+  } catch {}
+}
+
+// Refresh stats on every renderMap (filters change → counts change)
+function refreshAllRadiusStats() {
+  for (const c of RADIUS_CIRCLES) updateRadiusStats(c);
 }
 
 function renderAirportPins() {
@@ -2724,12 +2971,14 @@ function renderMap() {
 
   // Auto-populate the chain / city / zip dropdowns from the current SAVED set.
   // Sorted alphabetically; counts shown so reps see "Marriott (38)" not just "Marriott".
+  // Sort by hotel count DESC so reps see "Marriott (38)" before "avid Hotel (1)" —
+  // matches the question they're actually asking ("which chain dominates my territory?")
   populateOptionDropdown('mapChainFilter', SAVED, h => {
     const key = (h.brand || h.operator || '').trim();
     return key || null;
-  }, MAP_FILTERS.chain, 'All chains');
-  populateOptionDropdown('mapCityFilter', SAVED, h => h.city, MAP_FILTERS.city, 'All cities');
-  populateOptionDropdown('mapZipFilter',  SAVED, h => h.zip,  MAP_FILTERS.zip, 'All zips');
+  }, MAP_FILTERS.chain, 'All chains',  { sortBy: 'count' });
+  populateOptionDropdown('mapCityFilter', SAVED, h => h.city, MAP_FILTERS.city, 'All cities', { sortBy: 'count' });
+  populateOptionDropdown('mapZipFilter',  SAVED, h => h.zip,  MAP_FILTERS.zip,  'All zips',   { sortBy: 'count' });
 
   // Submarket dropdown — re-render based on the current saved set
   const subSet = Array.from(new Set(SAVED.map(h => h.submarket).filter(Boolean))).sort();
@@ -2918,6 +3167,9 @@ function renderMap() {
   }
 
   if (bounds.length > 0 && !MAP._userMoved) MAP.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+  // Refresh any user-drawn measurement circles so their hotel-counts reflect
+  // the current filter set (count drops if status/chain/etc. is narrowed).
+  refreshAllRadiusStats();
 }
 
 function buildPopupHtml(h) {
@@ -3288,7 +3540,9 @@ document.getElementById('mapDeepOnly')    ?.addEventListener('change', e => { MA
 // Builds <option> list for a filter dropdown from a key extractor over SAVED.
 // WHY count badges: a "Marriott (38)" option signals immediately how big a
 // slice the rep is about to apply, vs forcing them to click and find out.
-function populateOptionDropdown(elId, rows, keyFn, currentValue, allLabel) {
+// WHY count-DESC default: reps care about the densest cohorts first ("show
+// me my biggest chain by hotel count"); alphabetic sort buries the signal.
+function populateOptionDropdown(elId, rows, keyFn, currentValue, allLabel, opts = {}) {
   const sel = document.getElementById(elId);
   if (!sel) return;
   const counts = new Map();
@@ -3297,11 +3551,18 @@ function populateOptionDropdown(elId, rows, keyFn, currentValue, allLabel) {
     if (!k) continue;
     counts.set(k, (counts.get(k) || 0) + 1);
   }
-  const sorted = [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  const opts = [`<option value="all">${allLabel}</option>`].concat(
+  const sortBy = opts.sortBy || 'count'; // 'count' | 'alpha'
+  const sorted = [...counts.entries()].sort((a, b) => {
+    if (sortBy === 'count') {
+      // Count DESC, then alpha ASC as tiebreaker
+      return (b[1] - a[1]) || a[0].localeCompare(b[0]);
+    }
+    return a[0].localeCompare(b[0]);
+  });
+  const optionsHtml = [`<option value="all">${allLabel}</option>`].concat(
     sorted.map(([k, n]) => `<option value="${escapeHtml(k)}"${currentValue === k ? ' selected' : ''}>${escapeHtml(k)} (${n})</option>`),
   );
-  sel.innerHTML = opts.join('');
+  sel.innerHTML = optionsHtml.join('');
 }
 
 // ── Tesla + EV charger overlay ───────────────────────────────────────
@@ -4839,6 +5100,84 @@ window._planDay = async function(iso) {
 };
 
 // ── Auto-week wizard ─────────────────────────────────────────────
+// ── Ben's May 11-14 Miami tour — one-click multi-day plan ─────────
+// Wipes any existing routes named "Ben Noto · Miami May 11-14 …" and
+// rebuilds them from scratch using current AI fit scores + triage state.
+// Re-runnable any time after Ben/Celia keep triaging — picks up new
+// "yes / maybe" decisions and skips "no" cards.
+window._buildBenTour = async function() {
+  const btn = document.getElementById('benTourBtn');
+  const status = document.getElementById('benTourStatus');
+  if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
+  if (status) { status.className = 'vps-status'; status.textContent = ''; }
+  try {
+    const plan = {
+      name: 'Ben Noto · Miami May 11-14',
+      wipe: true,
+      days: [
+        { date: '2026-05-11', mode: 'driving',
+          label: 'Mon · Brickell + Downtown + Wynwood',
+          submarkets: [
+            { key: 'Brickell',         cap: 6 },
+            { key: 'Downtown Miami',   cap: 5 },
+            { key: 'Midtown / Wynwood', cap: 5 },
+          ]},
+        { date: '2026-05-12', mode: 'walking',
+          label: 'Tue · SOUTH BEACH walking tour — wedge play, 20+ in a row',
+          submarkets: [
+            { key: 'South Beach', cap: 22 },
+          ]},
+        { date: '2026-05-13', mode: 'driving',
+          label: 'Wed · Coral Gables + Coconut Grove + Doral + MIA Airport',
+          submarkets: [
+            { key: 'Coral Gables',   cap: 5 },
+            { key: 'Coconut Grove',  cap: 5 },
+            { key: 'Doral',          cap: 6 },
+            { key: 'MIA Airport',    cap: 5 },
+          ]},
+        { date: '2026-05-14', mode: 'driving',
+          label: 'Thu · North-Coast tour — Aventura + Bal Harbour + Sunny Isles + Mid-Beach + North Beach',
+          submarkets: [
+            { key: 'Aventura',           cap: 5 },
+            { key: 'Bal Harbour',        cap: 5 },
+            { key: 'Sunny Isles Beach',  cap: 5 },
+            { key: 'Mid-Beach',          cap: 5 },
+            { key: 'North Beach',        cap: 5 },
+          ]},
+      ],
+    };
+    const res = await fetch('/api/hotel-research/routes/visit-plan?wipe=1', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(plan),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    const totalStops = (data.days || []).reduce((s, d) => s + (d.stops_added || 0), 0);
+    if (status) {
+      status.className = 'vps-status success';
+      status.textContent = `✓ Built ${data.days.length} routes · ${totalStops} stops total · saved permanently. Tap "Open May 11 →" to view.`;
+    }
+    // Jump the schedule view to the week of May 11
+    SCHEDULE_ANCHOR = _mondayOf(new Date('2026-05-11T12:00:00'));
+    if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
+  } catch (err) {
+    if (status) {
+      status.className = 'vps-status error';
+      status.textContent = '⚠ Build failed: ' + err.message;
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Build / refresh Ben\'s tour'; }
+  }
+};
+
+window._jumpToBenTour = function() {
+  // Snap the schedule view to the week of May 11 + scroll the panel into view
+  SCHEDULE_ANCHOR = _mondayOf(new Date('2026-05-11T12:00:00'));
+  if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
+  document.getElementById('panel-schedule').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
 window._openAutoWeekWizard = function() {
   const submarkets = Array.from(new Set(SAVED.map(h => h.submarket).filter(Boolean))).sort();
   if (!submarkets.length) { alert('Save some hotels first — go to Search and run a market preset.'); return; }
