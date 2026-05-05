@@ -253,6 +253,35 @@ app.use('/api/system-settings', systemSettingsRoutes);
 // proxy isn't a public window into home-dashboard.
 app.use('/cl', requireAuthPage, creativeLabsProxy);
 
+// ── Deploy version endpoint (no auth — used by client banner) ──
+// Tells the dashboard exactly which commit is running. Falls back through:
+//   1. RENDER_GIT_COMMIT — set by Render on every deploy
+//   2. .git/HEAD lookup — works in any git checkout (dev, manual hosts)
+//   3. unknown — last resort if neither is available
+let _versionCache = null;
+app.get('/api/version', (_req, res) => {
+  if (_versionCache) return res.json(_versionCache);
+  let commit = process.env.RENDER_GIT_COMMIT || null;
+  let branch = process.env.RENDER_GIT_BRANCH || null;
+  if (!commit) {
+    try {
+      const { execFileSync } = require('child_process');
+      const repoRoot = path.resolve(__dirname, '..');
+      commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf-8' }).trim();
+      branch = branch || execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: repoRoot, encoding: 'utf-8' }).trim();
+    } catch { /* not a git checkout — leave commit null */ }
+  }
+  // Cache for the lifetime of the process — version doesn't change after boot.
+  _versionCache = {
+    commit: commit ? commit.slice(0, 40) : null,
+    short: commit ? commit.slice(0, 7) : null,
+    branch: branch || null,
+    started_at: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+    uptime_s: Math.round(process.uptime()),
+  };
+  res.json(_versionCache);
+});
+
 // ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
 // WHY: Removed auth requirement temporarily so we can diagnose the API key issue.
 // Does NOT send an email — only reports what key and EMAIL_FROM the server sees.

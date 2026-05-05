@@ -2312,6 +2312,46 @@
       font-size: 0.78rem; color: #cbd5e1; line-height: 1.45;
     }
     .gsd-streak-line .gsd-em { color: #fbbf24; font-weight: 700; }
+    /* Deploy-status banner — appears at the top of /admin when prod
+       is behind main. Hidden when in sync. */
+    .deploy-banner {
+      background: linear-gradient(90deg, #fef3c7, #fde68a);
+      border: 1px solid #fbbf24;
+      border-radius: 10px;
+      padding: 8px 14px;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.84rem; color: #78350f;
+      box-shadow: 0 2px 6px rgba(251,191,36,0.15);
+    }
+    .deploy-banner.is-fresh {
+      background: linear-gradient(90deg, #dcfce7, #ecfdf5);
+      border-color: #86efac;
+      color: #14532d;
+    }
+    .deploy-banner .db-badge {
+      font-weight: 800; font-size: 0.7rem;
+      padding: 3px 9px; border-radius: 999px;
+      background: rgba(120,53,15,0.12); color: #78350f;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      flex-shrink: 0;
+    }
+    .deploy-banner.is-fresh .db-badge {
+      background: rgba(20,83,45,0.12); color: #14532d;
+    }
+    .deploy-banner .db-msg { flex: 1; }
+    .deploy-banner code {
+      font-family: 'SF Mono', Menlo, monospace; font-size: 0.78rem;
+      background: rgba(15,23,42,0.06); padding: 1px 6px; border-radius: 4px;
+    }
+    .deploy-banner .db-link {
+      color: inherit; text-decoration: underline; font-weight: 600; flex-shrink: 0;
+    }
+    .deploy-banner .db-close {
+      background: transparent; border: 0; cursor: pointer; color: inherit; opacity: 0.6;
+      font-size: 1rem; padding: 0 4px; flex-shrink: 0;
+    }
+
     .gsd-marathon-banner {
       margin-top: 8px;
       background: linear-gradient(90deg, rgba(249,115,22,0.5), rgba(220,38,38,0.4));
@@ -2404,6 +2444,10 @@
           <button onclick="refreshAll()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-gray-500 hover:bg-gray-50 border border-gray-200 transition">Refresh</button>
         </div>
       </div>
+
+      <!-- Deploy-status banner: shows when prod is behind main. Populated
+           by checkDeployStatus() on load. Hidden by default. -->
+      <div id="deployBanner" class="deploy-banner" style="display:none;"></div>
 
       <!-- Quick-nav: sticky jumplist so the 10+ sections feel one click away -->
       <nav class="dashboard-quicknav" id="dashboardQuicknav" aria-label="Jump to section">
@@ -6691,7 +6735,75 @@ document.addEventListener('DOMContentLoaded', () => {
   _ccWrapSections();
   _ccBuildMinimap();
   _ccWireBulkToggles();
+  checkDeployStatus();
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// Deploy status — compares the running-server commit (/api/version)
+// against the latest commit in main (from git-activity). When the
+// running commit isn't the freshest, surface a banner so Eric knows
+// to manual-deploy on Render. Auto-hides when in sync.
+// ═══════════════════════════════════════════════════════════════════
+async function checkDeployStatus() {
+  const banner = document.getElementById('deployBanner');
+  if (!banner) return;
+  let prod, activity;
+  try {
+    [prod, activity] = await Promise.all([
+      fetch('/api/version').then(r => r.json()),
+      fetch('/api/toolkit/git-activity?days=14&nocache=1', { credentials: 'same-origin' }).then(r => r.json()),
+    ]);
+  } catch { return; } // network blip — silent
+
+  const prodShort = prod?.short;
+  if (!prodShort) return; // can't determine — silent
+
+  // Find the freshest commit across all days in the window
+  const allCommits = [];
+  for (const iso of Object.keys(activity?.daily_activity || {})) {
+    for (const ent of activity.daily_activity[iso]) {
+      for (const m of (ent.messages || [])) {
+        if (m.hash) allCommits.push({ iso, hash: m.hash, message: m.message });
+      }
+    }
+  }
+  if (allCommits.length === 0) return;
+  // Sort by ISO date desc — newest commit on most recent day wins
+  allCommits.sort((a, b) => b.iso.localeCompare(a.iso));
+  const latest = allCommits[0];
+
+  // Count commits between prod's commit and the latest. If we can't find
+  // prod's commit in the activity window, we treat it as "stale by 14d+".
+  const prodIdx = allCommits.findIndex(c => c.hash === prodShort);
+  const ahead = prodIdx === -1 ? '14+' : prodIdx;
+
+  if (ahead === 0) {
+    banner.classList.add('is-fresh');
+    banner.innerHTML = `
+      <span class="db-badge">In sync</span>
+      <span class="db-msg">Prod is up to date with <code>main</code> (<code>${escapeHtml(prodShort)}</code>).</span>
+      <button class="db-close" type="button" aria-label="Dismiss" onclick="this.parentElement.style.display='none'">×</button>
+    `;
+    banner.style.display = 'flex';
+    // Auto-hide the green badge after 8s — only the warning state should
+    // persist across refreshes.
+    setTimeout(() => { banner.style.display = 'none'; }, 8000);
+    return;
+  }
+
+  banner.classList.remove('is-fresh');
+  banner.innerHTML = `
+    <span class="db-badge">⚠ Stale</span>
+    <span class="db-msg">
+      Prod is <strong>${ahead} commit${ahead === 1 ? '' : 's'} behind</strong> main.
+      Running <code>${escapeHtml(prodShort)}</code> · latest is <code>${escapeHtml(latest.hash)}</code>
+      — <em>${escapeHtml(latest.message.slice(0, 80))}</em>.
+    </span>
+    <a class="db-link" href="https://dashboard.render.com" target="_blank" rel="noopener">Open Render →</a>
+    <button class="db-close" type="button" aria-label="Dismiss" onclick="this.parentElement.style.display='none'">×</button>
+  `;
+  banner.style.display = 'flex';
+}
 // Also fire immediately in case DOMContentLoaded already happened (defer-loaded pages).
 if (document.readyState !== 'loading') {
   setTimeout(() => { _ccWrapSections(); _ccBuildMinimap(); _ccWireBulkToggles(); }, 0);
