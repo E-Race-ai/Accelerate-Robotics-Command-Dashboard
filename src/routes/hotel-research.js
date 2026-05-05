@@ -791,6 +791,33 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
   }
 });
 
+// POST /saved/:id/ungraduate — reverse a graduation, removing the prospect
+// and unlinking the hotel. WHY: reps occasionally graduate a hotel too early
+// (before the site walk is complete, or they pick the wrong one). This lets
+// them undo without asking an admin to edit the database.
+router.post('/saved/:id/ungraduate', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+
+  const hotel = await db.one('SELECT id, prospect_id, status FROM hotels_saved WHERE id = ?', [id]);
+  if (!hotel) return res.status(404).json({ error: 'saved hotel not found' });
+  if (!hotel.prospect_id) return res.status(409).json({ error: 'hotel is not graduated' });
+
+  try {
+    // Remove the prospect row
+    await db.run('DELETE FROM prospects WHERE id = ?', [hotel.prospect_id]);
+    // Unlink the hotel and revert status to 'lead'
+    await db.run(
+      "UPDATE hotels_saved SET prospect_id = NULL, status = 'lead', updated_at = datetime('now') WHERE id = ?",
+      [id],
+    );
+    res.json({ ok: true, reverted_prospect_id: hotel.prospect_id });
+  } catch (err) {
+    console.error('[hotel-research] ungraduate failed:', err);
+    res.status(500).json({ error: 'Failed to undo graduation — ' + err.message });
+  }
+});
+
 // ─── BDR Schedule — saved + dated routes ────────────────────────
 //
 // A `bdr_route` is either a saved template (no date) OR a planned day
@@ -1093,7 +1120,7 @@ router.post('/routes/:id/auto-anchor', requireAuth, async (req, res) => {
            AND h.est_adr_dollars IS NOT NULL
            AND h.est_adr_dollars BETWEEN ? AND ?
            AND h.phone IS NOT NULL AND h.phone != ''
-           AND (h.triage IS NULL OR h.triage != 'no')
+           AND h.triage = 'yes'
          ORDER BY h.ai_fit_score DESC, h.est_adr_dollars ASC, h.id ASC
          LIMIT 1`,
         [id, budgetMin, budgetMax],
@@ -1106,7 +1133,7 @@ router.post('/routes/:id/auto-anchor', requireAuth, async (req, res) => {
            JOIN hotels_saved h ON h.id = s.hotel_saved_id
            WHERE s.route_id = ?
              AND COALESCE(h.ai_fit_score, 0) >= 20
-             AND (h.triage IS NULL OR h.triage != 'no')
+             AND h.triage = 'yes'
            ORDER BY h.ai_fit_score DESC, h.est_adr_dollars ASC, h.id ASC
            LIMIT 1`,
           [id],
@@ -1219,7 +1246,7 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
         `SELECT h.id, h.lat, h.lng, h.ai_fit_score FROM hotels_saved h
          WHERE h.submarket = ? AND h.lat IS NOT NULL AND h.lng IS NOT NULL
            AND (SELECT COUNT(*) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) = 0
-           AND (h.triage IS NULL OR h.triage != 'no')
+           AND h.triage = 'yes'
          ORDER BY (h.ai_fit_score IS NULL) ASC, h.ai_fit_score DESC, h.id ASC
          LIMIT ?`,
         [zone, cap],
@@ -1363,7 +1390,7 @@ router.post('/routes/visit-plan', requireAuth, async (req, res) => {
            FROM hotels_saved h
            WHERE h.submarket = ?
              AND h.lat IS NOT NULL AND h.lng IS NOT NULL
-             AND (h.triage IS NULL OR h.triage != 'no')
+             AND h.triage = 'yes'
              AND h.prospect_id IS NULL
            ORDER BY h.ai_fit_score DESC NULLS LAST, h.id ASC
            LIMIT ?`,

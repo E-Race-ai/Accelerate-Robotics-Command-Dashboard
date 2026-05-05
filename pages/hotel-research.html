@@ -1743,15 +1743,15 @@
     font-size: 0.78rem; flex: 1;
   }
   .schedule-day-stop {
-    display: flex; align-items: center; gap: 6px;
-    padding: 4px 6px; background: #f8fafc; border-radius: 6px;
     color: var(--text);
   }
-  .schedule-day-stop.done {
+  .schedule-day-stop.done > summary {
     text-decoration: line-through; color: var(--text-faint); background: #ecfdf5;
   }
   .schedule-day-stop input[type="checkbox"] { margin: 0; flex-shrink: 0; cursor: pointer; }
   .schedule-day-stop-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  details.schedule-day-stop > summary { list-style: none; }
+  details.schedule-day-stop > summary::-webkit-details-marker { display: none; }
   .schedule-day-actions {
     display: flex; gap: 4px; flex-wrap: wrap; margin-top: auto;
   }
@@ -2512,7 +2512,7 @@
       <div class="panel-head">
         <span class="panel-eyebrow">Step 4 · Drive it</span>
         <h2>📅 This week's plan</h2>
-        <span class="panel-sub">Pick a zone per day · auto-fills untouched stops · drive in optimized order.</span>
+        <span class="panel-sub">Pick a zone per day · auto-fills from triage-approved (✅ YES) hotels · drive in optimized order.</span>
       </div>
 
       <!-- Multi-day visit-plan presets — one click, persistent -->
@@ -2548,11 +2548,49 @@
     </div>
   </div>
 
+  <!-- Stop editor modal — click a stop to move/remove/add -->
+  <div class="modal-backdrop" id="stopEditorBackdrop" onclick="if(event.target===this)window._closeStopEditor()">
+    <div class="modal" style="max-width:480px;" role="dialog">
+      <h2 id="stopEditorTitle">Edit stop</h2>
+      <p class="modal-sub" id="stopEditorSub"></p>
+      <div id="stopEditorBody"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-ghost" type="button" onclick="window._closeStopEditor()" style="flex:1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add stop picker modal — search triage-approved hotels to add -->
+  <div class="modal-backdrop" id="addStopBackdrop" onclick="if(event.target===this)window._closeAddStop()">
+    <div class="modal" style="max-width:520px;" role="dialog">
+      <h2>Add hotel to route</h2>
+      <p class="modal-sub">Only triage-approved hotels are shown.</p>
+      <input type="text" id="addStopSearch" placeholder="Search by name, city, or brand..." style="width:100%;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-size:0.85rem">
+      <div id="addStopResults" style="max-height:320px;overflow-y:auto"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-ghost" type="button" onclick="window._closeAddStop()" style="flex:1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Route detail modal — full day route with hotel info + chargers -->
+  <div class="modal-backdrop" id="routeDetailBackdrop" onclick="if(event.target===this)window._closeRouteDetail()">
+    <div class="modal" style="max-width:640px;" role="dialog">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <h2 id="routeDetailTitle" style="margin:0">Route detail</h2>
+        <button type="button" onclick="window._closeRouteDetail()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#94a3b8">✕</button>
+      </div>
+      <p class="modal-sub" id="routeDetailSub"></p>
+      <div id="routeDetailBody" style="max-height:70vh;overflow-y:auto"></div>
+      <div style="display:flex;gap:8px;margin-top:16px" id="routeDetailActions"></div>
+    </div>
+  </div>
+
   <!-- Auto-plan week wizard -->
   <div class="modal-backdrop" id="autoWeekBackdrop" onclick="if(event.target===this)closeAutoWeek()">
     <div class="modal" style="max-width:560px;" role="dialog">
       <h2>⚡ Auto-plan a week</h2>
-      <p class="modal-sub">Pick a submarket for each day. We'll create one route per day with up to N untouched hotels in that zone, ordered for an efficient drive.</p>
+      <p class="modal-sub">Pick a submarket for each day. We'll create one route per day with up to N triage-approved (✅ swiped YES) hotels in that zone, ordered for an efficient drive.</p>
       <div class="form-error" id="autoWeekError"></div>
       <div class="form-row">
         <label for="awkStart">Week starts (Monday)</label>
@@ -3995,16 +4033,16 @@ function renderHeroStats() {
   const followups = SAVED.filter(h => (h.visit_count || 0) > 0 && (h.status === 'lead' || h.status === 'contacted')).length;
 
   const tiles = [
-    { label: 'Saved hotels',  value: total.toLocaleString(),       sub: 'in your territory',                      cls: '',        target: 'panel-saved' },
-    { label: 'Untouched',     value: untouched.toLocaleString(),   sub: 'no visit logged yet',                    cls: 'alert',   target: 'panel-saved' },
-    { label: 'Visited',       value: visited.toLocaleString(),     sub: 'at least one drop-by',                   cls: '',        target: 'panel-saved' },
-    { label: 'Qualified',     value: qualified.toLocaleString(),   sub: 'ready to graduate',                       cls: 'accent',  target: 'panel-saved' },
-    { label: 'Graduated',     value: graduated.toLocaleString(),   sub: 'in the deal pipeline',                    cls: 'success', target: 'panel-saved' },
-    { label: 'Follow-ups due', value: followups.toLocaleString(),  sub: 'visited, not yet qualified',              cls: 'accent',  target: 'panel-saved' },
-    { label: 'Est. territory rev', value: fmtRev(revSum) || '—',   sub: 'sum of room-rev × occupancy',             cls: '',        target: 'panel-saved' },
+    { label: 'Saved hotels',     value: total.toLocaleString(),       sub: 'in your territory',            cls: '',        filter: 'all' },
+    { label: 'Untouched',        value: untouched.toLocaleString(),   sub: 'no visit logged yet',          cls: 'alert',   filter: 'untouched' },
+    { label: 'Visited',          value: visited.toLocaleString(),     sub: 'at least one drop-by',         cls: '',        filter: 'visited' },
+    { label: 'Qualified',        value: qualified.toLocaleString(),   sub: 'ready to graduate',            cls: 'accent',  filter: 'qualified' },
+    { label: 'Graduated',        value: graduated.toLocaleString(),   sub: 'in the deal pipeline',         cls: 'success', filter: 'graduated' },
+    { label: 'Follow-ups due',   value: followups.toLocaleString(),   sub: 'visited, not yet qualified',   cls: 'accent',  filter: 'followups' },
+    { label: 'Est. territory rev', value: fmtRev(revSum) || '—',     sub: 'sum of room-rev × occupancy',  cls: '',        filter: 'all' },
   ];
   el.innerHTML = tiles.map(t => `
-    <div class="hero-stat ${t.cls}" onclick="document.getElementById('${t.target}').scrollIntoView({block:'start'})">
+    <div class="hero-stat ${t.cls}" onclick="applyHeroFilter('${t.filter}')" style="cursor:pointer">
       <span class="h-label">${escapeHtml(t.label)}</span>
       <span class="h-value">${t.value}</span>
       <span class="h-sub">${escapeHtml(t.sub)}</span>
@@ -5767,6 +5805,7 @@ window._confirmGraduate = async function() {
         <div class="grad-actions">
           <a class="btn btn-primary" href="/pages/pipeline-prospects.html?focus=${data.prospect_id}" style="text-decoration:none;">Open Prospect →</a>
           <button class="btn btn-secondary" type="button" onclick="window._closeGraduateModal()">Close</button>
+          <button class="btn btn-ghost" type="button" onclick="window._undoGraduation(${id})" style="color:#b91c1c;border-color:#fecaca;font-size:0.78rem;margin-top:4px">↩ Undo — remove from prospects</button>
         </div>
       </div>
     `;
@@ -5779,6 +5818,44 @@ window._confirmGraduate = async function() {
 
 // Backward-compat shim — keeps any old code paths (e.g. table rows) working.
 window._graduateHotel = window._openGraduateModal;
+
+// WHY: Immediate undo from the graduation success screen — no confirm dialog
+// needed since the user just graduated it seconds ago and is looking at the
+// result. Closes the modal and refreshes data after reverting.
+window._undoGraduation = async function(hotelId) {
+  try {
+    const res = await fetch(`/api/hotel-research/saved/${hotelId}/ungraduate`, {
+      method: 'POST', credentials: 'same-origin',
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    window._closeGraduateModal();
+    await loadSaved({ silent: true });
+    if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
+  } catch (err) {
+    alert('Undo failed: ' + err.message);
+  }
+};
+
+// WHY: Reps sometimes graduate a hotel prematurely — before the site walk
+// is done or by accident. This reverses the graduation, deletes the prospect
+// row, and resets the hotel status back to 'lead'.
+window._ungraduateHotel = async function(hotelId) {
+  const h = SAVED.find(x => x.id === hotelId);
+  const name = h ? h.name : 'this hotel';
+  if (!confirm(`Undo graduation for "${name}"?\n\nThis will remove Prospect #${h?.prospect_id} from the pipeline and revert the hotel to lead status.`)) return;
+  try {
+    const res = await fetch(`/api/hotel-research/saved/${hotelId}/ungraduate`, {
+      method: 'POST', credentials: 'same-origin',
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    await loadSaved({ silent: true });
+    if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
+  } catch (err) {
+    alert('Undo failed: ' + err.message);
+  }
+};
 
 // ─── Search ───────────────────────────────────────────────────────
 async function runSearch(e) {
@@ -6091,7 +6168,12 @@ async function loadSaved({ silent } = {}) {
 function applyFilters(rows) {
   const q = savedQuery.toLowerCase().trim();
   return rows.filter(s => {
-    if (savedFilter !== 'all' && s.status !== savedFilter) return false;
+    // WHY: 'needs_followup' is a virtual status used by hero stat cards —
+    // matches visited hotels with status lead or contacted (not yet qualified).
+    if (savedFilter === 'needs_followup') {
+      if ((s.visit_count || 0) === 0) return false;
+      if (s.status !== 'lead' && s.status !== 'contacted') return false;
+    } else if (savedFilter !== 'all' && s.status !== savedFilter) return false;
     if (savedSubmarketFilter !== 'all' && s.submarket !== savedSubmarketFilter) return false;
     if (ADV.brandClass !== 'all' && (s.brand_class || 'independent') !== ADV.brandClass) return false;
     if (ADV.starsMin > 0 && (Number(s.stars) || 0) < ADV.starsMin) return false;
@@ -6208,7 +6290,8 @@ function renderSaved() {
 
   // Filter summary banner — shows count + sum of effective filters
   const summaryBits = [];
-  if (savedFilter !== 'all') summaryBits.push(savedFilter);
+  if (savedFilter === 'needs_followup') summaryBits.push('follow-ups due');
+  else if (savedFilter !== 'all') summaryBits.push(savedFilter);
   if (savedSubmarketFilter !== 'all') summaryBits.push('📍 ' + savedSubmarketFilter);
   if (ADV.brandClass !== 'all') summaryBits.push(BRAND_CLASS_LABELS[ADV.brandClass] || ADV.brandClass);
   if (ADV.untouched) summaryBits.push('untouched');
@@ -6376,6 +6459,43 @@ window._setView = function(v) {
 function setSavedFilter(s) { savedFilter = s; renderSaved(); }
 function setSavedSubmarketFilter(s) { savedSubmarketFilter = s; renderSaved(); }
 
+// WHY: Hero stat cards need to clear all filters, apply one specific filter,
+// scroll to the saved-hotels panel, and re-render — so clicking "Untouched"
+// shows only untouched hotels instead of just scrolling down.
+function applyHeroFilter(filterName) {
+  // First clear everything (mirrors advClearBtn logic)
+  Object.assign(ADV, {
+    brandClass: 'all', starsMin: 0, roomsMin: 0, adrMin: 0, adrMax: 9999,
+    restMin: 0, eventMin: 0, mtgMin: 0, floorsMin: 0, fitMin: 0,
+    hasPhone: false, hasWebsite: false, hasVisits: false, untouched: false, graduated: false,
+  });
+  savedFilter = 'all'; savedSubmarketFilter = 'all'; savedQuery = '';
+  const searchEl = document.getElementById('savedSearch');
+  if (searchEl) searchEl.value = '';
+  // Reset advanced filter UI controls
+  const advEl = id => document.getElementById(id);
+  if (advEl('advBrandClass')) advEl('advBrandClass').value = 'all';
+  ['advStarsMin','advRoomsMin','advAdrMin','advRestMin','advEventMin','advMtgMin','advFloorsMin','advFitMin']
+    .forEach(id => { const el = advEl(id); if (el) el.value = 0; });
+  if (advEl('advAdrMax')) advEl('advAdrMax').value = 9999;
+  ['advHasPhone','advHasWebsite','advHasVisits','advUntouched','advGraduated']
+    .forEach(id => { const el = advEl(id); if (el) el.checked = false; });
+
+  // Now apply the specific filter
+  if (filterName === 'untouched')     { ADV.untouched = true;  const el = advEl('advUntouched'); if (el) el.checked = true; }
+  else if (filterName === 'visited')  { ADV.hasVisits = true;  const el = advEl('advHasVisits'); if (el) el.checked = true; }
+  else if (filterName === 'qualified'){ savedFilter = 'qualified'; }
+  else if (filterName === 'graduated'){ ADV.graduated = true;  const el = advEl('advGraduated'); if (el) el.checked = true; }
+  else if (filterName === 'followups'){
+    // Follow-ups due = visited + status is lead or contacted (virtual filter)
+    savedFilter = 'needs_followup';
+  }
+  // 'all' and 'revenue' just show everything — no filter needed
+
+  renderSaved();
+  document.getElementById('panel-saved').scrollIntoView({ block: 'start' });
+}
+
 document.getElementById('savedSearch').addEventListener('input', e => {
   savedQuery = e.target.value;
   renderSaved();
@@ -6439,7 +6559,8 @@ function renderSavedCard(h) {
          ${h.last_visit_date ? `<span>last: ${escapeHtml(h.last_visit_date)}</span>` : ''}
        </div>` : '';
   const graduatedBit = h.prospect_id
-    ? `<span class="graduated-pill" title="Graduated to Prospect #${h.prospect_id}">✓ Prospect #${h.prospect_id}</span>`
+    ? `<span class="graduated-pill" title="Graduated to Prospect #${h.prospect_id}">✓ Prospect #${h.prospect_id}</span>
+       <button class="btn btn-ghost" type="button" onclick="window._ungraduateHotel(${h.id})" style="font-size:0.66rem;padding:1px 6px;color:#b91c1c;border-color:#fecaca;margin-left:4px" title="Undo graduation and remove from prospects">↩ Undo</button>`
     : '';
   const graduateBtn = (!h.prospect_id && (h.status === 'qualified' || h.status === 'contacted' || h.status === 'lead'))
     ? `<button class="btn btn-graduate" type="button" onclick="window._openGraduateModal(${h.id})" title="Move into the Prospects pipeline">→ Graduate</button>`
@@ -7004,11 +7125,41 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
     const total = stops.length;
     const done = stops.filter(s => s.done).length;
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-    const stopsHtml = stops.map(s => `
-      <div class="schedule-day-stop ${s.done ? 'done' : ''}" data-stop-id="${s.stop_id}">
-        <input type="checkbox" ${s.done ? 'checked' : ''} onchange="window._toggleStopDone(${r.id}, ${s.stop_id}, this.checked)">
-        <span class="schedule-day-stop-name">${escapeHtml(s.name)}</span>
-      </div>`).join('');
+    const stopsHtml = stops.map(s => {
+      const h = SAVED.find(sv => sv.id === s.hotel_saved_id) || s;
+      const phone = h.phone || '';
+      const isGraduated = !!h.prospect_id;
+      const canGraduate = !isGraduated && ['qualified', 'contacted', 'lead'].includes(h.status);
+      return `
+      <details class="schedule-day-stop ${s.done ? 'done' : ''}" data-stop-id="${s.stop_id}" style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:4px;background:white">
+        <summary style="display:flex;align-items:center;gap:6px;padding:8px 10px;cursor:pointer;list-style:none">
+          <input type="checkbox" ${s.done ? 'checked' : ''} onchange="event.stopPropagation();window._toggleStopDone(${r.id}, ${s.stop_id}, this.checked)" onclick="event.stopPropagation()">
+          <span style="flex:1;font-weight:600;font-size:0.82rem">${escapeHtml(s.name)}</span>
+          ${isGraduated ? '<span style="background:#dcfce7;color:#14532d;padding:1px 6px;border-radius:100px;font-size:0.6rem;font-weight:700">✓ Prospect</span>' : ''}
+          <button type="button" class="visit-row-delete" onclick="event.stopPropagation();window._removeStop(${r.id}, ${s.stop_id})" title="Remove stop" style="font-size:0.7rem;padding:2px 5px;opacity:0.5">✕</button>
+        </summary>
+        <div style="padding:6px 10px 10px;border-top:1px solid #f1f5f9;font-size:0.78rem">
+          <div style="color:#64748b;margin-bottom:6px">${[h.brand, h.submarket, h.city].filter(Boolean).join(' · ')}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;color:#334155">
+            ${h.rooms ? `<span>🏨 ${h.rooms} rms</span>` : ''}
+            ${h.stars ? `<span>⭐ ${h.stars}★</span>` : ''}
+            ${h.est_adr_dollars ? `<span>💰 $${h.est_adr_dollars}/nt</span>` : ''}
+            ${(h.ai_fit_score != null) ? `<span>🎯 ${h.ai_fit_score}</span>` : ''}
+            ${h.total_floors ? `<span>🏗️ ${h.total_floors}fl</span>` : ''}
+          </div>
+          ${phone ? `<div style="margin-bottom:4px">📞 <a href="tel:${escapeHtml(phone)}" style="color:#0369a1;text-decoration:none">${escapeHtml(phone)}</a></div>` : ''}
+          ${s.address ? `<div style="color:#94a3b8;font-size:0.72rem;margin-bottom:6px">${escapeHtml(s.address)}${s.city ? ', ' + escapeHtml(s.city) : ''}${s.state ? ' ' + escapeHtml(s.state) : ''} ${escapeHtml(s.zip || '')}</div>` : ''}
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+            ${h.website ? `<a href="${escapeHtml(h.website)}" target="_blank" rel="noopener" class="btn btn-ghost" style="font-size:0.7rem;padding:3px 8px">🌐 Website</a>` : ''}
+            ${(s.lat && s.lng) ? `<a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank" rel="noopener" class="btn btn-ghost" style="font-size:0.7rem;padding:3px 8px">📍 Maps</a>` : ''}
+            <button type="button" class="btn btn-ghost" onclick="window._openStopEditor(${r.id}, ${s.stop_id}, ${s.hotel_saved_id}, '${iso}')" style="font-size:0.7rem;padding:3px 8px">↔ Move</button>
+            ${canGraduate ? `<button type="button" class="btn btn-primary" onclick="window._openGraduateModal(${s.hotel_saved_id})" style="font-size:0.7rem;padding:3px 8px">🎓 Graduate</button>` : ''}
+            ${isGraduated ? `<a href="/pages/pipeline-prospects.html?focus=${h.prospect_id}" class="btn btn-ghost" style="font-size:0.7rem;padding:3px 8px;text-decoration:none">📋 Prospect #${h.prospect_id}</a>` : ''}
+            ${isGraduated ? `<button type="button" class="btn btn-ghost" onclick="window._ungraduateHotel(${s.hotel_saved_id})" style="font-size:0.7rem;padding:3px 8px;color:#b91c1c;border-color:#fecaca">↩ Undo graduate</button>` : ''}
+          </div>
+        </div>
+      </details>`;
+    }).join('');
     const stopsWithCoords = stops.filter(s => s.lat && s.lng);
     const hasRoute = stopsWithCoords.length >= 2;
 
@@ -7061,6 +7212,8 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
         ${anchorHtml}
         <div class="schedule-day-stops">${stopsHtml || '<div class="schedule-day-empty">No stops yet.</div>'}</div>
         <div class="schedule-day-actions">
+          <button class="btn btn-ghost" type="button" onclick="window._openAddStop(${r.id})" style="font-size:0.75rem">+ Add stop</button>
+          ${total > 0 ? `<button class="btn btn-ghost" type="button" onclick="window._openDayRouteDetail(${r.id})" style="font-size:0.75rem">🗺️ Route detail</button>` : ''}
           ${hasRoute ? `<button class="btn btn-primary" type="button" onclick="window._openScheduleDayRoute(${r.id})" style="flex:1">📍 Open</button>` : ''}
         </div>
       </div>`;
@@ -7210,6 +7363,281 @@ window._toggleStopDone = async function(routeId, stopId, done) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     loadScheduleWeek();
   } catch (err) { alert('Update failed: ' + err.message); }
+};
+
+// WHY: Both Ben and Celia need to curate the schedule — remove stops
+// that don't make sense for a given day without deleting the whole route.
+window._removeStop = async function(routeId, stopId) {
+  if (!confirm('Remove this stop from the route?')) return;
+  try {
+    const res = await fetch(`/api/hotel-research/routes/${routeId}/stops/${stopId}`, {
+      method: 'DELETE', credentials: 'same-origin',
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    loadScheduleWeek();
+  } catch (err) { alert('Remove failed: ' + err.message); }
+};
+
+// ── Stop editor — click a stop name to move it to another day or remove ──
+window._openStopEditor = function(routeId, stopId, hotelId, currentDate) {
+  const hotel = SAVED.find(h => h.id === hotelId);
+  const name = hotel ? hotel.name : 'Hotel #' + hotelId;
+  const sub = hotel ? [hotel.brand, hotel.city, hotel.submarket].filter(Boolean).join(' · ') : '';
+
+  document.getElementById('stopEditorTitle').textContent = name;
+  document.getElementById('stopEditorSub').textContent = sub;
+
+  // Build all 7 days of the visible week (excluding the current day)
+  const weekDays = [];
+  if (SCHEDULE_ANCHOR) {
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(SCHEDULE_ANCHOR);
+      d.setDate(d.getDate() + i);
+      const iso = _isoDate(d);
+      if (iso === currentDate) continue; // skip the day this stop is already on
+      const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const existingRoute = SCHEDULE_ROUTES.find(r => r.scheduled_date === iso);
+      weekDays.push({ iso, label, route: existingRoute });
+    }
+  }
+
+  const btns = weekDays.map(day => {
+    const zoneSuffix = day.route ? ' · ' + escapeHtml(day.route.zone || day.route.name) : '';
+    if (day.route) {
+      return `<button class="btn btn-ghost" type="button" onclick="window._moveStop(${routeId}, ${stopId}, ${hotelId}, ${day.route.id})" style="font-size:0.8rem">${day.label}${zoneSuffix}</button>`;
+    } else {
+      return `<button class="btn btn-ghost" type="button" onclick="window._moveStopToNewDay(${routeId}, ${stopId}, ${hotelId}, '${day.iso}')" style="font-size:0.8rem">${day.label} <span style="color:#94a3b8;font-size:0.7rem">(new)</span></button>`;
+    }
+  }).join('');
+  const moveHtml = `
+    <div style="margin-bottom:16px">
+      <div style="font-weight:600;font-size:0.8rem;margin-bottom:6px;color:#64748b">Move to another day</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${btns}</div>
+    </div>`;
+
+  document.getElementById('stopEditorBody').innerHTML = `
+    ${moveHtml}
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" type="button" onclick="window._removeStop(${routeId}, ${stopId}); window._closeStopEditor();" style="color:#b91c1c;border-color:#fecaca;flex:1">Remove from schedule</button>
+    </div>`;
+
+  document.getElementById('stopEditorBackdrop').classList.add('open');
+};
+
+window._closeStopEditor = function() {
+  document.getElementById('stopEditorBackdrop').classList.remove('open');
+};
+
+// WHY: Moving a stop = remove from old route + add to new route. No API
+// exists for a direct move, so we chain delete + post.
+window._moveStop = async function(fromRouteId, stopId, hotelId, toRouteId) {
+  try {
+    // Remove from current route
+    const del = await fetch(`/api/hotel-research/routes/${fromRouteId}/stops/${stopId}`, {
+      method: 'DELETE', credentials: 'same-origin',
+    });
+    if (!del.ok) throw new Error('Remove failed');
+    // Add to target route
+    const add = await fetch(`/api/hotel-research/routes/${toRouteId}/stops`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotel_ids: [hotelId] }),
+    });
+    if (!add.ok) throw new Error('Add to new day failed');
+    window._closeStopEditor();
+    loadScheduleWeek();
+  } catch (err) { alert('Move failed: ' + err.message); }
+};
+
+// WHY: When moving a stop to a day that has no route yet, create a route
+// on the fly so the stop has somewhere to land.
+window._moveStopToNewDay = async function(fromRouteId, stopId, hotelId, targetDate) {
+  try {
+    // Remove from current route
+    const del = await fetch(`/api/hotel-research/routes/${fromRouteId}/stops/${stopId}`, {
+      method: 'DELETE', credentials: 'same-origin',
+    });
+    if (!del.ok) throw new Error('Remove failed');
+    // Create a new route for the target day
+    const d = new Date(targetDate + 'T12:00:00');
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    const create = await fetch('/api/hotel-research/routes', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: dayName, scheduled_date: targetDate, hotel_ids: [hotelId] }),
+    });
+    if (!create.ok) throw new Error('Create route failed');
+    window._closeStopEditor();
+    loadScheduleWeek();
+  } catch (err) { alert('Move failed: ' + err.message); }
+};
+
+// ── Route detail — full itinerary with hotel info + nearby Tesla chargers ──
+window._openDayRouteDetail = async function(routeId) {
+  const route = SCHEDULE_ROUTES.find(r => r.id === routeId);
+  if (!route) { alert('Route not found'); return; }
+  const stops = route.stops || [];
+  if (!stops.length) { alert('No stops on this route'); return; }
+
+  const d = route.scheduled_date ? new Date(route.scheduled_date + 'T12:00:00') : null;
+  const dateLabel = d ? d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
+  document.getElementById('routeDetailTitle').textContent = route.zone || route.name;
+  document.getElementById('routeDetailSub').textContent = dateLabel + ' · ' + stops.length + ' stops';
+
+  // Show loading state
+  const body = document.getElementById('routeDetailBody');
+  body.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8">Loading chargers…</div>';
+  document.getElementById('routeDetailBackdrop').classList.add('open');
+
+  // Build hotel detail cards
+  const hotelCards = stops.map((s, i) => {
+    const h = SAVED.find(sv => sv.id === s.hotel_saved_id) || s;
+    const phone = h.phone ? `<a href="tel:${escapeHtml(h.phone)}" style="color:#0369a1;text-decoration:none">${escapeHtml(h.phone)}</a>` : '<span style="color:#94a3b8">no phone</span>';
+    const website = h.website ? `<a href="${escapeHtml(h.website)}" target="_blank" rel="noopener" style="color:#0369a1;text-decoration:none;font-size:0.75rem">🌐 Website</a>` : '';
+    const mapsLink = (s.lat && s.lng) ? `<a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank" rel="noopener" style="color:#0369a1;text-decoration:none;font-size:0.75rem">📍 Maps</a>` : '';
+    return `
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="background:var(--accent-deep);color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0">${i + 1}</span>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:0.9rem">${escapeHtml(s.name)}</div>
+            <div style="font-size:0.75rem;color:#64748b">${[h.brand, h.submarket, h.city].filter(Boolean).join(' · ')}</div>
+          </div>
+          ${s.done ? '<span style="background:#dcfce7;color:#14532d;padding:2px 8px;border-radius:100px;font-size:0.66rem;font-weight:700">✓ Done</span>' : ''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:0.78rem;color:#334155;margin-bottom:6px">
+          ${h.rooms ? `<span>🏨 ${h.rooms} rooms</span>` : ''}
+          ${h.stars ? `<span>⭐ ${h.stars}-star</span>` : ''}
+          ${h.est_adr_dollars ? `<span>💰 ~$${h.est_adr_dollars}/nt</span>` : ''}
+          ${(h.ai_fit_score != null) ? `<span>🎯 Fit ${h.ai_fit_score}</span>` : ''}
+          ${h.total_floors ? `<span>🏗️ ${h.total_floors} floors</span>` : ''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+          <span style="font-size:0.78rem">📞 ${phone}</span>
+          ${website} ${mapsLink}
+        </div>
+        ${s.address ? `<div style="font-size:0.72rem;color:#94a3b8;margin-top:4px">${escapeHtml(s.address)}${s.city ? ', ' + escapeHtml(s.city) : ''}${s.state ? ' ' + escapeHtml(s.state) : ''} ${escapeHtml(s.zip || '')}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  // Fetch nearby chargers along the route
+  const stopsWithCoords = stops.filter(s => s.lat && s.lng);
+  let chargerHtml = '';
+  if (stopsWithCoords.length > 0) {
+    try {
+      const lats = stopsWithCoords.map(s => s.lat);
+      const lngs = stopsWithCoords.map(s => s.lng);
+      const south = Math.min(...lats) - 0.05;
+      const north = Math.max(...lats) + 0.05;
+      const west  = Math.min(...lngs) - 0.05;
+      const east  = Math.max(...lngs) + 0.05;
+      const res = await fetch(`/api/hotel-research/chargers?bbox=${south},${west},${north},${east}`, { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        const chargers = (data.chargers || []);
+        // Prioritize Tesla Superchargers, then sort by stall count
+        const sorted = chargers
+          .sort((a, b) => (b.is_tesla ? 1 : 0) - (a.is_tesla ? 1 : 0) || (b.stall_count || 0) - (a.stall_count || 0))
+          .slice(0, 10);
+        if (sorted.length > 0) {
+          const chargerCards = sorted.map(c => {
+            const icon = c.is_tesla ? '🔴' : '🟢';
+            const type = c.is_tesla ? 'Tesla Supercharger' : (c.operator || 'EV charger');
+            const stalls = c.stall_count ? `${c.stall_count} stalls` : '';
+            const power = c.power_kw ? `${c.power_kw} kW` : '';
+            const meta = [type, stalls, power].filter(Boolean).join(' · ');
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}`;
+            return `
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fefce8;border:1px solid #fef08a;border-radius:8px;margin-bottom:6px">
+                <span style="font-size:1.1rem">${icon}</span>
+                <div style="flex:1">
+                  <div style="font-weight:600;font-size:0.8rem">${escapeHtml(c.name || type)}</div>
+                  <div style="font-size:0.72rem;color:#64748b">${escapeHtml(meta)}</div>
+                  ${c.address ? `<div style="font-size:0.68rem;color:#94a3b8">${escapeHtml(c.address)}</div>` : ''}
+                </div>
+                <a href="${mapsUrl}" target="_blank" rel="noopener" style="color:#0369a1;font-size:0.75rem;text-decoration:none;white-space:nowrap">📍 Go</a>
+              </div>`;
+          }).join('');
+          chargerHtml = `
+            <div style="margin-top:16px">
+              <div style="font-weight:700;font-size:0.85rem;margin-bottom:8px;display:flex;align-items:center;gap:6px">⚡ Charging stations along route</div>
+              ${chargerCards}
+            </div>`;
+        }
+      }
+    } catch {}
+  }
+
+  body.innerHTML = hotelCards + chargerHtml;
+
+  // Google Maps link with all stops
+  const gmUrl = 'https://www.google.com/maps/dir/' + stopsWithCoords.map(s => `${s.lat},${s.lng}`).join('/');
+  document.getElementById('routeDetailActions').innerHTML = `
+    <a href="${gmUrl}" target="_blank" rel="noopener" class="btn btn-primary" style="flex:1;text-align:center;text-decoration:none">🗺️ Open full route in Google Maps</a>
+    <button class="btn btn-ghost" type="button" onclick="window._closeRouteDetail()">Close</button>`;
+};
+
+window._closeRouteDetail = function() {
+  document.getElementById('routeDetailBackdrop').classList.remove('open');
+};
+
+// ── Add stop picker — search triage-approved hotels and add to a route ──
+let _addStopRouteId = null;
+
+window._openAddStop = function(routeId) {
+  _addStopRouteId = routeId;
+  document.getElementById('addStopSearch').value = '';
+  _renderAddStopResults('');
+  document.getElementById('addStopBackdrop').classList.add('open');
+  document.getElementById('addStopSearch').focus();
+};
+
+window._closeAddStop = function() {
+  document.getElementById('addStopBackdrop').classList.remove('open');
+  _addStopRouteId = null;
+};
+
+document.getElementById('addStopSearch')?.addEventListener('input', e => {
+  _renderAddStopResults(e.target.value);
+});
+
+function _renderAddStopResults(query) {
+  const q = (query || '').toLowerCase().trim();
+  // Only show triage-approved hotels not already on this route
+  const route = SCHEDULE_ROUTES.find(r => r.id === _addStopRouteId);
+  const existingIds = new Set((route?.stops || []).map(s => s.hotel_saved_id));
+  const candidates = SAVED
+    .filter(h => h.triage === 'yes' && !existingIds.has(h.id))
+    .filter(h => !q || `${h.name} ${h.city || ''} ${h.brand || ''} ${h.submarket || ''}`.toLowerCase().includes(q))
+    .slice(0, 20);
+
+  const el = document.getElementById('addStopResults');
+  if (candidates.length === 0) {
+    el.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:20px">No matching triage-approved hotels found.</div>';
+    return;
+  }
+  el.innerHTML = candidates.map(h => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid #f1f5f9;cursor:pointer" onclick="window._addStopToRoute(${h.id})">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:0.85rem">${escapeHtml(h.name)}</div>
+        <div style="font-size:0.72rem;color:#64748b">${[h.brand, h.submarket, h.city].filter(Boolean).join(' · ')} · fit ${h.ai_fit_score ?? '–'}</div>
+      </div>
+      <button class="btn btn-primary" type="button" style="font-size:0.72rem;padding:4px 10px">+ Add</button>
+    </div>`).join('');
+}
+
+window._addStopToRoute = async function(hotelId) {
+  if (!_addStopRouteId) return;
+  try {
+    const res = await fetch(`/api/hotel-research/routes/${_addStopRouteId}/stops`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotel_ids: [hotelId] }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    window._closeAddStop();
+    loadScheduleWeek();
+  } catch (err) { alert('Add failed: ' + err.message); }
 };
 
 window._deleteRoute = async function(routeId) {
