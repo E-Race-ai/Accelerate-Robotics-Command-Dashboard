@@ -2295,6 +2295,7 @@
         <button id="savedSortDir" type="button" class="btn btn-ghost" title="Toggle sort direction">↓ DESC</button>
         <div class="chip-row" id="statusChips"></div>
         <button id="routeModeToggle" class="btn btn-ghost" type="button" onclick="window._toggleRouteMode()">🗺️ Plan route</button>
+        <button id="callQueueBtn" class="btn btn-ghost" type="button" onclick="window._startCallQueue()" title="Auto-advance through callable prospects">📞 Call queue</button>
         <div class="view-toggle" role="tablist" aria-label="View mode">
           <button id="viewCardsBtn"   class="active" type="button" onclick="window._setView('cards')">▦ Cards</button>
           <button id="viewTableBtn"   type="button" onclick="window._setView('table')">≡ Table</button>
@@ -3506,6 +3507,87 @@ window._coldCallStart = function(hotelId) {
   setTimeout(() => openCallDispositionModal(hotelId), 600);
 };
 
+// ── Call-queue mode ─────────────────────────────────────────────────
+// Auto-advance through a sorted list of callable prospects. Rep clicks
+// "📞 Call queue", we dial the top hotel + open the disposition modal;
+// after they save, we tee up the next one until the queue's exhausted.
+let CALL_QUEUE = [];        // [{ id, name }]
+let CALL_QUEUE_INDEX = 0;   // 0-based — points at the *currently-active* hotel
+let CALL_QUEUE_ON = false;
+
+// Selection rule: must have a phone, must be in active prospecting status,
+// and we sort by AI fit so reps work the highest-likelihood targets first.
+// We deliberately INCLUDE 'contacted' so a "left voicemail" hotel cycles
+// back into the queue tomorrow — but we exclude any hotel with today's
+// date already stamped in notes (to avoid double-dialing in one session).
+function _buildCallQueue() {
+  const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return SAVED
+    .filter(h => h.phone && ['lead', 'qualified', 'contacted'].includes(h.status) && !h.prospect_id)
+    .filter(h => !(h.notes || '').includes(`[${todayStr}]`)) // skip if already touched today
+    .sort((a, b) => (Number(b.ai_fit_score) || 0) - (Number(a.ai_fit_score) || 0))
+    .map(h => ({ id: h.id, name: h.name }));
+}
+
+window._startCallQueue = function() {
+  if (CALL_QUEUE_ON) { _stopCallQueue(); return; }
+  CALL_QUEUE = _buildCallQueue();
+  if (CALL_QUEUE.length === 0) {
+    alert('Call queue is empty — every callable prospect has already been touched today (or has no phone). Check the filters or untouched chip.');
+    return;
+  }
+  CALL_QUEUE_INDEX = 0;
+  CALL_QUEUE_ON = true;
+  _updateCallQueueButton();
+  _advanceCallQueue();
+};
+
+function _stopCallQueue() {
+  CALL_QUEUE = [];
+  CALL_QUEUE_INDEX = 0;
+  CALL_QUEUE_ON = false;
+  _updateCallQueueButton();
+}
+
+function _updateCallQueueButton() {
+  const btn = document.getElementById('callQueueBtn');
+  if (!btn) return;
+  if (CALL_QUEUE_ON) {
+    btn.textContent = `⏸ Stop queue (${CALL_QUEUE_INDEX + 1}/${CALL_QUEUE.length})`;
+    btn.style.background = 'var(--accent)';
+    btn.style.color = 'white';
+    btn.style.borderColor = 'var(--accent)';
+  } else {
+    btn.textContent = '📞 Call queue';
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }
+}
+
+function _advanceCallQueue() {
+  if (!CALL_QUEUE_ON) return;
+  if (CALL_QUEUE_INDEX >= CALL_QUEUE.length) {
+    _stopCallQueue();
+    alert('🎉 Queue complete! All callable prospects touched. Take a break.');
+    return;
+  }
+  const item = CALL_QUEUE[CALL_QUEUE_INDEX];
+  const h = SAVED.find(s => s.id === item.id);
+  if (!h || !h.phone) {
+    // Hotel removed or phone gone — skip to next
+    CALL_QUEUE_INDEX++;
+    return _advanceCallQueue();
+  }
+  // Scroll the card into view so the rep can see who they're about to call
+  const card = document.querySelector(`.card[data-id="${item.id}"]`);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Fire the dialer + open disposition modal (matches the manual flow)
+  try { window.location.href = `tel:${h.phone}`; } catch {}
+  setTimeout(() => openCallDispositionModal(item.id), 600);
+  _updateCallQueueButton();
+}
+
 function openCallDispositionModal(hotelId) {
   const h = SAVED.find(s => s.id === hotelId);
   if (!h) return;
@@ -3556,7 +3638,15 @@ function openCallDispositionModal(hotelId) {
       modal.querySelector('#cd-followup').style.display = chosen === 'appointment' ? '' : 'none';
     });
   });
-  const close = () => modal.remove();
+  const close = () => {
+    modal.remove();
+    // In queue mode, "skip" advances to next without saving — useful when
+    // the rep mis-dialed or wants to come back to this hotel later.
+    if (CALL_QUEUE_ON) {
+      CALL_QUEUE_INDEX++;
+      setTimeout(_advanceCallQueue, 400);
+    }
+  };
   modal.querySelector('button[data-skip]').addEventListener('click', close);
   modal.addEventListener('click', e => { if (e.target === modal) close(); });
   modal.querySelector('#cd-save').addEventListener('click', async () => {
@@ -3605,6 +3695,12 @@ async function saveCallDisposition(hotelId, disposition, userNotes, modal) {
     }
   }
   await loadSaved({ silent: true });
+  // Auto-advance the call queue if it's active. Wait a tick so the
+  // current modal's close animation finishes before the next dial fires.
+  if (CALL_QUEUE_ON) {
+    CALL_QUEUE_INDEX++;
+    setTimeout(_advanceCallQueue, 400);
+  }
 }
 
 // ── Multi-rater alignment tile — Ben + Celia + Eric vote stats ─────
