@@ -135,6 +135,32 @@ Many-to-many: which people support which item.
 | person_id | INTEGER | NOT NULL REFERENCES tracker_people(id) ON DELETE CASCADE |
 | PRIMARY KEY | | (item_id, person_id) |
 
+### `hotels_saved`
+
+Sales-rep prospecting database. Hotels saved from the Hotel Research tool (`/pages/hotel-research.html`) — searches OpenStreetMap by city/zip, then bookmarks candidates with rep-captured intel (actual nightly rate, deal status, notes).
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| name | TEXT | NOT NULL |
+| address | TEXT | nullable — stitched from OSM `addr:*` tags |
+| city / state / zip / country | TEXT | nullable each |
+| lat / lng | REAL | nullable — copied from OSM |
+| brand | TEXT | nullable — chain or operator (e.g. "Hampton Inn") |
+| stars | INTEGER | nullable — 1–5 |
+| rooms | INTEGER | nullable — when OSM tags it |
+| phone / website | TEXT | nullable |
+| osm_id | TEXT | `${type}/${id}` from OSM, used to dedupe re-saves |
+| est_adr_dollars | INTEGER | nullable — rep's actual rate (overrides the brand-based estimate shown in search) |
+| status | TEXT | NOT NULL DEFAULT 'lead' CHECK IN ('lead', 'contacted', 'qualified', 'proposed', 'won', 'lost', 'archived') |
+| notes | TEXT | nullable — free-form rep intel (decision-maker, follow-up dates, etc.) |
+| saved_by | TEXT | nullable — admin email captured at insert time |
+| created_at / updated_at | TEXT | DEFAULT (datetime('now')) |
+
+**Indexes:** `(status, updated_at DESC)` for filtered list views, `(city)` for region-rollup reports.
+
+**Why no real-time pricing:** real nightly rates require a paid partner API (Amadeus, Booking, Expedia EPS). The current build returns rough ADR estimates from a brand → rate lookup table or a star-rating fallback. Reps can override per-hotel via `est_adr_dollars` after calling the property.
+
 ### `whatsapp_groups`
 
 Curated directory of company WhatsApp groups + communities. Powers `/pages/whatsapp-hub.html`. Editable via the admin UI (auth-gated CRUD at `/api/whatsapp`).

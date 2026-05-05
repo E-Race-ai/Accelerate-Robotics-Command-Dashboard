@@ -31,6 +31,8 @@ const activityRoutes = require('./routes/activities');
 const collabRoutes = require('./routes/collab');
 const improvementRoutes = require('./routes/improvement-requests');
 const whatsappRoutes = require('./routes/whatsapp');
+const hotelResearchRoutes = require('./routes/hotel-research');
+const glossaryGameRoutes = require('./routes/glossary-game');
 const systemSettingsRoutes = require('./routes/system-settings');
 const { creativeLabsProxy } = require('./routes/creative-labs-proxy');
 
@@ -231,6 +233,17 @@ app.use('/api/improvement-requests', (req, res, next) => {
 // All methods require auth; gated inside the route module via requireAuth.
 app.use('/api/whatsapp', whatsappRoutes);
 
+// Hotel Research Tool — sales-rep prospecting helper.
+// Searches OpenStreetMap (Nominatim + Overpass) by city/zip, returns
+// hotels with rough ADR estimates, and lets reps save candidates.
+// All methods require auth; gated inside the route module via requireAuth.
+app.use('/api/hotel-research', hotelResearchRoutes);
+
+// Glossary Game — gamification of /pages/team-glossary.html. Quiz sessions,
+// points, levels, streaks, badges. All points are server-awarded based on
+// validated activities, so clients can't fake totals.
+app.use('/api/glossary-game', glossaryGameRoutes);
+
 app.use('/api/system-settings', systemSettingsRoutes);
 
 // WHY: Proxy /cl/* to the tunnel URL stored in system_settings.creative_labs_url.
@@ -239,6 +252,35 @@ app.use('/api/system-settings', systemSettingsRoutes);
 // blocks *.trycloudflare.com. requireAuthPage gates browser access so the
 // proxy isn't a public window into home-dashboard.
 app.use('/cl', requireAuthPage, creativeLabsProxy);
+
+// ── Deploy version endpoint (no auth — used by client banner) ──
+// Tells the dashboard exactly which commit is running. Falls back through:
+//   1. RENDER_GIT_COMMIT — set by Render on every deploy
+//   2. .git/HEAD lookup — works in any git checkout (dev, manual hosts)
+//   3. unknown — last resort if neither is available
+let _versionCache = null;
+app.get('/api/version', (_req, res) => {
+  if (_versionCache) return res.json(_versionCache);
+  let commit = process.env.RENDER_GIT_COMMIT || null;
+  let branch = process.env.RENDER_GIT_BRANCH || null;
+  if (!commit) {
+    try {
+      const { execFileSync } = require('child_process');
+      const repoRoot = path.resolve(__dirname, '..');
+      commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf-8' }).trim();
+      branch = branch || execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: repoRoot, encoding: 'utf-8' }).trim();
+    } catch { /* not a git checkout — leave commit null */ }
+  }
+  // Cache for the lifetime of the process — version doesn't change after boot.
+  _versionCache = {
+    commit: commit ? commit.slice(0, 40) : null,
+    short: commit ? commit.slice(0, 7) : null,
+    branch: branch || null,
+    started_at: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+    uptime_s: Math.round(process.uptime()),
+  };
+  res.json(_versionCache);
+});
 
 // ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
 // WHY: Removed auth requirement temporarily so we can diagnose the API key issue.
@@ -267,6 +309,13 @@ app.get('/api/debug/resend-check', async (req, res) => {
 // WHY: /admin is the master command center — unified dashboard for all tools
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-command-center.html'));
+});
+
+// WHY: Friendly URL for the standalone Hotel Triage mobile app. Eric and
+// Ben/Celia can navigate to /triage directly on a phone, or it's iframed
+// inside the iPhone bezel on the desktop /hotel-research page.
+app.get('/triage', requireAuthPage, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'pages', 'triage.html'));
 });
 // WHY: Old admin dashboard (inquiries + recipients) moved to /admin/inquiries
 app.get('/admin/inquiries', (req, res) => {

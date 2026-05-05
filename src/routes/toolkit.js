@@ -5,6 +5,14 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+// GitHub repo for the API fallback. WHY: Render deploys are shallow git
+// clones (depth 1) and `git fetch --unshallow` sometimes can't run from the
+// runtime container — when local git only sees 1 commit we hit the
+// public commits API instead so the activity calendar still reflects reality.
+// Override with GITHUB_REPO=<owner>/<repo> if the canonical repo moves.
+const GITHUB_REPO = process.env.GITHUB_REPO
+  || 'Accelerate-Robotics-Team-Space/Accelerate-Robotics-Command-Dashboard';
+
 const router = express.Router();
 
 // Module → list of source-of-truth file references. Each entry is either:
@@ -43,6 +51,7 @@ const MODULE_FILES = {
   public_website:     ['public/index.html'],
   team_glossary:      ['pages/team-glossary.html', 'docs/00-overview/glossary.md'],
   whatsapp_hub:       ['pages/whatsapp-hub.html', 'src/routes/whatsapp.js'],
+  hotel_research:     ['pages/hotel-research.html', 'src/routes/hotel-research.js'],
 };
 
 // Fallback assignments when `git log` turns up nothing real (external URLs
@@ -204,22 +213,127 @@ const ACTIVITY_TTL_MS = 5 * 60 * 1000; // 5 min — fresh enough to reflect a ju
 // short list and unbounded growth on a heavy day would bloat the response.
 const MAX_MESSAGES_PER_BUCKET = 8;
 
-router.get('/git-activity', (req, res) => {
+// We try to deepen the shallow clone on first request. If it fails we
+// remember that for a short window so we don't spam the network on every
+// request — but we DO retry eventually (Render deploys can have transient
+// network issues during cold start).
+let SHALLOW_DEEPENED = false;
+let LAST_DEEPEN_ATTEMPT = 0;
+const DEEPEN_RETRY_MS = 10 * 60 * 1000; // 10min — enough to outlast a cold-start blip
+
+function deepenShallowClone(dir) {
+  if (SHALLOW_DEEPENED) return;
+  if (Date.now() - LAST_DEEPEN_ATTEMPT < DEEPEN_RETRY_MS) return;
+  LAST_DEEPEN_ATTEMPT = Date.now();
+  try {
+    execFileSync('git', ['fetch', '--unshallow', '--quiet', 'origin'],
+      { cwd: dir, encoding: 'utf-8', timeout: 30000 });
+    SHALLOW_DEEPENED = true;
+    console.log('[toolkit/git-activity] deepened shallow clone in', dir);
+    return;
+  } catch (err) {
+    // Expected error on a complete repo: "--unshallow on a complete repository
+    // does not make sense". That means we already have full history.
+    if (/complete repository/i.test(String(err.stderr || err.message || ''))) {
+      SHALLOW_DEEPENED = true;
+      return;
+    }
+    console.warn('[toolkit/git-activity] --unshallow failed:', String(err.stderr || err.message || '').slice(0, 200));
+  }
+  // Belt-and-suspenders: try a deep fetch.
+  try {
+    execFileSync('git', ['fetch', '--depth=1000', '--quiet', 'origin'],
+      { cwd: dir, encoding: 'utf-8', timeout: 30000 });
+    SHALLOW_DEEPENED = true;
+    console.log('[toolkit/git-activity] depth=1000 fetch succeeded in', dir);
+  } catch (err2) {
+    console.warn('[toolkit/git-activity] depth fetch also failed — will fall back to GitHub API:', String(err2.stderr || err2.message || '').slice(0, 200));
+  }
+}
+
+// GitHub commits-API fallback. Called when local git returns insufficient
+// activity (Render's shallow-clone container can't always deepen). Returns a
+// Map shaped exactly like the local-git accumulator so the merge is trivial.
+async function fetchActivityFromGitHub(daysBack) {
+  if (!GITHUB_REPO || !GITHUB_REPO.includes('/')) return null;
+  const since = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
+  const headers = { 'Accept': 'application/vnd.github+json', 'User-Agent': 'accelerate-robotics-activity' };
+  // GitHub token gives us 5000 req/hr instead of 60. Optional.
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  // Page through up to 5x100 commits — covers ~2 weeks of marathon-rate work.
+  const all = [];
+  for (let page = 1; page <= 5; page++) {
+    const url = `https://api.github.com/repos/${GITHUB_REPO}/commits?since=${encodeURIComponent(since)}&per_page=100&page=${page}`;
+    let resp;
+    try {
+      resp = await fetch(url, { headers });
+    } catch (err) {
+      console.warn('[toolkit/git-activity] GitHub fetch error:', err.message);
+      return null;
+    }
+    if (!resp.ok) {
+      console.warn('[toolkit/git-activity] GitHub API non-OK:', resp.status, await resp.text().catch(() => ''));
+      return null;
+    }
+    const list = await resp.json();
+    if (!Array.isArray(list) || list.length === 0) break;
+    all.push(...list);
+    if (list.length < 100) break;
+  }
+  return all;
+}
+
+// Add a (sha, subject, name, email, ts-seconds) commit to the daily/author
+// accumulators. Centralized so local-git and GitHub-API paths feed the same
+// shape. WHY: keeps the response stable as we toggle data sources.
+function addCommitToAccumulators(daily, authorTotals, projectName, sha, subject, name, email, tsSec) {
+  if (!sha || !tsSec) return;
+  const lcEmail = (email || '').trim().toLowerCase();
+  if (HIDDEN_EMAILS.has(lcEmail)) return;
+  const iso = new Date(Number(tsSec) * 1000).toISOString().slice(0, 10);
+  if (!daily.has(iso)) daily.set(iso, new Map());
+  const projMap = daily.get(iso);
+  const entry = projMap.get(projectName) || { commits: 0, messages: [], authors: {} };
+  entry.commits++;
+  if (entry.messages.length < MAX_MESSAGES_PER_BUCKET) {
+    entry.messages.push({
+      hash: String(sha).slice(0, 7),
+      message: (subject || '').trim(),
+      author: (name || '').trim(),
+      email: lcEmail,
+    });
+  }
+  // Per-author tally per day — drives the GSD leaderboard
+  const key = lcEmail || (name || 'unknown').toLowerCase();
+  entry.authors[key] = (entry.authors[key] || 0) + 1;
+  projMap.set(projectName, entry);
+  // Roll-up totals for the response (so the client doesn't have to re-sum).
+  if (!authorTotals.has(key)) {
+    authorTotals.set(key, { name: (name || '').trim(), email: lcEmail, total: 0, days: new Set() });
+  }
+  const a = authorTotals.get(key);
+  a.total++;
+  a.days.add(iso);
+  if (!a.name && name) a.name = name.trim();
+}
+
+router.get('/git-activity', async (req, res) => {
   // Clamp `days` to a sane band: 7 minimum (anything smaller can't show even
   // a 7-day window), 180 maximum (keeps git log output bounded).
   const days = Math.min(Math.max(parseInt(req.query.days, 10) || 90, 7), 180);
-  if (activityCache.payload && activityCache.days === days && Date.now() - activityCache.at < ACTIVITY_TTL_MS) {
+  const noCache = req.query.nocache === '1';
+  if (!noCache && activityCache.payload && activityCache.days === days && Date.now() - activityCache.at < ACTIVITY_TTL_MS) {
     return res.json(activityCache.payload);
   }
 
-  // `git log --since` accepts ISO 8601 — pad by one day to make sure dates
-  // near the boundary aren't dropped due to tz drift.
   const since = new Date(Date.now() - (days + 1) * 24 * 60 * 60 * 1000).toISOString();
-  // iso → Map(project → { commits, messages: [...] })
-  const daily = new Map();
+  const daily = new Map();          // iso → Map(project → entry)
+  const authorTotals = new Map();   // key → { name, email, total, days:Set }
+  let source = 'git';
 
   for (const { name, dir } of ACTIVITY_REPOS) {
     if (!isGitRepo(dir)) continue;
+    deepenShallowClone(dir); // attempts to undo Render's shallow clone
     try {
       const out = execFileSync(
         'git',
@@ -227,24 +341,38 @@ router.get('/git-activity', (req, res) => {
         { cwd: dir, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
       );
       out.split('\n').filter(Boolean).forEach(line => {
-        const [sha, subject, _author, rawEmail, ts] = line.split('\x01');
-        if (!sha || !ts) return;
-        const email = (rawEmail || '').trim().toLowerCase();
-        if (HIDDEN_EMAILS.has(email)) return;
-        // Bucket by author-timestamp UTC date — matches client's
-        // toISOString().slice(0,10) cell-key generation.
-        const iso = new Date(Number(ts) * 1000).toISOString().slice(0, 10);
-        if (!daily.has(iso)) daily.set(iso, new Map());
-        const projMap = daily.get(iso);
-        const entry = projMap.get(name) || { commits: 0, messages: [] };
-        entry.commits++;
-        if (entry.messages.length < MAX_MESSAGES_PER_BUCKET) {
-          entry.messages.push({ hash: sha.slice(0, 7), message: (subject || '').trim() });
-        }
-        projMap.set(name, entry);
+        const [sha, subject, author, rawEmail, ts] = line.split('\x01');
+        addCommitToAccumulators(daily, authorTotals, name, sha, subject, author, rawEmail, ts);
       });
     } catch (err) {
       console.error(`git-activity: log failed in ${dir}:`, err.message);
+    }
+  }
+
+  // GitHub-API fallback — runs when local git is shallow (≤1 active day in
+  // the requested window). The shallow-clone deepening sometimes fails on
+  // Render and we don't want the team's activity-calendar to lie about how
+  // hard they're working.
+  if (daily.size <= 1 && days >= 7) {
+    try {
+      const ghCommits = await fetchActivityFromGitHub(days);
+      if (ghCommits && ghCommits.length > 0) {
+        // Reset and rebuild from GitHub data — cleaner than merging.
+        daily.clear(); authorTotals.clear();
+        const projectName = ACTIVITY_REPOS[0]?.name || 'accelerate-robotics';
+        ghCommits.forEach(c => {
+          const sha = c.sha;
+          const subject = (c.commit?.message || '').split('\n')[0];
+          const author = c.commit?.author?.name || c.author?.login || '';
+          const email = c.commit?.author?.email || '';
+          const dateStr = c.commit?.author?.date || c.commit?.committer?.date;
+          const tsSec = dateStr ? Math.floor(new Date(dateStr).getTime() / 1000) : 0;
+          addCommitToAccumulators(daily, authorTotals, projectName, sha, subject, author, email, tsSec);
+        });
+        source = 'github_api';
+      }
+    } catch (err) {
+      console.warn('[toolkit/git-activity] GitHub fallback failed:', err.message);
     }
   }
 
@@ -255,16 +383,26 @@ router.get('/git-activity', (req, res) => {
       project,
       commits: info.commits,
       messages: info.messages,
+      authors: info.authors,
     }));
   }
+  // Author roll-ups, with the Set serialized to a count.
+  const authors = Array.from(authorTotals.values())
+    .map(a => ({ name: a.name || a.email, email: a.email, total: a.total, active_days: a.days.size }))
+    .sort((x, y) => y.total - x.total);
 
   const payload = {
     generated_at: new Date().toISOString(),
     window_days: days,
+    source, // 'git' or 'github_api' — handy for debugging
     repos: ACTIVITY_REPOS.filter(r => isGitRepo(r.dir)).map(r => r.name),
     daily_activity: dailyOut,
+    authors,
   };
-  activityCache = { days, payload, at: Date.now() };
+  // Don't cache empty results — quick recovery when fetch fails transiently.
+  if (Object.keys(dailyOut).length > 0) {
+    activityCache = { days, payload, at: Date.now() };
+  }
   res.json(payload);
 });
 

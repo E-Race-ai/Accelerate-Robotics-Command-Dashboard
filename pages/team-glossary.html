@@ -220,13 +220,347 @@
     h1 { font-size: 1.7rem; }
     .wrap { padding: 24px 18px 60px; }
   }
+
+  /* ─── Game UI ─────────────────────────────────────────────── */
+  .game-bar {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin: 8px 0 22px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  }
+  .game-bar-loading { color: var(--text-faint); font-size: 0.86rem; }
+  .gb-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .gb-label {
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.62rem; font-weight: 700; color: var(--text-faint);
+  }
+  .gb-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.05rem; color: var(--text);
+  }
+  .gb-points .gb-value { color: var(--accent-deep); }
+  .gb-streak .gb-value .fire { font-size: 1.1rem; margin-right: 3px; }
+  .gb-progress { flex: 1; min-width: 180px; }
+  .gb-progress-track {
+    height: 8px; background: rgba(217,119,6,0.18); border-radius: 100px;
+    overflow: hidden; margin-top: 4px;
+  }
+  .gb-progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-deep));
+    border-radius: 100px; transition: width 0.4s ease;
+  }
+  .gb-cta { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .gb-btn {
+    background: var(--accent); color: white; border: 0; cursor: pointer;
+    padding: 9px 16px; border-radius: 10px;
+    font: inherit; font-weight: 700; font-size: 0.86rem;
+    box-shadow: 0 1px 3px rgba(217,119,6,0.30);
+    transition: transform 0.08s, background 0.12s;
+  }
+  .gb-btn:hover  { background: var(--accent-deep); transform: translateY(-1px); }
+  .gb-btn:active { transform: translateY(0); }
+  .gb-btn-ghost {
+    background: white; color: var(--text-dim); border: 1px solid var(--border);
+    box-shadow: none;
+  }
+  .gb-btn-ghost:hover { color: var(--accent-deep); border-color: var(--accent); background: var(--accent-soft); }
+  .gb-badges { display: flex; gap: 4px; }
+  .gb-badge {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: white; border: 1px solid var(--border);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+  }
+  .gb-badge[data-empty="true"] { opacity: 0.25; }
+
+  /* First-time intro variant of the game bar */
+  .gb-intro { flex: 1; min-width: 240px; }
+  .gb-intro-eyebrow {
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.7rem; font-weight: 700; color: var(--accent-deep);
+  }
+  .gb-intro-headline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.3rem; color: var(--text);
+    margin: 4px 0 6px;
+  }
+  .gb-intro-body { font-size: 0.86rem; color: var(--text-dim); line-height: 1.55; }
+  .gb-intro-tip {
+    font-size: 0.74rem; color: var(--text-faint);
+    margin-top: 6px; text-align: center;
+  }
+  .gb-btn-big { padding: 11px 18px; font-size: 0.95rem; }
+
+  /* Leaderboard */
+  .leaderboard {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 22px; margin: 0 0 22px;
+  }
+  .leaderboard-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .leaderboard h2 {
+    font-size: 1.1rem; margin: 0;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .leaderboard-team-stats {
+    font-size: 0.78rem; color: var(--text-dim);
+  }
+  .leaderboard-team-stats strong { color: var(--accent-deep); font-weight: 700; }
+  .leaderboard-row {
+    display: grid; grid-template-columns: 32px 1fr auto auto auto; gap: 12px;
+    padding: 8px 0; border-top: 1px solid var(--border);
+    align-items: center;
+  }
+  .leaderboard-row:first-of-type { border-top: 0; }
+  .lb-rank {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 0.95rem; color: var(--text-faint);
+    text-align: center;
+  }
+  .lb-rank.top1 { color: #b45309; font-size: 1.1rem; }
+  .lb-rank.top2 { color: #475569; }
+  .lb-rank.top3 { color: #92400e; }
+  .lb-name {
+    font-weight: 600; color: var(--text); font-size: 0.9rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .lb-name .me-tag {
+    font-size: 0.62rem; background: var(--accent); color: white;
+    padding: 1px 6px; border-radius: 100px; margin-left: 6px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .lb-title {
+    font-size: 0.74rem; color: var(--text-dim);
+    background: #f1f5f9; padding: 3px 9px; border-radius: 100px;
+  }
+  .lb-streak { font-size: 0.78rem; color: #c2410c; font-weight: 600; }
+  .lb-points {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; color: var(--accent-deep); font-size: 0.95rem;
+    text-align: right;
+  }
+
+  /* Quiz modal */
+  .quiz-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(15,23,42,0.65);
+    align-items: center; justify-content: center; padding: 30px 16px;
+  }
+  .quiz-backdrop.open { display: flex; }
+  .quiz-modal {
+    background: white; border-radius: 18px;
+    width: 100%; max-width: 600px; padding: 28px 32px 24px;
+    box-shadow: 0 30px 80px rgba(15,23,42,0.4);
+    animation: quizIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 90vh; overflow-y: auto;
+  }
+  @keyframes quizIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .quiz-progress {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px; font-size: 0.78rem; color: var(--text-dim);
+  }
+  .quiz-progress-bar {
+    flex: 1; height: 6px; background: var(--border); border-radius: 100px;
+    margin: 0 12px; overflow: hidden;
+  }
+  .quiz-progress-fill {
+    height: 100%; background: var(--accent); transition: width 0.3s;
+  }
+  .quiz-prompt-eyebrow {
+    text-transform: uppercase; letter-spacing: 0.1em;
+    font-size: 0.7rem; font-weight: 700; color: var(--accent-deep);
+    margin-bottom: 6px;
+  }
+  .quiz-term {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.7rem; color: var(--text);
+    line-height: 1.2; margin-bottom: 4px;
+  }
+  .quiz-term-alias { font-size: 0.86rem; color: var(--text-faint); margin-bottom: 18px; }
+  .quiz-question { font-size: 0.95rem; color: var(--text-dim); margin-bottom: 14px; }
+  .quiz-choices { display: flex; flex-direction: column; gap: 8px; }
+  .quiz-choice {
+    background: white; border: 2px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; text-align: left; cursor: pointer;
+    font: inherit; font-size: 0.88rem; color: var(--text);
+    transition: border-color 0.12s, background 0.12s, transform 0.08s;
+    line-height: 1.45;
+  }
+  .quiz-choice:hover:not(:disabled) {
+    border-color: var(--accent); background: var(--accent-soft);
+  }
+  .quiz-choice:disabled { cursor: default; }
+  .quiz-choice.correct {
+    border-color: #16a34a; background: #dcfce7; color: #14532d;
+    animation: pulseGreen 0.4s;
+  }
+  .quiz-choice.wrong {
+    border-color: #dc2626; background: #fee2e2; color: #7f1d1d;
+  }
+  .quiz-choice.also-correct {
+    border-color: #16a34a; opacity: 0.6;
+  }
+  @keyframes pulseGreen {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+  .quiz-actions {
+    display: flex; gap: 8px; margin-top: 18px; justify-content: space-between;
+  }
+  .quiz-skip {
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--text-faint); font: inherit; font-size: 0.82rem;
+  }
+  .quiz-skip:hover { color: var(--text-dim); }
+  .quiz-feedback {
+    margin-top: 12px; font-size: 0.84rem; padding: 10px 12px;
+    border-radius: 8px; display: none;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.win  { background: #dcfce7; color: #14532d; border: 1px solid rgba(22,163,74,0.30); }
+  .quiz-feedback.lose { background: #fef3c7; color: #78350f; border: 1px solid rgba(217,119,6,0.30); }
+  .quiz-feedback .pts { font-weight: 700; }
+  .quiz-next-btn {
+    background: var(--accent); color: white; border: 0; cursor: pointer;
+    padding: 9px 16px; border-radius: 10px;
+    font: inherit; font-weight: 700; font-size: 0.86rem;
+  }
+  .quiz-next-btn:hover { background: var(--accent-deep); }
+
+  /* Result screen */
+  .quiz-result-headline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 2rem; color: var(--text);
+    text-align: center; margin: 6px 0 4px;
+  }
+  .quiz-result-score {
+    text-align: center; font-size: 1.2rem; color: var(--accent-deep);
+    margin-bottom: 14px;
+  }
+  .quiz-result-score .nbig {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.6rem; font-weight: 800;
+  }
+  .quiz-result-breakdown {
+    background: var(--accent-soft); border-radius: 10px;
+    padding: 12px 16px; font-size: 0.88rem; margin-bottom: 12px;
+  }
+  .quiz-result-breakdown div {
+    display: flex; justify-content: space-between; padding: 3px 0;
+  }
+  .quiz-result-breakdown .total {
+    border-top: 1px solid rgba(217,119,6,0.30);
+    margin-top: 6px; padding-top: 8px; font-weight: 700;
+    color: var(--accent-deep);
+  }
+  .quiz-new-badges {
+    background: linear-gradient(135deg, #fff7ed, #fef3c7);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 12px;
+    text-align: center;
+  }
+  .quiz-new-badges-label {
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.7rem; font-weight: 700; color: var(--accent-deep);
+    margin-bottom: 6px;
+  }
+  .quiz-new-badges-list {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  }
+  .quiz-new-badge {
+    background: white; border: 2px solid var(--accent);
+    padding: 8px 14px; border-radius: 100px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.84rem; font-weight: 600;
+  }
+  .quiz-new-badge .emoji { font-size: 1.1rem; }
+  .quiz-level-up {
+    background: linear-gradient(90deg, #fbbf24, #d97706);
+    color: white; padding: 10px 16px; border-radius: 10px;
+    font-weight: 700; text-align: center; margin-bottom: 12px;
+    animation: levelUpFlash 1s ease-out;
+  }
+  @keyframes levelUpFlash {
+    0%   { transform: scale(0.9); opacity: 0; }
+    50%  { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Confetti — pure CSS, lightweight */
+  .confetti {
+    position: fixed; inset: 0; pointer-events: none; z-index: 300; overflow: hidden;
+  }
+  .confetti span {
+    position: absolute; top: -20px;
+    width: 8px; height: 14px; opacity: 0.95;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    to { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* Section chip — "Quiz me on Git" inline trigger */
+  .section h2 .quiz-section-btn {
+    margin-left: 12px; font-size: 0.7rem; font-weight: 700;
+    background: var(--accent-soft); color: var(--accent-deep);
+    border: 1px solid rgba(217,119,6,0.30); border-radius: 100px;
+    padding: 4px 10px; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    vertical-align: middle; line-height: 1;
+  }
+  .section h2 .quiz-section-btn:hover {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+
+  @media (max-width: 720px) {
+    .game-bar {
+      padding: 12px 14px; gap: 10px;
+      /* Stack sensibly on phones: each stat block goes 50% wide, badges + CTA full-width below */
+      flex-direction: row; flex-wrap: wrap;
+    }
+    .gb-stat { flex-basis: calc(50% - 6px); min-width: 0; }
+    .gb-progress { flex-basis: 100%; }
+    .gb-badges { order: 90; flex-basis: 100%; justify-content: flex-start; }
+    .gb-cta { order: 100; flex-basis: 100%; margin-left: 0; }
+    .gb-cta .gb-btn { width: 100%; padding: 12px 16px; font-size: 0.95rem; }
+    .gb-intro { flex-basis: 100%; }
+    .gb-intro-headline { font-size: 1.15rem; }
+
+    .quiz-modal { padding: 22px 22px 18px; }
+    .quiz-term { font-size: 1.4rem; }
+
+    .leaderboard-row { grid-template-columns: 28px 1fr auto; row-gap: 4px; }
+    .lb-title, .lb-streak { display: none; }
+  }
 </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="hdr-eyebrow">Team Reference</div>
+    <div class="hdr-eyebrow">Team Reference · 🎮 Earn Points</div>
     <h1>Team Glossary</h1>
-    <p class="lede">Plain-English definitions for the technical terms you'll hear around Accelerate Robotics. Type to search across every section.</p>
+    <p class="lede">Plain-English definitions for the technical terms you'll hear around Accelerate Robotics. Type to search across every section — or hit <strong>Quiz Me</strong> to earn points toward swag.</p>
+
+    <!-- ─── Game stats bar ───────────────────────────────────── -->
+    <div class="game-bar" id="gameBar">
+      <div class="game-bar-loading">Loading your stats…</div>
+    </div>
+
+    <!-- ─── Leaderboard (lives near the top so the team can see momentum) ─── -->
+    <div class="leaderboard" id="leaderboardCard">
+      <div class="leaderboard-head">
+        <h2>🏆 Team Leaderboard</h2>
+        <div class="leaderboard-team-stats" id="teamStats"></div>
+      </div>
+      <div id="leaderboardBody"><div style="color:var(--text-faint);font-size:0.86rem;">Loading…</div></div>
+    </div>
 
     <div class="search-wrap">
       <div class="search-box">
@@ -659,6 +993,13 @@
 
     <div class="no-results" id="noResults">No matches. Try a different word.</div>
 
+    <!-- ─── Quiz modal ──────────────────────────────────────── -->
+    <div class="quiz-backdrop" id="quizBackdrop" onclick="if(event.target===this)closeQuiz()">
+      <div class="quiz-modal" id="quizModal" role="dialog" aria-labelledby="quizTitle">
+        <div id="quizContent"></div>
+      </div>
+    </div>
+
     <div class="foot">
       Source of truth: <a href="/repos/accelerate-robotics/docs/00-overview/glossary.md">docs/00-overview/glossary.md</a> · Missing a term? Add it there and the next deploy will pick it up.
     </div>
@@ -715,6 +1056,380 @@
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// GAME MODE — points, levels, streaks, badges, quiz
+// ═══════════════════════════════════════════════════════════════════
+(function() {
+  const SECTION_LABELS = {
+    git: 'Git & GitHub',
+    process: 'Code review & deploys',
+    types: 'Commit types',
+    stack: 'Software & data',
+    robotics: 'Robots & elevators',
+    business: 'Business',
+  };
+  const SECTION_IDS = ['git', 'process', 'types', 'stack', 'robotics', 'business'];
+
+  let ME = null;          // /me payload
+  let SESSION = null;     // active quiz: { session_id, questions: [{q_id, term, choices, answered, was_correct}], idx }
+
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function fireConfetti(count = 60) {
+    const colors = ['#d97706', '#fbbf24', '#22c55e', '#3b82f6', '#ec4899', '#a855f7'];
+    const root = document.createElement('div');
+    root.className = 'confetti';
+    document.body.appendChild(root);
+    for (let i = 0; i < count; i++) {
+      const span = document.createElement('span');
+      span.style.left = (Math.random() * 100) + 'vw';
+      span.style.background = colors[i % colors.length];
+      span.style.animationDuration = (1.8 + Math.random() * 1.4) + 's';
+      span.style.animationDelay = (Math.random() * 0.4) + 's';
+      span.style.transform = `rotate(${Math.random() * 360}deg)`;
+      span.style.borderRadius = Math.random() < 0.5 ? '2px' : '50%';
+      root.appendChild(span);
+    }
+    setTimeout(() => root.remove(), 4000);
+  }
+
+  // ── Stats bar ─────────────────────────────────────────────────
+  async function loadMe() {
+    try {
+      const res = await fetch('/api/glossary-game/me', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      ME = data.me;
+      window._GAME_CFG = { badges_catalog: data.badges_catalog, levels: data.levels, points: data.points_table };
+      renderGameBar();
+    } catch (err) {
+      document.getElementById('gameBar').innerHTML =
+        '<div class="game-bar-loading">Game stats unavailable: ' + escHtml(err.message) + '</div>';
+    }
+  }
+
+  function renderGameBar() {
+    if (!ME) return;
+    const m = ME;
+    const earnedCodes = new Set(m.badges.map(b => b.code));
+    const allBadges = (window._GAME_CFG?.badges_catalog || []);
+    const badgeRow = allBadges.map(b => `
+      <div class="gb-badge" data-empty="${earnedCodes.has(b.code) ? 'false' : 'true'}" title="${escHtml(b.label)} — ${escHtml(b.desc)}">${b.emoji}</div>
+    `).join('');
+
+    const pct = Math.round(m.progress_to_next * 100);
+    const nextSummary = m.next_level_at
+      ? `${m.next_level_at - m.points_total} pts to <strong>${escHtml(m.next_title)}</strong>`
+      : `Max level reached — you're a legend.`;
+
+    // First-time vs returning UI: a brand-new player gets a warmer intro
+    // explaining the loop. Returning players see the standard stats grid.
+    const isNew = m.total_points === 0 && m.quizzes_completed === 0;
+    if (isNew) {
+      document.getElementById('gameBar').innerHTML = `
+        <div class="gb-intro">
+          <div class="gb-intro-eyebrow">👋 Welcome, ${escHtml(m.display_name)}</div>
+          <div class="gb-intro-headline">Earn points → unlock swag.</div>
+          <div class="gb-intro-body">
+            Hit <strong>Quiz Me</strong> to play your first 10-question round. You'll earn
+            <strong>10 pts per right answer</strong>, plus bonuses for completion, perfect runs, and
+            daily streaks. Climb the leaderboard, unlock 6 badges, and reach <strong>Code Sensei</strong> at 6,000 pts.
+          </div>
+        </div>
+        <div class="gb-cta">
+          <button class="gb-btn gb-btn-big" onclick="window._startQuiz(null)">🎮 Start your first quiz</button>
+          <div class="gb-intro-tip">First quiz earns the 🆕 First Steps badge.</div>
+        </div>
+      `;
+      return;
+    }
+
+    document.getElementById('gameBar').innerHTML = `
+      <div class="gb-stat gb-points" title="Total points earned">
+        <span class="gb-label">Points</span>
+        <span class="gb-value">${m.total_points.toLocaleString()}</span>
+      </div>
+      <div class="gb-stat" title="Current level">
+        <span class="gb-label">Level ${m.level}</span>
+        <span class="gb-value">${escHtml(m.title)}</span>
+      </div>
+      <div class="gb-stat gb-streak" title="Quiz once a day to keep your streak">
+        <span class="gb-label">Streak</span>
+        <span class="gb-value"><span class="fire">🔥</span>${m.current_streak} day${m.current_streak === 1 ? '' : 's'}</span>
+      </div>
+      <div class="gb-progress">
+        <span class="gb-label">${nextSummary}</span>
+        <div class="gb-progress-track"><div class="gb-progress-fill" style="width:${pct}%;"></div></div>
+      </div>
+      <div class="gb-badges" title="Badges earned">${badgeRow}</div>
+      <div class="gb-cta">
+        <button class="gb-btn" onclick="window._startQuiz(null)">🎮 Quiz Me</button>
+      </div>
+    `;
+  }
+
+  // ── Leaderboard ────────────────────────────────────────────────
+  async function loadLeaderboard() {
+    try {
+      const res = await fetch('/api/glossary-game/leaderboard', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderTeamStats(data.team || { players: 0, total_points: 0 });
+      renderLeaderboard(data.players || [], data.team || { players: 0 });
+    } catch (err) {
+      document.getElementById('leaderboardBody').innerHTML =
+        `<div style="color:var(--text-faint);font-size:0.86rem;">Leaderboard unavailable: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  function renderTeamStats(team) {
+    const el = document.getElementById('teamStats');
+    if (!el) return;
+    if (team.players === 0) {
+      el.innerHTML = `<span>No one's playing yet — be first! 🥇</span>`;
+    } else {
+      el.innerHTML = `<strong>${team.players}</strong> ${team.players === 1 ? 'player' : 'players'} · <strong>${team.total_points.toLocaleString()}</strong> total pts`;
+    }
+  }
+
+  function renderLeaderboard(players, team) {
+    const body = document.getElementById('leaderboardBody');
+    if (!players.length) {
+      body.innerHTML = `
+        <div style="text-align:center;padding:18px 12px;color:var(--text-dim);font-size:0.92rem;">
+          The board is empty — be the first to score.
+          <div style="margin-top:6px;font-size:0.82rem;color:var(--text-faint);">
+            Click <strong>Quiz Me</strong> above to put your name up here.
+          </div>
+        </div>`;
+      return;
+    }
+    const myEmail = ME?.email;
+    const onBoard = players.some(p => p.email === myEmail);
+    const meRow = (!onBoard && ME && ME.total_points > 0) ? `
+      <div class="leaderboard-row">
+        <div class="lb-rank">—</div>
+        <div class="lb-name">${escHtml(ME.display_name)}<span class="me-tag">you</span></div>
+        <span class="lb-title">${escHtml(ME.title)}</span>
+        ${ME.current_streak > 0 ? `<span class="lb-streak">🔥 ${ME.current_streak}</span>` : '<span></span>'}
+        <div class="lb-points">${ME.total_points.toLocaleString()}</div>
+      </div>
+      <div style="font-size:0.74rem;color:var(--text-faint);text-align:center;padding:6px 0;">↑ keep going to crack the top 10</div>
+    ` : '';
+
+    body.innerHTML = players.map(p => {
+      const rankClass = p.rank === 1 ? 'top1' : p.rank === 2 ? 'top2' : p.rank === 3 ? 'top3' : '';
+      const rankIcon = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : `#${p.rank}`;
+      const isMe = p.email === myEmail;
+      const streakBit = p.current_streak > 0 ? `<span class="lb-streak">🔥 ${p.current_streak}</span>` : '<span></span>';
+      return `
+        <div class="leaderboard-row">
+          <div class="lb-rank ${rankClass}">${rankIcon}</div>
+          <div class="lb-name">${escHtml(p.display_name)}${isMe ? '<span class="me-tag">you</span>' : ''}</div>
+          <span class="lb-title">${escHtml(p.title)}</span>
+          ${streakBit}
+          <div class="lb-points">${p.total_points.toLocaleString()}</div>
+        </div>
+      `;
+    }).join('') + meRow;
+  }
+
+  // ── Quiz flow ─────────────────────────────────────────────────
+  async function startQuiz(sectionId) {
+    try {
+      const res = await fetch('/api/glossary-game/quiz/start', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: 10, sectionId: sectionId || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      SESSION = {
+        session_id: data.session_id,
+        questions: data.questions.map(q => ({ ...q, answered: false, was_correct: false, picked_id: null })),
+        idx: 0,
+      };
+      document.getElementById('quizBackdrop').classList.add('open');
+      renderCurrentQuestion();
+    } catch (err) {
+      alert('Could not start quiz: ' + err.message);
+    }
+  }
+  window._startQuiz = startQuiz;
+
+  function closeQuiz() {
+    document.getElementById('quizBackdrop').classList.remove('open');
+    SESSION = null;
+  }
+  window.closeQuiz = closeQuiz;
+
+  function renderCurrentQuestion() {
+    if (!SESSION) return;
+    const q = SESSION.questions[SESSION.idx];
+    if (!q) return finishQuiz();
+    const total = SESSION.questions.length;
+    const pct = Math.round(((SESSION.idx) / total) * 100);
+    document.getElementById('quizContent').innerHTML = `
+      <div class="quiz-progress">
+        <span>Question ${SESSION.idx + 1} of ${total}</span>
+        <div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:${pct}%;"></div></div>
+        <span>${q.section_label}</span>
+      </div>
+      <div class="quiz-prompt-eyebrow">Match the term to its definition</div>
+      <div class="quiz-term">${escHtml(q.term)}</div>
+      ${q.term_alias ? `<div class="quiz-term-alias">${escHtml(q.term_alias)}</div>` : '<div class="quiz-term-alias"></div>'}
+      <div class="quiz-question">Which definition fits?</div>
+      <div class="quiz-choices">
+        ${q.choices.map(c => `
+          <button class="quiz-choice" data-cid="${c.id}" onclick="window._answer('${c.id}')">${escHtml(c.text)}</button>
+        `).join('')}
+      </div>
+      <div class="quiz-feedback" id="quizFb"></div>
+      <div class="quiz-actions">
+        <button class="quiz-skip" onclick="window.closeQuiz()">Quit quiz</button>
+        <span></span>
+      </div>
+    `;
+  }
+
+  async function answer(choiceId) {
+    if (!SESSION) return;
+    const q = SESSION.questions[SESSION.idx];
+    if (q.answered) return;
+    q.answered = true; q.picked_id = choiceId;
+
+    // Visual lock: disable all buttons.
+    const btns = document.querySelectorAll('.quiz-choice');
+    btns.forEach(b => b.disabled = true);
+
+    try {
+      const res = await fetch('/api/glossary-game/quiz/answer', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: SESSION.session_id, q_id: q.q_id, choice_id: choiceId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      q.was_correct = data.correct;
+      const correctBtn = document.querySelector(`.quiz-choice[data-cid="${data.correct_choice_id}"]`);
+      const pickedBtn  = document.querySelector(`.quiz-choice[data-cid="${choiceId}"]`);
+      if (data.correct) {
+        pickedBtn.classList.add('correct');
+        document.getElementById('quizFb').innerHTML = `<span class="pts">+${data.awarded_points} pts</span> · Nailed it.`;
+        document.getElementById('quizFb').className = 'quiz-feedback win show';
+      } else {
+        pickedBtn.classList.add('wrong');
+        if (correctBtn && correctBtn !== pickedBtn) correctBtn.classList.add('also-correct');
+        document.getElementById('quizFb').innerHTML = `Not quite — the correct answer is highlighted. (${data.correct_so_far}/${data.answered} right so far)`;
+        document.getElementById('quizFb').className = 'quiz-feedback lose show';
+      }
+      // Replace skip with Next
+      const actions = document.querySelector('.quiz-actions');
+      const isLast = SESSION.idx >= SESSION.questions.length - 1;
+      actions.innerHTML = `
+        <button class="quiz-skip" onclick="window.closeQuiz()">Quit quiz</button>
+        <button class="quiz-next-btn" onclick="window._next()">${isLast ? 'See results →' : 'Next question →'}</button>
+      `;
+    } catch (err) {
+      alert('Answer submit failed: ' + err.message);
+    }
+  }
+  window._answer = answer;
+
+  function next() {
+    if (!SESSION) return;
+    SESSION.idx++;
+    if (SESSION.idx >= SESSION.questions.length) finishQuiz();
+    else renderCurrentQuestion();
+  }
+  window._next = next;
+
+  async function finishQuiz() {
+    if (!SESSION) return;
+    try {
+      const res = await fetch('/api/glossary-game/quiz/finish', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: SESSION.session_id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      renderResult(data);
+      // Trigger celebration if score warrants
+      if (data.perfect || data.leveled_up || (data.new_badges && data.new_badges.length)) fireConfetti(140);
+      else if (data.correct >= 7) fireConfetti(60);
+      // Refresh stats + leaderboard for next time
+      loadMe();
+      loadLeaderboard();
+    } catch (err) {
+      alert('Could not finalize quiz: ' + err.message);
+      closeQuiz();
+    }
+  }
+
+  function renderResult(r) {
+    const headline = r.perfect ? '🏆 Perfect Score!' : r.correct >= 8 ? '🔥 Crushed it!' : r.correct >= 5 ? '💪 Solid run' : '📚 Keep going';
+    // Use server-computed totals — they include level-up cascades exactly.
+    const total = r.awarded.total;
+    const html = `
+      ${r.leveled_up ? `<div class="quiz-level-up">🎉 Level up! Welcome to <strong>${escHtml(r.me.title)}</strong> (Level ${r.me.level}).</div>` : ''}
+      ${r.new_badges?.length ? `
+        <div class="quiz-new-badges">
+          <div class="quiz-new-badges-label">New badges earned</div>
+          <div class="quiz-new-badges-list">
+            ${r.new_badges.map(b => `<div class="quiz-new-badge"><span class="emoji">${b.emoji}</span><span>${escHtml(b.label)}</span></div>`).join('')}
+          </div>
+        </div>` : ''}
+      <div class="quiz-result-headline">${headline}</div>
+      <div class="quiz-result-score"><span class="nbig">${r.correct}</span> / ${r.total} correct</div>
+      <div class="quiz-result-breakdown">
+        <div><span>Per-question (${r.correct} × 10)</span><span>+${r.awarded.per_correct_total}</span></div>
+        <div><span>Quiz completion</span><span>+${r.awarded.completion}</span></div>
+        ${r.awarded.perfect_bonus ? `<div><span>Perfect-score bonus</span><span>+${r.awarded.perfect_bonus}</span></div>` : ''}
+        ${r.awarded.streak ? `<div><span>Daily streak (🔥 ${r.me.current_streak})</span><span>+${r.awarded.streak}</span></div>` : ''}
+        ${r.awarded.level_up_bonus ? `<div><span>Level-up bonus</span><span>+${r.awarded.level_up_bonus}</span></div>` : ''}
+        <div class="total"><span>This run</span><span>+${total}</span></div>
+      </div>
+      <div style="text-align:center;color:var(--text-dim);font-size:0.86rem;margin-bottom:14px;">
+        Total points: <strong style="color:var(--accent-deep);">${r.me.total_points.toLocaleString()}</strong> · ${escHtml(r.me.title)}
+      </div>
+      <div class="quiz-actions" style="justify-content:center;">
+        <button class="quiz-skip" onclick="window.closeQuiz()">Done</button>
+        <button class="quiz-next-btn" onclick="window._startQuiz(null)">Play again →</button>
+      </div>
+    `;
+    document.getElementById('quizContent').innerHTML = html;
+  }
+
+  // ── Section quiz buttons ──────────────────────────────────────
+  function injectSectionButtons() {
+    SECTION_IDS.forEach(id => {
+      const sec = document.getElementById(id);
+      const h2 = sec?.querySelector('h2');
+      if (h2 && !h2.querySelector('.quiz-section-btn')) {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-section-btn';
+        btn.textContent = '🎮 Quiz this section';
+        btn.onclick = () => startQuiz(id);
+        h2.appendChild(btn);
+      }
+    });
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('quizBackdrop').classList.contains('open')) closeQuiz();
+  });
+  loadMe();
+  loadLeaderboard();
+  injectSectionButtons();
 })();
 </script>
 </body>

@@ -483,28 +483,27 @@
   }
 
   // ── Voice dictation (Web Speech API) ───────────────────────
-  // Browsers that support webkitSpeechRecognition / SpeechRecognition can
-  // dictate the description field. Click mic to start, click again to stop.
-  // Falls back gracefully (button stays hidden) when unsupported — common in
-  // Firefox and locked-down enterprise browsers.
+  // Click mic to start, click again to stop. Hardened against the silent-
+  // failure cases that have made this look broken to users:
+  //   1. Hidden button in unsupported browsers — now we ALWAYS show the
+  //      button so users see why dictation isn't available.
+  //   2. Chrome auto-ends recognition after ~30s of silence with continuous=
+  //      true — we now auto-restart while the user is still "recording" so
+  //      pauses don't drop the session.
+  //   3. Insecure context (HTTP) silently blocks getUserMedia — we surface
+  //      a specific error before the user even clicks.
+  //   4. Errors were sometimes ignored ('aborted') even when the user
+  //      hadn't asked to abort — we now show all non-trivial errors.
   (function initVoiceDictation() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const mic = document.getElementById('f-voice-mic');
     const hint = document.getElementById('f-voice-hint');
     const ta = document.getElementById('f-description');
-    if (!SR || !mic || !ta) return;
+    if (!mic || !ta) return;
 
+    // Always show the button; explain unsupported state on click instead of
+    // hiding it (silent hide makes users think it's broken).
     mic.classList.add('is-supported');
-
-    const recog = new SR();
-    recog.continuous = true;     // keep listening until user clicks Stop
-    recog.interimResults = true; // show partials so the user sees progress
-    recog.lang = navigator.language || 'en-US';
-
-    let recording = false;
-    // WHY: Track the textarea length at recording-start so each new utterance
-    // appends after existing typed content, rather than wiping it.
-    let baseText = '';
 
     function setHint(msg, isError) {
       if (!msg) { hint.classList.remove('is-shown', 'is-error'); hint.textContent = ''; return; }
@@ -513,45 +512,98 @@
       hint.classList.toggle('is-error', !!isError);
     }
 
+    // Pre-flight: clear, actionable messages for the common gotchas
+    if (!SR) {
+      mic.title = 'Voice dictation requires Chrome, Edge, or Safari';
+      mic.classList.add('is-unsupported');
+      mic.addEventListener('click', () => {
+        setHint('Voice dictation isn\'t available in this browser. Try Chrome, Edge, or Safari (Firefox doesn\'t support the Web Speech API).', true);
+      });
+      return;
+    }
+    if (!window.isSecureContext) {
+      mic.classList.add('is-unsupported');
+      mic.addEventListener('click', () => {
+        setHint('Voice dictation needs a secure (https) connection. Open this page over https.', true);
+      });
+      return;
+    }
+
+    const recog = new SR();
+    recog.continuous = true;
+    recog.interimResults = true;
+    recog.lang = navigator.language || 'en-US';
+
+    let userWantsRecording = false; // user-intent — distinct from `recog`'s actual state
+    let baseText = '';
+    // Watchdog — Chrome silently stops after ~60s with no speech; if user
+    // still wants recording, we auto-restart.
+    let restartGuard = false;
+
     function start() {
       baseText = ta.value;
+      userWantsRecording = true;
       try {
         recog.start();
       } catch (e) {
-        // already-started or permissions issue — surface it.
-        setHint('Could not start mic: ' + e.message, true);
+        // InvalidStateError = already started; ignore. Anything else, surface.
+        if (!/already started/i.test(e.message)) {
+          setHint('Could not start mic: ' + e.message, true);
+        }
       }
     }
 
     function stop() {
+      userWantsRecording = false;
       try { recog.stop(); } catch (e) { /* ignore */ }
     }
 
     mic.addEventListener('click', () => {
-      if (recording) stop(); else start();
+      if (userWantsRecording) stop(); else start();
     });
 
     recog.onstart = () => {
-      recording = true;
       mic.classList.add('is-recording');
       mic.title = 'Stop dictation';
-      setHint('Listening… click the mic again to stop.', false);
+      setHint('Listening… click the mic to stop. Speak naturally; pauses are fine.', false);
     };
 
     recog.onerror = (e) => {
-      // 'no-speech' fires every few seconds during natural pauses — ignore.
-      if (e.error === 'no-speech' || e.error === 'aborted') return;
-      const msg = e.error === 'not-allowed'
-        ? 'Microphone access blocked. Allow it in your browser settings.'
-        : `Voice error: ${e.error}`;
-      setHint(msg, true);
+      // 'no-speech' is normal during pauses — keep going.
+      if (e.error === 'no-speech') return;
+      // 'aborted' fires when WE stop the recog — ignore unless the user
+      // didn't ask to stop.
+      if (e.error === 'aborted' && !userWantsRecording) return;
+      const messages = {
+        'not-allowed':           'Microphone access blocked. Allow it in your browser settings, then click the mic again.',
+        'service-not-allowed':   'Speech service blocked by your browser or network. Try a different network or check extensions.',
+        'audio-capture':         'No microphone detected. Plug one in and reload.',
+        'network':               'Speech service network error. Check your connection or try again.',
+        'language-not-supported': 'This language isn\'t supported by your browser\'s speech engine.',
+      };
+      setHint(messages[e.error] || `Voice error: ${e.error}`, true);
+      // Hard errors should stop the watchdog so we don't hammer-restart
+      if (['not-allowed', 'service-not-allowed', 'audio-capture'].includes(e.error)) {
+        userWantsRecording = false;
+      }
     };
 
     recog.onend = () => {
-      recording = false;
+      // If the user still wants to record, Chrome killed us — auto-restart
+      // through the watchdog. Throttle so we don't infinite-loop on a hard
+      // failure (one auto-restart per onend cycle).
+      if (userWantsRecording && !restartGuard) {
+        restartGuard = true;
+        setTimeout(() => {
+          restartGuard = false;
+          if (userWantsRecording) {
+            try { recog.start(); } catch {/* ignore */}
+          }
+        }, 250);
+        return;
+      }
       mic.classList.remove('is-recording');
       mic.title = 'Dictate (click to start, click again to stop)';
-      // Only clear the hint if it's not currently showing an error.
       if (!hint.classList.contains('is-error')) setHint('', false);
     };
 
@@ -563,7 +615,6 @@
         if (r.isFinal) finalChunk += r[0].transcript;
         else interim += r[0].transcript;
       }
-      // Commit final chunks to baseText, render baseText + interim live.
       if (finalChunk) {
         baseText = (baseText + (baseText && !/[\s.!?]$/.test(baseText) ? ' ' : '') + finalChunk.trim()).trim();
       }
