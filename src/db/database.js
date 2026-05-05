@@ -971,22 +971,35 @@ const ready = isTestEnv ? Promise.resolve() : (async () => {
       if (est > 0) console.log(`[db] Rooms estimator — filled ${est}/${noRooms.length} hotels`);
     }
 
-    // Pass B — fit score (every row gets a number)
+    // Pass B — fit score. Two passes:
+    //   1) Score any rows where ai_fit_score IS NULL (new saves)
+    //   2) RE-score every row whose score predates the most recent
+    //      logic change (FIT_SCORE_LOGIC_CUTOFF). This is what makes
+    //      a scoring-curve change (e.g. Goldilocks) actually take effect
+    //      against existing data — without it, the team keeps seeing
+    //      stale scores until they manually delete them.
+    //
+    // To bump the cutoff: edit the timestamp constant when shipping a
+    // fit-score logic change. Anyone scored *before* the cutoff gets
+    // rescored on next boot.
+    const FIT_SCORE_LOGIC_CUTOFF = '2026-05-05T15:00:00Z'; // Goldilocks curve shipped in #130
     const { fitScoreFor } = require('../services/fit-score');
-    const unscored = await all(
+    const stale = await all(
       `SELECT id, name, brand, operator, stars, rooms, total_floors, est_adr_dollars,
               year_opened, restaurant_count, event_sqft, meeting_room_count,
               ballroom_capacity, spa_count, pool_count, status
        FROM hotels_saved
        WHERE ai_fit_score IS NULL
+          OR ai_fit_scored_at IS NULL
+          OR ai_fit_scored_at < ?
        LIMIT 5000`,
-      [],
+      [FIT_SCORE_LOGIC_CUTOFF],
     );
-    if (unscored.length > 0) {
-      console.log(`[db] AI Fit Score v1 — scoring ${unscored.length} unscored hotels…`);
+    if (stale.length > 0) {
+      console.log(`[db] AI Fit Score — (re)scoring ${stale.length} hotels with current logic…`);
       const stamp = new Date().toISOString();
       let scored = 0;
-      for (const h of unscored) {
+      for (const h of stale) {
         const { score, reasoning, tier } = fitScoreFor(h);
         await run(
           `UPDATE hotels_saved
@@ -996,7 +1009,7 @@ const ready = isTestEnv ? Promise.resolve() : (async () => {
         );
         scored++;
       }
-      console.log(`[db] AI Fit Score v1 — scored ${scored} hotels`);
+      console.log(`[db] AI Fit Score — (re)scored ${scored} hotels`);
     }
   } catch (err) {
     // Non-fatal — server boots even if scoring trips. Eric can re-run via
