@@ -1093,7 +1093,7 @@ router.post('/routes/:id/auto-anchor', requireAuth, async (req, res) => {
            AND h.est_adr_dollars IS NOT NULL
            AND h.est_adr_dollars BETWEEN ? AND ?
            AND h.phone IS NOT NULL AND h.phone != ''
-           AND (h.triage IS NULL OR h.triage != 'no')
+           AND h.triage = 'yes'
          ORDER BY h.ai_fit_score DESC, h.est_adr_dollars ASC, h.id ASC
          LIMIT 1`,
         [id, budgetMin, budgetMax],
@@ -1106,7 +1106,7 @@ router.post('/routes/:id/auto-anchor', requireAuth, async (req, res) => {
            JOIN hotels_saved h ON h.id = s.hotel_saved_id
            WHERE s.route_id = ?
              AND COALESCE(h.ai_fit_score, 0) >= 20
-             AND (h.triage IS NULL OR h.triage != 'no')
+             AND h.triage = 'yes'
            ORDER BY h.ai_fit_score DESC, h.est_adr_dollars ASC, h.id ASC
            LIMIT 1`,
           [id],
@@ -1219,7 +1219,7 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
         `SELECT h.id, h.lat, h.lng, h.ai_fit_score FROM hotels_saved h
          WHERE h.submarket = ? AND h.lat IS NOT NULL AND h.lng IS NOT NULL
            AND (SELECT COUNT(*) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) = 0
-           AND (h.triage IS NULL OR h.triage != 'no')
+           AND h.triage = 'yes'
          ORDER BY (h.ai_fit_score IS NULL) ASC, h.ai_fit_score DESC, h.id ASC
          LIMIT ?`,
         [zone, cap],
@@ -1363,7 +1363,7 @@ router.post('/routes/visit-plan', requireAuth, async (req, res) => {
            FROM hotels_saved h
            WHERE h.submarket = ?
              AND h.lat IS NOT NULL AND h.lng IS NOT NULL
-             AND (h.triage IS NULL OR h.triage != 'no')
+             AND h.triage = 'yes'
              AND h.prospect_id IS NULL
            ORDER BY h.ai_fit_score DESC NULLS LAST, h.id ASC
            LIMIT ?`,
