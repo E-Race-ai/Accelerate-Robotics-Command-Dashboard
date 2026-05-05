@@ -2901,10 +2901,40 @@ function buildBriefing(h) {
   const strongest = out.pitchAngles[0];
   const dmHint = h.dm_name ? ` ${h.dm_name}` : '';
   if (strongest) {
-    out.opener = `"Hi${dmHint}, this is [name] from Accelerate Robotics — we run the software layer that lets robots work across hotel systems like elevators and PMS. I'm calling because ${escapeHtml(h.name)}${strongest.title.toLowerCase().includes('-key') ? ' is exactly the property profile where ' : ' has '}${strongest.title.toLowerCase()}, which is where this stuff actually pays off. Have you got 60 seconds for me to share why I think you'd be a great pilot site?"`;
+    out.opener = `"Hi${dmHint}, this is [name] from Accelerate Robotics — we run the software layer that lets robots work across hotel systems like elevators and PMS. I'm calling because ${h.name}${strongest.title.toLowerCase().includes('-key') ? ' is exactly the property profile where ' : ' has '}${strongest.title.toLowerCase()}, which is where this stuff actually pays off. Have you got 60 seconds for me to share why I think you'd be a great pilot site?"`;
   } else {
-    out.opener = `"Hi${dmHint}, this is [name] from Accelerate Robotics — we run the software layer that lets robots work across hotel systems. I'm in Miami May 11–14 and I'd love to do a quick walkthrough of ${escapeHtml(h.name)}. Got 60 seconds for me to explain what I'm seeing in the market?"`;
+    out.opener = `"Hi${dmHint}, this is [name] from Accelerate Robotics — we run the software layer that lets robots work across hotel systems. I'm in Miami May 11–14 and I'd love to do a quick walkthrough of ${h.name}. Got 60 seconds for me to explain what I'm seeing in the market?"`;
   }
+
+  // ── Voicemail script (different cadence — must be 30s max) ────────
+  const vmStrongest = strongest ? strongest.title.toLowerCase() : 'the property profile';
+  out.voicemail = `"Hi${dmHint}, this is [name] from Accelerate Robotics, calling for the GM at ${h.name}. We run the software platform that lets robots work across hotel systems — elevators, PMS, BOH operations. I'm in Miami May 11–14 doing site walkthroughs at properties with ${vmStrongest}, and I'd love 20 minutes when I'm in town. My number is [phone]. Again, this is [name] from Accelerate Robotics, [phone]. Thanks."`;
+
+  // ── Follow-up email template (used after voicemail or "send materials")
+  out.emailSubject = `Robotics platform pilot — ${h.name} (Miami visit May 11–14)`;
+  const propertyAttribute = strongest ? strongest.title.toLowerCase() : `${h.rooms || ''}-key property`;
+  out.emailBody = `Hi${dmHint},
+
+I left a voicemail earlier — appreciate you taking a look at this.
+
+Quick context: Accelerate Robotics is the software platform that lets robots work across hotel systems. We're not a robot vendor; we're the brain that lets a Keenon delivery bot, a Pudu cleaner, and your existing elevator + PMS work as one operation.
+
+The reason I'm reaching out specifically: ${h.name} ${propertyAttribute ? 'has ' + propertyAttribute + ', ' : ''}which is where this software meaningfully changes ops cost — not at smaller properties.
+
+I'm in Miami May 11–14 and would love a 20-minute walkthrough of your lobby + back-of-house. No deck, no slides — just see what your team is working with and tell you what we'd do differently.
+
+Available windows:
+• Mon May 11 — afternoon
+• Tue May 12 — South Beach corridor (could swing by morning or evening)
+• Wed May 13 — open
+• Thu May 14 — open
+
+What works on your end?
+
+Best,
+[Name]
+Accelerate Robotics
+[Phone] · acceleraterobotics.ai`;
 
   // ── Chain context (from deep-research enrichment) ──────────────────
   if (h.chain_description) {
@@ -2956,8 +2986,24 @@ window._openPreCallBriefing = function(hotelId) {
             </li>`).join('')}
         </ol>` : ''}
 
-      <h3 class="fs-section-h">📝 Suggested opener</h3>
-      <div style="background:#f0f9ff;border-left:3px solid #0891b2;border-radius:6px;padding:12px 14px;font-size:0.92rem;line-height:1.5;color:#0c4a6e;font-style:italic">${b.opener}</div>
+      <h3 class="fs-section-h" style="display:flex;align-items:center;gap:8px">📝 Suggested opener <span style="font-size:0.62rem;background:#dcfce7;color:#14532d;padding:2px 8px;border-radius:100px;font-weight:700">LIVE CALL</span></h3>
+      <div style="background:#f0f9ff;border-left:3px solid #0891b2;border-radius:6px;padding:12px 14px;font-size:0.92rem;line-height:1.5;color:#0c4a6e;font-style:italic">${escapeHtml(b.opener)}</div>
+      <div style="margin-top:6px;text-align:right">
+        <button type="button" class="btn btn-ghost" onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='✓ Copied';setTimeout(()=>this.textContent='📋 Copy opener',1400)" data-copy="${escapeHtml(b.opener.replace(/^"|"$/g, ''))}" style="font-size:0.78rem;padding:4px 10px">📋 Copy opener</button>
+      </div>
+
+      <h3 class="fs-section-h" style="display:flex;align-items:center;gap:8px">📨 Voicemail script <span style="font-size:0.62rem;background:#fef3c7;color:#78350f;padding:2px 8px;border-radius:100px;font-weight:700">30 SEC MAX</span></h3>
+      <div style="background:#fffbeb;border-left:3px solid #f59e0b;border-radius:6px;padding:12px 14px;font-size:0.92rem;line-height:1.5;color:#78350f;font-style:italic">${escapeHtml(b.voicemail)}</div>
+      <div style="margin-top:6px;text-align:right">
+        <button type="button" class="btn btn-ghost" onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='✓ Copied';setTimeout(()=>this.textContent='📋 Copy voicemail',1400)" data-copy="${escapeHtml(b.voicemail.replace(/^"|"$/g, ''))}" style="font-size:0.78rem;padding:4px 10px">📋 Copy voicemail</button>
+      </div>
+
+      <h3 class="fs-section-h" style="display:flex;align-items:center;gap:8px">📧 Follow-up email <span style="font-size:0.62rem;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:100px;font-weight:700">AFTER VM OR "SEND MATERIALS"</span></h3>
+      <div style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:0.84rem;color:var(--text);line-height:1.55;font-family:Menlo,Consolas,monospace;white-space:pre-wrap;max-height:240px;overflow-y:auto">${escapeHtml(b.emailBody)}</div>
+      <div style="margin-top:6px;display:flex;gap:6px;justify-content:flex-end">
+        <button type="button" class="btn btn-ghost" onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='✓ Copied';setTimeout(()=>this.textContent='📋 Copy email',1400)" data-copy="${escapeHtml(b.emailBody)}" style="font-size:0.78rem;padding:4px 10px">📋 Copy email</button>
+        <a class="btn btn-ghost" href="mailto:${h.dm_email ? escapeHtml(h.dm_email) : ''}?subject=${encodeURIComponent(b.emailSubject)}&body=${encodeURIComponent(b.emailBody)}" style="font-size:0.78rem;padding:4px 10px;text-decoration:none">📧 Open in Mail</a>
+      </div>
 
       ${b.chainContext ? `
         <h3 class="fs-section-h">🏢 Chain context (use sparingly — for credibility, not pitch)</h3>
