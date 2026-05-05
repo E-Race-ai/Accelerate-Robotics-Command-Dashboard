@@ -181,11 +181,12 @@ function shapeHotel(el, centerLat, centerLng) {
 // price is set per-property at proposal time.
 const RAAS_MONTHLY_PER_BOT_USD = 2000;
 
-// Robot count scales with property size + service complexity. Anchors
-// (per Eric's deal-cycle model):
-//   • Pilot                  → 3 bots
-//   • Bigger pilot           → 5-7 bots
-//   • Full deployment        → 10+ bots
+// Robot count scales with property size + service complexity. Mapped
+// to four named packages for forecasting clarity:
+//   • Starter Package (S)            → 1-3 bots,  ≤$75k/yr
+//   • Integration Package (M)        → 4-6 bots,  $75-150k/yr
+//   • Service Augmentation Layer (L) → 7-12 bots, $150-300k/yr
+//   • Facility Automation (XL)       → 13+ bots,  $300k+/yr
 // Rooms drives the base count; luxury (more service touchpoints), F&B
 // outlets, and large event space each add 1-2 bots. The final number
 // stays bounded so a Fontainebleau-class property doesn't price itself
@@ -234,21 +235,63 @@ function revenuePotential({
   return bots * RAAS_MONTHLY_PER_BOT_USD * 12;
 }
 
-// Deal-size tier — banded against the new RaaS-based revenue. Anchor
-// points map to the user's deal-cycle vocabulary so the badge means
-// the same thing at-a-glance:
-//   XS  <  $30k   — sub-pilot exploration (1 bot, tiny boutique)
-//   S   $30-75k   — mini-pilot (2-3 bots)
-//   M   $75-150k  — pilot+ (3-5 bots)
-//   L   $150-300k — bigger pilot (6-10 bots)
-//   XL  $300k+    — full deployment (10+ bots)
+// Deal-size tier — banded against the RaaS-based revenue. Each band
+// maps to a named package the team uses in proposals + forecasts:
+//   S   ≤   $75k   — Starter Package          (1-3 bots, single dept pilot)
+//   M   $75-150k   — Integration Package      (4-6 bots, multi-dept rollout)
+//   L   $150-300k  — Service Augmentation     (7-12 bots, full-floor coverage)
+//   XL  $300k+     — Facility Automation      (13+ bots, end-to-end ops)
+//
+// Anything below ~$30k still rolls up to "S/Starter" — we don't surface
+// a sub-Starter band because there's no separate product offering for
+// it. The only exception is `null` (no rooms data → no estimate).
 function dealSizeTier(rev) {
   if (!Number.isFinite(rev) || rev <= 0) return null;
   if (rev >= 300_000) return 'XL';
   if (rev >= 150_000) return 'L';
   if (rev >=  75_000) return 'M';
-  if (rev >=  30_000) return 'S';
-  return 'XS';
+  return 'S';
+}
+
+// Tier code → package name for display. Storage stays the letter code
+// (compact, sortable, indexable) and the display layer maps to the
+// reader-friendly package name. WHY: changing the package name in the
+// future shouldn't require a DB migration.
+const PACKAGE_NAME = {
+  S:  'Starter Package',
+  M:  'Integration Package',
+  L:  'Service Augmentation Layer',
+  XL: 'Facility Automation',
+};
+const PACKAGE_SHORT = {
+  S:  'Starter',
+  M:  'Integration',
+  L:  'Service Aug',
+  XL: 'Facility Auto',
+};
+const PACKAGE_SIZE_LABEL = {
+  S:  'Small',
+  M:  'Medium',
+  L:  'Large',
+  XL: 'X-Large',
+};
+// Range labels for the graduate-modal chips — show the rep what each
+// package roughly covers in bots + ARR so they pick the right one.
+const PACKAGE_RANGE = {
+  S:  '1–3 bots · ≤$75k/yr',
+  M:  '4–6 bots · $75–150k/yr',
+  L:  '7–12 bots · $150–300k/yr',
+  XL: '13+ bots · $300k+/yr',
+};
+
+// Map a bot count to its package tier. Pure derivation — used by the
+// graduate modal to pre-select the right chip when the rep opens it.
+function packageForBots(bots) {
+  const n = Number(bots) || 0;
+  if (n >= 13) return 'XL';
+  if (n >= 7)  return 'L';
+  if (n >= 4)  return 'M';
+  return 'S';
 }
 
 function fmtRevenue(rev) {
@@ -315,6 +358,11 @@ module.exports = {
   BRAND_CLASS_LABELS,
   RAAS_MONTHLY_PER_BOT_USD,
   estimatedRobotCount,
+  PACKAGE_NAME,
+  PACKAGE_SHORT,
+  PACKAGE_SIZE_LABEL,
+  PACKAGE_RANGE,
+  packageForBots,
   revenuePotential,
   dealSizeTier,
   fmtRevenue,
