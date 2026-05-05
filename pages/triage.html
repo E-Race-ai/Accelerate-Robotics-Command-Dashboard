@@ -1147,6 +1147,17 @@ function renderTopCard() {
   `;
   stack.appendChild(card);
   initCardMiniMap(card, h);
+  // Tell the parent (when iframed in the bezel overlay) which hotel is on
+  // top so the desktop side panels can sync their map + insights views.
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'triage:cardActive',
+        hotel: h,
+        progress: { sorted: TOTALS.sorted, total: TOTALS.total },
+      }, '*');
+    }
+  } catch {}
 
   // Wire up the inline expander; also auto-expand if Advanced mode is on.
   const moreBtn = card.querySelector('#moreBtn');
