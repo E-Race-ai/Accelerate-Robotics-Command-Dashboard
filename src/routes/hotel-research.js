@@ -415,7 +415,7 @@ router.get('/saved', requireAuth, async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT h.id, h.name, h.address, h.city, h.state, h.zip, h.country, h.lat, h.lng,
-              h.brand, h.stars, h.rooms, h.phone, h.website, h.osm_id, h.submarket,
+              h.brand, h.stars, h.rooms, h.rooms_source, h.phone, h.website, h.osm_id, h.submarket,
               h.est_adr_dollars, h.status, h.notes, h.saved_by, h.prospect_id,
               h.operator, h.ownership, h.year_opened, h.total_floors, h.amenities,
               h.tags, h.dm_name, h.dm_title, h.dm_email, h.dm_phone, h.dm_linkedin,
@@ -500,6 +500,8 @@ router.patch('/saved/:id', requireAuth, async (req, res) => {
     operator: 200, ownership: 200,
     dm_name: 200, dm_title: 200, dm_email: 200, dm_phone: 100, dm_linkedin: 500,
     existing_vendor: 200, photo_url: 1000,
+    rooms_source: 20,        // 'osm' | 'website' | 'wikidata' | 'estimated' | 'manual'
+    description: 2000, wikipedia_url: 1000, // permit clearing/replacing the wiki match
   };
   for (const [field, max] of Object.entries(STR_FIELDS)) {
     if (b[field] !== undefined) {
@@ -1561,7 +1563,7 @@ router.get('/triage/queue', requireAuth, async (req, res) => {
     let rows;
     if (player) {
       rows = await db.all(
-        `SELECT h.id, h.name, h.address, h.city, h.state, h.brand, h.stars, h.rooms,
+        `SELECT h.id, h.name, h.address, h.city, h.state, h.brand, h.stars, h.rooms, h.rooms_source,
                 h.phone, h.website, h.submarket, h.est_adr_dollars,
                 h.operator, h.year_opened, h.total_floors, h.lat, h.lng, h.notes,
                 h.photo_url, h.description, h.rating, h.review_count, h.wikipedia_url,
@@ -1582,7 +1584,7 @@ router.get('/triage/queue', requireAuth, async (req, res) => {
     } else {
       // No player — fall back to the legacy queue ("hotels nobody voted on")
       rows = await db.all(
-        `SELECT h.id, h.name, h.address, h.city, h.state, h.brand, h.stars, h.rooms,
+        `SELECT h.id, h.name, h.address, h.city, h.state, h.brand, h.stars, h.rooms, h.rooms_source,
                 h.phone, h.website, h.submarket, h.est_adr_dollars,
                 h.operator, h.year_opened, h.total_floors, h.lat, h.lng, h.notes,
                 h.photo_url, h.description, h.rating, h.review_count, h.wikipedia_url,

@@ -827,6 +827,13 @@ async function initSchema() {
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_triage_votes_hotel ON hotel_triage_votes(hotel_saved_id)`);
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_triage_votes_player ON hotel_triage_votes(player)`);
 
+  // WHY rooms_source: distinguishes verified room counts (from OSM tag,
+  // hotel website, Wikidata) from brand-median estimates we infer when
+  // structured data is missing. The UI uses this to hedge inferred
+  // numbers ("~250 rooms" vs "248 rooms"). Values: osm | website |
+  // wikidata | estimated | manual | null (unknown).
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN rooms_source TEXT");
+
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage TEXT");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage_by TEXT");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage_player TEXT");
