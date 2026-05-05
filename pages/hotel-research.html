@@ -50,16 +50,21 @@
     max-width: 740px; margin: 0 0 22px;
   }
 
-  /* Tabs */
+  /* Sticky scroll-nav (was tabs) — jumps between dashboard sections */
   .tabs {
     display: flex; gap: 4px; border-bottom: 1px solid var(--border);
     margin-bottom: 22px;
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(247, 248, 252, 0.95);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    padding-top: 6px;
   }
   .tab {
     padding: 10px 16px; background: transparent; border: 0; cursor: pointer;
     font: inherit; font-size: 0.92rem; font-weight: 600; color: var(--text-dim);
     border-bottom: 2px solid transparent; margin-bottom: -1px;
     transition: color 0.12s, border-color 0.12s;
+    text-decoration: none; line-height: 1.2;
   }
   .tab:hover { color: var(--text); }
   .tab.active { color: var(--accent-deep); border-bottom-color: var(--accent); }
@@ -69,8 +74,54 @@
     font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: 100px;
   }
 
-  .panel { display: none; }
-  .panel.active { display: block; }
+  /* All sections stack now — no display:none, just scroll-margin so the
+     sticky nav doesn't cover the section heading when you click it. */
+  .panel { display: block; scroll-margin-top: 60px; margin-bottom: 28px; }
+  .panel-head {
+    display: flex; align-items: baseline; gap: 12px;
+    margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .panel-head h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.3rem; margin: 0;
+  }
+  .panel-head .panel-eyebrow {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 700; color: var(--accent-deep);
+  }
+  .panel-head .panel-sub {
+    font-size: 0.86rem; color: var(--text-dim);
+    margin-left: auto;
+  }
+
+  /* Hero dashboard — at-a-glance KPI cards above the search */
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px; margin-bottom: 22px;
+  }
+  .hero-stat {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 2px;
+    cursor: pointer; transition: border-color 0.12s, transform 0.08s;
+  }
+  .hero-stat:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .hero-stat .h-label {
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 0.62rem; font-weight: 700; color: var(--text-faint);
+  }
+  .hero-stat .h-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 1.5rem; color: var(--text);
+    line-height: 1.1;
+  }
+  .hero-stat .h-sub {
+    font-size: 0.74rem; color: var(--text-dim);
+  }
+  .hero-stat.alert .h-value   { color: var(--danger); }
+  .hero-stat.success .h-value { color: var(--green); }
+  .hero-stat.accent .h-value  { color: var(--accent-deep); }
 
   /* Preset markets */
   .preset-card {
@@ -954,15 +1005,25 @@
       Pinpoint research for any city or zip code. Pulls live hotel listings from OpenStreetMap (no key required), gives you a rough nightly-rate estimate from the brand or star rating, then save the candidates worth following up on. Real-time pricing isn't included — call the property or click through to their site to confirm.
     </p>
 
-    <div class="tabs" role="tablist">
-      <button class="tab active" data-panel="search"   role="tab" aria-selected="true">Search</button>
-      <button class="tab" data-panel="map"      role="tab" aria-selected="false">🗺️ Map</button>
-      <button class="tab" data-panel="saved"    role="tab" aria-selected="false">My Saved <span class="badge" id="savedCount">0</span></button>
-      <button class="tab" data-panel="schedule" role="tab" aria-selected="false">📅 Schedule</button>
-    </div>
+    <!-- Hero KPI dashboard — at-a-glance health of the territory; click any
+         tile to jump to the relevant section below. -->
+    <div class="hero-stats" id="heroStats"></div>
+
+    <!-- Sticky nav — jumps between dashboard sections (no longer hides them) -->
+    <nav class="tabs" aria-label="Jump to section">
+      <a class="tab" href="#panel-search">Search</a>
+      <a class="tab" href="#panel-map">🗺️ Map</a>
+      <a class="tab" href="#panel-saved">My Saved <span class="badge" id="savedCount">0</span></a>
+      <a class="tab" href="#panel-schedule">📅 Schedule</a>
+    </nav>
 
     <!-- ─── Search panel ──────────────────────────────────────── -->
-    <div class="panel active" id="panel-search" role="tabpanel">
+    <div class="panel" id="panel-search" role="region" aria-label="Search">
+      <div class="panel-head">
+        <span class="panel-eyebrow">Step 1 · Find</span>
+        <h2>Search hotels in any market</h2>
+        <span class="panel-sub">Pulls live from OpenStreetMap. Save candidates as you go.</span>
+      </div>
       <!-- Preset markets — one-click submarket prospecting -->
       <div class="preset-card" id="presetCard">
         <div class="preset-head">
@@ -1001,7 +1062,12 @@
     </div>
 
     <!-- ─── Map panel — visual research workspace ─────────────── -->
-    <div class="panel" id="panel-map" role="tabpanel">
+    <div class="panel" id="panel-map" role="region" aria-label="Map">
+      <div class="panel-head">
+        <span class="panel-eyebrow">Step 2 · See your territory</span>
+        <h2>🗺️ Map · routes · market planning</h2>
+        <span class="panel-sub">Click a pin to view. Toggle Route mode to plan a drive.</span>
+      </div>
       <!-- Market planning stats card — at-a-glance health of the territory -->
       <div class="market-panel" id="marketPanel">
         <div class="market-panel-summary" id="marketSummary">Loading…</div>
@@ -1076,7 +1142,12 @@
     </div>
 
     <!-- ─── Saved panel ───────────────────────────────────────── -->
-    <div class="panel" id="panel-saved" role="tabpanel">
+    <div class="panel" id="panel-saved" role="region" aria-label="My saved hotels">
+      <div class="panel-head">
+        <span class="panel-eyebrow">Step 3 · Work the list</span>
+        <h2>My saved hotels</h2>
+        <span class="panel-sub">Sort, filter, drill down. Edit any property to add visits + sales intel.</span>
+      </div>
       <div class="saved-toolbar">
         <input id="savedSearch" type="search" placeholder="Filter by name, city, brand, notes, or visits…" autocomplete="off">
         <div class="chip-row" id="statusChips"></div>
@@ -1134,7 +1205,12 @@
     </div>
 
     <!-- ─── Schedule panel — BDR weekly territory plan ────────── -->
-    <div class="panel" id="panel-schedule" role="tabpanel">
+    <div class="panel" id="panel-schedule" role="region" aria-label="Schedule">
+      <div class="panel-head">
+        <span class="panel-eyebrow">Step 4 · Drive it</span>
+        <h2>📅 This week's plan</h2>
+        <span class="panel-sub">Pick a zone per day · auto-fills untouched stops · drive in optimized order.</span>
+      </div>
       <div class="schedule-header">
         <div>
           <div class="schedule-eyebrow">Weekly schedule</div>
@@ -1422,20 +1498,87 @@ function starRow(stars) {
   return `<div class="card-stars" title="${stars}-star">${html}</div>`;
 }
 
-// ─── Tab switching ────────────────────────────────────────────────
-document.querySelectorAll('.tab').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => {
-      x.classList.toggle('active', x === t);
-      x.setAttribute('aria-selected', x === t ? 'true' : 'false');
-    });
-    document.querySelectorAll('.panel').forEach(p => {
-      p.classList.toggle('active', p.id === 'panel-' + t.dataset.panel);
-    });
-    if (t.dataset.panel === 'saved') loadSaved();
-    if (t.dataset.panel === 'map')   renderMap();
+// ─── Sticky-nav scroll behavior ───────────────────────────────────
+// Tabs are now anchor links. We let the browser do native smooth-scroll
+// (CSS scroll-margin-top handles the offset). An IntersectionObserver
+// updates the active-tab indicator as the rep scrolls.
+document.documentElement.style.scrollBehavior = 'smooth';
+
+const _navObserver = new IntersectionObserver(entries => {
+  // Pick the entry closest to the top of the viewport that's intersecting.
+  let bestId = null, bestTop = Infinity;
+  for (const e of entries) {
+    if (e.isIntersecting) {
+      const top = e.boundingClientRect.top;
+      if (top >= 0 && top < bestTop) { bestTop = top; bestId = e.target.id; }
+    }
+  }
+  if (!bestId) return;
+  document.querySelectorAll('.tab').forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + bestId);
   });
+}, { rootMargin: '-65px 0px -60% 0px' });
+
+// Observe all panels at boot
+document.querySelectorAll('.panel').forEach(p => _navObserver.observe(p));
+
+// Lazy-load heavy panels when the user scrolls them into view.
+const _lazyLoaded = new Set();
+const _lazyObserver = new IntersectionObserver(entries => {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue;
+    const id = e.target.id;
+    if (_lazyLoaded.has(id)) continue;
+    _lazyLoaded.add(id);
+    if (id === 'panel-map')      renderMap();
+    if (id === 'panel-schedule') loadScheduleWeek();
+  }
+}, { rootMargin: '200px 0px' });
+['panel-map', 'panel-schedule'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) _lazyObserver.observe(el);
 });
+
+// ─── Hero KPI dashboard — at-a-glance health row ──────────────────
+function renderHeroStats() {
+  const el = document.getElementById('heroStats');
+  if (!el) return;
+  const total = SAVED.length;
+  if (total === 0) {
+    el.innerHTML = `
+      <div class="hero-stat" onclick="document.getElementById('panel-search').scrollIntoView({block:'start'})">
+        <span class="h-label">Get started</span>
+        <span class="h-value">0</span>
+        <span class="h-sub">Run a search ↓ to populate your dashboard</span>
+      </div>`;
+    return;
+  }
+  const visited   = SAVED.filter(h => (h.visit_count || 0) > 0).length;
+  const untouched = total - visited;
+  const qualified = SAVED.filter(h => h.status === 'qualified').length;
+  const graduated = SAVED.filter(h => h.prospect_id).length;
+  // Total est annual revenue across the territory — sums revenue_potential_annual
+  // (already computed server-side, falls back to brand estimate when ADR unset).
+  const revSum = SAVED.reduce((s, h) => s + (Number(h.revenue_potential_annual) || 0), 0);
+  const followups = SAVED.filter(h => (h.visit_count || 0) > 0 && (h.status === 'lead' || h.status === 'contacted')).length;
+
+  const tiles = [
+    { label: 'Saved hotels',  value: total.toLocaleString(),       sub: 'in your territory',                      cls: '',        target: 'panel-saved' },
+    { label: 'Untouched',     value: untouched.toLocaleString(),   sub: 'no visit logged yet',                    cls: 'alert',   target: 'panel-saved' },
+    { label: 'Visited',       value: visited.toLocaleString(),     sub: 'at least one drop-by',                   cls: '',        target: 'panel-saved' },
+    { label: 'Qualified',     value: qualified.toLocaleString(),   sub: 'ready to graduate',                       cls: 'accent',  target: 'panel-saved' },
+    { label: 'Graduated',     value: graduated.toLocaleString(),   sub: 'in the deal pipeline',                    cls: 'success', target: 'panel-saved' },
+    { label: 'Follow-ups due', value: followups.toLocaleString(),  sub: 'visited, not yet qualified',              cls: 'accent',  target: 'panel-saved' },
+    { label: 'Est. territory rev', value: fmtRev(revSum) || '—',   sub: 'sum of room-rev × occupancy',             cls: '',        target: 'panel-saved' },
+  ];
+  el.innerHTML = tiles.map(t => `
+    <div class="hero-stat ${t.cls}" onclick="document.getElementById('${t.target}').scrollIntoView({block:'start'})">
+      <span class="h-label">${escapeHtml(t.label)}</span>
+      <span class="h-value">${t.value}</span>
+      <span class="h-sub">${escapeHtml(t.sub)}</span>
+    </div>
+  `).join('');
+}
 
 // ─── Map state + rendering ────────────────────────────────────────
 const STATUS_PIN_COLORS = {
@@ -2191,8 +2334,9 @@ async function loadSaved({ silent } = {}) {
     document.getElementById('savedCount').textContent = SAVED.length;
     renderSaved();
     if (typeof renderMarketPanel === 'function') renderMarketPanel();
-    // If the user is on the Map tab, refresh pins to reflect new visit counts / status changes
-    if (document.querySelector('.tab[data-panel="map"]').classList.contains('active')) renderMap();
+    if (typeof renderHeroStats   === 'function') renderHeroStats();
+    // Always refresh map when data changes — page is one stack now, the map is in view.
+    if (typeof renderMap === 'function' && _lazyLoaded.has('panel-map')) renderMap();
   } catch (err) {
     document.getElementById('savedContent').innerHTML = `<div class="err">Load failed: ${escapeHtml(err.message)}</div>`;
   }
@@ -3085,6 +3229,7 @@ const _origTabHandler = (() => {
 // ─── Boot ─────────────────────────────────────────────────────────
 loadPresets();
 loadSaved({ silent: true });
+renderHeroStats();   // empty state until loadSaved completes
 document.getElementById('f_location').focus();
 </script>
 </body>
