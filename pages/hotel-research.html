@@ -743,6 +743,91 @@
     font: inherit; font-size: 0.86rem;
   }
 
+  /* ─── Sales-intel sections in the edit modal ──────────────── */
+  .modal-section {
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 14px; margin: 12px 0;
+  }
+  .modal-section summary {
+    cursor: pointer; user-select: none;
+    font-size: 0.92rem; font-weight: 700; color: var(--text);
+    padding: 4px 0; font-family: 'Space Grotesk', sans-serif;
+  }
+  .modal-section[open] summary { margin-bottom: 8px; }
+  .modal-section .form-row { margin-bottom: 10px; }
+  .modal-section .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 640px) { .modal-section .form-grid { grid-template-columns: 1fr; } }
+
+  .opp-stars { display: flex; gap: 4px; }
+  .opp-stars .opp-star {
+    cursor: pointer; font-size: 1.4rem; color: var(--border-strong);
+    background: transparent; border: 0; padding: 0; line-height: 1;
+    transition: color 0.12s;
+  }
+  .opp-stars .opp-star.active { color: #fbbf24; }
+  .opp-stars .opp-star:hover { color: #f59e0b; }
+
+  .tags-input-wrap {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 8px; min-height: 36px;
+    display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    background: white;
+  }
+  .tags-input-wrap input {
+    border: 0; outline: none; flex: 1; min-width: 120px;
+    font: inherit; font-size: 0.86rem; padding: 2px 4px;
+  }
+  .tags-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag-chip {
+    background: var(--accent-soft); color: var(--accent-deep);
+    padding: 3px 9px; border-radius: 100px;
+    font-size: 0.78rem; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .tag-chip button {
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--accent-deep); padding: 0; font-size: 0.95rem; line-height: 1;
+  }
+
+  .amenities-list {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    padding: 4px 0;
+  }
+  .amenity-chip {
+    background: #ecfeff; color: #155e75;
+    padding: 3px 9px; border-radius: 4px;
+    font-size: 0.74rem; font-weight: 600;
+    text-transform: capitalize;
+  }
+  .amenity-chip.no { background: #fee2e2; color: #991b1b; }
+
+  /* Tier badges (XS-XL) — surfaced on cards + table */
+  .tier-badge {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 0.72rem; padding: 3px 8px;
+    border-radius: 6px; line-height: 1;
+    display: inline-block; min-width: 28px; text-align: center;
+  }
+  .tier-XS { background: #f1f5f9; color: #475569; }
+  .tier-S  { background: #dcfce7; color: #166534; }
+  .tier-M  { background: #cffafe; color: #155e75; }
+  .tier-L  { background: #ede9fe; color: #5b21b6; }
+  .tier-XL { background: #fef3c7; color: #78350f; border: 1px solid #fbbf24; }
+
+  /* Card "intel ribbon" — slim row above actions on saved cards */
+  .intel-ribbon {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    font-size: 0.78rem; color: var(--text-dim);
+    padding: 6px 10px; background: #f8fafc; border-radius: 8px;
+  }
+  .intel-ribbon .label {
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 0.62rem; font-weight: 700; color: var(--text-faint);
+  }
+  .intel-ribbon .opp-readonly { color: #fbbf24; font-size: 0.86rem; line-height: 1; }
+  .intel-ribbon .opp-readonly .empty { color: var(--text-faint); }
+  .intel-ribbon .dm-bit { color: var(--text); font-weight: 600; }
+
   /* ─── Route builder ────────────────────────────────────────── */
   .saved-toolbar #routeModeToggle.active {
     background: var(--accent); color: white; border-color: var(--accent);
@@ -1136,6 +1221,80 @@
           <textarea id="f_notes" maxlength="4000" placeholder="GM: Jane Doe · referred by Hilton Tampa · 220 rooms · interested in nightly turn-down support"></textarea>
         </div>
 
+        <!-- 🎯 Sales intel — decision maker, vendor, opportunity, tags -->
+        <details class="modal-section">
+          <summary>🎯 Sales intel</summary>
+          <div class="form-row">
+            <label for="f_opp">Opportunity score</label>
+            <div class="opp-stars" id="f_opp_stars" role="radiogroup" aria-label="Opportunity score 0–5"></div>
+            <input id="f_opp" type="hidden" value="0">
+          </div>
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="f_dm_name">Decision maker name</label>
+              <input id="f_dm_name" type="text" placeholder="Jane Doe">
+            </div>
+            <div class="form-row">
+              <label for="f_dm_title">Title</label>
+              <input id="f_dm_title" type="text" placeholder="GM, Owner, Operations Director">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="f_dm_email">Email</label>
+              <input id="f_dm_email" type="email" placeholder="jane@hotel.com">
+            </div>
+            <div class="form-row">
+              <label for="f_dm_phone">Direct phone</label>
+              <input id="f_dm_phone" type="text" placeholder="+1 …">
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="f_dm_linkedin">LinkedIn URL</label>
+            <input id="f_dm_linkedin" type="url" placeholder="https://linkedin.com/in/…">
+          </div>
+          <div class="form-row">
+            <label for="f_existing_vendor">Existing vendor / current solution</label>
+            <input id="f_existing_vendor" type="text" placeholder="In-house, Servi, Bear, Hyperdyne, etc.">
+          </div>
+          <div class="form-row">
+            <label for="f_tags_input">Tags <span style="color:var(--text-faint);font-weight:500;">(press Enter or comma to add)</span></label>
+            <div class="tags-input-wrap">
+              <div class="tags-chips" id="f_tags_chips"></div>
+              <input id="f_tags_input" type="text" placeholder="renovation 2025, owner-operator, loud lobby…">
+            </div>
+          </div>
+        </details>
+
+        <!-- 🏨 Property details — pulled from OSM at search time, editable -->
+        <details class="modal-section">
+          <summary>🏨 Property details</summary>
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="f_operator">Operator / management</label>
+              <input id="f_operator" type="text" placeholder="Marriott Hotels Services, etc.">
+            </div>
+            <div class="form-row">
+              <label for="f_ownership">Ownership</label>
+              <input id="f_ownership" type="text" placeholder="REIT name or owner LLC">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="f_year_opened">Year opened</label>
+              <input id="f_year_opened" type="number" min="1800" max="2100" placeholder="1996">
+            </div>
+            <div class="form-row">
+              <label for="f_total_floors">Floors</label>
+              <input id="f_total_floors" type="number" min="0" max="200" placeholder="12">
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Amenities (from OpenStreetMap)</label>
+            <div class="amenities-list" id="f_amenities_list"><span style="color:var(--text-faint);font-size:0.84rem;">None reported.</span></div>
+          </div>
+        </details>
+
         <!-- Visit log — drop-in / drive-by tracking timeline + add form -->
         <div class="visit-log-section">
           <h3>📍 Visit log</h3>
@@ -1245,6 +1404,15 @@ function escapeHtml(s) {
 function fmtUsd(n) {
   if (n == null || !isFinite(n)) return null;
   return '$' + Math.round(n).toLocaleString('en-US');
+}
+
+// Compact revenue formatter — $5.2M / $850K / $42K. Used on cards + table.
+function fmtRev(n) {
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n >= 1e9) return '$' + (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return '$' + Math.round(n / 1e3) + 'K';
+  return '$' + n;
 }
 
 function starRow(stars) {
@@ -2054,7 +2222,7 @@ function applyFilters(rows) {
 function applySort(rows) {
   if (!sortKey) return rows;
   const dir = sortDir === 'desc' ? -1 : 1;
-  const numeric = new Set(['stars', 'rooms', 'est_adr_dollars', 'visit_count']);
+  const numeric = new Set(['stars', 'rooms', 'est_adr_dollars', 'visit_count', 'revenue_potential_annual', 'opportunity_score']);
   const sorted = rows.slice().sort((a, b) => {
     const va = a[sortKey], vb = b[sortKey];
     if (numeric.has(sortKey)) {
@@ -2164,17 +2332,20 @@ function renderSaved() {
 }
 
 const TABLE_COLS = [
-  { key: 'name',             label: 'Hotel' },
-  { key: 'submarket',        label: 'Submarket' },
-  { key: 'brand_class',      label: 'Class' },
-  { key: 'brand',            label: 'Brand' },
-  { key: 'stars',            label: 'Stars',     align: 'num' },
-  { key: 'rooms',            label: 'Rooms',     align: 'num' },
-  { key: 'est_adr_dollars',  label: 'Est ADR',   align: 'num' },
-  { key: 'status',           label: 'Status' },
-  { key: 'visit_count',      label: 'Visits',    align: 'num' },
-  { key: 'last_visit_date',  label: 'Last visit' },
-  { key: '_actions',         label: '',          sortable: false },
+  { key: 'name',                     label: 'Hotel' },
+  { key: 'submarket',                label: 'Submarket' },
+  { key: 'deal_size_tier',           label: 'Tier' },
+  { key: 'brand_class',              label: 'Class' },
+  { key: 'brand',                    label: 'Brand' },
+  { key: 'stars',                    label: 'Stars',     align: 'num' },
+  { key: 'rooms',                    label: 'Rooms',     align: 'num' },
+  { key: 'est_adr_dollars',          label: 'Est ADR',   align: 'num' },
+  { key: 'revenue_potential_annual', label: 'Est rev/yr', align: 'num' },
+  { key: 'opportunity_score',        label: 'Opp',       align: 'num' },
+  { key: 'status',                   label: 'Status' },
+  { key: 'visit_count',              label: 'Visits',    align: 'num' },
+  { key: 'last_visit_date',          label: 'Last visit' },
+  { key: '_actions',                 label: '',          sortable: false },
 ];
 
 function renderSavedTable(rows) {
@@ -2193,6 +2364,9 @@ function renderSavedTable(rows) {
       ? '★'.repeat(h.stars) + '<span class="empty">' + '★'.repeat(5 - h.stars) + '</span>'
       : '<span class="empty">—</span>';
     const adr = h.est_adr_dollars ? '$' + h.est_adr_dollars : '—';
+    const opp = Number.isInteger(h.opportunity_score) && h.opportunity_score > 0
+      ? `<span style="color:#fbbf24;">${'★'.repeat(h.opportunity_score)}</span>`
+      : '<span style="color:var(--text-faint);">—</span>';
     return `
       <tr data-id="${h.id}">
         <td class="name-cell">
@@ -2201,11 +2375,14 @@ function renderSavedTable(rows) {
           ${h.prospect_id ? `<span class="graduated-marker" title="Graduated to Prospect #${h.prospect_id}">✓ #${h.prospect_id}</span>` : ''}
         </td>
         <td>${h.submarket ? `<button class="drill" data-action="filter-submarket" data-val="${escapeHtml(h.submarket)}">${escapeHtml(h.submarket)}</button>` : '—'}</td>
+        <td>${h.deal_size_tier ? `<span class="tier-badge tier-${h.deal_size_tier}">${h.deal_size_tier}</span>` : '—'}</td>
         <td><button class="drill pill-class ${h.brand_class || 'independent'}" data-action="filter-class" data-val="${h.brand_class || 'independent'}">${BRAND_CLASS_LABELS[h.brand_class] || 'Independent'}</button></td>
         <td>${h.brand ? `<button class="drill" data-action="filter-brand" data-val="${escapeHtml(h.brand)}">${escapeHtml(h.brand)}</button>` : '—'}</td>
         <td class="num stars-cell">${stars}</td>
         <td class="num">${h.rooms || '—'}</td>
         <td class="num">${adr}</td>
+        <td class="num">${fmtRev(h.revenue_potential_annual) || '—'}</td>
+        <td class="num">${opp}</td>
         <td><button class="drill pill-status ${h.status}" data-action="filter-status" data-val="${h.status}">${h.status}</button></td>
         <td class="num">${h.visit_count || 0}</td>
         <td>${h.last_visit_date || '—'}</td>
@@ -2320,12 +2497,21 @@ function renderSavedCard(h) {
       ${h.address || cityState ? `<div class="card-address">📍 ${escapeHtml(h.address || cityState)}</div>` : ''}
       <div class="card-meta">
         <span class="card-status-pill ${h.status}">${h.status}</span>
+        ${h.deal_size_tier ? `<span class="tier-badge tier-${h.deal_size_tier}" title="Deal-size tier (rev × occupancy × 365)">${h.deal_size_tier}</span>` : ''}
         ${h.submarket ? `<span class="card-meta-pill submarket">📍 ${escapeHtml(h.submarket)}</span>` : ''}
         ${h.brand ? `<span class="card-meta-pill brand">${escapeHtml(h.brand)}</span>` : ''}
         ${adr ? `<span class="card-meta-pill adr">${fmtUsd(adr)}/night</span>` : ''}
         ${h.rooms ? `<span class="card-meta-pill">${h.rooms} rooms</span>` : ''}
         ${graduatedBit}
       </div>
+      ${(h.revenue_potential_annual || h.opportunity_score || h.dm_name || (h.tags && h.tags.length)) ? `
+        <div class="intel-ribbon">
+          ${h.revenue_potential_annual ? `<span><span class="label">Est. annual rev</span> <strong>${fmtRev(h.revenue_potential_annual)}</strong></span>` : ''}
+          ${Number.isInteger(h.opportunity_score) && h.opportunity_score > 0 ? `<span><span class="label">Opp</span> <span class="opp-readonly">${'★'.repeat(h.opportunity_score)}<span class="empty">${'★'.repeat(5 - h.opportunity_score)}</span></span></span>` : ''}
+          ${h.dm_name ? `<span><span class="label">DM</span> <span class="dm-bit">${escapeHtml(h.dm_name)}${h.dm_title ? ', ' + escapeHtml(h.dm_title) : ''}</span></span>` : ''}
+          ${h.existing_vendor ? `<span><span class="label">Vendor</span> ${escapeHtml(h.existing_vendor)}</span>` : ''}
+          ${(h.tags && h.tags.length) ? h.tags.slice(0, 3).map(t => `<span class="tag-chip" style="font-size:0.7rem;padding:1px 7px;">${escapeHtml(t)}</span>`).join('') : ''}
+        </div>` : ''}
       ${visitsBit}
       ${h.notes ? `<div class="card-notes-preview">${escapeHtml(h.notes)}</div>` : ''}
       <div class="card-actions">
@@ -2355,6 +2541,31 @@ async function openModal(id) {
   document.getElementById('f_rooms').value = h.rooms != null ? h.rooms : '';
   document.getElementById('f_website').value = h.website || '';
   document.getElementById('f_notes').value = h.notes || '';
+  // Sales intel
+  document.getElementById('f_dm_name').value     = h.dm_name || '';
+  document.getElementById('f_dm_title').value    = h.dm_title || '';
+  document.getElementById('f_dm_email').value    = h.dm_email || '';
+  document.getElementById('f_dm_phone').value    = h.dm_phone || '';
+  document.getElementById('f_dm_linkedin').value = h.dm_linkedin || '';
+  document.getElementById('f_existing_vendor').value = h.existing_vendor || '';
+  document.getElementById('f_opp').value = h.opportunity_score || 0;
+  renderOppStars(h.opportunity_score || 0);
+  // Tags
+  EDITING_TAGS = Array.isArray(h.tags) ? h.tags.slice() : [];
+  renderTagChips();
+  // Property details
+  document.getElementById('f_operator').value     = h.operator || '';
+  document.getElementById('f_ownership').value    = h.ownership || '';
+  document.getElementById('f_year_opened').value  = h.year_opened || '';
+  document.getElementById('f_total_floors').value = h.total_floors || '';
+  // Amenities — readonly chips from OSM
+  const amen = h.amenities || {};
+  const amenEl = document.getElementById('f_amenities_list');
+  if (Object.keys(amen).length === 0) amenEl.innerHTML = '<span style="color:var(--text-faint);font-size:0.84rem;">None reported.</span>';
+  else amenEl.innerHTML = Object.entries(amen).map(([k, v]) => {
+    const isNo = String(v).toLowerCase() === 'no';
+    return `<span class="amenity-chip ${isNo ? 'no' : ''}">${escapeHtml(k.replace(/_/g, ' '))}${(v !== 'yes' && v !== true) ? ': ' + escapeHtml(String(v)) : ''}</span>`;
+  }).join('');
   // Default visit date = today (so reps don't have to type it 80% of the time)
   const today = new Date().toISOString().slice(0, 10);
   document.getElementById('vf_date').value = today;
@@ -2379,6 +2590,63 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('modalBackdrop').classList.contains('open')) closeModal();
 });
 
+// ── Sales-intel: tags + opportunity stars ─────────────────────────
+let EDITING_TAGS = [];
+
+function renderTagChips() {
+  const wrap = document.getElementById('f_tags_chips');
+  if (!wrap) return;
+  wrap.innerHTML = EDITING_TAGS.map((t, i) => `
+    <span class="tag-chip">${escapeHtml(t)}<button type="button" data-i="${i}">✕</button></span>
+  `).join('');
+  wrap.querySelectorAll('button[data-i]').forEach(btn => {
+    btn.onclick = () => {
+      EDITING_TAGS.splice(Number(btn.dataset.i), 1);
+      renderTagChips();
+    };
+  });
+}
+
+function setupTagsInput() {
+  const inp = document.getElementById('f_tags_input');
+  if (!inp || inp._wired) return;
+  inp._wired = true;
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const v = inp.value.trim().replace(/,$/, '').trim();
+      if (v && !EDITING_TAGS.includes(v) && EDITING_TAGS.length < 30) EDITING_TAGS.push(v);
+      inp.value = '';
+      renderTagChips();
+    } else if (e.key === 'Backspace' && inp.value === '' && EDITING_TAGS.length) {
+      EDITING_TAGS.pop();
+      renderTagChips();
+    }
+  });
+}
+
+function renderOppStars(score) {
+  const wrap = document.getElementById('f_opp_stars');
+  if (!wrap) return;
+  const cur = Number(score) || 0;
+  wrap.innerHTML = '';
+  for (let i = 0; i <= 5; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'opp-star' + (i > 0 && i <= cur ? ' active' : '');
+    btn.textContent = i === 0 ? '∅' : '★';
+    btn.title = i === 0 ? 'Clear' : `${i} of 5`;
+    btn.onclick = () => {
+      document.getElementById('f_opp').value = i;
+      renderOppStars(i);
+    };
+    if (i === 0) btn.style.fontSize = '1rem';
+    wrap.appendChild(btn);
+  }
+}
+
+setupTagsInput();
+
 async function saveHotel(e) {
   e.preventDefault();
   if (!editingId) return false;
@@ -2393,6 +2661,20 @@ async function saveHotel(e) {
     rooms: roomsRaw === '' ? null : Number(roomsRaw),
     website: document.getElementById('f_website').value.trim() || null,
     notes: document.getElementById('f_notes').value,
+    // Sales intel
+    dm_name:         document.getElementById('f_dm_name').value.trim() || null,
+    dm_title:        document.getElementById('f_dm_title').value.trim() || null,
+    dm_email:        document.getElementById('f_dm_email').value.trim() || null,
+    dm_phone:        document.getElementById('f_dm_phone').value.trim() || null,
+    dm_linkedin:     document.getElementById('f_dm_linkedin').value.trim() || null,
+    existing_vendor: document.getElementById('f_existing_vendor').value.trim() || null,
+    opportunity_score: Number(document.getElementById('f_opp').value) || 0,
+    tags: EDITING_TAGS.slice(),
+    // Property details
+    operator:     document.getElementById('f_operator').value.trim() || null,
+    ownership:    document.getElementById('f_ownership').value.trim() || null,
+    year_opened:  document.getElementById('f_year_opened').value === '' ? null : Number(document.getElementById('f_year_opened').value),
+    total_floors: document.getElementById('f_total_floors').value === '' ? null : Number(document.getElementById('f_total_floors').value),
   };
   const btn = document.getElementById('saveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
