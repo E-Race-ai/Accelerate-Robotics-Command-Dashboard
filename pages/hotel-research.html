@@ -2016,6 +2016,7 @@
           <button class="btn btn-ghost" type="button" onclick="window._scheduleNav(7)">Next ›</button>
         </div>
         <button class="btn btn-primary" type="button" onclick="window._openAutoWeekWizard()">⚡ Auto-plan week</button>
+        <button class="btn btn-ghost" type="button" onclick="window._dedupeRoutes()" title="Collapse duplicate routes for the same date+zone. Keeps the one with the most stops.">🧹 Dedupe</button>
         <button class="btn btn-ghost" type="button" onclick="window._wipeAllRoutes()" style="color:#b91c1c;border-color:#fecaca" title="Delete every route in the system. Use when the schedule view is cluttered with old/duplicate routes.">🗑️ Clear all routes</button>
       </div>
 
@@ -5223,8 +5224,24 @@ function _isoDate(d) {
   return `${y}-${m}-${day}`;
 }
 
+// Once-per-session flag — auto-collapse legacy duplicate routes silently
+// the first time a user opens the schedule. Avoids the "tripled dates"
+// view from prior wizard runs without making the user click "Dedupe."
+let SCHEDULE_AUTO_DEDUPED = false;
+
 async function loadScheduleWeek() {
   if (!SCHEDULE_ANCHOR) SCHEDULE_ANCHOR = _mondayOf(new Date());
+  // First-load auto-dedupe — fire-and-forget; refresh after to pick up changes.
+  if (!SCHEDULE_AUTO_DEDUPED) {
+    SCHEDULE_AUTO_DEDUPED = true;
+    try {
+      const r = await fetch('/api/hotel-research/routes/dedupe', {
+        method: 'POST', credentials: 'same-origin',
+      });
+      const data = await r.json();
+      if (data?.deleted > 0) console.log(`[schedule] auto-dedupe collapsed ${data.deleted} duplicate route(s)`);
+    } catch { /* non-fatal */ }
+  }
   const monday = SCHEDULE_ANCHOR;
   const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
   const fmt = { month: 'short', day: 'numeric' };
@@ -5449,6 +5466,27 @@ window._buildBenTour = async function() {
     }
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '⚡ Build / refresh Ben\'s tour'; }
+  }
+};
+
+// Auto-dedupe routes by (date, zone) — keeps the route with the most stops,
+// deletes the rest. Non-destructive of intent: routes that aren't duplicates
+// are untouched.
+window._dedupeRoutes = async function() {
+  try {
+    const r = await fetch('/api/hotel-research/routes/dedupe', {
+      method: 'POST', credentials: 'same-origin',
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    if (data.deleted === 0) {
+      alert('No duplicate routes found — your schedule is already clean.');
+    } else {
+      alert(`Collapsed ${data.groups_collapsed} duplicate groups → deleted ${data.deleted} duplicate route${data.deleted === 1 ? '' : 's'}.`);
+    }
+    if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
+  } catch (err) {
+    alert('Could not dedupe routes: ' + err.message);
   }
 };
 

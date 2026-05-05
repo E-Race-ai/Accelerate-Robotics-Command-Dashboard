@@ -1062,6 +1062,45 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
   }
 });
 
+// POST /routes/dedupe — keep one route per (scheduled_date, zone), delete
+// the rest. Non-destructive of intent: existing routes that aren't dupes
+// stay. The "winner" per group is the route with the most stops (or, on
+// tie, the most recent ID — assumes the latest auto-plan run had the
+// best data). Cascade-deletes route stops via FK.
+router.post('/routes/dedupe', requireAuth, async (_req, res) => {
+  try {
+    const groups = await db.all(
+      `SELECT scheduled_date, zone, COUNT(*) AS n
+       FROM bdr_routes
+       WHERE scheduled_date IS NOT NULL AND zone IS NOT NULL
+       GROUP BY scheduled_date, zone
+       HAVING COUNT(*) > 1`,
+      [],
+    );
+    let deleted = 0;
+    for (const g of groups) {
+      const candidates = await db.all(
+        `SELECT r.id,
+                (SELECT COUNT(*) FROM bdr_route_stops s WHERE s.route_id = r.id) AS stop_count
+         FROM bdr_routes r
+         WHERE r.scheduled_date = ? AND r.zone = ?
+         ORDER BY stop_count DESC, r.id DESC`,
+        [g.scheduled_date, g.zone],
+      );
+      // Keep the first (most stops, then newest); delete the rest.
+      const losers = candidates.slice(1).map(c => c.id);
+      for (const id of losers) {
+        await db.run('DELETE FROM bdr_routes WHERE id = ?', [id]);
+        deleted++;
+      }
+    }
+    res.json({ ok: true, deleted, groups_collapsed: groups.length });
+  } catch (err) {
+    console.error('[hotel-research] dedupe routes failed:', err);
+    res.status(500).json({ error: 'Failed to dedupe routes' });
+  }
+});
+
 // DELETE /routes/all — bulk-delete every route in the system. The schedule
 // panel can become a mess after repeated wizard clicks; this is the "wipe
 // the slate" button. Cascade deletes route stops automatically (FK ON
