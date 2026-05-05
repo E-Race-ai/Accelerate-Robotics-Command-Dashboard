@@ -530,6 +530,34 @@ async function initSchema() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_hotel_visits_hotel ON hotel_visits(hotel_saved_id, visit_date DESC)`,
 
+    // ── BDR scheduled routes — one row per planned day OR per named saved route
+    // WHY: BDRs work zones on a weekly cadence (e.g. "Coral Gables Monday,
+    // Brickell Tuesday, South Beach Wednesday"). Each row here is either a
+    // dated day-plan or an undated saved template that can be cloned. Stops
+    // live in bdr_route_stops with explicit ordering so the rep can drive
+    // them in sequence and check each one off as they go.
+    `CREATE TABLE IF NOT EXISTS bdr_routes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      scheduled_date TEXT,
+      zone TEXT,
+      notes TEXT,
+      created_by TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS bdr_route_stops (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      route_id INTEGER NOT NULL REFERENCES bdr_routes(id) ON DELETE CASCADE,
+      hotel_saved_id INTEGER NOT NULL REFERENCES hotels_saved(id) ON DELETE CASCADE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      done INTEGER NOT NULL DEFAULT 0,
+      visit_id INTEGER,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_bdr_routes_date ON bdr_routes(scheduled_date)`,
+    `CREATE INDEX IF NOT EXISTS idx_bdr_route_stops_route ON bdr_route_stops(route_id, sort_order)`,
+
     // ── Glossary game — gamification of /pages/team-glossary.html
     // WHY: Per-user progress (points, level, streak) plus an activity log so
     // teammates can earn points by quizzing and eventually swap them for swag
