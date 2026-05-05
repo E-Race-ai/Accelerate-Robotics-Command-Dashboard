@@ -2320,6 +2320,42 @@
       font-size: 0.7rem; font-weight: 800; color: white;
       display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
     }
+    /* Shipped-today feed — actual feature names committed today */
+    .gsd-shipments {
+      margin-top: 14px; padding-top: 14px;
+      border-top: 1px solid rgba(148,163,184,0.18);
+      position: relative;
+    }
+    .gsd-ship-eyebrow {
+      font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.12em;
+      font-weight: 800; color: #94a3b8; margin-bottom: 8px;
+    }
+    .gsd-ship-list {
+      display: flex; flex-direction: column; gap: 4px;
+      max-height: 220px; overflow-y: auto;
+    }
+    .gsd-ship-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 10px; border-radius: 8px;
+      background: rgba(15,23,42,0.45);
+      border: 1px solid rgba(148,163,184,0.10);
+      font-size: 0.82rem; color: #e2e8f0;
+    }
+    .gsd-ship-item .ship-emoji { flex-shrink: 0; font-size: 0.95rem; line-height: 1; }
+    .gsd-ship-item .ship-msg {
+      flex: 1; min-width: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .gsd-ship-item .ship-author {
+      font-size: 0.66rem; color: #94a3b8;
+      flex-shrink: 0; padding: 2px 8px;
+      background: rgba(148,163,184,0.10); border-radius: 999px;
+    }
+    .gsd-ship-item .ship-hash {
+      font-family: 'SF Mono', Menlo, monospace;
+      font-size: 0.66rem; color: #64748b;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body class="bg-[#f7f8fc] min-h-screen">
@@ -2907,6 +2943,11 @@
               <div class="gsd-streak-stat" id="gsdStreakStat">— days</div>
               <div class="gsd-streak-line" id="gsdStreakLine">Track consecutive days the team ships.</div>
             </div>
+          </div>
+          <!-- "What shipped today" feed — actual feature names, not counts -->
+          <div class="gsd-shipments" id="gsdShipments" style="display:none;">
+            <div class="gsd-ship-eyebrow">Shipped today</div>
+            <div class="gsd-ship-list" id="gsdShipList"></div>
           </div>
         </div>
       </div>
@@ -6905,6 +6946,62 @@ function gsdRender(json) {
     const contribs = sorted.length;
     sub.textContent = `${totalCommits} commit${totalCommits === 1 ? '' : 's'} · ${contribs} contributor${contribs === 1 ? '' : 's'} · ${daysActive} active day${daysActive === 1 ? '' : 's'}`;
   }
+
+  // ── Today's shipments — actual commit messages, not just counts.
+  // Pulls from the SAME daily_activity payload (each day has a
+  // `messages` array). Filters out chore/deploy nudge noise so the
+  // feed reads as feature shipments.
+  _gsdRenderShipments(daily, todayIso);
+}
+
+// Map commit-message prefixes to a readable emoji so the feed scans fast.
+function _gsdShipEmoji(message) {
+  const m = (message || '').toLowerCase();
+  if (m.startsWith('feat'))     return '✨';
+  if (m.startsWith('fix'))      return '🐛';
+  if (m.startsWith('refactor')) return '🧹';
+  if (m.startsWith('docs'))     return '📝';
+  if (m.startsWith('test'))     return '🧪';
+  if (m.startsWith('chore'))    return '🔧';
+  if (m.startsWith('perf'))     return '⚡';
+  return '✓';
+}
+
+function _gsdRenderShipments(daily, todayIso) {
+  const wrap = document.getElementById('gsdShipments');
+  const list = document.getElementById('gsdShipList');
+  if (!wrap || !list) return;
+  const todayBucket = daily[todayIso] || [];
+  // Each entry has .messages; flatten across projects (single repo today).
+  const messages = [];
+  for (const ent of todayBucket) {
+    for (const m of (ent.messages || [])) {
+      // Skip merge commits + deploy nudges — they're not real shipments.
+      const subject = (m.message || '').trim();
+      if (!subject) continue;
+      if (/^merge /i.test(subject)) continue;
+      if (/^chore\(deploy\)/i.test(subject)) continue;
+      messages.push({
+        hash: m.hash,
+        message: subject,
+        author: m.author || '',
+        email: (m.email || '').toLowerCase(),
+      });
+    }
+  }
+  if (messages.length === 0) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = '';
+  list.innerHTML = messages.slice(0, 12).map(m => `
+    <div class="gsd-ship-item" title="${escapeHtml(m.message)}">
+      <span class="ship-emoji">${_gsdShipEmoji(m.message)}</span>
+      <span class="ship-msg">${escapeHtml(m.message)}</span>
+      <span class="ship-author">${escapeHtml(_gsdLabel(m.email, m.author))}</span>
+      <span class="ship-hash">${escapeHtml(m.hash)}</span>
+    </div>
+  `).join('');
 }
 
 // Period switcher
