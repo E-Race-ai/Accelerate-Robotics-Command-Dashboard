@@ -471,6 +471,58 @@
     animation: confettiFall linear forwards;
   }
   @keyframes confettiFall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  @keyframes streakPop {
+    0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+    20%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    40%  { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+    100% { transform: translate(-50%, -120%) scale(0.95); opacity: 0; }
+  }
+  /* Tappable / cliquey card pills — press feedback */
+  .card-pill, .fit-reason, .sib-chip, .card-dm-row a {
+    transition: transform 0.10s, box-shadow 0.10s, background 0.10s;
+    cursor: pointer;
+  }
+  .card-pill:active, .fit-reason:active, .sib-chip:active, .card-dm-row a:active {
+    transform: scale(0.95);
+  }
+  /* Stat-row hover: show that they're tappable for tooltips */
+  .card-grid > div { cursor: pointer; transition: background 0.10s; border-radius: 6px; padding: 4px; margin: -4px; }
+  .card-grid > div:hover, .card-grid > div:active { background: #eff6ff; }
+  /* Tappable score reasoning chip — gets a "+N" badge on the right */
+  .fit-reason {
+    position: relative;
+    background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%);
+  }
+  .fit-reason:hover {
+    background: linear-gradient(90deg, #dbeafe 0%, #bfdbfe 100%);
+    box-shadow: 0 2px 6px rgba(14, 165, 233, 0.25);
+  }
+  /* Sound toggle in the topbar */
+  .topbar .sound-toggle {
+    background: transparent; border: 1px solid rgba(255,255,255,0.2);
+    color: white; padding: 6px 10px; border-radius: 100px;
+    font: inherit; font-size: 0.95rem; cursor: pointer;
+    line-height: 1;
+  }
+  .topbar .sound-toggle:hover { background: rgba(255,255,255,0.12); }
+  /* Streak badge in topbar — shows when STREAK >= 2 */
+  .streak-badge {
+    display: none;
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 0.78rem;
+    box-shadow: 0 0 12px rgba(249, 115, 22, 0.55);
+    animation: streakBadgeBeat 1.5s ease-in-out infinite;
+  }
+  .streak-badge.show { display: inline-flex; align-items: center; gap: 4px; }
+  @keyframes streakBadgeBeat {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.06); }
+  }
 
   /* Loading + error */
   .splash {
@@ -508,7 +560,9 @@
 <div class="app hidden" id="app">
   <div class="topbar">
     <div class="player-pill" onclick="changePlayer()" id="playerPill">—</div>
+    <span class="streak-badge" id="streakBadge">🔥 <span id="streakCount">0</span></span>
     <button class="leaderboard-btn" type="button" onclick="openLeaderboard()">🏆</button>
+    <button class="sound-toggle" type="button" id="soundToggle" onclick="toggleSound()" title="Sound on">🔊</button>
     <button class="adv-toggle" type="button" id="advToggle" onclick="toggleAdvanced()" title="Show full hotel details on every card">
       <span class="dot"></span><span>Advanced</span>
     </button>
@@ -604,6 +658,209 @@ function generateCoverSvgInline(h) {
 // Optional haptic feedback (Android Chrome supports navigator.vibrate; iOS doesn't)
 function buzz(ms) { try { navigator.vibrate?.(ms); } catch {} }
 
+// ── Synth sound FX — Web Audio, no assets needed ──────────────────
+// Distinctive tones per decision so reps can feel the rhythm of swiping.
+let _audioCtx = null;
+function getAudio() {
+  if (_audioCtx) return _audioCtx;
+  try {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch { _audioCtx = null; }
+  return _audioCtx;
+}
+function playTone({ freq, type = 'sine', duration = 0.18, attack = 0.01, gain = 0.16, slide = 0 }) {
+  const ctx = getAudio();
+  if (!ctx || SOUND_OFF) return;
+  // Resume context if suspended (autoplay policy)
+  if (ctx.state === 'suspended') { try { ctx.resume(); } catch {} }
+  const osc = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  if (slide) {
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq + slide, ctx.currentTime + duration);
+  }
+  gainNode.gain.value = 0;
+  gainNode.gain.linearRampToValueAtTime(gain, ctx.currentTime + attack);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+  osc.connect(gainNode); gainNode.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + duration);
+}
+function playDecisionSound(decision) {
+  switch (decision) {
+    case 'yes':
+      // Bright two-note "ding" — reward
+      playTone({ freq: 660, type: 'triangle', duration: 0.10, gain: 0.18 });
+      setTimeout(() => playTone({ freq: 990, type: 'triangle', duration: 0.20, gain: 0.20 }), 80);
+      break;
+    case 'maybe':
+      // Single mid tone
+      playTone({ freq: 520, type: 'sine', duration: 0.16, gain: 0.14 });
+      break;
+    case 'needs_research':
+      // Curious upward chirp
+      playTone({ freq: 380, type: 'sine', duration: 0.22, gain: 0.14, slide: 100 });
+      break;
+    case 'no':
+      // Soft downward bump — not punishing, just decisive
+      playTone({ freq: 240, type: 'sawtooth', duration: 0.18, gain: 0.10, slide: -80 });
+      break;
+    case 'streak3': playTone({ freq: 880, type: 'triangle', duration: 0.30, gain: 0.20, slide: 200 }); break;
+    case 'streak5': // Bigger fanfare for 5-streak
+      [0, 70, 140].forEach((delay, i) => {
+        setTimeout(() => playTone({ freq: 660 + i * 220, type: 'triangle', duration: 0.18, gain: 0.20 }), delay);
+      });
+      break;
+    case 'undo':
+      playTone({ freq: 320, type: 'sine', duration: 0.10, gain: 0.10 });
+      break;
+  }
+}
+
+// Sound on/off toggle. Persisted in localStorage so reps don't have to mute every session.
+let SOUND_OFF = localStorage.getItem('triageSoundOff') === '1';
+function toggleSound() {
+  SOUND_OFF = !SOUND_OFF;
+  localStorage.setItem('triageSoundOff', SOUND_OFF ? '1' : '0');
+  syncSoundToggle();
+  if (!SOUND_OFF) playDecisionSound('yes'); // play sample
+}
+function syncSoundToggle() {
+  const btn = document.getElementById('soundToggle');
+  if (!btn) return;
+  btn.textContent = SOUND_OFF ? '🔇' : '🔊';
+  btn.title = SOUND_OFF ? 'Sound off — tap to enable' : 'Sound on — tap to mute';
+}
+
+// ── Streak tracking ────────────────────────────────────────────────
+let STREAK = 0;
+let STREAK_BEST = Number(localStorage.getItem('triageStreakBest') || 0);
+function bumpStreak(decision) {
+  if (decision === 'yes') {
+    STREAK += 1;
+    if (STREAK > STREAK_BEST) {
+      STREAK_BEST = STREAK;
+      localStorage.setItem('triageStreakBest', String(STREAK_BEST));
+    }
+    // Audio fanfare at streak milestones
+    if (STREAK === 3) playDecisionSound('streak3');
+    if (STREAK === 5 || STREAK === 10) playDecisionSound('streak5');
+    showStreakBanner();
+  } else {
+    STREAK = 0;
+  }
+  syncStreakBadge();
+}
+
+function showStreakBanner() {
+  if (STREAK < 2) return;
+  const label = STREAK >= 10 ? '🚀 ON FIRE!' : STREAK >= 5 ? '🔥🔥🔥 BLAZING!' : STREAK >= 3 ? '🔥 HOT STREAK' : '✨ Combo';
+  const colorBg = STREAK >= 10 ? '#ec4899' : STREAK >= 5 ? '#f97316' : STREAK >= 3 ? '#fbbf24' : '#22c55e';
+  const banner = document.createElement('div');
+  banner.style.cssText = `
+    position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%) scale(0.6);
+    background: ${colorBg}; color: white;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800;
+    font-size: 1.4rem; padding: 14px 22px; border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.40);
+    z-index: 90; pointer-events: none;
+    animation: streakPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    text-align: center;
+  `;
+  banner.innerHTML = `${label}<div style="font-size:0.78rem;font-weight:600;margin-top:2px;opacity:0.92">${STREAK} yes in a row${STREAK_BEST > STREAK ? ` · best: ${STREAK_BEST}` : ' · personal best 🏆'}</div>`;
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 1100);
+}
+
+// Tappable reasoning chip — shows a tooltip with WHICH weight category
+// drove this signal. Maps strings from the fit-score service to the
+// weights table. Reps tap to learn — gamified transparency.
+window._explainReason = function(anchorEl, reasonText) {
+  // Map the reason string back to its weight + category
+  const r = String(reasonText).toLowerCase();
+  let pts = '+?', why = '', cat = '';
+  if (/rooms.*xl|xl.*rooms/.test(r))        { pts = '+25'; cat = 'Property scale'; why = '300+ rooms = enterprise-grade ops, real ROI on robotics.'; }
+  else if (/rooms.*large/.test(r))           { pts = '+18'; cat = 'Property scale'; why = '150–299 rooms — meaningful labor savings, viable pilot site.'; }
+  else if (/^\d+\s+rooms\b/.test(r))         { pts = '+10'; cat = 'Property scale'; why = '75–149 rooms — solid mid-market property.'; }
+  else if (/luxury class/.test(r))           { pts = '+20'; cat = 'Brand class'; why = 'Luxury = budget for innovation + guests expect tech leadership.'; }
+  else if (/upper-upscale/.test(r))          { pts = '+17'; cat = 'Brand class'; why = 'Upper-upscale chains have the budget hierarchy to engage on enterprise software.'; }
+  else if (/upscale brand/.test(r))          { pts = '+13'; cat = 'Brand class'; why = 'Upscale tier — established sales motions for hospitality tech.'; }
+  else if (/floor tower|\d+\s+floors/.test(r)) { pts = '+15'; cat = 'Multi-floor'; why = 'Each floor multiplies the value of robot↔elevator integration.'; }
+  else if (/5★ rating|5★/.test(r))           { pts = '+10'; cat = 'Star rating'; why = '5-star property — guests expect polish, staff appreciates ops support.'; }
+  else if (/4★ rating|4★/.test(r))           { pts = '+7';  cat = 'Star rating'; why = '4-star — solid signal of investment quality.'; }
+  else if (/enterprise chain/.test(r))       { pts = '+10'; cat = 'Recognized chain'; why = 'Major chain — established enterprise sales path, GMs familiar with the conversation.'; }
+  else if (/ADR/.test(r))                    { pts = '+15'; cat = 'Revenue density'; why = 'Higher ADR = labor savings compound faster per stay.'; }
+  else if (/opened/.test(r))                 { pts = '+6';  cat = 'Recently opened'; why = 'Modern building infra — easier elevator/network integration.'; }
+  else if (/restaurant/.test(r))             { pts = '+3 each'; cat = 'F&B'; why = 'F&B-to-room runners + banquet support = robotics workflow opportunity.'; }
+  else if (/event space|sqft event/.test(r)) { pts = '+12'; cat = 'Event space'; why = 'Big event sqft = multi-vendor coordination + high deal value.'; }
+  else if (/meeting room/.test(r))           { pts = '+6';  cat = 'Meeting rooms'; why = 'Meeting setup + AV runners — recurring ops opportunity.'; }
+  else if (/ballroom/.test(r))               { pts = '+8';  cat = 'Ballroom'; why = 'High-capacity events = peak labor crunch periods.'; }
+  else if (/resort|tower|grand|plaza|boutique|beach/i.test(r)) { pts = '+4–6'; cat = 'Name signal'; why = 'Property name signals scale + service tier even when structured data is sparse.'; }
+  else                                        { pts = '+2'; cat = 'Other signal'; why = 'Captured during enrichment — small but real positive signal.'; }
+
+  // Pop a temporary tooltip near the anchor element
+  const existing = document.querySelector('.reason-tip');
+  if (existing) existing.remove();
+  const tip = document.createElement('div');
+  tip.className = 'reason-tip';
+  tip.style.cssText = `
+    position: fixed; z-index: 50;
+    background: #1e293b; color: white;
+    padding: 10px 14px; border-radius: 10px;
+    font-size: 0.78rem; line-height: 1.4;
+    max-width: 280px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    animation: streakPop 0.32s ease-out forwards;
+  `;
+  tip.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <span style="background:#16a34a;color:white;padding:1px 7px;border-radius:100px;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:0.74rem">${pts}</span>
+      <strong style="color:#7dd3fc;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em">${cat}</strong>
+    </div>
+    <div>${why}</div>`;
+  document.body.appendChild(tip);
+  // Position above anchor
+  const rect = anchorEl.getBoundingClientRect();
+  tip.style.left = Math.max(8, Math.min(window.innerWidth - 290, rect.left + rect.width / 2 - 140)) + 'px';
+  tip.style.top = Math.max(8, rect.top - tip.offsetHeight - 8) + 'px';
+  // Auto-dismiss + tap-anywhere-to-dismiss
+  setTimeout(() => tip.remove(), 4500);
+  setTimeout(() => {
+    document.addEventListener('click', () => tip.remove(), { once: true });
+  }, 100);
+};
+
+// Mini emoji confetti — lighter than fireConfetti, fires per YES.
+function miniConfetti() {
+  const emojis = ['💖', '🏆', '🔥', '✨', '💸', '🎯'];
+  const n = 14;
+  for (let i = 0; i < n; i++) {
+    const span = document.createElement('span');
+    span.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    span.style.cssText = `
+      position: fixed;
+      left: ${30 + Math.random() * 40}vw;
+      top: ${30 + Math.random() * 30}vh;
+      font-size: ${1 + Math.random() * 0.8}rem;
+      pointer-events: none;
+      z-index: 100;
+      transition: transform 0.9s ease-out, opacity 0.9s ease-out;
+      will-change: transform, opacity;
+    `;
+    document.body.appendChild(span);
+    requestAnimationFrame(() => {
+      const dx = (Math.random() - 0.5) * 240;
+      const dy = -200 - Math.random() * 200;
+      span.style.transform = `translate(${dx}px, ${dy}px) rotate(${(Math.random() - 0.5) * 720}deg)`;
+      span.style.opacity = '0';
+    });
+    setTimeout(() => span.remove(), 1000);
+  }
+}
+
 // ── Boot flow ─────────────────────────────────────────────────────
 async function boot() {
   if (PLAYER) {
@@ -642,6 +899,16 @@ function showApp() {
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('playerPill').innerHTML = `🧑‍💼 ${escHtml(PLAYER)} <span style="opacity:0.6;font-size:0.74rem;margin-left:4px;">tap to switch</span>`;
   syncAdvancedToggle();
+  syncSoundToggle();
+  syncStreakBadge();
+}
+
+function syncStreakBadge() {
+  const badge = document.getElementById('streakBadge');
+  const count = document.getElementById('streakCount');
+  if (!badge || !count) return;
+  count.textContent = STREAK;
+  badge.classList.toggle('show', STREAK >= 2);
 }
 
 function syncAdvancedToggle() {
@@ -826,7 +1093,7 @@ function renderTopCard() {
     : '';
   const reasons = Array.isArray(h.ai_fit_reasoning) ? h.ai_fit_reasoning : [];
   const reasonsHtml = reasons.length
-    ? `<div class="fit-reasons">${reasons.map(r => `<span class="fit-reason">${escHtml(r)}</span>`).join('')}</div>`
+    ? `<div class="fit-reasons">${reasons.map(r => `<span class="fit-reason" onclick="window._explainReason(this, ${JSON.stringify(r).replace(/"/g, '&quot;')})">${escHtml(r)}</span>`).join('')}</div>`
     : '';
 
   // DM (decision-maker) LinkedIn shortcuts — only shown for deep-research
@@ -987,6 +1254,9 @@ async function decide(decision) {
   const h = QUEUE[0];
   LOCK = true;
   buzz(decision === 'yes' ? 30 : decision === 'no' ? 60 : 20);
+  playDecisionSound(decision);
+  bumpStreak(decision);
+  if (decision === 'yes') miniConfetti();
   // Animate top card off-screen in the matching direction
   const card = document.getElementById('topCard');
   if (card) {
@@ -1057,9 +1327,9 @@ function attachSwipe(card) {
 
   function onStart(e) {
     if (LOCK) return;
-    // Don't swipe-grab if the user tapped a link, the details toggle, or
-    // anything inside the expanded details panel (so they can scroll it).
-    if (e.target.closest('a, .more-toggle, .card-details.open')) return;
+    // Don't swipe-grab if the user tapped an interactive element (link,
+    // pill, button, or expanded details).
+    if (e.target.closest('a, button, .more-toggle, .card-details.open, .card-pill, .fit-reason, .sib-chip, .card-grid > div')) return;
     dragging = true;
     card.classList.add('dragging');
     const p = e.touches ? e.touches[0] : e;
