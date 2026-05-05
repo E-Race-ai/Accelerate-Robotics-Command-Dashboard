@@ -5655,17 +5655,31 @@ async function refreshVisitsInModal(hotelId) {
 // suggested pilot tier), step 2 shows success with explicit next-action
 // links so the rep doesn't drop off.
 
-function _gradTierForBots(bots) {
-  if (!bots) return { name: 'Pilot', size: 'Pilot' };
-  if (bots >= 10) return { name: 'Full deployment', size: 'Full' };
-  if (bots >= 5)  return { name: 'Bigger pilot',    size: 'Bigger pilot' };
-  return { name: 'Pilot', size: 'Pilot' };
+// Package tiers — single source of truth on the client. Mirrors
+// PACKAGE_NAME / PACKAGE_RANGE in src/services/hotel-research-utils.js.
+// The graduate modal renders one chip per entry; the rep clicks one and
+// the package code (tier letter) gets sent to the server.
+const PACKAGE_TIERS = [
+  { code: 'S',  name: 'Starter Package',           size: 'Small',   range: '1–3 bots · ≤$75k/yr',     minBots: 0  },
+  { code: 'M',  name: 'Integration Package',       size: 'Medium',  range: '4–6 bots · $75–150k/yr',  minBots: 4  },
+  { code: 'L',  name: 'Service Augmentation Layer',size: 'Large',   range: '7–12 bots · $150–300k/yr',minBots: 7  },
+  { code: 'XL', name: 'Facility Automation',       size: 'X-Large', range: '13+ bots · $300k+/yr',    minBots: 13 },
+];
+function _packageForBots(bots) {
+  const n = Number(bots) || 0;
+  // Walk descending so 13 lands on XL, 7 on L, 4 on M, else S.
+  for (let i = PACKAGE_TIERS.length - 1; i >= 0; i--) {
+    if (n >= PACKAGE_TIERS[i].minBots) return PACKAGE_TIERS[i];
+  }
+  return PACKAGE_TIERS[0];
 }
+const PACKAGE_NAME_BY_CODE = Object.fromEntries(PACKAGE_TIERS.map(p => [p.code, p.name]));
+const PACKAGE_SHORT_BY_CODE = { S: 'Starter', M: 'Integration', L: 'Service Aug', XL: 'Facility Auto' };
 
 window._openGraduateModal = function(id) {
   const h = SAVED.find(x => x.id === id);
   if (!h) { alert('Could not find that hotel.'); return; }
-  const tier = _gradTierForBots(h.est_bot_count);
+  const pkg = _packageForBots(h.est_bot_count);
   const bots = h.est_bot_count || 3;
   const arr = h.revenue_potential_annual || (bots * (h.raas_monthly_per_bot || 2000) * 12);
 
@@ -5682,16 +5696,19 @@ window._openGraduateModal = function(id) {
         <div class="gs-stats">
           <span><strong>${bots}</strong> bot${bots === 1 ? '' : 's'} estimated</span>
           <span>≈ <strong>${fmtRev(arr)}</strong> ARR</span>
-          <span><strong>${tier.size}</strong> tier</span>
+          <span><strong>${pkg.name}</strong></span>
         </div>
       </div>
 
       <div>
-        <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-faint);margin-bottom:6px;">Proposed deployment tier</div>
+        <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-faint);margin-bottom:6px;">Proposed package</div>
         <div class="grad-tier-row" id="gradTierRow">
-          <button type="button" class="grad-tier-chip ${tier.size === 'Pilot' ? 'active' : ''}" data-tier="Pilot"><span class="tier-name">Pilot</span><span class="tier-bots">3 bots · $72k/yr</span></button>
-          <button type="button" class="grad-tier-chip ${tier.size === 'Bigger pilot' ? 'active' : ''}" data-tier="Bigger pilot"><span class="tier-name">Bigger pilot</span><span class="tier-bots">5–7 bots · $120–168k/yr</span></button>
-          <button type="button" class="grad-tier-chip ${tier.size === 'Full' ? 'active' : ''}" data-tier="Full"><span class="tier-name">Full</span><span class="tier-bots">10+ bots · $240k+/yr</span></button>
+          ${PACKAGE_TIERS.map(p => `
+            <button type="button" class="grad-tier-chip ${p.code === pkg.code ? 'active' : ''}" data-tier="${escapeHtml(p.name)}" data-tier-code="${p.code}">
+              <span class="tier-name">${escapeHtml(p.name)}</span>
+              <span class="tier-bots">${escapeHtml(p.size)} · ${escapeHtml(p.range)}</span>
+            </button>
+          `).join('')}
         </div>
       </div>
 
@@ -5729,14 +5746,14 @@ window._confirmGraduate = async function() {
   const id = Number(modal?.dataset?.hotelId || 0);
   if (!id) return;
   const tierBtn = modal.querySelector('.grad-tier-chip.active');
-  const pilotTier = tierBtn?.dataset?.tier || 'Pilot';
+  const packageName = tierBtn?.dataset?.tier || 'Starter Package';
   const confirmBtn = document.getElementById('gradConfirmBtn');
   if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Graduating…'; }
   try {
     const res = await fetch(`/api/hotel-research/saved/${id}/graduate`, {
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pilot_tier: pilotTier }),
+      body: JSON.stringify({ package_tier: packageName }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -5746,7 +5763,7 @@ window._confirmGraduate = async function() {
       <div class="grad-success">
         <div class="check">✓</div>
         <h3>Graduated to Prospect #${data.prospect_id}</h3>
-        <p>${escapeHtml(h?.name || 'Hotel')} is now in your active pipeline as a <strong>${escapeHtml(pilotTier)}</strong> opportunity.</p>
+        <p>${escapeHtml(h?.name || 'Hotel')} is now in your active pipeline as a <strong>${escapeHtml(packageName)}</strong> opportunity.</p>
         <div class="grad-actions">
           <a class="btn btn-primary" href="/pages/pipeline-prospects.html?focus=${data.prospect_id}" style="text-decoration:none;">Open Prospect →</a>
           <button class="btn btn-secondary" type="button" onclick="window._closeGraduateModal()">Close</button>
@@ -6256,7 +6273,7 @@ window._savedShowMore = function(arg) {
 const TABLE_COLS = [
   { key: 'name',                     label: 'Hotel' },
   { key: 'submarket',                label: 'Submarket' },
-  { key: 'deal_size_tier',           label: 'Tier' },
+  { key: 'deal_size_tier',           label: 'Package' },
   { key: 'brand_class',              label: 'Class' },
   { key: 'brand',                    label: 'Brand' },
   { key: 'stars',                    label: 'Stars',     align: 'num' },
@@ -6297,7 +6314,7 @@ function renderSavedTable(rows) {
           ${h.prospect_id ? `<span class="graduated-marker" title="Graduated to Prospect #${h.prospect_id}">✓ #${h.prospect_id}</span>` : ''}
         </td>
         <td>${h.submarket ? `<button class="drill" data-action="filter-submarket" data-val="${escapeHtml(h.submarket)}">${escapeHtml(h.submarket)}</button>` : '—'}</td>
-        <td>${h.deal_size_tier ? `<span class="tier-badge tier-${h.deal_size_tier}">${h.deal_size_tier}</span>` : '—'}</td>
+        <td>${h.deal_size_tier ? `<span class="tier-badge tier-${h.deal_size_tier}" title="${escapeHtml(PACKAGE_NAME_BY_CODE[h.deal_size_tier] || '')}">${escapeHtml(PACKAGE_SHORT_BY_CODE[h.deal_size_tier] || h.deal_size_tier)}</span>` : '—'}</td>
         <td><button class="drill pill-class ${h.brand_class || 'independent'}" data-action="filter-class" data-val="${h.brand_class || 'independent'}">${BRAND_CLASS_LABELS[h.brand_class] || 'Independent'}</button></td>
         <td>${h.brand ? `<button class="drill" data-action="filter-brand" data-val="${escapeHtml(h.brand)}">${escapeHtml(h.brand)}</button>` : '—'}</td>
         <td class="num stars-cell">${stars}</td>
@@ -6463,7 +6480,7 @@ function renderSavedCard(h) {
         <div class="lbl">Est. ARR (Accelerate)</div>
         <div class="num">${fmtRev(h.revenue_potential_annual)}</div>
       </div>
-      ${h.est_bot_count ? `<div class="breakdown">${h.est_bot_count} bot${h.est_bot_count === 1 ? '' : 's'} × $${(h.raas_monthly_per_bot || 2000).toLocaleString()}/mo<br>${h.deal_size_tier ? `<span class="tier-badge tier-${h.deal_size_tier}" style="font-size:0.62rem;padding:2px 6px;">${h.deal_size_tier}</span> deployment` : ''}</div>` : ''}
+      ${h.est_bot_count ? `<div class="breakdown">${h.est_bot_count} bot${h.est_bot_count === 1 ? '' : 's'} × $${(h.raas_monthly_per_bot || 2000).toLocaleString()}/mo<br>${h.deal_size_tier ? `<span class="tier-badge tier-${h.deal_size_tier}" style="font-size:0.62rem;padding:2px 6px;" title="${escapeHtml(PACKAGE_NAME_BY_CODE[h.deal_size_tier] || '')}">${escapeHtml(PACKAGE_SHORT_BY_CODE[h.deal_size_tier] || h.deal_size_tier)}</span>` : ''}</div>` : ''}
     </div>` : '';
 
   return `

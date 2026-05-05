@@ -737,11 +737,14 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
 
   // market_id is optional; the prospects UI lets an admin assign it later.
   const marketId = req.body?.market_id ? String(req.body.market_id).slice(0, 80) : null;
-  // pilot_tier is set in the new graduate modal — Pilot / Bigger pilot /
-  // Full deployment. It's appended to the `signal` text so the deal-card
-  // surfaces "Bigger pilot · 📍 South Beach" without needing a schema change.
-  const pilotTier = req.body?.pilot_tier ? String(req.body.pilot_tier).slice(0, 40) : null;
-  const signalParts = [hotel.submarket, pilotTier ? `${pilotTier} tier` : null].filter(Boolean);
+  // package_tier is set in the graduate modal — one of the four named
+  // packages: Starter / Integration / Service Augmentation / Facility
+  // Automation. Stored on the prospect's `signal` field so it surfaces
+  // on the deal card without a schema change. Field name is still
+  // `pilot_tier` for backward compat with any older clients in flight.
+  const packageTier = req.body?.package_tier || req.body?.pilot_tier || null;
+  const packageStr = packageTier ? String(packageTier).slice(0, 80) : null;
+  const signalParts = [hotel.submarket, packageStr ? `${packageStr} package` : null].filter(Boolean);
   const signalStr = signalParts.length ? signalParts.join(' · ') : null;
 
   // Master-record link: ensure this hotel has a facility row, then carry the
