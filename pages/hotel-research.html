@@ -1905,104 +1905,8 @@
       <button class="tl-btn" type="button" onclick="window._openTriage()">Start swiping</button>
     </div>
 
-    <h1>Hotel Research</h1>
-    <p class="lede">
-      Pinpoint research for any city or zip code. Pulls live hotel listings from OpenStreetMap (no key required), gives you a rough nightly-rate estimate from the brand or star rating, then save the candidates worth following up on. Real-time pricing isn't included — call the property or click through to their site to confirm.
-    </p>
-
-    <!-- Hero KPI dashboard — at-a-glance health of the territory; click any
-         tile to jump to the relevant section below. -->
-    <div class="hero-stats" id="heroStats"></div>
-
-    <!-- 📲 Road kit — phone + iPad provisioning for the Miami tour -->
-    <div class="road-kit" id="roadKit">
-      <div class="rk-head">
-        <div>
-          <div class="rk-eyebrow">📲 ROAD KIT</div>
-          <div class="rk-title">Push hotels + routes to the iPhone &amp; iPad</div>
-          <div class="rk-sub">Download these on your laptop, AirDrop to the road devices. They land in Apple Contacts + Calendar and work offline + in CarPlay.</div>
-        </div>
-      </div>
-      <div class="rk-grid">
-        <a class="rk-card" href="/api/hotel-research/vcard" download>
-          <div class="rk-icon">🏨</div>
-          <div class="rk-name">All hotel contacts</div>
-          <div class="rk-meta">vCard · phone, address, AI fit · sortable in Contacts</div>
-        </a>
-        <a class="rk-card" href="/api/hotel-research/vcard?fit_min=50" download>
-          <div class="rk-icon">⭐</div>
-          <div class="rk-name">Top-fit hotels (≥50)</div>
-          <div class="rk-meta">vCard · slim cohort for the tour week</div>
-        </a>
-        <a class="rk-card" href="/api/hotel-research/atlas-vcard" download>
-          <div class="rk-icon">👥</div>
-          <div class="rk-name">Atlas team contacts</div>
-          <div class="rk-meta">vCard · everyone on the team</div>
-        </a>
-        <a class="rk-card" href="/api/hotel-research/calendar.ics" download>
-          <div class="rk-icon">📅</div>
-          <div class="rk-name">Routes calendar</div>
-          <div class="rk-meta">.ics · auto-syncs Ben's tour into Apple Calendar</div>
-        </a>
-      </div>
-    </div>
-
-    <!-- Curated call list — top fits the rep should hit first today -->
-    <div id="topCallsTile" class="top-calls-tile" style="display:none;"></div>
-
-    <!-- Multi-rater alignment — Ben + Celia + Eric agreement dashboard -->
-    <div id="alignmentTile" class="alignment-tile" style="display:none;"></div>
-
-    <!-- Triage Game overlay — iPhone 15 Pro Max bezel + side panels (live map + insights) -->
-    <div class="triage-game" id="triageGame" aria-hidden="true">
-      <button class="iphone-close" type="button" onclick="window._closeTriage()" title="Close (Esc)">✕</button>
-
-      <div class="triage-stage">
-        <!-- LEFT: live map of the active card -->
-        <aside class="triage-side-panel triage-map-panel" id="triageMapPanel">
-          <div class="tsp-eyebrow">📍 LIVE MAP</div>
-          <div class="tsp-title" id="tspMapTitle">No card active</div>
-          <div class="tsp-sub" id="tspMapSub">Tap a card or press Y/M/R/N to start</div>
-          <div class="tsp-map" id="tspMapEl"></div>
-          <div class="tsp-meta-row" id="tspAirport"></div>
-        </aside>
-
-        <div class="iphone-bezel" role="dialog" aria-label="Hotel Triage on iPhone">
-          <span class="ip-btn mute"></span>
-          <span class="ip-btn vol-up"></span>
-          <span class="ip-btn vol-dn"></span>
-          <span class="ip-btn power"></span>
-          <span class="dynamic-island"></span>
-          <div class="iphone-screen">
-            <iframe id="triageIframe" title="Hotel Triage" loading="lazy"></iframe>
-          </div>
-        </div>
-
-        <!-- RIGHT: insights, sisters, score breakdown -->
-        <aside class="triage-side-panel triage-insights-panel" id="triageInsightsPanel">
-          <div class="tsp-eyebrow">🤖 INSIGHTS</div>
-          <div class="tsp-title" id="tspInsightsTitle">No card active</div>
-          <div class="tsp-insights-body" id="tspInsightsBody">
-            <div style="color:rgba(255,255,255,0.55);font-size:0.84rem;text-align:center;margin-top:24px;line-height:1.5">Pick your name &amp; start triaging — context will fill in here. Map on the left, insights on the right, swipe in the middle.</div>
-          </div>
-        </aside>
-      </div>
-
-      <div class="iphone-helper">
-        Drag to swipe · <kbd>Y</kbd>/<kbd>M</kbd>/<kbd>R</kbd>/<kbd>N</kbd> hotkeys · <kbd>U</kbd> Undo · <kbd>Esc</kbd> close
-      </div>
-    </div>
-
-    <!-- Sticky nav — jumps between dashboard sections (no longer hides them) -->
-    <nav class="tabs" aria-label="Jump to section">
-      <a class="tab" href="#panel-map">🗺️ Map</a>
-      <a class="tab" href="#panel-saved">My Saved <span class="badge" id="savedCount">0</span></a>
-      <a class="tab" href="#panel-search">Search</a>
-      <a class="tab" href="#panel-schedule">📅 Schedule</a>
-    </nav>
-
-    <!-- ─── Map panel — primary BDR view, hoisted to top ──────── -->
-    <div class="panel" id="panel-map" role="region" aria-label="Map">
+    <!-- ─── Map panel — territory view, hoisted to the top alongside the swipe game ── -->
+    <div class="panel" id="panel-map" role="region" aria-label="Map" style="margin-top:14px">
       <div class="panel-head">
         <span class="panel-eyebrow">Step 1 · See your territory</span>
         <h2>🗺️ Map · routes · drive time</h2>
@@ -2109,14 +2013,12 @@
               <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:6px;">No hotels on the map yet</div>
               <div style="font-size:0.88rem;line-height:1.5;color:var(--text-dim);">
                 Go to the <strong>Search</strong> tab and run a city search or hit a Quick-market preset
-                (e.g. <strong>Run all 11 Miami-Dade submarkets</strong>), then save the hotels you want
+                (e.g. <strong>Run all 21 Miami-Dade submarkets</strong>), then save the hotels you want
                 to track. They'll appear as pins here.
               </div>
             </div>
           </div>
         </div>
-        <!-- Drill-down side rail — toggled by .rail-open on the wrap. Populated
-             from JS when a pin is clicked or the user clicks the map background. -->
         <aside class="pin-rail" id="pinRail" aria-hidden="true"></aside>
       </div>
       <div class="map-legend">
@@ -2147,6 +2049,101 @@
       </div>
     </div>
 
+    <h1>Hotel Research</h1>
+    <p class="lede">
+      Pinpoint research for any city or zip code. Pulls live hotel listings from OpenStreetMap (no key required), gives you a rough nightly-rate estimate from the brand or star rating, then save the candidates worth following up on. Real-time pricing isn't included — call the property or click through to their site to confirm.
+    </p>
+
+    <!-- Hero KPI dashboard — at-a-glance health of the territory; click any
+         tile to jump to the relevant section below. -->
+    <div class="hero-stats" id="heroStats"></div>
+
+    <!-- 📲 Road kit — phone + iPad provisioning for the Miami tour -->
+    <div class="road-kit" id="roadKit">
+      <div class="rk-head">
+        <div>
+          <div class="rk-eyebrow">📲 ROAD KIT</div>
+          <div class="rk-title">Push hotels + routes to the iPhone &amp; iPad</div>
+          <div class="rk-sub">Download these on your laptop, AirDrop to the road devices. They land in Apple Contacts + Calendar and work offline + in CarPlay.</div>
+        </div>
+      </div>
+      <div class="rk-grid">
+        <a class="rk-card" href="/api/hotel-research/vcard" download>
+          <div class="rk-icon">🏨</div>
+          <div class="rk-name">All hotel contacts</div>
+          <div class="rk-meta">vCard · phone, address, AI fit · sortable in Contacts</div>
+        </a>
+        <a class="rk-card" href="/api/hotel-research/vcard?fit_min=50" download>
+          <div class="rk-icon">⭐</div>
+          <div class="rk-name">Top-fit hotels (≥50)</div>
+          <div class="rk-meta">vCard · slim cohort for the tour week</div>
+        </a>
+        <a class="rk-card" href="/api/hotel-research/atlas-vcard" download>
+          <div class="rk-icon">👥</div>
+          <div class="rk-name">Atlas team contacts</div>
+          <div class="rk-meta">vCard · everyone on the team</div>
+        </a>
+        <a class="rk-card" href="/api/hotel-research/calendar.ics" download>
+          <div class="rk-icon">📅</div>
+          <div class="rk-name">Routes calendar</div>
+          <div class="rk-meta">.ics · auto-syncs Ben's tour into Apple Calendar</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Curated call list — top fits the rep should hit first today -->
+    <div id="topCallsTile" class="top-calls-tile" style="display:none;"></div>
+
+    <!-- Multi-rater alignment — Ben + Celia + Eric agreement dashboard -->
+    <div id="alignmentTile" class="alignment-tile" style="display:none;"></div>
+
+    <!-- Triage Game overlay — iPhone 15 Pro Max bezel + side panels (live map + insights) -->
+    <div class="triage-game" id="triageGame" aria-hidden="true">
+      <button class="iphone-close" type="button" onclick="window._closeTriage()" title="Close (Esc)">✕</button>
+
+      <div class="triage-stage">
+        <!-- LEFT: live map of the active card -->
+        <aside class="triage-side-panel triage-map-panel" id="triageMapPanel">
+          <div class="tsp-eyebrow">📍 LIVE MAP</div>
+          <div class="tsp-title" id="tspMapTitle">No card active</div>
+          <div class="tsp-sub" id="tspMapSub">Tap a card or press Y/M/R/N to start</div>
+          <div class="tsp-map" id="tspMapEl"></div>
+          <div class="tsp-meta-row" id="tspAirport"></div>
+        </aside>
+
+        <div class="iphone-bezel" role="dialog" aria-label="Hotel Triage on iPhone">
+          <span class="ip-btn mute"></span>
+          <span class="ip-btn vol-up"></span>
+          <span class="ip-btn vol-dn"></span>
+          <span class="ip-btn power"></span>
+          <span class="dynamic-island"></span>
+          <div class="iphone-screen">
+            <iframe id="triageIframe" title="Hotel Triage" loading="lazy"></iframe>
+          </div>
+        </div>
+
+        <!-- RIGHT: insights, sisters, score breakdown -->
+        <aside class="triage-side-panel triage-insights-panel" id="triageInsightsPanel">
+          <div class="tsp-eyebrow">🤖 INSIGHTS</div>
+          <div class="tsp-title" id="tspInsightsTitle">No card active</div>
+          <div class="tsp-insights-body" id="tspInsightsBody">
+            <div style="color:rgba(255,255,255,0.55);font-size:0.84rem;text-align:center;margin-top:24px;line-height:1.5">Pick your name &amp; start triaging — context will fill in here. Map on the left, insights on the right, swipe in the middle.</div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="iphone-helper">
+        Drag to swipe · <kbd>Y</kbd>/<kbd>M</kbd>/<kbd>R</kbd>/<kbd>N</kbd> hotkeys · <kbd>U</kbd> Undo · <kbd>Esc</kbd> close
+      </div>
+    </div>
+
+    <!-- Sticky nav — jumps between dashboard sections (no longer hides them) -->
+    <nav class="tabs" aria-label="Jump to section">
+      <a class="tab" href="#panel-map">🗺️ Map</a>
+      <a class="tab" href="#panel-saved">My Saved <span class="badge" id="savedCount">0</span></a>
+      <a class="tab" href="#panel-search">Search</a>
+      <a class="tab" href="#panel-schedule">📅 Schedule</a>
+    </nav>
     <!-- ─── Saved panel ───────────────────────────────────────── -->
     <div class="panel" id="panel-saved" role="region" aria-label="My saved hotels">
       <div class="panel-head">
