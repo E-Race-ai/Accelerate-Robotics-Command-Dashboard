@@ -894,6 +894,20 @@ router.patch('/routes/:id', requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /routes/all — bulk-delete every route. MUST be registered before
+// /routes/:id or Express matches it as id='all' and 400s. Cascade deletes
+// route stops via FK.
+router.delete('/routes/all', requireAuth, async (_req, res) => {
+  try {
+    const count = await db.one(`SELECT COUNT(*) AS n FROM bdr_routes`);
+    await db.run(`DELETE FROM bdr_routes`);
+    res.json({ ok: true, deleted: Number(count?.n || 0) });
+  } catch (err) {
+    console.error('[hotel-research] delete all routes failed:', err);
+    res.status(500).json({ error: 'Failed to delete routes' });
+  }
+});
+
 // DELETE /routes/:id — drop a route + its stops (CASCADE)
 router.delete('/routes/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
@@ -1098,21 +1112,6 @@ router.post('/routes/dedupe', requireAuth, async (_req, res) => {
   } catch (err) {
     console.error('[hotel-research] dedupe routes failed:', err);
     res.status(500).json({ error: 'Failed to dedupe routes' });
-  }
-});
-
-// DELETE /routes/all — bulk-delete every route in the system. The schedule
-// panel can become a mess after repeated wizard clicks; this is the "wipe
-// the slate" button. Cascade deletes route stops automatically (FK ON
-// DELETE CASCADE on bdr_route_stops).
-router.delete('/routes/all', requireAuth, async (req, res) => {
-  try {
-    const count = await db.one(`SELECT COUNT(*) AS n FROM bdr_routes`);
-    await db.run(`DELETE FROM bdr_routes`);
-    res.json({ ok: true, deleted: Number(count?.n || 0) });
-  } catch (err) {
-    console.error('[hotel-research] delete all routes failed:', err);
-    res.status(500).json({ error: 'Failed to delete routes' });
   }
 });
 
