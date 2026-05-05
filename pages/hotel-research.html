@@ -3995,16 +3995,16 @@ function renderHeroStats() {
   const followups = SAVED.filter(h => (h.visit_count || 0) > 0 && (h.status === 'lead' || h.status === 'contacted')).length;
 
   const tiles = [
-    { label: 'Saved hotels',  value: total.toLocaleString(),       sub: 'in your territory',                      cls: '',        target: 'panel-saved' },
-    { label: 'Untouched',     value: untouched.toLocaleString(),   sub: 'no visit logged yet',                    cls: 'alert',   target: 'panel-saved' },
-    { label: 'Visited',       value: visited.toLocaleString(),     sub: 'at least one drop-by',                   cls: '',        target: 'panel-saved' },
-    { label: 'Qualified',     value: qualified.toLocaleString(),   sub: 'ready to graduate',                       cls: 'accent',  target: 'panel-saved' },
-    { label: 'Graduated',     value: graduated.toLocaleString(),   sub: 'in the deal pipeline',                    cls: 'success', target: 'panel-saved' },
-    { label: 'Follow-ups due', value: followups.toLocaleString(),  sub: 'visited, not yet qualified',              cls: 'accent',  target: 'panel-saved' },
-    { label: 'Est. territory rev', value: fmtRev(revSum) || '—',   sub: 'sum of room-rev × occupancy',             cls: '',        target: 'panel-saved' },
+    { label: 'Saved hotels',     value: total.toLocaleString(),       sub: 'in your territory',            cls: '',        filter: 'all' },
+    { label: 'Untouched',        value: untouched.toLocaleString(),   sub: 'no visit logged yet',          cls: 'alert',   filter: 'untouched' },
+    { label: 'Visited',          value: visited.toLocaleString(),     sub: 'at least one drop-by',         cls: '',        filter: 'visited' },
+    { label: 'Qualified',        value: qualified.toLocaleString(),   sub: 'ready to graduate',            cls: 'accent',  filter: 'qualified' },
+    { label: 'Graduated',        value: graduated.toLocaleString(),   sub: 'in the deal pipeline',         cls: 'success', filter: 'graduated' },
+    { label: 'Follow-ups due',   value: followups.toLocaleString(),   sub: 'visited, not yet qualified',   cls: 'accent',  filter: 'followups' },
+    { label: 'Est. territory rev', value: fmtRev(revSum) || '—',     sub: 'sum of room-rev × occupancy',  cls: '',        filter: 'all' },
   ];
   el.innerHTML = tiles.map(t => `
-    <div class="hero-stat ${t.cls}" onclick="document.getElementById('${t.target}').scrollIntoView({block:'start'})">
+    <div class="hero-stat ${t.cls}" onclick="applyHeroFilter('${t.filter}')" style="cursor:pointer">
       <span class="h-label">${escapeHtml(t.label)}</span>
       <span class="h-value">${t.value}</span>
       <span class="h-sub">${escapeHtml(t.sub)}</span>
@@ -6091,7 +6091,12 @@ async function loadSaved({ silent } = {}) {
 function applyFilters(rows) {
   const q = savedQuery.toLowerCase().trim();
   return rows.filter(s => {
-    if (savedFilter !== 'all' && s.status !== savedFilter) return false;
+    // WHY: 'needs_followup' is a virtual status used by hero stat cards —
+    // matches visited hotels with status lead or contacted (not yet qualified).
+    if (savedFilter === 'needs_followup') {
+      if ((s.visit_count || 0) === 0) return false;
+      if (s.status !== 'lead' && s.status !== 'contacted') return false;
+    } else if (savedFilter !== 'all' && s.status !== savedFilter) return false;
     if (savedSubmarketFilter !== 'all' && s.submarket !== savedSubmarketFilter) return false;
     if (ADV.brandClass !== 'all' && (s.brand_class || 'independent') !== ADV.brandClass) return false;
     if (ADV.starsMin > 0 && (Number(s.stars) || 0) < ADV.starsMin) return false;
@@ -6208,7 +6213,8 @@ function renderSaved() {
 
   // Filter summary banner — shows count + sum of effective filters
   const summaryBits = [];
-  if (savedFilter !== 'all') summaryBits.push(savedFilter);
+  if (savedFilter === 'needs_followup') summaryBits.push('follow-ups due');
+  else if (savedFilter !== 'all') summaryBits.push(savedFilter);
   if (savedSubmarketFilter !== 'all') summaryBits.push('📍 ' + savedSubmarketFilter);
   if (ADV.brandClass !== 'all') summaryBits.push(BRAND_CLASS_LABELS[ADV.brandClass] || ADV.brandClass);
   if (ADV.untouched) summaryBits.push('untouched');
@@ -6375,6 +6381,43 @@ window._setView = function(v) {
 
 function setSavedFilter(s) { savedFilter = s; renderSaved(); }
 function setSavedSubmarketFilter(s) { savedSubmarketFilter = s; renderSaved(); }
+
+// WHY: Hero stat cards need to clear all filters, apply one specific filter,
+// scroll to the saved-hotels panel, and re-render — so clicking "Untouched"
+// shows only untouched hotels instead of just scrolling down.
+function applyHeroFilter(filterName) {
+  // First clear everything (mirrors advClearBtn logic)
+  Object.assign(ADV, {
+    brandClass: 'all', starsMin: 0, roomsMin: 0, adrMin: 0, adrMax: 9999,
+    restMin: 0, eventMin: 0, mtgMin: 0, floorsMin: 0, fitMin: 0,
+    hasPhone: false, hasWebsite: false, hasVisits: false, untouched: false, graduated: false,
+  });
+  savedFilter = 'all'; savedSubmarketFilter = 'all'; savedQuery = '';
+  const searchEl = document.getElementById('savedSearch');
+  if (searchEl) searchEl.value = '';
+  // Reset advanced filter UI controls
+  const advEl = id => document.getElementById(id);
+  if (advEl('advBrandClass')) advEl('advBrandClass').value = 'all';
+  ['advStarsMin','advRoomsMin','advAdrMin','advRestMin','advEventMin','advMtgMin','advFloorsMin','advFitMin']
+    .forEach(id => { const el = advEl(id); if (el) el.value = 0; });
+  if (advEl('advAdrMax')) advEl('advAdrMax').value = 9999;
+  ['advHasPhone','advHasWebsite','advHasVisits','advUntouched','advGraduated']
+    .forEach(id => { const el = advEl(id); if (el) el.checked = false; });
+
+  // Now apply the specific filter
+  if (filterName === 'untouched')     { ADV.untouched = true;  const el = advEl('advUntouched'); if (el) el.checked = true; }
+  else if (filterName === 'visited')  { ADV.hasVisits = true;  const el = advEl('advHasVisits'); if (el) el.checked = true; }
+  else if (filterName === 'qualified'){ savedFilter = 'qualified'; }
+  else if (filterName === 'graduated'){ ADV.graduated = true;  const el = advEl('advGraduated'); if (el) el.checked = true; }
+  else if (filterName === 'followups'){
+    // Follow-ups due = visited + status is lead or contacted (virtual filter)
+    savedFilter = 'needs_followup';
+  }
+  // 'all' and 'revenue' just show everything — no filter needed
+
+  renderSaved();
+  document.getElementById('panel-saved').scrollIntoView({ block: 'start' });
+}
 
 document.getElementById('savedSearch').addEventListener('input', e => {
   savedQuery = e.target.value;
