@@ -205,11 +205,41 @@ const ACTIVITY_TTL_MS = 5 * 60 * 1000; // 5 min — fresh enough to reflect a ju
 // short list and unbounded growth on a heavy day would bloat the response.
 const MAX_MESSAGES_PER_BUCKET = 8;
 
+// One-time per-process flag — we deepen the shallow clone on first request
+// then never again (deepening is idempotent, but skipping the network call
+// on subsequent requests keeps the endpoint snappy).
+let SHALLOW_DEEPENED = false;
+function deepenShallowClone(dir) {
+  if (SHALLOW_DEEPENED) return;
+  try {
+    // Render's deploys do shallow git clones (1 commit of history) which
+    // makes `git log --since=...` return only the most-recent commit even
+    // when there's a year of activity. `git fetch --unshallow` pulls the
+    // full history; if the repo is already deep it's a no-op error we swallow.
+    execFileSync('git', ['fetch', '--unshallow', '--quiet', 'origin'],
+      { cwd: dir, encoding: 'utf-8', timeout: 30000 });
+    console.log('[toolkit/git-activity] deepened shallow clone in', dir);
+  } catch (err) {
+    // 'fatal: --unshallow on a complete repository does not make sense'
+    // is the expected error on a non-shallow clone. Anything else might
+    // be a network blip — fall back to a depth-1000 fetch as belt-and-
+    // suspenders.
+    try {
+      execFileSync('git', ['fetch', '--depth=1000', '--quiet', 'origin'],
+        { cwd: dir, encoding: 'utf-8', timeout: 30000 });
+    } catch { /* offline or non-git env — proceed with whatever's local */ }
+  }
+  SHALLOW_DEEPENED = true;
+}
+
 router.get('/git-activity', (req, res) => {
   // Clamp `days` to a sane band: 7 minimum (anything smaller can't show even
   // a 7-day window), 180 maximum (keeps git log output bounded).
   const days = Math.min(Math.max(parseInt(req.query.days, 10) || 90, 7), 180);
-  if (activityCache.payload && activityCache.days === days && Date.now() - activityCache.at < ACTIVITY_TTL_MS) {
+  // Optional: ?nocache=1 forces a fresh read — useful when the team wants
+  // to see commits that just landed without waiting out the 5-min TTL.
+  const noCache = req.query.nocache === '1';
+  if (!noCache && activityCache.payload && activityCache.days === days && Date.now() - activityCache.at < ACTIVITY_TTL_MS) {
     return res.json(activityCache.payload);
   }
 
@@ -221,6 +251,7 @@ router.get('/git-activity', (req, res) => {
 
   for (const { name, dir } of ACTIVITY_REPOS) {
     if (!isGitRepo(dir)) continue;
+    deepenShallowClone(dir); // first call only — fixes Render's shallow clone
     try {
       const out = execFileSync(
         'git',
