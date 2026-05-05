@@ -943,6 +943,66 @@ const ready = isTestEnv ? Promise.resolve() : (async () => {
   } catch (e) {
     if (!e.message.includes('Cannot find module')) throw e;
   }
+
+  // ─── AI Fit Score v1 + rooms estimator — auto-populate on every boot ──
+  // Eric: every card was a gray circle on prod because rows had NULL
+  // ai_fit_score. Both passes are deterministic + fast (no API calls), so
+  // we run them on boot for any rows that need data. Order matters:
+  // estimate rooms FIRST so the scorer sees the new room counts and can
+  // upgrade those hotels' tiers from low → mid/high.
+  try {
+    // Pass A — rooms estimator (fills NULL rooms via brand medians)
+    const { estimateRoomsForHotel } = require('../services/rooms-estimator');
+    const noRooms = await all(
+      `SELECT id, name, brand, operator FROM hotels_saved WHERE rooms IS NULL`,
+      [],
+    );
+    if (noRooms.length > 0) {
+      let est = 0;
+      for (const h of noRooms) {
+        const guess = estimateRoomsForHotel(h);
+        if (!guess) continue;
+        await run(
+          `UPDATE hotels_saved SET rooms = ?, rooms_source = 'estimated' WHERE id = ?`,
+          [guess.rooms, h.id],
+        );
+        est++;
+      }
+      if (est > 0) console.log(`[db] Rooms estimator — filled ${est}/${noRooms.length} hotels`);
+    }
+
+    // Pass B — fit score (every row gets a number)
+    const { fitScoreFor } = require('../services/fit-score');
+    const unscored = await all(
+      `SELECT id, name, brand, operator, stars, rooms, total_floors, est_adr_dollars,
+              year_opened, restaurant_count, event_sqft, meeting_room_count,
+              ballroom_capacity, spa_count, pool_count, status
+       FROM hotels_saved
+       WHERE ai_fit_score IS NULL
+       LIMIT 5000`,
+      [],
+    );
+    if (unscored.length > 0) {
+      console.log(`[db] AI Fit Score v1 — scoring ${unscored.length} unscored hotels…`);
+      const stamp = new Date().toISOString();
+      let scored = 0;
+      for (const h of unscored) {
+        const { score, reasoning, tier } = fitScoreFor(h);
+        await run(
+          `UPDATE hotels_saved
+           SET ai_fit_score = ?, ai_fit_reasoning = ?, ai_fit_tier = ?, ai_fit_scored_at = ?
+           WHERE id = ?`,
+          [score, JSON.stringify(reasoning), tier, stamp, h.id],
+        );
+        scored++;
+      }
+      console.log(`[db] AI Fit Score v1 — scored ${scored} hotels`);
+    }
+  } catch (err) {
+    // Non-fatal — server boots even if scoring trips. Eric can re-run via
+    // POST /api/hotel-research/score-all anytime.
+    console.warn('[db] AI Fit Score v1 boot pass failed:', err.message);
+  }
 })().catch((err) => {
   console.error('[db] Initialization failed:', err);
   throw err;
