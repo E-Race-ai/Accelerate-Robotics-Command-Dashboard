@@ -273,6 +273,66 @@
   .rk-card .rk-name { font-weight: 700; font-size: 0.92rem; margin-top: 4px; }
   .rk-card .rk-meta { font-size: 0.72rem; color: rgba(255,255,255,0.7); margin-top: 3px; }
 
+  /* ─── Multi-rater alignment tile — Ben + Celia + Eric agreement ───── */
+  .alignment-tile {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    color: white;
+    border-radius: 14px; padding: 16px 20px; margin-bottom: 12px;
+    box-shadow: 0 8px 28px rgba(49, 46, 129, 0.25);
+  }
+  .at-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .at-eyebrow {
+    font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em;
+    color: #a5b4fc;
+  }
+  .at-title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800;
+    font-size: 1.1rem; margin-top: 3px;
+  }
+  .at-sub { color: rgba(255,255,255,0.72); font-size: 0.84rem; margin-top: 4px; }
+  .at-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px; margin-top: 14px;
+  }
+  .at-stat {
+    background: rgba(255,255,255,0.07);
+    border-radius: 10px; padding: 10px 14px;
+  }
+  .at-stat .v {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.4rem;
+  }
+  .at-stat .l { font-size: 0.72rem; color: rgba(255,255,255,0.65); margin-top: 2px; }
+  .at-stat.agree .v { color: #4ade80; }
+  .at-stat.disagree .v { color: #fbbf24; }
+  .at-players {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;
+  }
+  .at-player {
+    background: rgba(255,255,255,0.10);
+    padding: 6px 12px; border-radius: 100px;
+    font-size: 0.8rem; font-weight: 600;
+  }
+  .at-player .v { font-family: 'Space Grotesk', sans-serif; font-weight: 800; margin-left: 6px; color: #a5b4fc; }
+  .at-disagreement-list { margin-top: 14px; }
+  .at-disagreement-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px; padding: 8px 12px; margin-bottom: 6px;
+    cursor: pointer; transition: background 0.10s;
+  }
+  .at-disagreement-row:hover { background: rgba(255,255,255,0.12); }
+  .at-disagreement-name { font-weight: 600; font-size: 0.88rem; }
+  .at-disagreement-meta { font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .at-vote-stack { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .at-vote-pill {
+    font-size: 0.66rem; padding: 2px 8px; border-radius: 100px; font-weight: 700;
+    color: white;
+  }
+  .at-vote-pill.yes   { background: #16a34a; }
+  .at-vote-pill.maybe { background: #d97706; }
+  .at-vote-pill.rsch  { background: #2563eb; }
+  .at-vote-pill.no    { background: #dc2626; }
+
   /* ─── Top calls tile — curated daily call list ──────────────── */
   .top-calls-tile {
     background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%);
@@ -1828,6 +1888,23 @@
 <body>
   <div class="wrap">
     <div class="hdr-eyebrow">Sales prospecting</div>
+    <!-- 🎮 Triage Game launcher — hoisted above everything so it's the first
+         thing the rep sees. Empty deal queue → hidden gracefully. -->
+    <div id="triageLauncher" class="triage-launcher" style="display:none;margin-top:8px">
+      <div class="tl-cards" aria-hidden="true"><div class="tl-top-card">🏨</div></div>
+      <div>
+        <div class="tl-eyebrow">💖 SWIPE FOR DEALS</div>
+        <div class="tl-title" id="tlTitle">— deals waiting to land in your DM</div>
+        <div class="tl-sub">It's Tinder, but for 7-figure hotel deals. Swipe right on the ones you want to call.</div>
+        <div class="tl-meta" id="tlMeta">
+          <span class="tl-meta-pill">⚡ Y/M/R/N hotkeys</span>
+          <span class="tl-meta-pill">📱 plays on your phone</span>
+          <span class="tl-meta-pill">🏆 leaderboard with Ben + Celia</span>
+        </div>
+      </div>
+      <button class="tl-btn" type="button" onclick="window._openTriage()">Start swiping</button>
+    </div>
+
     <h1>Hotel Research</h1>
     <p class="lede">
       Pinpoint research for any city or zip code. Pulls live hotel listings from OpenStreetMap (no key required), gives you a rough nightly-rate estimate from the brand or star rating, then save the candidates worth following up on. Real-time pricing isn't included — call the property or click through to their site to confirm.
@@ -1873,21 +1950,8 @@
     <!-- Curated call list — top fits the rep should hit first today -->
     <div id="topCallsTile" class="top-calls-tile" style="display:none;"></div>
 
-    <!-- 🎮 Triage Game launcher — visible only when there are unsorted hotels -->
-    <div id="triageLauncher" class="triage-launcher" style="display:none;">
-      <div class="tl-cards" aria-hidden="true"><div class="tl-top-card">🏨</div></div>
-      <div>
-        <div class="tl-eyebrow">💖 SWIPE FOR DEALS</div>
-        <div class="tl-title" id="tlTitle">— deals waiting to land in your DM</div>
-        <div class="tl-sub">It's Tinder, but for 7-figure hotel deals. Swipe right on the ones you want to call.</div>
-        <div class="tl-meta" id="tlMeta">
-          <span class="tl-meta-pill">⚡ Y/M/R/N hotkeys</span>
-          <span class="tl-meta-pill">📱 plays on your phone</span>
-          <span class="tl-meta-pill">🏆 leaderboard with Ben + Celia</span>
-        </div>
-      </div>
-      <button class="tl-btn" type="button" onclick="window._openTriage()">Start swiping</button>
-    </div>
+    <!-- Multi-rater alignment — Ben + Celia + Eric agreement dashboard -->
+    <div id="alignmentTile" class="alignment-tile" style="display:none;"></div>
 
     <!-- Triage Game overlay — iPhone 15 Pro Max bezel + side panels (live map + insights) -->
     <div class="triage-game" id="triageGame" aria-hidden="true">
@@ -3412,6 +3476,73 @@ async function saveCallDisposition(hotelId, disposition, userNotes, modal) {
     }
   }
   await loadSaved({ silent: true });
+}
+
+// ── Multi-rater alignment tile — Ben + Celia + Eric vote stats ─────
+async function renderAlignmentTile() {
+  const el = document.getElementById('alignmentTile');
+  if (!el) return;
+  let data;
+  try {
+    const r = await fetch('/api/hotel-research/triage/alignment', { credentials: 'same-origin' });
+    if (!r.ok) { el.style.display = 'none'; return; }
+    data = await r.json();
+  } catch { el.style.display = 'none'; return; }
+
+  const players = data.players || [];
+  // Hide the tile entirely until at least 2 humans have voted — otherwise
+  // it's just noise on a single-player page.
+  if (players.length < 2 && data.summary.total_multi_voted === 0) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = '';
+  const totalVotes = players.reduce((s, p) => s + Number(p.total || 0), 0);
+  const totalHotels = data.total_hotels || 0;
+  const pctCovered = totalHotels ? Math.round((data.summary.total_multi_voted / totalHotels) * 100) : 0;
+
+  el.innerHTML = `
+    <div class="at-head">
+      <div>
+        <div class="at-eyebrow">🎯 TEAM ALIGNMENT</div>
+        <div class="at-title">Where ${players.length || 'we'} agree — and where we don't</div>
+        <div class="at-sub">Every player's swipe stays in the master file. ${data.summary.total_multi_voted} hotel${data.summary.total_multi_voted === 1 ? '' : 's'} have multiple votes (${pctCovered}% of saved).</div>
+      </div>
+    </div>
+
+    <div class="at-stats">
+      <div class="at-stat agree"><div class="v">${data.summary.agreed}</div><div class="l">All agree</div></div>
+      <div class="at-stat disagree"><div class="v">${data.summary.disagreed}</div><div class="l">Need a review-together</div></div>
+      <div class="at-stat"><div class="v">${totalVotes}</div><div class="l">Total swipes logged</div></div>
+      <div class="at-stat"><div class="v">${players.length}</div><div class="l">Active players</div></div>
+    </div>
+
+    ${players.length ? `
+      <div class="at-players">
+        ${players.map(p => `
+          <span class="at-player" title="Yes ${p.yes_count} · Maybe ${p.maybe_count} · Research ${p.needs_research_count} · No ${p.no_count}">
+            🧑‍💼 ${escapeHtml(p.player)}<span class="v">${p.total}</span>
+          </span>`).join('')}
+      </div>` : ''}
+
+    ${data.disagreements?.length ? `
+      <div class="at-disagreement-list">
+        <div style="font-size:0.74rem;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:0.06em;margin:14px 0 6px">⚠️ Top contested deals — review these together</div>
+        ${data.disagreements.slice(0, 5).map(d => {
+          const voteCls = { yes:'yes', maybe:'maybe', needs_research:'rsch', no:'no' };
+          return `
+            <div class="at-disagreement-row" onclick="window._jumpToTopCall(${d.hotel_id})">
+              <div>
+                <div class="at-disagreement-name">${escapeHtml(d.name)}</div>
+                <div class="at-disagreement-meta">${escapeHtml(d.submarket || '')}${d.brand ? ' · ' + escapeHtml(d.brand) : ''}${d.ai_fit_score != null ? ' · fit ' + d.ai_fit_score : ''}</div>
+              </div>
+              <div class="at-vote-stack">
+                ${d.votes.map(v => `<span class="at-vote-pill ${voteCls[v.decision] || 'maybe'}">${escapeHtml(v.player)}: ${v.decision === 'needs_research' ? 'rsch' : v.decision}</span>`).join('')}
+              </div>
+            </div>`;
+        }).join('')}
+      </div>` : ''}
+  `;
 }
 
 window._jumpToTopCall = function(id) {
@@ -5318,6 +5449,7 @@ async function loadSaved({ silent } = {}) {
     if (typeof renderMarketPanel === 'function') renderMarketPanel();
     if (typeof renderHeroStats   === 'function') renderHeroStats();
     if (typeof renderTopCallsTile === 'function') renderTopCallsTile();
+    if (typeof renderAlignmentTile === 'function') renderAlignmentTile();
     if (typeof loadTriageQueue   === 'function') loadTriageQueue();
     // Always refresh map when data changes — page is one stack now, the map is in view.
     if (typeof renderMap === 'function' && _lazyLoaded.has('panel-map')) renderMap();
