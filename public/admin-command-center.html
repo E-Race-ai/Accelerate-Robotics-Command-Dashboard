@@ -2088,6 +2088,154 @@
     .pcal-loading { padding: 30px; text-align: center; color: #94a3b8; font-size: 0.85rem; grid-column: 1 / -1; }
     .pcal-error   { padding: 18px; text-align: center; color: #b91c1c; font-size: 0.82rem; grid-column: 1 / -1;
                     background: #fee2e2; border: 1px solid rgba(220,38,38,0.25); border-radius: 8px; }
+
+    /* ═══ GSD ("Getting Shit Done") Leaderboard ═══
+       Celebrates marathon nights. Sits above the activity calendar so the
+       team sees who shipped what, this week, with hype. */
+    .gsd-section {
+      background: linear-gradient(135deg, #18181b 0%, #1f2937 50%, #0f172a 100%);
+      border-radius: 16px; padding: 18px 20px;
+      box-shadow: 0 10px 30px rgba(15,23,42,0.18);
+      color: #f8fafc;
+      position: relative; overflow: hidden;
+    }
+    .gsd-section::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(900px 200px at 90% -20%, rgba(249,115,22,0.25), transparent),
+                  radial-gradient(600px 180px at -10% 110%, rgba(34,197,94,0.18), transparent);
+      pointer-events: none;
+    }
+    .gsd-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; position: relative; }
+    .gsd-title {
+      font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 800;
+      background: linear-gradient(90deg, #fb923c, #f97316, #facc15);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      letter-spacing: 0.02em;
+    }
+    .gsd-sub { font-size: 0.74rem; color: #cbd5e1; flex: 1; }
+    .gsd-period {
+      display: inline-flex; gap: 0; background: rgba(15,23,42,0.5); border: 1px solid rgba(148,163,184,0.25);
+      border-radius: 999px; padding: 3px;
+    }
+    .gsd-period button {
+      background: transparent; border: 0; color: #cbd5e1;
+      padding: 5px 12px; font-size: 0.72rem; font-weight: 700; cursor: pointer;
+      border-radius: 999px; font-family: 'Inter', sans-serif;
+      transition: background 0.15s, color 0.15s;
+    }
+    .gsd-period button.active {
+      background: linear-gradient(90deg, #f97316, #fb923c);
+      color: white; box-shadow: 0 4px 12px rgba(249,115,22,0.35);
+    }
+    .gsd-grid {
+      display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 14px;
+      position: relative;
+    }
+    @media (max-width: 880px) { .gsd-grid { grid-template-columns: 1fr; } }
+
+    /* Today's hero card — the big celebration when someone is shipping */
+    .gsd-hero {
+      background: linear-gradient(160deg, rgba(249,115,22,0.18) 0%, rgba(15,23,42,0.5) 70%);
+      border: 1px solid rgba(249,115,22,0.45);
+      border-radius: 14px; padding: 16px;
+      display: flex; flex-direction: column; gap: 8px; min-height: 180px;
+    }
+    .gsd-hero.idle {
+      background: rgba(15,23,42,0.45); border-color: rgba(148,163,184,0.18);
+    }
+    .gsd-hero-eyebrow {
+      font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.12em;
+      font-weight: 800; color: #fdba74;
+    }
+    .gsd-hero.idle .gsd-hero-eyebrow { color: #94a3b8; }
+    .gsd-hero-name {
+      font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 800;
+      color: white; line-height: 1.1;
+    }
+    .gsd-hero-stat {
+      font-size: 2.6rem; font-weight: 900; color: #fbbf24;
+      font-family: 'Space Grotesk', sans-serif; line-height: 1; letter-spacing: -0.02em;
+    }
+    .gsd-hero-stat .gsd-stat-unit { font-size: 0.85rem; color: #cbd5e1; font-weight: 600; margin-left: 6px; }
+    .gsd-hero-flair { font-size: 0.84rem; color: #fde68a; }
+    .gsd-hero.marathon { animation: gsdMarathon 2.4s ease-in-out infinite; }
+    @keyframes gsdMarathon {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.0); }
+      50%      { box-shadow: 0 0 0 10px rgba(249,115,22,0.18); }
+    }
+    .gsd-hero-fire { font-size: 1.6rem; }
+
+    /* Leaderboard list */
+    .gsd-board {
+      background: rgba(15,23,42,0.45); border: 1px solid rgba(148,163,184,0.18);
+      border-radius: 14px; padding: 14px;
+      display: flex; flex-direction: column; gap: 8px; min-height: 180px;
+    }
+    .gsd-board-title {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+      font-weight: 800; color: #94a3b8; margin-bottom: 4px;
+    }
+    .gsd-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(30,41,59,0.5);
+      border: 1px solid rgba(148,163,184,0.10);
+    }
+    .gsd-row.you { border-color: rgba(251,191,36,0.45); background: rgba(251,191,36,0.06); }
+    .gsd-rank {
+      font-family: 'Space Grotesk', sans-serif; font-size: 0.78rem; font-weight: 800;
+      color: #fbbf24; width: 22px; text-align: center;
+    }
+    .gsd-row .gsd-name {
+      flex: 1; font-size: 0.86rem; font-weight: 700; color: #f1f5f9;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .gsd-row .gsd-meta {
+      font-size: 0.66rem; color: #94a3b8; font-weight: 600;
+    }
+    .gsd-row .gsd-bar-wrap {
+      width: 80px; height: 6px; background: rgba(148,163,184,0.18); border-radius: 999px;
+      overflow: hidden;
+    }
+    .gsd-row .gsd-bar {
+      height: 100%; background: linear-gradient(90deg, #f97316, #fbbf24);
+      border-radius: 999px;
+    }
+    .gsd-row .gsd-num {
+      font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; font-weight: 800;
+      color: white; width: 36px; text-align: right;
+    }
+    .gsd-empty {
+      padding: 30px; text-align: center; color: #94a3b8; font-size: 0.85rem;
+    }
+
+    /* Streak callout */
+    .gsd-streak {
+      background: linear-gradient(150deg, rgba(34,197,94,0.18) 0%, rgba(15,23,42,0.5) 70%);
+      border: 1px solid rgba(34,197,94,0.35);
+      border-radius: 14px; padding: 14px;
+      display: flex; flex-direction: column; gap: 6px; min-height: 180px;
+    }
+    .gsd-streak-eyebrow {
+      font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.12em;
+      font-weight: 800; color: #4ade80;
+    }
+    .gsd-streak-stat {
+      font-family: 'Space Grotesk', sans-serif; font-size: 2.2rem; font-weight: 900;
+      color: #4ade80; line-height: 1;
+    }
+    .gsd-streak-line {
+      font-size: 0.78rem; color: #cbd5e1; line-height: 1.45;
+    }
+    .gsd-streak-line .gsd-em { color: #fbbf24; font-weight: 700; }
+    .gsd-marathon-banner {
+      margin-top: 8px;
+      background: linear-gradient(90deg, rgba(249,115,22,0.5), rgba(220,38,38,0.4));
+      border: 1px solid rgba(251,146,60,0.6);
+      border-radius: 999px; padding: 4px 10px;
+      font-size: 0.7rem; font-weight: 800; color: white;
+      display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+    }
   </style>
 </head>
 <body class="bg-[#f7f8fc] min-h-screen">
@@ -2144,6 +2292,7 @@
         <a href="#velocityHero"     data-target="velocityHero">Velocity</a>
         <a href="#workflowPipeline" data-target="workflowPipeline">Pipeline</a>
         <a href="#communityBoard"   data-target="communityBoard">Community</a>
+        <a href="#gsdSection"       data-target="gsdSection">GSD</a>
         <a href="#productivityCalendar" data-target="productivityCalendar">Activity</a>
         <a href="#dealMap"          data-target="dealMap">Map</a>
         <a href="#projectHub"       data-target="projectHub">Team Sync</a>
@@ -2633,6 +2782,44 @@
               <span class="atc-lane-count" id="atcDash-count-done">0</span>
             </div>
             <div class="atc-lane-body" data-status="done" id="atcDash-lane-done"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ GSD ("Getting Shit Done") Leaderboard ═══ -->
+      <!-- Celebrates marathon nights — surfaces the team-member who's
+           shipping hardest right now and the running streak. Data comes
+           from /api/toolkit/git-activity (per-author daily commit counts). -->
+      <div class="mb-6 brand-reveal" data-delay="0.185" id="gsdSection">
+        <div class="gsd-section">
+          <div class="gsd-head">
+            <span class="gsd-fire" style="font-size:1.4rem;">🔥</span>
+            <div>
+              <div class="gsd-title">GSD — Getting Shit Done</div>
+              <div class="gsd-sub" id="gsdSub">Loading team activity…</div>
+            </div>
+            <div class="gsd-period" id="gsdPeriod" role="tablist" aria-label="GSD window">
+              <button data-window="today"  class="active" type="button">Today</button>
+              <button data-window="week"   type="button">This Week</button>
+              <button data-window="month"  type="button">30 Days</button>
+            </div>
+          </div>
+          <div class="gsd-grid">
+            <div class="gsd-hero idle" id="gsdHero">
+              <div class="gsd-hero-eyebrow">Today's GSD Champion</div>
+              <div class="gsd-hero-name" id="gsdHeroName">—</div>
+              <div class="gsd-hero-stat" id="gsdHeroStat">0 <span class="gsd-stat-unit">commits</span></div>
+              <div class="gsd-hero-flair" id="gsdHeroFlair">—</div>
+            </div>
+            <div class="gsd-board" id="gsdBoard">
+              <div class="gsd-board-title" id="gsdBoardTitle">Top contributors today</div>
+              <div id="gsdBoardList"><div class="gsd-empty">Loading…</div></div>
+            </div>
+            <div class="gsd-streak" id="gsdStreak">
+              <div class="gsd-streak-eyebrow">Streak</div>
+              <div class="gsd-streak-stat" id="gsdStreakStat">— days</div>
+              <div class="gsd-streak-line" id="gsdStreakLine">Track consecutive days the team ships.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -6242,11 +6429,239 @@ async function pcalLoad() {
     _pcalDaily = json.daily_activity || {};
     _pcalLoaded = true;
     pcalToday();
+    // GSD widget consumes the same payload (per-author counts inside each day).
+    try { gsdRender(json); } catch (e) { console.warn('gsdRender:', e); }
   } catch (err) {
     console.error('git-activity fetch failed:', err);
     if (grid) grid.innerHTML = `<div class="pcal-error">Failed to load activity: ${escapeHtml(err.message)}</div>`;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// GSD ("Getting Shit Done") leaderboard — celebrates the team-member
+// shipping hardest right now. Pure read on the same git-activity payload
+// the calendar uses; no separate request.
+// ═══════════════════════════════════════════════════════════════════
+let _gsdData = null;        // last payload — cached so tab switches are instant
+let _gsdWindow = 'today';   // 'today' | 'week' | 'month'
+
+// Friendly display names for known commit emails. Anything not in this map
+// falls back to the git author name (or email local-part) at render time.
+// Keep keys lowercased to match server-side normalization.
+// Display names keyed by lowercased commit email. WHY: every teammate
+// commits under a different "Claude <First> <Last>" bot identity (e.g.
+// claude.r.hussain@…). Mapping back to first names keeps the leaderboard
+// human. Add entries when new teammates start committing.
+const GSD_NAMES = {
+  'claude.e.race@atlasmobility.com':     'Eric',
+  'eric@accelerate-robotics.com':        'Eric',
+  'claude.r.hussain@atlasmobility.com':  'Richa',
+  'claude.t.rey@atlasmobility.com':      'Trey',
+  'claude.l.george@atlasmobility.com':   'Claudia',
+  'claude.c.simon@atlasmobility.com':    'Simon',
+  'claude.d.genske@atlasmobility.com':   'Genske',
+  'claude.b.noto@atlasmobility.com':     'Ben',
+  'claude.celia@atlasmobility.com':      'Celia',
+};
+
+// Marathon threshold — 15+ commits in a day means the day's hero gets the
+// pulsing red-orange glow + the "MARATHON MODE" banner. WHY 15: that's
+// roughly the cadence of one feature every 30-45 minutes for an 8-hour
+// session — enough to clearly signal "they're going for it" without
+// firing on a normal day.
+const GSD_MARATHON_THRESHOLD = 15;
+
+function _gsdIso(d) { return d.toISOString().slice(0, 10); }
+function _gsdStartOfWeek(d) {
+  // Sunday-start week, matching the cadence the team uses elsewhere.
+  const x = new Date(d); x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - x.getDay());
+  return x;
+}
+function _gsdLabel(email, fallbackName) {
+  const lc = (email || '').toLowerCase();
+  if (GSD_NAMES[lc]) return GSD_NAMES[lc];
+  const cleanName = (fallbackName || '').trim();
+  if (cleanName) return cleanName;
+  return (email || 'Unknown').split('@')[0];
+}
+
+// Sum a date range from the daily_activity map: returns
+// { totals: Map<email,{name,total,days:Set}>, totalCommits, daysActive }
+function _gsdSumRange(daily, startIso, endIso) {
+  const totals = new Map();
+  let totalCommits = 0;
+  const activeDays = new Set();
+  for (const iso of Object.keys(daily)) {
+    if (iso < startIso || iso > endIso) continue;
+    const entries = daily[iso] || [];
+    for (const ent of entries) {
+      const authors = ent.authors || {};
+      const messages = ent.messages || [];
+      // Build a lookup of email → display name from the messages array
+      // (the per-author tally only stores email keys).
+      const nameLookup = {};
+      messages.forEach(m => {
+        const e = (m.email || '').toLowerCase();
+        if (e && !nameLookup[e]) nameLookup[e] = m.author || '';
+      });
+      for (const [key, count] of Object.entries(authors)) {
+        if (!count) continue;
+        if (!totals.has(key)) {
+          totals.set(key, { email: key, name: nameLookup[key] || '', total: 0, days: new Set() });
+        }
+        const t = totals.get(key);
+        t.total += count;
+        t.days.add(iso);
+        if (!t.name && nameLookup[key]) t.name = nameLookup[key];
+      }
+      totalCommits += ent.commits || 0;
+      if ((ent.commits || 0) > 0) activeDays.add(iso);
+    }
+  }
+  return { totals, totalCommits, daysActive: activeDays.size };
+}
+
+// Compute "team streak" — consecutive days ending today where ANY commit landed.
+function _gsdTeamStreak(daily) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let streak = 0;
+  for (let i = 0; i < 90; i++) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const entries = daily[_gsdIso(d)] || [];
+    const total = entries.reduce((s, e) => s + (e.commits || 0), 0);
+    if (total > 0) streak++;
+    else if (i === 0) {
+      // No commits today yet — keep counting back to find the most recent
+      // streak's length, but flag it as "ended yesterday".
+      continue;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function gsdRender(json) {
+  if (json) _gsdData = json;
+  if (!_gsdData) return;
+  const daily = _gsdData.daily_activity || {};
+
+  // Determine the date range for the active window.
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayIso = _gsdIso(today);
+  let startIso, endIso, periodLabel;
+  if (_gsdWindow === 'today') {
+    startIso = endIso = todayIso;
+    periodLabel = 'today';
+  } else if (_gsdWindow === 'week') {
+    startIso = _gsdIso(_gsdStartOfWeek(today));
+    endIso = todayIso;
+    periodLabel = 'this week';
+  } else {
+    const back = new Date(today); back.setDate(back.getDate() - 29);
+    startIso = _gsdIso(back); endIso = todayIso;
+    periodLabel = 'in the last 30 days';
+  }
+
+  const { totals, totalCommits, daysActive } = _gsdSumRange(daily, startIso, endIso);
+  const sorted = Array.from(totals.values()).sort((a, b) => b.total - a.total);
+  const champ = sorted[0] || null;
+  const max = champ ? champ.total : 0;
+
+  // Today's hero card — uses the *active* window's #1, but the eyebrow shifts
+  // to match. WHY: a "Today's champ" eyebrow on the 30d view would be wrong.
+  const eyebrowEl = document.querySelector('#gsdHero .gsd-hero-eyebrow');
+  if (eyebrowEl) {
+    eyebrowEl.textContent = _gsdWindow === 'today'
+      ? "Today's GSD Champion"
+      : _gsdWindow === 'week' ? "This Week's GSD Champion"
+      : "30-Day GSD Champion";
+  }
+  const heroEl = document.getElementById('gsdHero');
+  const heroName = document.getElementById('gsdHeroName');
+  const heroStat = document.getElementById('gsdHeroStat');
+  const heroFlair = document.getElementById('gsdHeroFlair');
+
+  if (!champ || champ.total === 0) {
+    heroEl.classList.add('idle');
+    heroEl.classList.remove('marathon');
+    heroName.textContent = '— quiet so far —';
+    heroStat.innerHTML = `0 <span class="gsd-stat-unit">commits ${periodLabel}</span>`;
+    heroFlair.textContent = 'Be the first to ship today.';
+  } else {
+    heroEl.classList.remove('idle');
+    const isMarathon = champ.total >= GSD_MARATHON_THRESHOLD;
+    heroEl.classList.toggle('marathon', isMarathon);
+    heroName.innerHTML = `<span class="gsd-hero-fire">${isMarathon ? '🔥' : '✨'}</span> ${escapeHtml(_gsdLabel(champ.email, champ.name))}`;
+    heroStat.innerHTML = `${champ.total} <span class="gsd-stat-unit">commit${champ.total === 1 ? '' : 's'} ${periodLabel}</span>`;
+    if (isMarathon) {
+      heroFlair.innerHTML = `<span class="gsd-marathon-banner">⚡ MARATHON MODE</span>`;
+    } else if (champ.total >= 5) {
+      heroFlair.textContent = "Cooking. Keep it going.";
+    } else {
+      heroFlair.textContent = "Off and running.";
+    }
+  }
+
+  // Leaderboard list
+  const listEl = document.getElementById('gsdBoardList');
+  const titleEl = document.getElementById('gsdBoardTitle');
+  if (titleEl) {
+    titleEl.textContent = _gsdWindow === 'today' ? 'Today’s contributors'
+      : _gsdWindow === 'week' ? 'This week’s contributors'
+      : 'Top contributors (30d)';
+  }
+  if (sorted.length === 0) {
+    listEl.innerHTML = `<div class="gsd-empty">No commits ${periodLabel} yet.</div>`;
+  } else {
+    listEl.innerHTML = sorted.slice(0, 6).map((a, i) => {
+      const pct = max ? Math.max(8, Math.round(a.total / max * 100)) : 0;
+      const days = a.days.size;
+      return `
+        <div class="gsd-row">
+          <div class="gsd-rank">#${i + 1}</div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <div class="gsd-name">${escapeHtml(_gsdLabel(a.email, a.name))}</div>
+            <div class="gsd-bar-wrap"><div class="gsd-bar" style="width:${pct}%"></div></div>
+            <div class="gsd-meta">${days} active day${days === 1 ? '' : 's'}</div>
+          </div>
+          <div class="gsd-num">${a.total}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Streak callout — team-wide consecutive shipping days, plus champ's
+  // active-day count for the active window.
+  const teamStreak = _gsdTeamStreak(daily);
+  const streakStat = document.getElementById('gsdStreakStat');
+  const streakLine = document.getElementById('gsdStreakLine');
+  streakStat.textContent = `${teamStreak} day${teamStreak === 1 ? '' : 's'}`;
+  if (teamStreak === 0) {
+    streakLine.textContent = 'No shipping streak yet — first commit today starts it.';
+  } else if (teamStreak >= 5) {
+    streakLine.innerHTML = `Team has shipped <span class="gsd-em">${teamStreak} days</span> straight. Don't break it.`;
+  } else {
+    streakLine.innerHTML = `Active streak: <span class="gsd-em">${teamStreak}</span> consecutive shipping day${teamStreak === 1 ? '' : 's'}.`;
+  }
+
+  // Sub-line: total commits in the window, # of contributors active.
+  const sub = document.getElementById('gsdSub');
+  if (sub) {
+    const contribs = sorted.length;
+    sub.textContent = `${totalCommits} commit${totalCommits === 1 ? '' : 's'} · ${contribs} contributor${contribs === 1 ? '' : 's'} · ${daysActive} active day${daysActive === 1 ? '' : 's'}`;
+  }
+}
+
+// Period switcher
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('#gsdPeriod button[data-window]');
+  if (!btn) return;
+  document.querySelectorAll('#gsdPeriod button').forEach(b => b.classList.toggle('active', b === btn));
+  _gsdWindow = btn.dataset.window;
+  gsdRender();
+});
 
 function pcalToday() {
   _pcalEndDate = _pcalStartOfDay(new Date());
