@@ -3617,6 +3617,83 @@ window._coldCallStart = function(hotelId) {
   setTimeout(() => openCallDispositionModal(hotelId), 600);
 };
 
+// ── One-tap visit log ──────────────────────────────────────────────
+// Designed for the field: Ben taps 📝 on a hotel card while standing
+// in the lobby, picks the visit type, types one short line, hits save.
+// Bypasses the heavy Edit modal so a drop-by takes 5 seconds, not 30.
+window._quickLogVisit = function(hotelId) {
+  const h = SAVED.find(s => s.id === hotelId);
+  if (!h) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:440px" role="dialog">
+      <h2 style="margin-top:0;font-size:1.1rem;">📝 Log visit</h2>
+      <p class="modal-sub" style="margin:0 0 12px;font-size:0.84rem;">
+        <strong>${escapeHtml(h.name)}</strong>${h.submarket ? ` · 📍 ${escapeHtml(h.submarket)}` : ''}<br>
+        <span style="color:var(--text-faint);">${escapeHtml(today)}</span>
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+        <button type="button" class="btn btn-ghost qv-type" data-type="drop_in">🚪 Drop-in</button>
+        <button type="button" class="btn btn-ghost qv-type" data-type="drive_by">🚗 Drive-by</button>
+        <button type="button" class="btn btn-ghost qv-type" data-type="scheduled_meeting">📅 Scheduled meeting</button>
+        <button type="button" class="btn btn-ghost qv-type" data-type="phone_call">📞 Phone call</button>
+      </div>
+      <input id="qv-contact" type="text" placeholder="Who did you talk to? (optional)" maxlength="200"
+        style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:16px;margin-bottom:8px;">
+      <textarea id="qv-notes" placeholder="One-line summary…" rows="2" maxlength="2000"
+        style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:16px;resize:vertical;"></textarea>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-ghost" data-cancel>Cancel</button>
+        <button type="button" class="btn btn-primary" id="qv-save" disabled>Save visit</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  let chosenType = null;
+  modal.querySelectorAll('.qv-type').forEach(btn => {
+    btn.addEventListener('click', () => {
+      chosenType = btn.dataset.type;
+      modal.querySelectorAll('.qv-type').forEach(b => {
+        b.style.outline = b === btn ? '2px solid var(--accent)' : '';
+      });
+      modal.querySelector('#qv-save').disabled = false;
+    });
+  });
+  const close = () => modal.remove();
+  modal.querySelector('button[data-cancel]').addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+  modal.querySelector('#qv-save').addEventListener('click', async () => {
+    if (!chosenType) return;
+    const contact = modal.querySelector('#qv-contact').value.trim();
+    const notes = modal.querySelector('#qv-notes').value.trim();
+    const saveBtn = modal.querySelector('#qv-save');
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+    try {
+      const res = await fetch(`/api/hotel-research/saved/${hotelId}/visits`, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visit_date: today,
+          visit_type: chosenType,
+          contact_name: contact || null,
+          summary: notes || null,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `HTTP ${res.status}`);
+      }
+      close();
+      await loadSaved({ silent: true });
+    } catch (err) {
+      saveBtn.disabled = false; saveBtn.textContent = 'Save visit';
+      alert('Could not save visit: ' + err.message);
+    }
+  });
+};
+
 // ── Call-queue mode ─────────────────────────────────────────────────
 // Auto-advance through a sorted list of callable prospects. Rep clicks
 // "📞 Call queue", we dial the top hotel + open the disposition modal;
@@ -6411,6 +6488,7 @@ function renderSavedCard(h) {
       ${h.notes ? `<div class="card-notes-preview">${escapeHtml(h.notes)}</div>` : ''}
       <div class="card-actions">
         <button class="btn btn-primary" onclick="openModal(${h.id})">Edit · Visits</button>
+        <button class="btn-icon" type="button" onclick="window._quickLogVisit(${h.id})" title="Quick log a visit">📝</button>
         ${graduateBtn}
         ${h.lat && h.lng ? `<a class="btn-icon" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" title="Open in Google Maps">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C7 2 4 6 4 10c0 6 8 12 8 12s8-6 8-12c0-4-3-8-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
