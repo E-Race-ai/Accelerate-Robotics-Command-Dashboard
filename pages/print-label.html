@@ -100,6 +100,45 @@
       font-size: 0.84rem; margin-bottom: 14px;
       display: flex; align-items: center; gap: 10px;
     }
+
+    /* Recent prospects chip strip — one-click re-print path. Sits above
+       the form; populated from localStorage on boot. */
+    .recent-bar {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      background: var(--paper);
+      border: 1px solid var(--paper-2);
+      border-radius: 10px;
+    }
+    .recent-bar-label {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-dim); flex-shrink: 0;
+    }
+    .recent-chips {
+      display: flex; gap: 6px; flex-wrap: wrap; flex: 1;
+    }
+    .recent-chip {
+      background: white;
+      border: 1px solid var(--paper-2);
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-family: var(--font-body); font-size: 0.82rem; font-weight: 500;
+      color: var(--ink);
+      cursor: pointer;
+      transition: all 0.12s;
+      max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .recent-chip:hover {
+      border-color: var(--primary); color: var(--primary);
+    }
+    .recent-chip .chip-action {
+      margin-left: 6px; opacity: 0.5;
+      font-size: 0.66rem; font-family: var(--font-mono);
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .recent-chip:hover .chip-action { opacity: 1; }
     .auto-print-hint button {
       margin-left: auto; background: transparent; border: 0; color: inherit; cursor: pointer;
       font-weight: 700;
@@ -393,8 +432,8 @@
 <body class="size-4x6">
   <div class="pg">
     <div class="pg-header">
-      <h1>Personal Concierge Label</h1>
-      <p class="sub">Quiet-luxury data card for an envelope. Pick a hotel, set your name + cell + photo (saved per-browser), and print directly to the attached printer.</p>
+      <h1>Print Concierge Label</h1>
+      <p class="sub">Standalone leave-behind generator. Pick a prospect, hit print — high-quality 4×6 thermal label out the door.</p>
       <div id="errBox"></div>
       <div id="autoPrintHint" class="auto-print-hint" style="display:none;">
         <span>🖨️ Print dialog will open automatically once the label loads.</span>
@@ -402,17 +441,27 @@
       </div>
     </div>
 
+    <!-- ── Recent prospects: one-tap quick re-print ──────────────────
+         Last 6 prospects this rep printed for, surfaced as chips at
+         the top of the page. Click a chip = preselect the prospect +
+         fire the print dialog immediately (no second click needed).
+         Persists in localStorage under 'printLabel:recents'. -->
+    <div id="recentBar" class="recent-bar" style="display:none;">
+      <span class="recent-bar-label">Recent</span>
+      <div class="recent-chips" id="recentChips"></div>
+    </div>
+
     <div class="controls">
       <div class="row">
         <div class="ctrl-field">
-          <label for="ctrlHotel">Hotel</label>
-          <select id="ctrlHotel"><option value="">— loading saved hotels —</option></select>
+          <label for="ctrlHotel">Prospect</label>
+          <select id="ctrlHotel"><option value="">— loading prospects —</option></select>
         </div>
         <div class="ctrl-field" style="flex: 0 1 220px;">
           <label for="ctrlSize">Paper / label size</label>
           <select id="ctrlSize">
-            <option value="letter" selected>US Letter (8.5 × 11) — office printer</option>
-            <option value="4x6">4 × 6 in (shipping label)</option>
+            <option value="4x6" selected>4 × 6 in (thermal label — recommended)</option>
+            <option value="letter">US Letter (8.5 × 11) — office printer</option>
             <option value="4x3">4 × 3 in (compact label)</option>
             <option value="2x4">2 × 4 in (address label)</option>
           </select>
@@ -726,7 +775,54 @@ function applySize(size) {
 }
 $('ctrlSize').addEventListener('change', (e) => applySize(e.target.value));
 
-$('btnPrint').addEventListener('click', () => window.print());
+$('btnPrint').addEventListener('click', () => {
+  rememberRecent(CURRENT_PROSPECT);
+  window.print();
+});
+
+// ─── Recent-prospects quick chips ──────────────────────────────────
+// Tracks the last 6 prospects this browser printed. Stored separately
+// from the profile (which is identity-level) so the chips persist
+// across photo/phone changes.
+const RECENTS_KEY = 'printLabel:recents:v1';
+function loadRecents() {
+  try { return JSON.parse(localStorage.getItem(RECENTS_KEY) || '[]'); } catch { return []; }
+}
+function saveRecents(arr) {
+  try { localStorage.setItem(RECENTS_KEY, JSON.stringify(arr.slice(0, 6))); } catch {}
+}
+function rememberRecent(p) {
+  if (!p || !p.id) return;
+  const list = loadRecents().filter(r => r.id !== p.id);
+  list.unshift({ id: p.id, name: p.name, market_name: p.market_name || '' });
+  saveRecents(list);
+  renderRecents();
+}
+function renderRecents() {
+  const bar = $('recentBar');
+  const chips = $('recentChips');
+  if (!bar || !chips) return;
+  const list = loadRecents();
+  if (list.length === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  chips.innerHTML = list.map(r => `
+    <button type="button" class="recent-chip" data-prospect-id="${r.id}" title="Re-print label for ${escapeHtml(r.name)}">
+      ${escapeHtml(r.name)}${r.market_name ? ` <span style="color:var(--ink-faint);">· ${escapeHtml(r.market_name)}</span>` : ''}
+      <span class="chip-action">Print</span>
+    </button>
+  `).join('');
+  chips.querySelectorAll('.recent-chip').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.prospectId;
+      $('ctrlHotel').value = id;
+      pickProspect(id);
+      // Brief render delay so layout settles, then fire print immediately.
+      await new Promise(r => setTimeout(r, 250));
+      rememberRecent(CURRENT_PROSPECT);
+      window.print();
+    });
+  });
+}
 
 // ─── Auto-print on load ────────────────────────────────────────────
 // User asked for the page to "open directly to the printer". We fire
@@ -776,6 +872,11 @@ function maybeAutoPrint() {
   applySize($('ctrlSize').value);
   await loadProspects();
   renderLabel();
+  renderRecents();
+  // If autoprint is firing (URL has prospect/hotel/facility param), the
+  // prospect about to be printed should be added to recents — track it
+  // before print() so the chip persists for next time.
+  if (CURRENT_PROSPECT) rememberRecent(CURRENT_PROSPECT);
   maybeAutoPrint();
 })();
 </script>
