@@ -3167,6 +3167,10 @@ window.addEventListener('message', (event) => {
 
 function renderTriageCard() {
   const stack = document.getElementById('tgCardStack');
+  // WHY: Triage UI now lives in the /triage iframe — these DOM elements
+  // no longer exist on the parent page. Bail out silently so keyboard
+  // shortcuts (Y/M/R/N) don't crash when the iframe handles its own cards.
+  if (!stack) return;
   // Strip any previous .tg-card without removing the empty placeholder
   stack.querySelectorAll('.tg-card').forEach(el => el.remove());
   // Update progress
