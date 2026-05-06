@@ -781,7 +781,18 @@ function renderLabel() {
   $('lblRole').textContent = profile.role || 'Founder';
   const phone = (profile.phone || '').trim();
   $('lblPhone').textContent = regalPhone(phone) || '— · — · —';
-  if (profile.photo) $('lblPhoto').src = profile.photo;
+  // Photo source resolution order:
+  //   1. ?photoToken=<id> URL param — used by the server-side render
+  //      pipeline. Fetches the actual bytes from /api/print-label/photo/:t.
+  //   2. profile.photo (data URL from localStorage) — what the rep sees
+  //      live in their browser after uploading.
+  const params = new URLSearchParams(location.search);
+  const photoToken = params.get('photoToken');
+  if (photoToken) {
+    $('lblPhoto').src = `/api/print-label/photo/${encodeURIComponent(photoToken)}`;
+  } else if (profile.photo) {
+    $('lblPhoto').src = profile.photo;
+  }
 
   const p = CURRENT_PROSPECT;
   $('lblRefNo').textContent = buildReference(p);
@@ -902,6 +913,10 @@ async function sendToPrinter(prospectId) {
         role: profile.role,
         phone: profile.phone,
         note: profile.note,
+        // Photo data URL piggybacks on the POST body — too big for a
+        // URL param. Server stashes it under a short-lived token and
+        // forwards just the token to the headless render.
+        photo: profile.photo,
       },
     }),
   });

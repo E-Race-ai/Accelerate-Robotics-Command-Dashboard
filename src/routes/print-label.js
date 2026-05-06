@@ -27,6 +27,39 @@ const os = require('os');
 
 const router = express.Router();
 
+// In-memory photo cache for server-side renders. The page POSTs a base64
+// data URL; we stash it under a UUID and pass ?photoToken=<uuid> to the
+// headless browser. The browser fetches /api/print-label/photo/:token to
+// get the actual image. Entries auto-expire after 2 minutes — long enough
+// for the render → print pipeline, short enough that a user closing the
+// tab doesn't leave images sitting in memory forever.
+const PHOTO_CACHE = new Map(); // token → { dataUrl, expiresAt }
+const PHOTO_TTL_MS = 2 * 60 * 1000;
+function stashPhoto(dataUrl) {
+  if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return null;
+  // Sanity cap — refuse anything bigger than 4 MB to keep RAM bounded.
+  if (dataUrl.length > 4 * 1024 * 1024) return null;
+  const token = require('crypto').randomBytes(8).toString('hex');
+  PHOTO_CACHE.set(token, { dataUrl, expiresAt: Date.now() + PHOTO_TTL_MS });
+  // Lazy garbage collection — wipe expired entries on every set.
+  for (const [t, v] of PHOTO_CACHE) {
+    if (v.expiresAt < Date.now()) PHOTO_CACHE.delete(t);
+  }
+  return token;
+}
+router.get('/photo/:token', (req, res) => {
+  const entry = PHOTO_CACHE.get(req.params.token);
+  if (!entry || entry.expiresAt < Date.now()) {
+    PHOTO_CACHE.delete(req.params.token);
+    return res.status(404).send('photo not found');
+  }
+  // Decode the data URL into raw bytes + content type.
+  const m = /^data:(image\/[\w+.-]+);base64,(.+)$/.exec(entry.dataUrl);
+  if (!m) return res.status(400).send('bad photo data');
+  res.set('Content-Type', m[1]);
+  res.send(Buffer.from(m[2], 'base64'));
+});
+
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const DEFAULT_PRINTER = 'JADENS_Label';
 const RENDER_TIMEOUT_MS = 12_000;
@@ -37,7 +70,7 @@ function q(v) { return encodeURIComponent(String(v == null ? '' : v)); }
 
 // Build the URL the headless browser hits. Profile values land as query
 // params; the page's boot block reads them and applies before render.
-function buildRenderUrl({ origin, prospect_id, size, profile }) {
+function buildRenderUrl({ origin, prospect_id, size, profile, photoToken }) {
   const p = profile || {};
   const params = new URLSearchParams();
   if (prospect_id) params.set('prospect', String(prospect_id));
@@ -46,6 +79,7 @@ function buildRenderUrl({ origin, prospect_id, size, profile }) {
   if (p.role)  params.set('role', p.role);
   if (p.phone) params.set('phone', p.phone);
   if (p.note)  params.set('note', p.note);
+  if (photoToken) params.set('photoToken', photoToken);
   // Disable the page's own auto-print — we're printing server-side.
   params.set('autoprint', '0');
   return `${origin}/pages/print-label.html?${params.toString()}`;
@@ -127,7 +161,12 @@ router.post('/send', async (req, res) => {
   // print-label.html page with the rep's profile baked into the URL.
   const port = req.app.get('port') || process.env.PORT || 3000;
   const origin = `http://127.0.0.1:${port}`;
-  const url = buildRenderUrl({ origin, prospect_id, size, profile: body.profile });
+
+  // Photo: stashed in an in-memory cache keyed by a short-lived token.
+  // We pass the token (not the data URL — it's too big for a URL) and
+  // the page fetches the image via /api/print-label/photo/:token.
+  const photoToken = body.profile?.photo ? stashPhoto(body.profile.photo) : null;
+  const url = buildRenderUrl({ origin, prospect_id, size, profile: body.profile, photoToken });
 
   const tmpFile = path.join(os.tmpdir(), `accelerate-label-${Date.now()}-${prospect_id}.pdf`);
 

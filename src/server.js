@@ -250,7 +250,9 @@ app.use('/api/system-settings', systemSettingsRoutes);
 // WHY a server route instead of window.print(): the OS print dialog adds
 // a click the rep doesn't need every time. Same machine = the server
 // can lp the PDF straight at the JADENS without the dialog.
-app.use('/api/print-label', require('./routes/print-label'));
+// Body limit bumped to 5mb so the rep's photo data URL (typically
+// 100–500kb base64) fits in the POST body.
+app.use('/api/print-label', express.json({ limit: '5mb' }), require('./routes/print-label'));
 
 // WHY: Proxy /cl/* to the tunnel URL stored in system_settings.creative_labs_url.
 // This serves home-dashboard (running on Eric's MacBook on localhost:3100) to
