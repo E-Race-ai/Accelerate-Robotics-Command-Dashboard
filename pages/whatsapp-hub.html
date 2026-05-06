@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatsApp Hub — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<style>
+  :root {
+    --bg: #f7f8fc;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --text: #111827;
+    --text-dim: #4b5563;
+    --text-faint: #9ca3af;
+    --wa-green: #25d366;       /* WhatsApp brand green */
+    --wa-deep:  #128c7e;       /* WhatsApp dark teal */
+    --wa-soft:  #e7f9ef;
+    --code-bg: #f3f4f6;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 32px 28px 200px; }
+
+  /* Header */
+  .hdr-eyebrow {
+    text-transform: uppercase; letter-spacing: 0.12em;
+    font-size: 0.7rem; font-weight: 700; color: var(--wa-deep);
+  }
+  h1 {
+    font-size: 2.1rem; font-weight: 700; margin: 6px 0 8px;
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    font-size: 1.02rem; color: var(--text-dim);
+    max-width: 720px; margin: 0 0 20px;
+  }
+  .hdr-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .stat-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stat-pill {
+    padding: 6px 12px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 100px; font-size: 0.78rem; color: var(--text-dim);
+  }
+  .stat-pill strong { color: var(--text); margin-right: 4px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 10px; font-weight: 600;
+    font-size: 0.86rem; cursor: pointer; border: 1px solid transparent;
+    text-decoration: none; transition: all 0.12s; font-family: inherit;
+  }
+  .btn-primary {
+    background: var(--wa-green); color: white;
+    box-shadow: 0 1px 3px rgba(37,211,102,0.30);
+  }
+  .btn-primary:hover { background: var(--wa-deep); }
+  .btn-ghost {
+    background: var(--card); color: var(--text-dim); border-color: var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border-strong); }
+  .btn-danger {
+    background: white; color: var(--danger); border-color: rgba(220,38,38,0.30);
+  }
+  .btn-danger:hover { background: #fef2f2; }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .search-input {
+    flex: 1 1 280px; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 10px;
+    font: inherit; font-size: 0.92rem; background: var(--card);
+  }
+  .search-input:focus { outline: 2px solid var(--wa-green); outline-offset: -1px; }
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    padding: 7px 12px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 100px; font-size: 0.78rem; font-weight: 600;
+    color: var(--text-dim); cursor: pointer; transition: all 0.12s;
+  }
+  .chip:hover { color: var(--text); }
+  .chip.active {
+    background: var(--wa-deep); color: white; border-color: var(--wa-deep);
+  }
+  .chip .count {
+    margin-left: 5px; font-size: 0.72rem; opacity: 0.8;
+  }
+
+  /* Group grid */
+  .grid {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;
+    transition: box-shadow 0.12s, transform 0.12s, border-color 0.12s;
+    position: relative;
+  }
+  .card:hover { box-shadow: 0 4px 14px rgba(15,23,42,0.06); border-color: var(--border-strong); }
+  .card.is-pinned { border-left: 3px solid var(--wa-green); }
+  .card-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  }
+  .card-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1.05rem; color: var(--text);
+    line-height: 1.25; word-break: break-word;
+  }
+  .card-cat {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 700; padding: 3px 8px; border-radius: 100px;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .card-cat.team      { background: #eff6ff; color: #1e40af; }
+  .card-cat.project   { background: #f5f3ff; color: #6d28d9; }
+  .card-cat.customer  { background: #fef3c7; color: #92400e; }
+  .card-cat.community { background: #fce7f3; color: #9d174d; }
+  .card-cat.other     { background: #f1f5f9; color: #475569; }
+  .card-meta {
+    display: flex; gap: 12px; font-size: 0.78rem; color: var(--text-faint);
+    align-items: center;
+  }
+  .card-meta-icon {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .card-desc {
+    font-size: 0.86rem; color: var(--text-dim); margin: 0;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-notes {
+    background: #fff8e1; border-left: 3px solid #fbbf24;
+    border-radius: 6px; padding: 8px 10px;
+    font-size: 0.78rem; color: #78350f;
+    white-space: pre-wrap; word-break: break-word;
+    /* WHY: Notes can be long ("currently discussing X, Y, Z"); cap visible
+       height so cards stay roughly the same size in the grid. */
+    max-height: 130px; overflow-y: auto;
+  }
+  .card-notes-label {
+    font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 700; color: #78350f; margin-bottom: 3px;
+  }
+  .card-actions {
+    display: flex; gap: 8px; margin-top: auto; padding-top: 6px; flex-wrap: wrap;
+  }
+  .card-actions .btn { padding: 7px 12px; font-size: 0.8rem; }
+  .card-actions .btn-primary { flex: 1 1 auto; justify-content: center; }
+  .card-actions .btn-disabled {
+    background: #f1f5f9; color: var(--text-faint); cursor: not-allowed;
+    box-shadow: none; pointer-events: none;
+  }
+  .card-pin-toggle {
+    background: transparent; border: 0; cursor: pointer; padding: 4px;
+    color: var(--text-faint); font-size: 1.1rem; line-height: 1;
+  }
+  .card-pin-toggle.is-pinned { color: var(--wa-green); }
+  .card-pin-toggle:hover { color: var(--wa-deep); }
+
+  /* Empty + loading */
+  .empty, .loading, .err {
+    background: var(--card); border: 1px dashed var(--border-strong);
+    border-radius: 14px; padding: 40px 24px; text-align: center;
+    color: var(--text-faint);
+  }
+  .err { color: var(--danger); border-color: rgba(220,38,38,0.30); background: #fef2f2; }
+  .empty h3 { color: var(--text); margin: 0 0 4px; font-size: 1.1rem; }
+  .empty p { margin: 0 0 16px; font-size: 0.92rem; }
+
+  /* Modal */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(15,23,42,0.55); align-items: flex-start; justify-content: center;
+    padding: 60px 16px; overflow-y: auto;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 16px; padding: 24px 26px 22px;
+    width: 100%; max-width: 560px; box-shadow: 0 20px 60px rgba(15,23,42,0.25);
+    animation: modalIn 0.18s ease-out;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .modal h2 {
+    font-size: 1.25rem; margin: 0 0 4px;
+  }
+  .modal-sub {
+    color: var(--text-dim); font-size: 0.86rem; margin: 0 0 18px;
+  }
+  .form-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  .form-row label {
+    font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 700; color: var(--text-dim);
+  }
+  .form-row input, .form-row select, .form-row textarea {
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font: inherit; font-size: 0.92rem; background: white; color: var(--text);
+  }
+  .form-row textarea { resize: vertical; min-height: 80px; }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+    outline: 2px solid var(--wa-green); outline-offset: -1px;
+  }
+  .form-hint { font-size: 0.74rem; color: var(--text-faint); margin-top: 2px; }
+  .form-row.checkbox-row {
+    flex-direction: row; align-items: center; gap: 8px;
+  }
+  .form-row.checkbox-row label {
+    text-transform: none; letter-spacing: normal; font-weight: 500;
+    color: var(--text); font-size: 0.9rem;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 120px; gap: 12px; }
+  .form-actions {
+    display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px;
+    border-top: 1px solid var(--border); padding-top: 14px;
+  }
+  .form-actions .left { margin-right: auto; }
+  .form-error {
+    background: #fef2f2; border: 1px solid rgba(220,38,38,0.30);
+    color: var(--danger); padding: 8px 12px; border-radius: 8px;
+    font-size: 0.84rem; margin-bottom: 12px; display: none;
+  }
+  .form-error.show { display: block; }
+
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 1.6rem; }
+    .wrap { padding: 24px 16px 120px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr-eyebrow">Internal directory</div>
+    <h1>WhatsApp Hub</h1>
+    <p class="lede">Every internal WhatsApp group + community in one place. Tap a card to jump straight into the chat. Use the notes field on each card to surface what's currently being discussed so the team can stay aligned without scrolling through history.</p>
+
+    <div class="hdr-row">
+      <div class="stat-pills" id="statPills"></div>
+      <button class="btn btn-primary" onclick="openModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Group
+      </button>
+    </div>
+
+    <div class="toolbar">
+      <input id="search" class="search-input" type="search" placeholder="Search groups by name, description, or notes…" autocomplete="off">
+      <div class="chip-row" id="catChips"></div>
+    </div>
+
+    <div id="content"></div>
+  </div>
+
+  <!-- Add / Edit modal -->
+  <div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal" role="dialog" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">Add WhatsApp Group</h2>
+      <p class="modal-sub">Names, descriptions, and notes are visible to every admin.</p>
+
+      <div class="form-error" id="formError"></div>
+
+      <form id="groupForm" onsubmit="return saveGroup(event)">
+        <input type="hidden" id="f_id">
+        <div class="form-row">
+          <label for="f_name">Name *</label>
+          <input id="f_name" type="text" required maxlength="100" placeholder="e.g. Robotics Engineering">
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="f_category">Category</label>
+            <select id="f_category">
+              <option value="team">Team</option>
+              <option value="project">Project</option>
+              <option value="customer">Customer</option>
+              <option value="community">Community</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="f_member_count">Members</label>
+            <input id="f_member_count" type="number" min="0" step="1" placeholder="0">
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="f_invite_url">Invite URL</label>
+          <input id="f_invite_url" type="url" placeholder="https://chat.whatsapp.com/…">
+          <div class="form-hint">Must start with <code>https://chat.whatsapp.com/</code> or <code>https://wa.me/</code>. Leave blank if you don't have an invite link.</div>
+        </div>
+        <div class="form-row">
+          <label for="f_description">Description</label>
+          <textarea id="f_description" maxlength="500" placeholder="What is this group for? Who's in it?"></textarea>
+        </div>
+        <div class="form-row">
+          <label for="f_notes">Discussion notes</label>
+          <textarea id="f_notes" maxlength="2000" placeholder="Currently discussing: …"></textarea>
+          <div class="form-hint">Surface what's being talked about so teammates have context before opening the chat.</div>
+        </div>
+        <div class="form-row checkbox-row">
+          <input id="f_pinned" type="checkbox">
+          <label for="f_pinned">Pin to the top of the directory</label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-danger left" id="deleteBtn" onclick="deleteGroup()" style="display:none;">Delete</button>
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script src="/js/admin-auth.js"></script>
+<script>
+const CATEGORIES = [
+  { id: 'all',       label: 'All' },
+  { id: 'team',      label: 'Team' },
+  { id: 'project',   label: 'Project' },
+  { id: 'customer',  label: 'Customer' },
+  { id: 'community', label: 'Community' },
+  { id: 'other',     label: 'Other' },
+];
+
+let GROUPS = [];
+let activeCat = 'all';
+let activeQuery = '';
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadGroups() {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Loading groups…</div>';
+  try {
+    const res = await fetch('/api/whatsapp', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    GROUPS = data.groups || [];
+    renderAll();
+  } catch (e) {
+    console.error('whatsapp load failed:', e);
+    content.innerHTML = `<div class="err">Couldn't load groups: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderAll() {
+  renderStats();
+  renderChips();
+  renderGroups();
+}
+
+function renderStats() {
+  const total = GROUPS.length;
+  const totalMembers = GROUPS.reduce((s, g) => s + (g.member_count || 0), 0);
+  const pinned = GROUPS.filter(g => g.pinned).length;
+  document.getElementById('statPills').innerHTML = `
+    <span class="stat-pill"><strong>${total}</strong> group${total === 1 ? '' : 's'}</span>
+    <span class="stat-pill"><strong>${totalMembers}</strong> total members</span>
+    ${pinned ? `<span class="stat-pill"><strong>${pinned}</strong> pinned</span>` : ''}
+  `;
+}
+
+function renderChips() {
+  const counts = { all: GROUPS.length };
+  for (const c of CATEGORIES) if (c.id !== 'all') counts[c.id] = 0;
+  for (const g of GROUPS) counts[g.category] = (counts[g.category] || 0) + 1;
+  document.getElementById('catChips').innerHTML = CATEGORIES.map(c => `
+    <button class="chip ${activeCat === c.id ? 'active' : ''}" onclick="setCat('${c.id}')" type="button">
+      ${c.label}<span class="count">${counts[c.id] || 0}</span>
+    </button>
+  `).join('');
+}
+
+function setCat(cat) { activeCat = cat; renderAll(); }
+
+function renderGroups() {
+  const q = activeQuery.toLowerCase().trim();
+  const filtered = GROUPS.filter(g => {
+    if (activeCat !== 'all' && g.category !== activeCat) return false;
+    if (!q) return true;
+    const hay = `${g.name} ${g.description || ''} ${g.notes || ''}`.toLowerCase();
+    return q.split(/\s+/).every(t => hay.includes(t));
+  });
+  const content = document.getElementById('content');
+  if (filtered.length === 0) {
+    if (GROUPS.length === 0) {
+      content.innerHTML = `
+        <div class="empty">
+          <h3>No WhatsApp groups yet</h3>
+          <p>Click "Add Group" to start the directory. The first thing you add becomes the team's central reference.</p>
+        </div>`;
+    } else {
+      content.innerHTML = `<div class="empty"><h3>No matches</h3><p>Try a different search or category.</p></div>`;
+    }
+    return;
+  }
+  content.innerHTML = `<div class="grid">${filtered.map(renderCard).join('')}</div>`;
+}
+
+function renderCard(g) {
+  const cat = escapeHtml(g.category);
+  const memberLine = g.member_count > 0
+    ? `<span class="card-meta-icon">👥 ${g.member_count}</span>`
+    : '';
+  const updatedLine = g.updated_at
+    ? `<span class="card-meta-icon">🕒 ${escapeHtml(formatRelative(g.updated_at))}</span>`
+    : '';
+  const inviteBtn = g.invite_url
+    ? `<a class="btn btn-primary" href="${escapeHtml(g.invite_url)}" target="_blank" rel="noopener noreferrer">
+         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.6-.8-2.7-1.4-3.7-3.2-.3-.5.3-.4.8-1.4.1-.2 0-.4-.1-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4 0 1.4 1 2.8 1.2 3 .1.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.7.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.5-.4z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.7.4 3.3 1.2 4.7L2 22l5.4-1.2c1.4.7 2.9 1.2 4.6 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18c-1.5 0-3-.4-4.2-1.1l-.3-.2-3 .8.8-3-.2-.3C4.4 15 4 13.5 4 12c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8z"/></svg>
+         Open in WhatsApp
+       </a>`
+    : `<span class="btn btn-disabled">No invite link</span>`;
+  return `
+    <div class="card ${g.pinned ? 'is-pinned' : ''}">
+      <div class="card-head">
+        <div class="card-name">${escapeHtml(g.name)}</div>
+        <span class="card-cat ${cat}">${cat}</span>
+      </div>
+      <div class="card-meta">
+        ${memberLine}
+        ${updatedLine}
+        ${g.pinned ? '<span class="card-meta-icon" title="Pinned">⭐</span>' : ''}
+      </div>
+      ${g.description ? `<p class="card-desc">${escapeHtml(g.description)}</p>` : ''}
+      ${g.notes ? `
+        <div class="card-notes">
+          <div class="card-notes-label">📌 What's being discussed</div>
+          ${escapeHtml(g.notes)}
+        </div>` : ''}
+      <div class="card-actions">
+        ${inviteBtn}
+        <button class="btn btn-ghost" type="button" onclick="openModal(${g.id})">Edit</button>
+      </div>
+    </div>
+  `;
+}
+
+function formatRelative(iso) {
+  const t = new Date(iso + 'Z');           // SQLite datetime() returns UTC without Z
+  if (isNaN(t)) return iso;
+  const diffMs = Date.now() - t.getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}d ago`;
+  const wk = Math.floor(day / 7);
+  if (wk < 5) return `${wk}w ago`;
+  return t.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ── Modal ───────────────────────────────────────────────────────
+let editingId = null;
+
+function openModal(id) {
+  editingId = id || null;
+  document.getElementById('formError').classList.remove('show');
+  document.getElementById('modalTitle').textContent = id ? 'Edit Group' : 'Add WhatsApp Group';
+  document.getElementById('deleteBtn').style.display = id ? 'inline-flex' : 'none';
+  if (id) {
+    const g = GROUPS.find(x => x.id === id);
+    if (!g) return;
+    document.getElementById('f_id').value = g.id;
+    document.getElementById('f_name').value = g.name || '';
+    document.getElementById('f_category').value = g.category || 'team';
+    document.getElementById('f_member_count').value = g.member_count || 0;
+    document.getElementById('f_invite_url').value = g.invite_url || '';
+    document.getElementById('f_description').value = g.description || '';
+    document.getElementById('f_notes').value = g.notes || '';
+    document.getElementById('f_pinned').checked = !!g.pinned;
+  } else {
+    document.getElementById('groupForm').reset();
+    document.getElementById('f_id').value = '';
+  }
+  document.getElementById('modalBackdrop').classList.add('open');
+  setTimeout(() => document.getElementById('f_name').focus(), 60);
+}
+
+function closeModal() {
+  document.getElementById('modalBackdrop').classList.remove('open');
+  editingId = null;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('modalBackdrop').classList.contains('open')) closeModal();
+});
+
+async function saveGroup(e) {
+  e.preventDefault();
+  const id = document.getElementById('f_id').value;
+  const body = {
+    name: document.getElementById('f_name').value,
+    category: document.getElementById('f_category').value,
+    member_count: Number(document.getElementById('f_member_count').value) || 0,
+    invite_url: document.getElementById('f_invite_url').value.trim(),
+    description: document.getElementById('f_description').value,
+    notes: document.getElementById('f_notes').value,
+    pinned: document.getElementById('f_pinned').checked,
+  };
+  const errBox = document.getElementById('formError');
+  errBox.classList.remove('show');
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+  try {
+    const url = id ? `/api/whatsapp/${id}` : '/api/whatsapp';
+    const method = id ? 'PATCH' : 'POST';
+    const res = await fetch(url, {
+      method,
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error || `HTTP ${res.status}`);
+    }
+    closeModal();
+    await loadGroups();
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.add('show');
+  } finally {
+    saveBtn.disabled = false; saveBtn.textContent = 'Save';
+  }
+  return false;
+}
+
+async function deleteGroup() {
+  if (!editingId) return;
+  if (!confirm('Delete this group from the directory? The actual WhatsApp chat is not affected.')) return;
+  const errBox = document.getElementById('formError');
+  errBox.classList.remove('show');
+  try {
+    const res = await fetch(`/api/whatsapp/${editingId}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error || `HTTP ${res.status}`);
+    }
+    closeModal();
+    await loadGroups();
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.add('show');
+  }
+}
+
+// ── Search ──────────────────────────────────────────────────────
+document.getElementById('search').addEventListener('input', e => {
+  activeQuery = e.target.value;
+  renderGroups();
+});
+
+// ── Boot ────────────────────────────────────────────────────────
+loadGroups();
+</script>
+</body>
+</html>

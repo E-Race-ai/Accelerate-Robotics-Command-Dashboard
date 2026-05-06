@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thesis Hotel — Autonomous Guest Services Proposal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --gold: #b8965a;
+        --gold-light: #d4b07a;
+        --gold-soft: #e6d9b8;
+        --navy: #0d2137;
+        --navy-light: #1a2d44;
+        --charcoal: #1a1a2e;
+        --cream: #f8f5ef;
+        --cream-warm: #faf7f0;
+        --cream-deep: #f0ece2;
+        /* Accelerate Robotics brand colors — used sparingly for AR wordmark + signature accents */
+        --accel-blue: #0055ff;
+        --accel-cyan: #00c8ff;
+        --accel-purple: #7c3aed;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; }
+    .gold-gradient { background: linear-gradient(135deg, var(--gold), var(--gold-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    /* WHY: Accelerate Robotics signature gradient — matches the wordmark treatment on acceleraterobotics.ai. Restricted to AR identity only. */
+    .accel-gradient { background: linear-gradient(135deg, var(--accel-blue), var(--accel-cyan), var(--accel-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ── Unified callout system ─────────────────────────────────── */
+    /* WHY: Replaces the prior ad-hoc red/blue/green/amber/slate/indigo/purple callouts. */
+    /* Three tonal variants derived from the Thesis palette. */
+    .callout-soft   { background: var(--cream); border: 1px solid rgba(184, 150, 90, 0.25); border-radius: 0.75rem; }
+    .callout-warm   { background: var(--cream-warm); border: 1px solid rgba(184, 150, 90, 0.35); border-radius: 0.75rem; }
+    .callout-deep   { background: var(--cream-deep); border: 1px solid rgba(13, 33, 55, 0.15); border-radius: 0.75rem; }
+    .callout-navy   { background: var(--navy); color: #fff; border-radius: 0.75rem; }
+    .callout-navy h3, .callout-navy h4 { color: var(--gold); }
+
+    .brand-dot   { color: var(--gold); font-weight: 700; }       /* diamond/dot bullets */
+    .brand-check { color: var(--gold); font-weight: 700; }       /* checkmark ✓ */
+    .brand-x     { color: var(--navy); font-weight: 700; }       /* cross ✕ — navy instead of red */
+
+    /* Robot type chips — unified navy for all (was rainbow) */
+    .robot-chip { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 0.5rem; background: var(--navy); color: var(--gold); font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.75rem; }
+
+    /* Phase/step circles — unified gold */
+    .step-circle { width: 1.75rem; height: 1.75rem; border-radius: 999px; background: var(--gold); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; font-family: 'Space Grotesk', sans-serif; }
+
+    /* "Recommended" pill — gold, not green */
+    .recommended-pill { background: var(--gold); color: #fff; font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.65rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* Solution cards */
+    .solution-card {
+        background: white;
+        border: 1px solid #e8e3d9;
+        border-radius: 1.25rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    .solution-card:hover {
+        box-shadow: 0 12px 40px rgba(184, 150, 90, 0.15);
+        transform: translateY(-2px);
+        border-color: var(--gold);
+    }
+    .robot-img-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem 1rem;
+        min-height: 200px;
+    }
+    .robot-img-wrap img {
+        max-height: 180px;
+        width: auto;
+        object-fit: contain;
+        filter: drop-shadow(0 8px 24px rgba(0,0,0,0.12));
+        transition: transform 0.4s ease;
+    }
+    .solution-card:hover .robot-img-wrap img {
+        transform: scale(1.05);
+    }
+    .stat-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.5rem;
+        background: #f5f0e6;
+        border-radius: 999px;
+        font-size: 0.6rem;
+        font-weight: 600;
+        color: #6b5c3e;
+        white-space: nowrap;
+    }
+
+    /* Tier badges — tonal progression in the brand family */
+    .tier-a { background: var(--cream); color: var(--navy); border: 1px solid rgba(13, 33, 55, 0.15); }
+    .tier-b { background: var(--cream-deep); color: var(--navy); border: 1px solid rgba(184, 150, 90, 0.4); }
+    .tier-c { background: var(--gold); color: #fff; }
+    .tier-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.55rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    /* Tables */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .data-table th { background: var(--navy); color: #fff; font-weight: 700; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.7rem; }
+    .data-table th.center { text-align: center; }
+    .data-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    .data-table tr:nth-child(even) td { background: #f9fafb; }
+    .data-table td.num { text-align: right; font-family: 'Space Grotesk', monospace; }
+    .data-table td.center { text-align: center; }
+    .data-table td.label { font-weight: 600; color: var(--navy); }
+    .data-table tr.section-header td { background: var(--navy) !important; color: #fff; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
+    .data-table tr.total td { background: var(--cream-warm) !important; font-weight: 700; border-top: 2px solid var(--gold); }
+    .data-table tr.highlight td { background: var(--cream) !important; }
+
+    /* Print */
+    @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .solution-card { break-inside: avoid; }
+        .page-break { page-break-before: always; }
+        .no-print { display: none; }
+    }
+
+    /* Section dividers */
+    .section-divider {
+        border: none;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #d4b07a, transparent);
+        margin: 3rem 0;
+    }
+</style>
+</head>
+<body class="bg-white text-gray-900">
+
+<!-- ================================================================ -->
+<!-- HEADER -->
+<!-- ================================================================ -->
+<header class="bg-gradient-to-br from-[#0d2137] via-[#1a2d44] to-[#0d2137] text-white px-8 py-12 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%221%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+
+    <div class="max-w-5xl mx-auto relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-14 h-14 rounded-xl border-2 border-[#b8965a] flex items-center justify-center">
+                        <span class="text-[#b8965a] font-bold text-2xl headline">T</span>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">
+                            TH<span class="text-[#b8965a]">e</span>sis Hotel Miami
+                        </h1>
+                        <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Autonomous Guest Services Proposal</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+                <div class="flex items-center gap-3">
+                    <!-- WHY: AR signature mark — simple geometric node using the AR gradient. Echoes the acceleraterobotics.ai wordmark treatment. -->
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                    </div>
+                    <span class="text-sm font-bold tracking-tight accel-gradient tech-font">Accelerate Robotics</span>
+                </div>
+                <div class="text-[10px] text-gray-400 text-right tracking-wide">
+                    One Brain. Many Bots.<br>
+                    <span class="text-gray-500">April 2026</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats bar -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">Up to 14</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Autonomous Robots</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">24/7</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Luxury Guest Service</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">3</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Scalable Tiers</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">$0</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Capital Required</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ================================================================ -->
+<!-- COVER LETTER -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-10">
+    <p class="text-gray-600 text-sm leading-relaxed mb-4">Dear Thesis Hotel Leadership,</p>
+
+    <p class="text-gray-700 text-sm leading-relaxed mb-4">Following our site visit and conversations with your engineering and operations teams, we've developed three service tiers for bringing autonomous guest services to Thesis Hotel — not as a cost-cutting exercise, but as a <strong class="text-[#0d2137]">luxury amenity</strong> that puts Thesis ahead of every comparable hotel in South Florida.</p>
+
+    <div class="bg-gradient-to-r from-[#f8f5ef] to-[#faf7f2] rounded-xl p-6 border border-[#e8e3d9] my-6">
+        <p class="text-gray-800 text-sm leading-relaxed font-medium"><strong class="text-[#0d2137]">Thesis-branded autonomous concierge service, available 24 hours a day, 7 days a week</strong> — something no amount of human staffing can sustainably deliver. Every robot carries the Thesis Hotel identity. The S100 delivery platform is dressed with a <strong class="text-[#0d2137]">custom walnut, brass and cream-leather three-tier service cart</strong> — swappable configurations for in-room dining, poolside, cocktails, and VIP bellhop — all fitted to the property's aesthetic. Guests don't see a vendor's equipment — they see a Thesis amenity.</p>
+    </div>
+
+    <p class="text-gray-700 text-sm leading-relaxed mb-4">This fleet doesn't replace your team. It gives your team <strong>leverage</strong>. Housekeeping focuses on room turns and guest-facing moments instead of hauling linen carts through elevators. Front desk staff offer guests a delivery experience that runs at 2 AM with the same quality as 2 PM.</p>
+
+    <p class="text-gray-700 text-sm leading-relaxed mb-6"><strong class="text-[#0d2137]">Thesis Hotel becomes the first property in Coral Gables — and one of the first in Miami — to offer autonomous luxury guest services as a standard amenity.</strong> A genuine point of differentiation in a market where every upper-upscale hotel is competing on the same spa, the same rooftop pool, and the same farm-to-table menu.</p>
+
+    <!-- Three tiers summary -->
+    <div class="grid md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-xl p-5 border border-gray-200 hover:border-[#b8965a] transition-colors">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="tier-badge tier-a">Option A</span>
+            </div>
+            <h3 class="font-bold text-base text-[#0d2137]">Signature Automation</h3>
+            <p class="text-xs text-gray-500 mt-1 mb-3">4 robots — core cleaning &amp; delivery</p>
+            <p class="text-xs text-gray-600 leading-relaxed">Hard floor maintenance, carpet care, room delivery, and linens transport. The entry point that proves the concept.</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-gray-200 hover:border-[#b8965a] transition-colors">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="tier-badge tier-b">Option B</span>
+            </div>
+            <h3 class="font-bold text-base text-[#0d2137]">Full-Property Automation</h3>
+            <p class="text-xs text-gray-500 mt-1 mb-3">8 robots — full indoor &amp; outdoor</p>
+            <p class="text-xs text-gray-600 leading-relaxed">Adds residences wing, bellhop service, kitchen-to-pool delivery, and Paseo Courtyard maintenance.</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 border-2 border-[#b8965a] hover:border-[#a0804a] transition-colors relative">
+            <div class="absolute -top-2.5 right-4">
+                <span class="recommended-pill">Recommended</span>
+            </div>
+            <div class="flex items-center gap-2 mb-2">
+                <span class="tier-badge tier-c">Option C</span>
+            </div>
+            <h3 class="font-bold text-base text-[#0d2137]">Thesis Autonomous</h3>
+            <p class="text-xs text-gray-500 mt-1 mb-3">14 robots + Intelligence Platform</p>
+            <p class="text-xs text-gray-600 leading-relaxed">Peak capacity, Volley AI padel trainer, and real-time facility intelligence. The full transformation.</p>
+        </div>
+    </div>
+
+    <p class="text-gray-600 text-sm">Eric Race<br><strong class="text-[#0d2137]">Founder &amp; CEO, Accelerate Robotics</strong></p>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- GUEST EXPERIENCE -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#0d2137] headline mb-6">The Guest Experience</h2>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <div class="bg-gradient-to-br from-[#faf7f0] to-[#f5f0e6] rounded-xl p-6 border border-[#e8e3d9]">
+            <h3 class="font-bold text-sm text-[#0d2137] mb-3 tech-font uppercase tracking-wide">What Guests See</h3>
+            <p class="text-sm text-gray-700 leading-relaxed mb-3">Every robot is <strong>custom-branded with the Thesis Hotel identity</strong>. The S100 platform carries a <strong>bespoke walnut, brass and cream-leather three-tier service cart</strong> — swappable for in-room dining, poolside, cocktail trolley, or VIP bellhop — designed to match the property's material palette: leather, brass, warm wood tones.</p>
+            <p class="text-sm text-gray-700 leading-relaxed">A guest orders amenities at midnight. A Thesis-branded W3 arrives at their door, calls the room phone, and presents items in a leather-lined compartment. The same premium experience at 2 AM as 2 PM.</p>
+        </div>
+        <div class="bg-gradient-to-br from-[#f8f5ef] to-[#f5f0e6] rounded-xl p-6 border border-[#e8e3d9]">
+            <h3 class="font-bold text-sm text-[#0d2137] mb-3 tech-font uppercase tracking-wide">What Guests Don't See</h3>
+            <p class="text-sm text-gray-700 leading-relaxed mb-3">Behind the scenes, the fleet handles repetitive logistics that consume your team's hours without adding guest value:</p>
+            <ul class="text-sm text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="text-[#b8965a] mt-0.5">&#9670;</span> <span><strong>Carpet maintenance</strong> runs autonomously during low-traffic windows</span></li>
+                <li class="flex items-start gap-2"><span class="text-[#b8965a] mt-0.5">&#9670;</span> <span><strong>Linen transport</strong> moves loads floor-to-laundry without tying up staff or elevators</span></li>
+                <li class="flex items-start gap-2"><span class="text-[#b8965a] mt-0.5">&#9670;</span> <span><strong>Supply runs</strong> keep carts stocked so room attendants stay on their floors</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="bg-[#0d2137] text-white rounded-xl p-6">
+        <h3 class="font-bold text-sm mb-3 tech-font text-[#b8965a] tracking-wide uppercase">Competitive Positioning</h3>
+        <p class="text-sm text-gray-300 leading-relaxed mb-4">Thesis can market autonomous guest services as a genuine differentiator — not a back-of-house optimization guests never notice, but a visible, marketable luxury amenity:</p>
+        <div class="grid md:grid-cols-3 gap-4">
+            <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+                <p class="text-sm text-white italic headline">"The first hotel in Coral Gables to offer 24/7 autonomous concierge delivery"</p>
+            </div>
+            <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+                <p class="text-sm text-white italic headline">"Luxury amenities delivered to your door, any hour, by our Thesis concierge fleet"</p>
+            </div>
+            <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+                <p class="text-sm text-white italic headline">"A guest experience no equivalent hotel in the market can offer today"</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- FLEET SHOWCASE — ROBOT CARDS -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#0d2137] headline mb-2">The Fleet</h2>
+    <p class="text-sm text-gray-500 mb-8">Thesis-branded robots from three manufacturers — Keenon, PUDU, and Volley — coordinated through a single platform.</p>
+
+    <div class="grid md:grid-cols-2 gap-6">
+
+        <!-- ROBOT: C40 Hard Floor -->
+        <div class="solution-card">
+            <div class="bg-gradient-to-r from-[#f8f5ef] to-[#faf7f2] border-b border-[#e8e3d9] px-5 py-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip">C40</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">Hard-Floor Maintenance</h3>
+                            <p class="text-[10px] text-gray-500">Keenon Robotics</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="tier-badge tier-a">A</span>
+                        <span class="tier-badge tier-b">B</span>
+                        <span class="tier-badge tier-c">C</span>
+                    </div>
+                </div>
+            </div>
+            <div class="robot-img-wrap bg-gradient-to-b from-[#faf7f2]/60 to-white">
+                <img src="../assets/robots/photos/keenon-c40-cleaning.png" alt="Keenon C40 Hard-Floor Cleaning Robot">
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100">
+                <p class="text-xs text-gray-600 mb-3">Autonomous scrub, sweep, and mop across lobby, restaurants, and kitchen. Full coverage overnight without adding a labor shift.</p>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <span class="stat-pill">540 sqm/hr</span>
+                    <span class="stat-pill">3-4h battery</span>
+                    <span class="stat-pill">61-68 dB</span>
+                    <span class="stat-pill">Auto-charge</span>
+                </div>
+                <div class="callout-soft p-2.5 text-xs text-[#0d2137]">
+                    <strong>Use Case:</strong> Runs 11 PM–6 AM across lobby, Mamey, The Collab, and kitchen tile. Guests arrive to spotless floors every morning — no overnight crew required.
+                </div>
+            </div>
+        </div>
+
+        <!-- ROBOT: C30 Carpet -->
+        <div class="solution-card">
+            <div class="bg-gradient-to-r from-[#f8f5ef] to-[#faf7f2] px-5 py-3 border-b border-[#e8e3d9]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip">C30</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">Carpet Care</h3>
+                            <p class="text-[10px] text-gray-500">Keenon Robotics &middot; up to 3 units</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="tier-badge tier-a">A</span>
+                        <span class="tier-badge tier-b">B</span>
+                        <span class="tier-badge tier-c">C</span>
+                    </div>
+                </div>
+            </div>
+            <div class="robot-img-wrap bg-gradient-to-b from-[#faf7f2]/60 to-white">
+                <img src="../assets/robots/photos/keenon-c30-white.png" alt="Keenon C30 Autonomous Carpet Cleaner">
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100">
+                <p class="text-xs text-gray-600 mb-3">Autonomous carpet vacuum for guest floors 4–10 and residences wing corridors. Quiet enough for daytime operation, thorough enough to replace manual vacuuming entirely.</p>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <span class="stat-pill">LiDAR + Vision</span>
+                    <span class="stat-pill">Low-pile carpet</span>
+                    <span class="stat-pill">Auto-charge</span>
+                    <span class="stat-pill">11,000 Pa</span>
+                </div>
+                <div class="callout-soft p-2.5 text-xs text-[#0d2137]">
+                    <strong>Use Case:</strong> Phase 1 pilot robot. One C30 cleans all 7 guest floors autonomously — 90 min per floor via elevator. Housekeepers focus on room turns instead of hallway vacuuming.
+                </div>
+            </div>
+        </div>
+
+        <!-- ROBOT: W3 Room Delivery -->
+        <div class="solution-card">
+            <div class="bg-gradient-to-r from-[#f8f5ef] to-[#faf7f2] px-5 py-3 border-b border-[#e8e3d9]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip">W3</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">Room Delivery Concierge</h3>
+                            <p class="text-[10px] text-gray-500">Keenon Robotics &middot; up to 2 units</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="tier-badge tier-a">A</span>
+                        <span class="tier-badge tier-b">B</span>
+                        <span class="tier-badge tier-c">C</span>
+                    </div>
+                </div>
+            </div>
+            <div class="robot-img-wrap bg-gradient-to-b from-[#faf7f2]/60 to-white">
+                <img src="../assets/robots/photos/keenon-w3-thesis-branded.png" alt="Keenon W3 — Thesis Hotel Branded Room Delivery Robot" style="max-height:200px;">
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100">
+                <p class="text-xs text-gray-600 mb-3">Thesis-branded enclosed delivery robot with <strong>custom leather-lined compartments</strong>. Delivers amenities, room service, and packages to guest rooms — discreetly, contactlessly, 24/7.</p>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <span class="stat-pill">9-12h battery</span>
+                    <span class="stat-pill">300+ deliveries/day</span>
+                    <span class="stat-pill">20 kg capacity</span>
+                    <span class="stat-pill">Guest notification</span>
+                </div>
+                <div class="callout-soft p-2.5 text-xs text-[#0d2137]">
+                    <strong>Use Case:</strong> Guest orders amenities at midnight. Front desk loads the W3, taps the room number. It rides the elevator to floor 8, calls the room phone, and presents items in a leather-lined compartment. No staff trip. No quality drop at 2 AM.
+                </div>
+            </div>
+        </div>
+
+        <!-- ROBOT: S100 Luxury Service Cart -->
+        <div class="solution-card">
+            <div class="bg-gradient-to-r from-[#f8f5ef] to-[#faf7f2] px-5 py-3 border-b border-[#e8e3d9]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip" style="width: 2.5rem;">S100</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">In-Room Dining &amp; Luxury Service Cart</h3>
+                            <p class="text-[10px] text-gray-500">Keenon Robotics &middot; custom walnut + brass + cream-leather topper &middot; up to 2 units</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="tier-badge tier-b">B</span>
+                        <span class="tier-badge tier-c">C</span>
+                    </div>
+                </div>
+            </div>
+            <div class="robot-img-wrap bg-gradient-to-b from-[#faf7f2]/60 to-white" style="min-height:280px;">
+                <img src="../assets/robots/photos/keenon-s100-luxury-cart-hero.png" alt="Keenon S100 with custom three-tier walnut, brass, and cream-leather in-room dining cart" style="max-height:260px;">
+                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-[#b8965a] text-white text-[9px] font-semibold px-3 py-1 rounded-full">Custom Walnut · Brass · Cream Leather</div>
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100">
+                <p class="text-xs text-gray-600 mb-3">Heavy-duty S100 platform dressed in a <strong>custom three-tier luxury service cart</strong> — walnut shelves, polished brass uprights, and cream-leather padded trim. Interchangeable toppers transform one robot into a breakfast cart, a pool-side service cart, a wine-and-cocktail trolley, or a bellhop luggage rack — without ever looking like vendor equipment.</p>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-gray-600 mb-3">
+                    <div class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-[#b8965a]"></span>In-room breakfast &amp; dinner service</div>
+                    <div class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-[#b8965a]"></span>Poolside beverage &amp; amenity cart</div>
+                    <div class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-[#b8965a]"></span>Evening wine &amp; cocktail trolley</div>
+                    <div class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-[#b8965a]"></span>VIP arrival bellhop (luggage topper)</div>
+                </div>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <span class="stat-pill">100+ kg / 220 lbs</span>
+                    <span class="stat-pill">8h battery</span>
+                    <span class="stat-pill">Swappable topper</span>
+                    <span class="stat-pill">Elevator-capable</span>
+                </div>
+                <div class="callout-soft p-2.5 text-xs text-[#0d2137]">
+                    <strong>Use Case:</strong> A guest orders breakfast at 7:15 AM. The kitchen plates the order on the S100's leather-trimmed walnut tray — ice bucket, orchid stem, linens underneath. The cart rides the elevator to floor 8, calls the room phone, and arrives at the door as a piece of Thesis furniture. The guest rolls the top tray into their room; the cart waits, retrieves, and returns itself. No porter interruption. No staff trip.
+                </div>
+            </div>
+        </div>
+
+        <!-- ROBOT: S300 Transport -->
+        <div class="solution-card">
+            <div class="bg-gradient-to-r from-[#f8f5ef] to-[#faf7f2] px-5 py-3 border-b border-[#e8e3d9]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip" style="width: 2.5rem;">S300</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">Heavy-Load Transport</h3>
+                            <p class="text-[10px] text-gray-500">Keenon Robotics &middot; up to 3 units</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="tier-badge tier-a">A</span>
+                        <span class="tier-badge tier-b">B</span>
+                        <span class="tier-badge tier-c">C</span>
+                    </div>
+                </div>
+            </div>
+            <div class="robot-img-wrap bg-gradient-to-b from-[#faf7f2]/60 to-white">
+                <img src="../assets/robots/photos/keenon-s300-linen-bin.png" alt="Keenon S300 with Linen Bin — Heavy-Load Transport Robot">
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100">
+                <p class="text-xs text-gray-600 mb-3">Workhorse transport platform for linens, food, and housekeeping supplies. Moves heavy loads floor-to-floor autonomously — the invisible logistics backbone that keeps operations running.</p>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <span class="stat-pill">100+ kg capacity</span>
+                    <span class="stat-pill">8h battery</span>
+                    <span class="stat-pill">15-sec battery swap</span>
+                    <span class="stat-pill">Dual LiDAR</span>
+                </div>
+                <div class="callout-soft p-2.5 text-xs text-[#0d2137]">
+                    <strong>Use Case:</strong> Housekeeping loads soiled linens on floor 7. The S300 rides the elevator to the basement laundry staging area and returns — saving 2+ hours of staff hallway transit per shift. Second unit runs kitchen-to-pool food delivery.
+                </div>
+            </div>
+        </div>
+
+        <!-- ROBOT: MT1 Max Outdoor -->
+        <div class="solution-card">
+            <div class="bg-gradient-to-r from-[#f8f5ef] to-[#faf7f2] px-5 py-3 border-b border-[#e8e3d9]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip">MT1</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">Outdoor Courtyard Sweeper</h3>
+                            <p class="text-[10px] text-gray-500">PUDU Robotics</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="tier-badge tier-b">B</span>
+                        <span class="tier-badge tier-c">C</span>
+                    </div>
+                </div>
+            </div>
+            <div class="robot-img-wrap bg-gradient-to-b from-[#faf7f2]/60 to-white">
+                <img src="../assets/robots/photos/pudu-mt1-max.png" alt="PUDU MT1 Max Outdoor Autonomous Sweeper">
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100">
+                <p class="text-xs text-gray-600 mb-3">Outdoor autonomous sweeper for the Paseo Courtyard. Keeps the 5,000+ sq ft "Urban Living Room" clean between events, yoga sessions, and padel matches.</p>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <span class="stat-pill">Outdoor-rated</span>
+                    <span class="stat-pill">GPS + LiDAR</span>
+                    <span class="stat-pill">Weather-resistant</span>
+                    <span class="stat-pill">Event-aware pause</span>
+                </div>
+                <div class="callout-soft p-2.5 text-xs text-[#0d2137]">
+                    <strong>Use Case:</strong> Sweeps the Paseo Courtyard at 6 AM before yoga and again after evening events. Automatically pauses during scheduled activities — padel matches, markets, ceremonies.
+                </div>
+            </div>
+        </div>
+
+        <!-- ROBOT: Volley Trainer -->
+        <div class="solution-card md:col-span-2">
+            <div class="bg-gradient-to-r from-[#f8f5ef] to-[#faf7f2] px-5 py-3 border-b border-[#e8e3d9]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="robot-chip">V</div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight">AI Padel Coach — Guest Revenue Amenity</h3>
+                            <p class="text-[10px] text-gray-500">Volley &middot; Option C only</p>
+                        </div>
+                    </div>
+                    <span class="tier-badge tier-c">C only</span>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-2">
+                <div class="robot-img-wrap bg-gradient-to-b from-[#faf7f2]/60 to-white">
+                    <img src="../assets/robots/photos/volley-trainer.png" alt="Volley AI Padel Trainer" style="max-height:170px;">
+                </div>
+                <div class="px-5 py-4 flex flex-col justify-center">
+                    <p class="text-xs text-gray-600 mb-3">AI-powered padel training machine for the Paseo Courtyard — Privé Padel at Thesis. A bookable guest amenity that generates revenue while reinforcing Thesis's position as a lifestyle destination.</p>
+                    <div class="flex flex-wrap gap-1.5 mb-3">
+                        <span class="stat-pill">$50–$100/session</span>
+                        <span class="stat-pill">2–3 sessions/day</span>
+                        <span class="stat-pill">AI-adaptive coaching</span>
+                        <span class="stat-pill">Revenue-generating</span>
+                    </div>
+                    <div class="callout-warm p-2.5 text-xs text-[#0d2137]">
+                        <strong>Revenue potential:</strong> $3,000–$9,000/month in guest session fees at $2,000/month lease cost. Managed on the Accelerate platform at no additional markup.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Custom Branding callout -->
+    <div class="mt-6 bg-gradient-to-r from-[#0d2137] to-[#1a2d44] text-white rounded-xl p-6">
+        <h3 class="font-bold text-sm mb-3 tech-font text-[#b8965a] tracking-wide uppercase">Custom Branding &amp; Materials — Included at No Additional Cost</h3>
+        <div class="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
+            <div class="flex items-start gap-3">
+                <span class="text-[#b8965a] text-lg">&#9670;</span>
+                <span><strong class="text-white">Thesis Hotel brand wraps</strong> — logo, color palette, and identity applied to every unit in the fleet</span>
+            </div>
+            <div class="flex items-start gap-3">
+                <span class="text-[#b8965a] text-lg">&#9670;</span>
+                <span><strong class="text-white">Walnut, brass &amp; cream-leather service cart</strong> — three-tier topper on the S100 platform; swappable configurations for dining, poolside, and bellhop</span>
+            </div>
+            <div class="flex items-start gap-3">
+                <span class="text-[#b8965a] text-lg">&#9670;</span>
+                <span><strong class="text-white">Branded touchscreen UI</strong> — guest-facing displays carry Thesis branding, not manufacturer interface</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- IN-ROOM DINING WORKFLOW (S100) -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#0d2137] headline mb-2">In-Room Dining Workflow</h2>
+    <p class="text-sm text-gray-600 mb-6">The S100 is a <strong>transport platform</strong> — it moves the meal between two humans. The choreography is designed so your F&amp;B standards and health-code compliance are never compromised by the robot.</p>
+
+    <!-- 7-step choreography -->
+    <div class="grid md:grid-cols-7 gap-2 mb-6">
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-xs font-bold mb-2">1</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Guest orders.</strong> In-room tablet, phone, or property app → existing POS (Simphony, Toast).</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-xs font-bold mb-2">2</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Kitchen plates.</strong> Your runner plates on porcelain at the pass — same as today.</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-xs font-bold mb-2">3</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Load thermal modules.</strong> Hot tier: stainless cloche (140°F+). Cold: gel-pack cradle (40°F−). Runner taps "dispatch."</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-xs font-bold mb-2">4</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Dispatch.</strong> S100 rides elevator to room. <strong>4–7 min pass → door.</strong> Temp logged per order.</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-xs font-bold mb-2">5</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Guest notified.</strong> Call to room PBX + knock-tone. Guest taps screen to unlock (key tap or room-number confirm).</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-xs font-bold mb-2">6</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Tray removal.</strong> Top tier slides out as a single tray. Robot waits 90 sec for additional tiers.</p>
+        </div>
+        <div class="callout-soft p-3">
+            <div class="w-6 h-6 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-xs font-bold mb-2">7</div>
+            <p class="text-[10px] text-gray-700 leading-snug"><strong>Pickup return.</strong> Scheduled sweep (every 45 min) or door-hanger-triggered. Runner reloads for dish-room.</p>
+        </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-5">
+        <div class="callout-warm p-5">
+            <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-3">What This Preserves</h3>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> <strong>Staff plates, loads, retrieves.</strong> Robot replaces the elevator-and-corridor walk — the lowest-value leg of the trip.</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> <strong>Food-safety compliance.</strong> Temperature logged per order; thermal modules NSF-certified; phase-change packs cycle through walk-in on banquet-caddy schedule.</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> <strong>Plating standards.</strong> Top tier is a removable tray the guest sees open — looks like room-service plating, not "robot output." Walnut/brass shell is cosmetic; thermal modules work invisibly.</li>
+            </ul>
+        </div>
+        <div class="callout-deep p-5">
+            <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-3">What This Does NOT Claim</h3>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-x">&#10005;</span> Not a replacement for in-room dining attendants on premium orders (suite service, Champagne setups, table-side).</li>
+                <li class="flex items-start gap-2"><span class="brand-x">&#10005;</span> Not a carrier for items requiring active heating — no ovens on board.</li>
+                <li class="flex items-start gap-2"><span class="brand-x">&#10005;</span> Not a substitute for F&amp;B runners during 7–10 AM rush. Humans handle complex orders; S100 handles simple parallel runs (continental, coffee, amenity drops).</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- FLEET OPTIONS TABLE -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#0d2137] headline mb-6">Fleet Options — Side by Side</h2>
+
+    <table class="data-table">
+        <tr>
+            <th></th>
+            <th class="center">Option A<br><span class="font-normal opacity-75">Signature</span></th>
+            <th class="center">Option B<br><span class="font-normal opacity-75">Full-Property</span></th>
+            <th class="center">Option C<br><span class="font-normal opacity-75">Thesis Autonomous</span></th>
+        </tr>
+        <tr class="section-header"><td colspan="4">Cleaning</td></tr>
+        <tr><td>C40 — Hard floor maintenance</td><td class="center">1</td><td class="center">1</td><td class="center">2</td></tr>
+        <tr><td>C30 — Carpet care (guest floors 4–10)</td><td class="center">1</td><td class="center">1</td><td class="center">1</td></tr>
+        <tr><td>C30 — Carpet care (residences wing)</td><td class="center">—</td><td class="center">1</td><td class="center">1</td></tr>
+        <tr><td>C30 — Peak-frequency coverage</td><td class="center">—</td><td class="center">—</td><td class="center">1</td></tr>
+        <tr><td>MT1 Max — Paseo Courtyard sweeper</td><td class="center">—</td><td class="center">1</td><td class="center">1</td></tr>
+        <tr class="section-header"><td colspan="4">Guest Services &amp; Transport</td></tr>
+        <tr><td>W3 — Branded room delivery</td><td class="center">1</td><td class="center">1</td><td class="center">2</td></tr>
+        <tr><td>S100 — Luxury service cart (walnut / brass / leather topper)</td><td class="center">—</td><td class="center">1</td><td class="center">2</td></tr>
+        <tr><td>S300 — Linens transport</td><td class="center">1</td><td class="center">1</td><td class="center">1</td></tr>
+        <tr><td>S300 — Food transport (kitchen → pool)</td><td class="center">—</td><td class="center">1</td><td class="center">1</td></tr>
+        <tr><td>S300 — Housekeeping supply transport</td><td class="center">—</td><td class="center">—</td><td class="center">1</td></tr>
+        <tr class="section-header"><td colspan="4">Guest Amenity</td></tr>
+        <tr><td>Volley Trainer — AI padel coach</td><td class="center">—</td><td class="center">—</td><td class="center">1</td></tr>
+        <tr class="section-header"><td colspan="4">Facility Intelligence Platform</td></tr>
+        <tr><td>BLE/UWB indoor positioning + asset tracking</td><td class="center">—</td><td class="center">—</td><td class="center">Yes</td></tr>
+        <tr><td>Real-time dashboard + smart dispatch</td><td class="center">—</td><td class="center">—</td><td class="center">Yes</td></tr>
+        <tr><td>Workflow analytics &amp; reporting</td><td class="center">—</td><td class="center">—</td><td class="center">Yes</td></tr>
+        <tr class="total">
+            <td><strong>Total Robots</strong></td>
+            <td class="center"><strong>4</strong></td>
+            <td class="center"><strong>8</strong></td>
+            <td class="center"><strong>14</strong></td>
+        </tr>
+    </table>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- ELEVATOR OPERATIONS -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#0d2137] headline mb-6">Elevator Operations</h2>
+    <p class="text-sm text-gray-600 mb-4">Thesis operates 2 ThyssenKrupp TAC32T elevators serving guest floors 4–10. Robot-elevator coexistence is a design constraint we've built the operating plan around.</p>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-2">Guest-Yield Protocol</h3>
+            <p class="text-xs text-gray-700">Robots <strong>always</strong> yield to waiting guests. If a guest is waiting on any floor, the robot holds position and takes the next available car. Guests never wait for a robot.</p>
+        </div>
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-2">Off-Peak Scheduling</h3>
+            <p class="text-xs text-gray-700">Cleaning robots operate 11 PM–6 AM when elevator demand is minimal. Full floor sequences before returning to dock — minimizing total trips.</p>
+        </div>
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-2">Batch Transport</h3>
+            <p class="text-xs text-gray-700">Linen and supply robots batch their loads — one full cart per trip instead of multiple partial runs. Fewer elevator trips, more efficient logistics.</p>
+        </div>
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-2">Non-Invasive Integration</h3>
+            <p class="text-xs text-gray-700">Our universal button emulator doesn't modify ThyssenKrupp firmware or require an OEM API contract. Fully reversible hardware layer.</p>
+        </div>
+    </div>
+
+    <div class="bg-[#f8f5ef] rounded-xl p-5 border border-[#e8e3d9] mb-5">
+        <p class="text-xs text-gray-700"><strong class="text-[#0d2137]">Realistic impact at peak fleet (Option C):</strong> 8–12 additional elevator trips/hour during overnight operations; 3–5 trips/hour during daytime (on-demand deliveries only). Two elevators serving 7 guest floors handle ~40–60 trips/hour at capacity. Robot traffic is a modest incremental load concentrated in off-peak windows.</p>
+    </div>
+
+    <h3 class="text-base font-bold text-[#0d2137] mb-3">ThyssenKrupp Contingency</h3>
+    <p class="text-xs text-gray-600 mb-3">The button emulator is non-invasive, but physical installation still requires TK review. We take that risk rather than pushing it to Thesis.</p>
+    <table class="data-table">
+        <tr><th style="width:32%;">Mitigation</th><th>What It Means</th></tr>
+        <tr><td class="label">Pre-deployment TK review</td><td>Emulator design package submitted to ThyssenKrupp regional service office <strong>before Phase 2 begins</strong>. Accelerate absorbs any engineering changes TK requests.</td></tr>
+        <tr><td class="label">TK-supervised install</td><td>Accelerate pays for a TK certified technician to supervise install. All work logged to TK service-record standard — your maintenance agreement remains intact.</td></tr>
+        <tr><td class="label">Service-contract preservation</td><td>If TK flags any warranty or service impact, Accelerate either redesigns to remove it or reimburses Thesis for any incremental TK fee for the term of the RaaS agreement.</td></tr>
+        <tr><td class="label">Fallback if TK refuses</td><td>Per-floor staging model. Cleaning robots dock and operate on individual floors. Delivery robots dispatched via scheduled staff-assisted transfer windows (1–2× / hour). Fleet still delivers most operational value; guest delivery becomes time-bounded rather than on-demand.</td></tr>
+        <tr class="highlight"><td class="label">No-cost exit if Phase 2 is blocked</td><td>If after 60 days from Phase 1 completion the elevator integration cannot be commissioned (TK refusal, management decision, technical block), <strong>Thesis may terminate with no penalty.</strong> Accelerate removes all equipment at our cost.</td></tr>
+    </table>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- INSURANCE & INDEMNIFICATION -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#0d2137] headline mb-3">Insurance &amp; Indemnification</h2>
+    <p class="text-sm text-gray-600 mb-5">Accelerate Robotics carries coverage sized for commercial robotics deployment in a luxury hospitality environment. All policies list <strong>Thesis Hotel, Pyramid Global Hospitality, Hilton Worldwide Holdings, and the property ownership entity as additional insureds</strong> at no cost to Thesis.</p>
+
+    <h3 class="text-base font-bold text-[#0d2137] mb-3">Coverage in Force</h3>
+    <table class="data-table">
+        <tr><th>Policy</th><th class="center">Limit</th><th>Notes</th></tr>
+        <tr><td class="label">Commercial General Liability</td><td class="center">$1M / $2M agg</td><td>Premises, operations, personal &amp; advertising injury</td></tr>
+        <tr><td class="label">Products / Completed Operations</td><td class="center">$1M / $2M agg</td><td>Robot hardware and branded accessories (bundled within CGL)</td></tr>
+        <tr><td class="label">Professional Liability / Tech E&amp;O</td><td class="center">$1M / $2M agg</td><td>Software, integration, service errors</td></tr>
+        <tr><td class="label">Cyber Liability &amp; Data Privacy</td><td class="center">$1M / claim</td><td>Incidental exposure — no guest data is collected</td></tr>
+        <tr><td class="label">Commercial Auto</td><td class="center">$1M CSL</td><td>Service van, hired &amp; non-owned vehicles</td></tr>
+        <tr><td class="label">Workers' Compensation</td><td class="center">Statutory + $500K EL</td><td>All Accelerate techs and subcontractors</td></tr>
+        <tr><td class="label">Umbrella / Excess</td><td class="center">$5M</td><td>Sits over GL, Auto, Employer's Liability</td></tr>
+    </table>
+
+    <div class="mt-4 bg-[#f8f5ef] rounded-lg p-4 border border-[#b8965a]/30">
+        <p class="text-xs text-gray-700"><strong class="text-[#0d2137]">Limits-up clause:</strong> If Hilton brand standards, Pyramid Global Hospitality vendor requirements, or property insurance review calls for higher limits, Accelerate will endorse coverage upward within 30 days. The incremental premium is passed through at Accelerate's cost basis — Thesis (or the brand) pays the differential, with full carrier invoice backup.</p>
+    </div>
+
+    <p class="text-xs text-gray-600 mt-3 mb-6">Certificates of Insurance delivered to Thesis and the management company before Phase 1 kickoff and renewed annually. Any material change in coverage triggers 30-day written notice to Thesis.</p>
+
+    <div class="grid md:grid-cols-2 gap-5 mb-6">
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-3">Indemnification — Mutual, Fault-Based</h3>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Accelerate indemnifies Thesis</strong> against guest injury, property damage, or third-party claim caused by robot malfunction or technician error.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Thesis indemnifies Accelerate</strong> against claims caused by staff misuse, unauthorized modifications, or facility hazards flagged in the site survey.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Defense costs follow the indemnity.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Caps:</strong> uncapped for bodily injury, property damage, IP claims. 2× annual RaaS spend for all other claims.</li>
+            </ul>
+        </div>
+        <div class="callout-deep p-5">
+            <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-3">Dispute Resolution</h3>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Governing law:</strong> Florida. <strong>Venue:</strong> Miami-Dade County.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Monthly operational review is the first path to resolution.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Unresolved matters → <strong>non-binding mediation</strong> within 30 days.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Still unresolved → <strong>binding arbitration</strong> under AAA Commercial Rules in Miami.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Either party retains the right to injunctive relief for IP or confidentiality matters.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="callout-warm p-5">
+        <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-3">Compliance Confirmations</h3>
+        <div class="grid md:grid-cols-2 gap-3 text-xs text-gray-700">
+            <div><strong class="text-[#0d2137]">OSHA:</strong> Field procedures meet the general-duty clause for robotic equipment in occupied commercial spaces.</div>
+            <div><strong class="text-[#0d2137]">ADA:</strong> Robots yield to guests; programmed to recognize and give right-of-way to mobility aids and service animals.</div>
+            <div><strong class="text-[#0d2137]">PCI:</strong> No cardholder data touched. No PCI scope extension to Thesis's environment.</div>
+            <div><strong class="text-[#0d2137]">GDPR / CCPA:</strong> No guest PII processed. Positioning anchors detect <em>asset tags</em>, not people or phones.</div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- PRICING -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#0d2137] headline mb-2">Pricing</h2>
+    <p class="text-sm text-gray-600 mb-6">Robot-as-a-Service — <strong class="text-[#0d2137]">$2,850 per robot per month</strong>, all-inclusive. Custom branding and the walnut/brass/leather service cart included.</p>
+
+    <table class="data-table">
+        <tr>
+            <th></th>
+            <th class="center">Option A<br><span class="font-normal opacity-75">Signature</span></th>
+            <th class="center">Option B<br><span class="font-normal opacity-75">Full-Property</span></th>
+            <th class="center">Option C<br><span class="font-normal opacity-75">Thesis Autonomous</span></th>
+        </tr>
+        <tr><td class="label">Number of Robots</td><td class="center">4</td><td class="center">8</td><td class="center">14</td></tr>
+        <tr><td class="label">Monthly RaaS</td><td class="num">$11,400</td><td class="num">$22,800</td><td class="num">$37,050</td></tr>
+        <tr><td class="label">Volley Trainer (pass-through)</td><td class="center">—</td><td class="center">—</td><td class="num">$2,000</td></tr>
+        <tr class="total"><td class="label">Monthly Total</td><td class="num"><strong>$11,400</strong></td><td class="num"><strong>$22,800</strong></td><td class="num"><strong>$39,050</strong></td></tr>
+        <tr><td class="label">Annualized</td><td class="num"><strong>$136,800</strong></td><td class="num"><strong>$273,600</strong></td><td class="num"><strong>$468,600</strong></td></tr>
+        <tr><td colspan="4" style="padding: 2px;"></td></tr>
+        <tr><td class="label">Intelligence Platform (Year 1)</td><td class="center">—</td><td class="center">—</td><td class="num">$58,100</td></tr>
+        <tr><td class="label">Intelligence Platform (Year 2+)</td><td class="center">—</td><td class="center">—</td><td class="num">$13,000/yr</td></tr>
+        <tr class="total"><td class="label">Year 1 All-In</td><td class="num"><strong>$136,800</strong></td><td class="num"><strong>$273,600</strong></td><td class="num"><strong>$526,700</strong></td></tr>
+        <tr><td class="label">Year 2+ Steady-State</td><td class="num"><strong>$136,800</strong></td><td class="num"><strong>$273,600</strong></td><td class="num"><strong>$481,600</strong></td></tr>
+    </table>
+
+    <!-- Facility Intelligence Platform Clarification -->
+    <div class="mt-8 bg-gradient-to-br from-[#f8f5ef] to-white rounded-xl p-6 border-2 border-[#b8965a]/30">
+        <h3 class="text-lg font-bold text-[#0d2137] mb-2">Facility Intelligence Platform — What You're Actually Buying</h3>
+        <p class="text-xs text-gray-700 mb-5">Option C includes a facility-wide sensing and dashboard layer. The structure is deliberate: <strong>Thesis owns the physical infrastructure; Accelerate licenses the software that runs on top of it.</strong></p>
+
+        <!-- Hardware Trio: what it actually looks like on a wall/ceiling/cart -->
+        <div class="bg-white rounded-lg p-5 border border-gray-200 mb-5">
+            <h4 class="text-xs font-bold text-[#0d2137] tech-font uppercase tracking-wide mb-4 text-center">The Physical Infrastructure</h4>
+            <div class="grid md:grid-cols-3 gap-5">
+                <div class="text-center">
+                    <div class="bg-gradient-to-br from-[#f8f5ef] to-white rounded-lg p-4 mb-3 border border-gray-100 flex items-center justify-center" style="height: 160px;">
+                        <img src="../assets/sensors/ble-anchor.png" alt="BLE ceiling anchor" class="max-h-full max-w-full object-contain" />
+                    </div>
+                    <p class="text-[11px] font-bold text-[#0d2137] uppercase tracking-wide">BLE Ceiling Anchor</p>
+                    <p class="text-[10px] text-[#b8965a] font-semibold tech-font">77 UNITS</p>
+                    <p class="text-[10px] text-gray-600 mt-1.5 leading-snug">Ceiling-mounted, battery-powered. Room-level location for any asset within ~5m.</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-gradient-to-br from-[#f8f5ef] to-white rounded-lg p-4 mb-3 border border-gray-100 flex items-center justify-center" style="height: 160px;">
+                        <img src="../assets/sensors/uwb-anchor.png" alt="UWB precision anchor" class="max-h-full max-w-full object-contain" />
+                    </div>
+                    <p class="text-[11px] font-bold text-[#0d2137] uppercase tracking-wide">UWB Precision Anchor</p>
+                    <p class="text-[10px] text-[#b8965a] font-semibold tech-font">11 UNITS</p>
+                    <p class="text-[10px] text-gray-600 mt-1.5 leading-snug">Wall/corner mount at key chokepoints (elevators, back-of-house). Sub-30cm accuracy.</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-gradient-to-br from-[#f8f5ef] to-white rounded-lg p-4 mb-3 border border-gray-100 flex items-center justify-center" style="height: 160px;">
+                        <img src="../assets/sensors/asset-tag.png" alt="BLE asset tag" class="max-h-full max-w-full object-contain" style="max-height: 110px;" />
+                    </div>
+                    <p class="text-[11px] font-bold text-[#0d2137] uppercase tracking-wide">BLE Asset Tag</p>
+                    <p class="text-[10px] text-[#b8965a] font-semibold tech-font">102 UNITS</p>
+                    <p class="text-[10px] text-gray-600 mt-1.5 leading-snug">Adhesive or clip-on. Attached to carts, laundry bins, maintenance kits, linen totes.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works: 4-step flow -->
+        <div class="bg-[#0d2137] rounded-lg p-5 mb-5">
+            <h4 class="text-xs font-bold text-white tech-font uppercase tracking-wide mb-4 text-center">How It Works</h4>
+            <div class="grid md:grid-cols-4 gap-3">
+                <div class="bg-white/5 rounded-lg p-4 border border-white/10 relative">
+                    <div class="absolute -top-2 -left-2 bg-[#b8965a] text-[#0d2137] rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-bold tech-font">1</div>
+                    <p class="text-[11px] font-bold text-[#b8965a] uppercase tracking-wide mb-1.5 tech-font">Tag Attached</p>
+                    <p class="text-[10px] text-white/80 leading-snug">An asset tag is affixed to a service cart, laundry bin, or maintenance kit. Each tag broadcasts a unique ID every few seconds.</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4 border border-white/10 relative">
+                    <div class="absolute -top-2 -left-2 bg-[#b8965a] text-[#0d2137] rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-bold tech-font">2</div>
+                    <p class="text-[11px] font-bold text-[#b8965a] uppercase tracking-wide mb-1.5 tech-font">Anchors Listen</p>
+                    <p class="text-[10px] text-white/80 leading-snug">Ceiling + wall anchors pick up the signal. Three or more anchors triangulate the tag's position in real time.</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4 border border-white/10 relative">
+                    <div class="absolute -top-2 -left-2 bg-[#b8965a] text-[#0d2137] rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-bold tech-font">3</div>
+                    <p class="text-[11px] font-bold text-[#b8965a] uppercase tracking-wide mb-1.5 tech-font">Dashboard Updates</p>
+                    <p class="text-[10px] text-white/80 leading-snug">Position data streams to the facility dashboard. Staff see every tagged asset on a live floor map — where it is, how long it's been idle.</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-4 border border-white/10 relative">
+                    <div class="absolute -top-2 -left-2 bg-[#b8965a] text-[#0d2137] rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-bold tech-font">4</div>
+                    <p class="text-[11px] font-bold text-[#b8965a] uppercase tracking-wide mb-1.5 tech-font">Robot Dispatched</p>
+                    <p class="text-[10px] text-white/80 leading-snug">Rules trigger action — a cart idle &gt;20 min in a corridor? The nearest robot is dispatched to retrieve it. No ticket, no radio call.</p>
+                </div>
+            </div>
+            <p class="text-[10px] text-white/60 italic text-center mt-4">Same infrastructure; different use cases. Once the anchors are live, new workflows are software configuration — not new hardware.</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-5">
+            <div>
+                <h4 class="text-xs font-bold text-[#0d2137] tech-font uppercase tracking-wide mb-3">Year 1 Install — $58,100 (one-time)</h4>
+                <table class="data-table">
+                    <tr><th>Component</th><th class="center">Qty</th></tr>
+                    <tr><td class="label">BLE indoor positioning anchors</td><td class="center">77</td></tr>
+                    <tr><td class="label">UWB precision anchors</td><td class="center">11</td></tr>
+                    <tr><td class="label">Asset tags (BLE)</td><td class="center">102</td></tr>
+                    <tr><td class="label">Dashboard + PMS integration</td><td class="center">1</td></tr>
+                    <tr><td class="label">Labor &amp; electrician install</td><td class="center">—</td></tr>
+                </table>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-[#0d2137] tech-font uppercase tracking-wide mb-3">Year 2+ Software License — $13,000/yr</h4>
+                <table class="data-table">
+                    <tr><th>Included</th><th class="center">&nbsp;</th></tr>
+                    <tr><td class="label">Real-time facility dashboard (web + mobile)</td><td class="center">&#10003;</td></tr>
+                    <tr><td class="label">Smart dispatch (asset-triggered tasks)</td><td class="center">&#10003;</td></tr>
+                    <tr><td class="label">Workflow analytics + monthly reporting</td><td class="center">&#10003;</td></tr>
+                    <tr><td class="label">Cloud hosting, security patches, updates</td><td class="center">&#10003;</td></tr>
+                    <tr><td class="label">Anchor firmware updates</td><td class="center">&#10003;</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-5 grid md:grid-cols-2 gap-4">
+            <div class="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 class="text-xs font-bold text-[#0d2137] mb-2">Ownership &amp; Exit</h4>
+                <ul class="text-[11px] text-gray-700 space-y-1.5">
+                    <li class="flex items-start gap-1.5"><span class="text-[#b8965a]">&#9670;</span> <strong>Hardware transfers to Thesis</strong> on Year 1 payment (signed delivery-and-acceptance schedule at Phase 4)</li>
+                    <li class="flex items-start gap-1.5"><span class="text-[#b8965a]">&#9670;</span> <strong>2-year hardware warranty</strong> from install date — regardless of RaaS status</li>
+                    <li class="flex items-start gap-1.5"><span class="text-[#b8965a]">&#9670;</span> If Thesis cancels RaaS: hardware stays, software terminates at paid-term end</li>
+                    <li class="flex items-start gap-1.5"><span class="text-[#b8965a]">&#9670;</span> Thesis may keep $13K/yr software independently, migrate anchors to 3rd-party RTLS, or decommission — no obligation</li>
+                </ul>
+            </div>
+            <div class="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 class="text-xs font-bold text-[#0d2137] mb-2">If Accelerate Dissolves</h4>
+                <ul class="text-[11px] text-gray-700 space-y-1.5">
+                    <li class="flex items-start gap-1.5"><span class="text-[#b8965a]">&#9670;</span> Thesis retains full ownership of anchors and tags</li>
+                    <li class="flex items-start gap-1.5"><span class="text-[#b8965a]">&#9670;</span> Dashboard source + anchor firmware specs held in <strong>third-party escrow</strong> with release-on-bankruptcy</li>
+                    <li class="flex items-start gap-1.5"><span class="text-[#b8965a]">&#9670;</span> You are not stranded if we go away</li>
+                </ul>
+            </div>
+        </div>
+
+        <p class="text-[11px] text-gray-600 mt-4 italic">The $58,100 is a hard asset on your balance sheet, not a service fee disguised as install labor.</p>
+    </div>
+
+    <!-- What's included -->
+    <h3 class="text-lg font-bold text-[#0d2137] mt-8 mb-4">What's Included in Every Option</h3>
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+        <div class="callout-soft p-5">
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Robot hardware (on our balance sheet)</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Thesis Hotel custom branding + walnut/brass/leather service cart</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Deployment, SLAM mapping &amp; commissioning</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Elevator integration (button emulator)</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> 24/7 remote monitoring + 2-hr on-site response</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> All consumables (brushes, filters, mop pads)</li>
+            </ul>
+        </div>
+        <div class="callout-soft p-5">
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Scheduled preventive maintenance</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Break-fix repair + loaner within 24 hours</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Extended warranty beyond manufacturer</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> 3-day on-site training + quarterly refreshers</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Monthly operational review &amp; reporting</li>
+                <li class="flex items-start gap-2"><span class="brand-check">&#10003;</span> Annual safety inspection</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- What you don't pay for -->
+    <div class="mt-6 callout-deep p-5">
+        <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-3">What the Hotel Does NOT Pay For</h3>
+        <div class="grid md:grid-cols-2 gap-x-8 text-xs text-gray-700">
+            <ul class="space-y-1">
+                <li><span class="brand-x">&#10005;</span> No robot purchase or capital expenditure</li>
+                <li><span class="brand-x">&#10005;</span> No software license</li>
+                <li><span class="brand-x">&#10005;</span> No elevator integration hardware cost</li>
+                <li><span class="brand-x">&#10005;</span> No deployment or professional services fee</li>
+            </ul>
+            <ul class="space-y-1">
+                <li><span class="brand-x">&#10005;</span> No support or response fee</li>
+                <li><span class="brand-x">&#10005;</span> No maintenance or consumables fee</li>
+                <li><span class="brand-x">&#10005;</span> No branding, service cart, or customization fee</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- OPERATIONAL EFFICIENCY + ROI -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#0d2137] headline mb-2">Return on Investment</h2>
+    <p class="text-sm text-gray-600 mb-2">The ROI is <strong>hard-dollar labor-cost reduction</strong> — cash that doesn't leave your P&amp;L once the fleet is running. We commit to specific, auditable savings categories: eliminated overtime, eliminated agency and contract spend, open positions not backfilled, reduced shift differentials.</p>
+    <p class="text-sm text-gray-600 mb-6">We do <strong>not</strong> count "hours redirected to other work" in the ROI math. That's capacity, and we show it separately below as upside.</p>
+
+    <h3 class="text-lg font-bold text-[#0d2137] mb-3">Hard Labor Savings — Committed Line Items</h3>
+
+    <table class="data-table">
+        <tr><th>Category</th><th>How the Fleet Captures It</th><th class="center">Monthly Savings</th></tr>
+        <tr class="section-header"><td colspan="3">Option A — Signature (4 robots)</td></tr>
+        <tr><td class="label">Overnight porter shift eliminated</td><td>C40 runs hard-floor maintenance overnight; PT role not backfilled</td><td class="num">$3,300</td></tr>
+        <tr><td class="label">Housekeeping OT reduction (20 hrs/wk @ 1.5×)</td><td>C30 handles daily carpet rotation</td><td class="num">$2,840</td></tr>
+        <tr><td class="label">Third-party carpet-care contract terminated</td><td>Monthly Chem-Dry / Ecolab contract for guest floors</td><td class="num">$1,200</td></tr>
+        <tr><td class="label">Overnight amenity runner PT position</td><td>W3 handles 11 PM – 6 AM delivery autonomously</td><td class="num">$2,000</td></tr>
+        <tr><td class="label">Engineering OT (8 hrs/wk)</td><td>Fewer overnight support calls + manual floor runs</td><td class="num">$1,135</td></tr>
+        <tr><td class="label">Linen transport PT handler</td><td>S300 runs floor-to-laundry transfers during peak turnover</td><td class="num">$1,800</td></tr>
+        <tr class="total"><td colspan="2"><strong>Option A Monthly Hard Savings</strong></td><td class="num"><strong>$12,275</strong></td></tr>
+        <tr><td colspan="2" class="label">Fleet cost</td><td class="num">$11,400</td></tr>
+        <tr class="highlight"><td colspan="2"><strong>Net hard cash benefit</strong></td><td class="num"><strong>+$875 / mo</strong></td></tr>
+
+        <tr class="section-header"><td colspan="3">Option B — Full-Property (8 robots)</td></tr>
+        <tr><td colspan="2" class="label"><em>Option A savings</em></td><td class="num"><em>$12,275</em></td></tr>
+        <tr><td class="label">Residences wing overnight porter</td><td>C30 #2 replaces manual carpet rounds in residences</td><td class="num">$2,800</td></tr>
+        <tr><td class="label">F&amp;B runner OT (peak breakfast + dinner)</td><td>S100 handles simple dining runs; human runners keep premium orders</td><td class="num">$2,400</td></tr>
+        <tr><td class="label">Pool/rooftop beverage runner PT</td><td>S300 #2 delivers kitchen → pool deck &amp; Ivy</td><td class="num">$2,100</td></tr>
+        <tr><td class="label">Third-party courtyard sweeping subcontract</td><td>MT1 Max replaces outdoor sweeping vendor</td><td class="num">$1,800</td></tr>
+        <tr><td class="label">Bellhop peak-shift OT</td><td>S100 absorbs non-premium luggage runs at check-in spikes</td><td class="num">$1,800</td></tr>
+        <tr><td class="label">BOH supply-runner FTE → reduced hours</td><td>S300s batch supply runs; role shifts to part-time</td><td class="num">$1,700</td></tr>
+        <tr class="total"><td colspan="2"><strong>Option B Monthly Hard Savings</strong></td><td class="num"><strong>$24,875</strong></td></tr>
+        <tr><td colspan="2" class="label">Fleet cost</td><td class="num">$22,800</td></tr>
+        <tr class="highlight"><td colspan="2"><strong>Net hard cash benefit</strong></td><td class="num"><strong>+$2,075 / mo</strong></td></tr>
+
+        <tr class="section-header"><td colspan="3">Option C — Thesis Autonomous (14 robots)</td></tr>
+        <tr><td colspan="2" class="label"><em>Option B savings</em></td><td class="num"><em>$24,875</em></td></tr>
+        <tr><td class="label">Overnight housekeeping FTE not backfilled</td><td>W3 #2 + additional C30 absorb overnight workload</td><td class="num">$5,500</td></tr>
+        <tr><td class="label">BOH cleaning contract terminated</td><td>C40 #2 + C30 #3 cover all remaining surfaces</td><td class="num">$3,200</td></tr>
+        <tr><td class="label">Agency temp spend reduced 50%</td><td>Fleet absorbs peak-season coverage normally needing temps</td><td class="num">$3,500</td></tr>
+        <tr><td class="label">Second overnight amenity runner</td><td>W3 #2 provides 24/7 coverage; PT role eliminated</td><td class="num">$1,900</td></tr>
+        <tr><td class="label">Cross-department OT reduction</td><td>Lower pressure on engineering, housekeeping, F&amp;B during peaks</td><td class="num">$2,000</td></tr>
+        <tr class="total"><td colspan="2"><strong>Option C Monthly Hard Savings</strong></td><td class="num"><strong>$40,975</strong></td></tr>
+        <tr><td colspan="2" class="label">Fleet cost (RaaS + Volley)</td><td class="num">$39,050</td></tr>
+        <tr><td colspan="2" class="label">Volley Trainer guest revenue (10 sessions/day @ $60 avg)</td><td class="num">+$18,000</td></tr>
+        <tr class="highlight"><td colspan="2"><strong>Net hard cash benefit (with Volley)</strong></td><td class="num"><strong>+$19,925 / mo</strong></td></tr>
+    </table>
+
+    <div class="mt-4 callout-warm p-4">
+        <p class="text-xs text-gray-700"><strong class="text-[#0d2137]">Savings tracking.</strong> Targets are measured against a baseline built jointly with the Thesis controller and department heads during Phase 1. We sign a <strong>savings tracking worksheet</strong> — monthly operational reviews reconcile actual vs. committed. If we materially miss the target, we work with Thesis in good faith to diagnose and fix the gap during the monthly operational review.</p>
+    </div>
+
+    <h3 class="text-lg font-bold text-[#0d2137] mt-8 mb-3">Capacity Created (Separate from Cash ROI)</h3>
+    <p class="text-sm text-gray-600 mb-4">In addition to the hard savings above, the fleet returns staff hours for higher-value guest work. We do <strong>not</strong> count these in ROI — they are a separate operational benefit.</p>
+    <table class="data-table">
+        <tr>
+            <th></th>
+            <th class="center">Option A</th>
+            <th class="center">Option B</th>
+            <th class="center">Option C</th>
+        </tr>
+        <tr><td class="label">Staff hours returned per day</td><td class="center">30</td><td class="center">57</td><td class="center">90</td></tr>
+        <tr><td class="label">Redirected to</td><td class="center" style="font-size:10px;">Room turns, guest interactions, training</td><td class="center" style="font-size:10px;">+ F&amp;B touchpoints, pool service</td><td class="center" style="font-size:10px;">+ Peak coverage, service recovery, amenity enhancement</td></tr>
+    </table>
+
+    <h3 class="text-lg font-bold text-[#0d2137] mt-8 mb-4">Return on Investment — Cash Only</h3>
+    <table class="data-table">
+        <tr>
+            <th></th>
+            <th class="center">Option A<br><span class="font-normal opacity-75">Signature</span></th>
+            <th class="center">Option B<br><span class="font-normal opacity-75">Full-Property</span></th>
+            <th class="center">Option C<br><span class="font-normal opacity-75">Thesis Autonomous</span></th>
+        </tr>
+        <tr><td class="label">Monthly Fleet Cost</td><td class="num">$11,400</td><td class="num">$22,800</td><td class="num">$39,050</td></tr>
+        <tr><td class="label">Monthly Hard Savings</td><td class="num">$12,275</td><td class="num">$24,875</td><td class="num">$40,975</td></tr>
+        <tr><td class="label">Monthly Volley Revenue</td><td class="center">—</td><td class="center">—</td><td class="num">+$18,000</td></tr>
+        <tr class="highlight"><td class="label">Monthly Net Cash Benefit</td><td class="num"><strong>+$875</strong></td><td class="num"><strong>+$2,075</strong></td><td class="num"><strong>+$19,925</strong></td></tr>
+        <tr class="highlight"><td class="label">Annual Net Cash Benefit</td><td class="num"><strong>+$10,500</strong></td><td class="num"><strong>+$24,900</strong></td><td class="num"><strong>+$239,100</strong></td></tr>
+    </table>
+
+    <div class="mt-4 callout-warm p-5">
+        <p class="text-xs text-gray-700 mb-2"><strong class="text-[#0d2137]">What these numbers are:</strong> Hard labor and vendor costs that leave the P&amp;L once the fleet is running. Line items you can point to on next year's operating statement.</p>
+        <p class="text-xs text-gray-700 mb-2"><strong class="text-[#0d2137]">What these numbers are not:</strong> "Efficiency value" of hours that may or may not translate to real savings. We've moved that to the capacity section above — you get that value too, it just doesn't show up as cash.</p>
+        <p class="text-xs text-gray-700"><strong class="text-[#0d2137]">What's still not counted:</strong> Marketing value of being the first autonomous luxury service hotel, press coverage, guest satisfaction lift, RevPAR premium, and the operational leverage of handling peaks without new hires. Real but harder to commit to in a contract — so we leave them off the ROI line and let them compound as upside.</p>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- DEPLOYMENT PHASES — VISUAL TIMELINE -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#0d2137] headline mb-2">Phased Deployment</h2>
+    <p class="text-sm text-gray-600 mb-6">All options begin with the same 30-day pilot. If Phase 1 doesn't meet its success criteria, both parties walk away.</p>
+
+    <!-- Option A -->
+    <h3 class="text-base font-bold text-[#0d2137] mb-3">Option A — Signature <span class="text-gray-400 font-normal">(3 phases, ~4 months)</span></h3>
+    <div class="grid md:grid-cols-3 gap-3 mb-8">
+        <div class="bg-[#faf7f0] rounded-xl p-4 border-2 border-[#b8965a]/40 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">1</div>
+                <div class="font-bold text-xs text-[#0d2137]">Month 1 — Pilot</div>
+            </div>
+            <p class="text-[11px] text-gray-600">1x C30 on guest-floor carpets. Success criteria agreed in advance. 30 days.</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-[#e8e3d9]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">2</div>
+                <div class="font-bold text-xs text-[#0d2137]">Month 2–3 — Core Fleet</div>
+            </div>
+            <p class="text-[11px] text-gray-600">Elevator integration. Deploy C40, W3, S300. Custom branding applied. <strong>Fleet: 4</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-[#e8e3d9]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">3</div>
+                <div class="font-bold text-xs text-[#0d2137]">Month 4 — Optimize</div>
+            </div>
+            <p class="text-[11px] text-gray-600">Route tuning, schedule refinement, staff workflow integration. <strong>Fleet: 4</strong></p>
+        </div>
+    </div>
+
+    <!-- Option B -->
+    <h3 class="text-base font-bold text-[#0d2137] mb-3">Option B — Full-Property <span class="text-gray-400 font-normal">(4 phases, ~6 months)</span></h3>
+    <div class="grid md:grid-cols-4 gap-3 mb-8">
+        <div class="bg-[#faf7f0] rounded-xl p-4 border-2 border-[#b8965a]/40 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">1</div>
+                <div class="font-bold text-xs text-[#0d2137]">Pilot</div>
+            </div>
+            <p class="text-[11px] text-gray-600">1x C30. 30 days.</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-[#e8e3d9]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">2</div>
+                <div class="font-bold text-xs text-[#0d2137]">Hotel Fleet</div>
+            </div>
+            <p class="text-[11px] text-gray-600">+C40, W3, S100, S300. Branding + leather. <strong>Fleet: 5</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-[#e8e3d9]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">3</div>
+                <div class="font-bold text-xs text-[#0d2137]">Full Coverage</div>
+            </div>
+            <p class="text-[11px] text-gray-600">+C30 #2, S300 #2, MT1 Max. <strong>Fleet: 8</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-[#e8e3d9]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">4</div>
+                <div class="font-bold text-xs text-[#0d2137]">Optimize</div>
+            </div>
+            <p class="text-[11px] text-gray-600">Full route optimization. <strong>Fleet: 8</strong></p>
+        </div>
+    </div>
+
+    <!-- Option C -->
+    <h3 class="text-base font-bold text-[#0d2137] mb-3">Option C — Thesis Autonomous <span class="text-gray-400 font-normal">(5 phases, ~8 months)</span> <span class="recommended-pill ml-2">Recommended</span></h3>
+    <div class="grid md:grid-cols-5 gap-3 mb-6">
+        <div class="bg-[#faf7f0] rounded-xl p-3 border-2 border-[#b8965a]/40 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">1</div>
+                <div class="font-bold text-[11px] text-[#0d2137]">Pilot</div>
+            </div>
+            <p class="text-[10px] text-gray-600">1x C30. 30 days.</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-[#e8e3d9]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">2</div>
+                <div class="font-bold text-[11px] text-[#0d2137]">Hotel Fleet</div>
+            </div>
+            <p class="text-[10px] text-gray-600">+C40, W3, S100, S300, MT1, Volley. <strong>Fleet: 7</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-[#e8e3d9]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">3</div>
+                <div class="font-bold text-[11px] text-[#0d2137]">Full Fleet</div>
+            </div>
+            <p class="text-[10px] text-gray-600">All remaining robots. <strong>Fleet: 14</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-[#e8e3d9]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">4</div>
+                <div class="font-bold text-[11px] text-[#0d2137]">Intelligence</div>
+            </div>
+            <p class="text-[10px] text-gray-600">BLE/UWB anchors, asset tags, dashboard. <strong>+RTLS</strong></p>
+        </div>
+        <div class="bg-white rounded-xl p-3 border border-[#e8e3d9]">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="step-circle">5</div>
+                <div class="font-bold text-[11px] text-[#0d2137]">Smart Ops</div>
+            </div>
+            <p class="text-[10px] text-gray-600">Smart dispatch, analytics, full integration.</p>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- RISK MITIGATION -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <h2 class="text-2xl font-bold text-[#0d2137] headline mb-6">Risk Mitigation</h2>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div class="callout-warm p-5">
+            <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-3">First Deployment Transparency</h3>
+            <p class="text-xs text-gray-700 mb-3">Thesis Hotel is Accelerate Robotics' first commercial deployment. We don't hide that — we structure around it:</p>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Founder on-site</strong> for the entirety of Phase 1 and Phase 2. Not a PM — the CEO.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Weekly operational reviews</strong> during Phases 1–3, monthly in steady state.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Defined success criteria</strong> agreed in writing before the pilot begins.</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>No-penalty cancellation</strong> after 90 days with 30 days' notice.</li>
+            </ul>
+        </div>
+        <div class="callout-soft p-5">
+            <h3 class="font-bold text-xs text-[#0d2137] tech-font uppercase tracking-wide mb-3">Hilton / Curio Compliance</h3>
+            <p class="text-xs text-gray-700 mb-3">Before Phase 1 begins, we will work with your team to address brand and management requirements:</p>
+            <ul class="text-xs text-gray-700 space-y-2">
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>Technology summary</strong> provided for Hilton brand review if required</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> All robots meet <strong>UL and CE safety standards</strong></li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> <strong>No guest data collected</strong> — no cameras recording guests, no PII</li>
+                <li class="flex items-start gap-2"><span class="brand-dot">&#9670;</span> Compatible with management agreement and brand operating standards</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3 class="text-base font-bold text-[#0d2137] mb-3">Operational Safeguards</h3>
+    <table class="data-table">
+        <tr><th style="width:30%;">Scenario</th><th>Response</th></tr>
+        <tr><td class="label">Robot malfunctions in guest hallway</td><td>Remote disable within 5 min. Nearest staff notified to move unit to service area.</td></tr>
+        <tr><td class="label">Robot blocks elevator</td><td>Guest-yield protocol prevents this. Robot holds on-floor if any guest call is pending.</td></tr>
+        <tr><td class="label">Guest noise complaint</td><td>Cleaning schedule adjusted to avoid the reported time window within 24 hours.</td></tr>
+        <tr><td class="label">Peak event in Paseo</td><td>MT1 Max and courtyard-routed robots automatically paused during scheduled events.</td></tr>
+        <tr><td class="label">Power outage / network loss</td><td>Robots safe-stop in place. Resume autonomously when connectivity returns.</td></tr>
+        <tr><td class="label">Staff questions</td><td>3-day hands-on training + quarterly refreshers. Dedicated channel with Accelerate for real-time support.</td></tr>
+    </table>
+
+    <div class="mt-4 bg-[#fef9e7] rounded-xl p-5 border border-[#d4a017]">
+        <p class="text-xs text-gray-800"><strong class="text-[#0d2137]">The risk to Thesis is a 30-day pilot of one carpet cleaning robot.</strong> The upside is being the flagship property for a platform that will scale across hospitality — with the founder-level attention that comes from being first.</p>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ================================================================ -->
+<!-- TERMS + WHY + ASK -->
+<!-- ================================================================ -->
+<section class="max-w-5xl mx-auto px-8 py-6">
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <div>
+            <h2 class="text-2xl font-bold text-[#0d2137] headline mb-4">Commitment Terms</h2>
+            <ul class="text-sm text-gray-700 space-y-3">
+                <li class="flex items-start gap-2"><span class="text-[#b8965a]">&#9670;</span> <strong>30-day pilot</strong> — one robot, defined success criteria</li>
+                <li class="flex items-start gap-2"><span class="text-[#b8965a]">&#9670;</span> <strong>90-day minimum term</strong> — covers pilot + Phase 2 start</li>
+                <li class="flex items-start gap-2"><span class="text-[#b8965a]">&#9670;</span> <strong>30-day cancellation notice</strong> — no penalty, return the robots</li>
+                <li class="flex items-start gap-2"><span class="text-[#b8965a]">&#9670;</span> <strong>No long-term lock-in</strong> — service agreement, not a lease</li>
+                <li class="flex items-start gap-2"><span class="text-[#b8965a]">&#9670;</span> <strong>Right-sizing</strong> — add or remove at phase boundaries</li>
+                <li class="flex items-start gap-2"><span class="text-[#b8965a]">&#9670;</span> <strong>Upgrade path</strong> — start A, expand to B or C anytime</li>
+            </ul>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-[#0d2137] headline mb-4">Why Accelerate Robotics</h2>
+            <ol class="text-sm text-gray-700 space-y-3 list-decimal list-inside">
+                <li><strong>Multi-vendor integration.</strong> Three manufacturers — Keenon, PUDU, Volley — one platform. You buy capability, not a brand.</li>
+                <li><strong>We solve the elevator.</strong> Universal button emulator. No firmware mods, no OEM contract. Non-invasive and reversible.</li>
+                <li><strong>Designed for luxury.</strong> Custom branding, walnut/brass/leather service cart, guest-yield protocols, noise-aware scheduling.</li>
+                <li><strong>Miami-based flagship.</strong> Founder-level attention — your success is our proof of concept.</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- The Ask -->
+    <div class="bg-gradient-to-r from-[#0d2137] to-[#1a2d44] text-white rounded-xl p-8">
+        <h2 class="text-2xl font-bold headline mb-5 text-[#b8965a]">The Ask</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+                <div>
+                    <h3 class="font-bold text-sm mb-1">Choose your tier</h3>
+                    <p class="text-xs text-gray-400">Review the three options and select the scope that matches your goals.</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+                <div>
+                    <h3 class="font-bold text-sm mb-1">Align internally</h3>
+                    <p class="text-xs text-gray-400">If Hilton/Curio or Pyramid Global review is needed, we'll provide documentation upfront.</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+                <div>
+                    <h3 class="font-bold text-sm mb-1">Sign the Phase 1 pilot</h3>
+                    <p class="text-xs text-gray-400">One robot, one use case, 30 days, measurable outcomes. Lowest commitment, highest evidence.</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+                <div>
+                    <h3 class="font-bold text-sm mb-1">Grant facility access</h3>
+                    <p class="text-xs text-gray-400">Charging dock outlet, Wi-Fi credentials, cleaning schedule agreement. That's all Phase 1 needs.</p>
+                </div>
+            </div>
+        </div>
+        <div class="mt-6 bg-white/10 rounded-lg p-4 text-center">
+            <p class="text-sm text-gray-300">If Phase 1 succeeds, we plan Phase 2 together. If it doesn't, both parties walk away.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- FOOTER -->
+<!-- ================================================================ -->
+<footer class="max-w-5xl mx-auto px-8 py-8 mt-4">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-gray-200 pt-6">
+        <div>
+            <p class="text-sm font-bold text-[#0d2137]">Eric Race</p>
+            <p class="text-xs text-gray-500">Founder &amp; CEO, Accelerate Robotics &middot; Miami, Florida</p>
+            <p class="text-xs text-gray-400 mt-1">Direct founder access. No call center, no ticket queue.</p>
+        </div>
+        <div class="text-right">
+            <div class="flex items-center gap-2 justify-end">
+                <div class="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-400 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <span class="text-xs text-gray-400 italic">One brain, many bots.</span>
+            </div>
+            <p class="text-[10px] text-gray-400 mt-1">&copy; April 2026 &middot; Accelerate Robotics</p>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

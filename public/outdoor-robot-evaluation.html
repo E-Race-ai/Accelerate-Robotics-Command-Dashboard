@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Robotics — Outdoor Cleaning Robot Evaluation</title>
+<style>
+  @page { size: letter; margin: 0.6in; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 10.5pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    max-width: 8.5in;
+    margin: 0 auto;
+    padding: 0.6in;
+    background: #fff;
+  }
+  h1 { font-size: 22pt; font-weight: 700; color: #0d2137; margin-bottom: 2pt; border-bottom: 3px solid #0d2137; padding-bottom: 6pt; }
+  h2 { font-size: 14pt; font-weight: 700; color: #0d2137; margin-top: 22pt; margin-bottom: 8pt; border-bottom: 1px solid #ccc; padding-bottom: 4pt; page-break-after: avoid; }
+  h3 { font-size: 11pt; font-weight: 700; color: #1a3a5c; margin-top: 14pt; margin-bottom: 5pt; page-break-after: avoid; }
+  h4 { font-size: 10pt; font-weight: 700; color: #1a3a5c; margin-top: 10pt; margin-bottom: 4pt; page-break-after: avoid; }
+  p { margin-bottom: 7pt; }
+  .subtitle { font-size: 12pt; color: #555; margin-bottom: 2pt; }
+  .meta { font-size: 9pt; color: #777; margin-bottom: 14pt; }
+  .confidential { display: inline-block; background: #c0392b; color: #fff; font-size: 8pt; font-weight: 700; padding: 2pt 6pt; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 6pt; }
+  .draft { display: inline-block; background: #e67e22; color: #fff; font-size: 8pt; font-weight: 700; padding: 2pt 6pt; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 6pt; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 14pt 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt 0; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: #0d2137; color: #fff; font-weight: 700; text-align: left; padding: 5pt 8pt; font-size: 9pt; }
+  td { padding: 4pt 8pt; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7f9fb; }
+  td.num { text-align: right; font-family: 'Courier New', monospace; font-size: 9.5pt; }
+  td.center { text-align: center; }
+  td.label { font-weight: 600; color: #1a3a5c; }
+  tr.total td { background: #eef4ed !important; font-weight: 700; border-top: 2px solid #0d2137; }
+  tr.highlight td { background: #e8f5e9 !important; }
+  tr.amber td { background: #fef5e7 !important; }
+  tr.reject td { background: #fdeaea !important; color: #7a2020; }
+
+  .callout { background: #eaf2f8; border-left: 4px solid #2980b9; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-green { background: #eef4ed; border-left: 4px solid #27ae60; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-amber { background: #fdf2e9; border-left: 4px solid #e67e22; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-red { background: #fdeaea; border-left: 4px solid #c0392b; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+
+  ul, ol { margin: 4pt 0 8pt 18pt; }
+  li { margin-bottom: 3pt; }
+  strong { color: #0d2137; }
+
+  .section-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: #999; margin-bottom: 4pt; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8pt; margin: 10pt 0 14pt 0; }
+  .stat-box { background: #f4f6f9; border-top: 3px solid #0d2137; padding: 8pt 10pt; text-align: center; page-break-inside: avoid; }
+  .stat-box .number { font-size: 15pt; font-weight: 700; color: #0d2137; display: block; }
+  .stat-box .label { font-size: 7.5pt; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .robot-card {
+    border: 1px solid #d0d7de;
+    border-left: 4px solid #0d2137;
+    border-radius: 4pt;
+    padding: 12pt 14pt;
+    margin: 10pt 0 14pt 0;
+    page-break-inside: avoid;
+    background: #fafbfc;
+  }
+  .robot-card.top { border-left-color: #27ae60; background: #f4faf6; }
+  .robot-card.strong { border-left-color: #2980b9; }
+  .robot-card.weak { border-left-color: #e67e22; }
+  .robot-card.reject { border-left-color: #c0392b; background: #fdf6f6; }
+  .robot-card h3 { margin-top: 0; font-size: 12pt; }
+  .robot-card .tier-badge {
+    display: inline-block;
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 2pt 6pt;
+    border-radius: 3px;
+    color: #fff;
+    vertical-align: middle;
+    margin-left: 6pt;
+  }
+  .tier-badge.top { background: #27ae60; }
+  .tier-badge.strong { background: #2980b9; }
+  .tier-badge.weak { background: #e67e22; }
+  .tier-badge.reject { background: #c0392b; }
+
+  .spec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4pt 14pt;
+    font-size: 9.5pt;
+    margin: 6pt 0 8pt 0;
+  }
+  .spec-grid div { border-bottom: 1px dotted #d0d7de; padding: 2pt 0; }
+  .spec-grid strong { font-weight: 700; color: #0d2137; }
+
+  .pros-cons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10pt;
+    margin: 6pt 0 0 0;
+    font-size: 9.5pt;
+  }
+  .pros-cons .pros, .pros-cons .cons { padding: 6pt 10pt; border-radius: 3pt; }
+  .pros-cons .pros { background: #eef4ed; border-left: 3px solid #27ae60; }
+  .pros-cons .cons { background: #fdeaea; border-left: 3px solid #c0392b; }
+  .pros-cons h4 { margin-top: 0; font-size: 9pt; text-transform: uppercase; letter-spacing: 1px; color: #555; }
+  .pros-cons ul { margin: 4pt 0 0 14pt; }
+
+  .page-break { page-break-before: always; }
+  .footer { margin-top: 28pt; padding-top: 10pt; border-top: 1px solid #ccc; font-size: 8pt; color: #999; text-align: center; }
+  .note { font-size: 9pt; color: #777; font-style: italic; margin: 4pt 0 8pt 0; }
+
+  blockquote { background: #f4f6f9; border-left: 4px solid #0d2137; padding: 10pt 14pt; margin: 10pt 0; font-style: italic; font-size: 10pt; }
+
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none; }
+  }
+
+  .no-print { text-align: center; padding: 20pt 0; background: #f4f6f9; margin: 0 -0.6in 14pt -0.6in; }
+  .no-print button { padding: 10pt 24pt; background: #0d2137; color: #fff; border: none; border-radius: 4pt; font-family: 'Georgia', serif; font-size: 11pt; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; }
+  .no-print button:hover { background: #1a3a5c; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<!-- =============================================================
+     COVER
+============================================================= -->
+<h1>Accelerate Robotics <span style="font-weight:400;font-size:13pt;">&mdash; Outdoor Cleaning Robot Evaluation</span></h1>
+<p class="subtitle">Thesis Hotel Courtyard &mdash; Comprehensive Market Scan, Q2 2026</p>
+<p class="meta">Working Draft <span class="confidential">Confidential</span> <span class="draft">Working Draft</span></p>
+
+<p>The Thesis Hotel has a large outdoor courtyard that needs a dedicated cleaning robot to handle tropical debris: palm fronds, leaves, flower litter, and light trash. This document is a full market scan of every robot that could plausibly do the job &mdash; commercial outdoor sweepers, semi-outdoor sweepers, modular yard robots, industrial street sweepers, wet scrubbers, and consumer patio vacuums &mdash; with a fit-scored recommendation at the end.</p>
+
+<p class="note">Every robot in this evaluation was verified against manufacturer spec sheets and current 2026 availability. Pricing is indicative only; quote every candidate before committing.</p>
+
+<hr>
+
+<!-- =============================================================
+     1. USE CASE
+============================================================= -->
+<h2>1. The Use Case</h2>
+
+<h3>The Space</h3>
+
+<p>The Thesis Hotel courtyard is a luxury hospitality environment, not an industrial site. Any robot that operates there is visible to paying guests every hour of the day, so aesthetics, noise, and safety posture matter as much as cleaning performance.</p>
+
+<div class="spec-grid">
+  <div><strong>Surface:</strong> Flat polished tile / stone hardscape</div>
+  <div><strong>Approximate area:</strong> 800&ndash;1,500 m² (est.)</div>
+  <div><strong>Obstacles:</strong> Water sculpture, planters, glass rails</div>
+  <div><strong>Elevated features:</strong> Topiary trees, palms in raised planters</div>
+  <div><strong>Access path:</strong> Guest doors, possible elevator ride</div>
+  <div><strong>Pedestrian traffic:</strong> Continuous, daytime and evening</div>
+</div>
+
+<h3>The Debris</h3>
+
+<p>Florida tropical landscaping generates a specific type of litter that is unusual compared to an airport or a warehouse:</p>
+
+<ul>
+  <li><strong>Palm fronds</strong> (up to 2 ft, stringy and fibrous &mdash; will choke a vacuum, needs a brush to be swept)</li>
+  <li><strong>Broad tropical leaves</strong> (Monstera, Ficus, broad-leaf bougainvillea &mdash; moist, sticky in humidity)</li>
+  <li><strong>Flower petals and seed pods</strong> from bougainvillea, plumeria, hibiscus</li>
+  <li><strong>Light guest trash</strong> &mdash; cocktail napkins, straws, wrappers, pool towels</li>
+  <li><strong>Fine dust</strong> &mdash; salt aerosol, windblown sand (Miami coastal)</li>
+  <li><strong>Wet/dry mixed</strong> after afternoon rain or sprinkler cycles</li>
+</ul>
+
+<h3>The Climate</h3>
+
+<div class="spec-grid">
+  <div><strong>Summer high:</strong> 95°F / 35°C</div>
+  <div><strong>Humidity:</strong> 75&ndash;95% year-round</div>
+  <div><strong>Rain:</strong> Daily afternoon showers, June&ndash;Oct</div>
+  <div><strong>Sun exposure:</strong> Direct UV, 8+ hours most days</div>
+  <div><strong>Salt air:</strong> Coastal corrosion risk</div>
+  <div><strong>Wind:</strong> Gulf storms, hurricane season</div>
+</div>
+
+<h3>No-Go Zones</h3>
+
+<ul>
+  <li>Water sculpture base and spray zone</li>
+  <li>Glass rail ledges and guest-seating areas when occupied</li>
+  <li>Planter beds (robot must not pull mulch or damage drip irrigation)</li>
+  <li>Stairs / step-down thresholds (any robot without step detection is disqualified)</li>
+</ul>
+
+<hr>
+
+<!-- =============================================================
+     2. EVALUATION CRITERIA
+============================================================= -->
+<h2>2. Evaluation Criteria</h2>
+
+<p>Every candidate is scored against eight criteria. The first four are hard gates &mdash; a robot must pass all four to be considered. The next four are preference factors.</p>
+
+<h3>Hard Gates (Must-Pass)</h3>
+
+<table>
+<tr><th style="width:25%">Gate</th><th>Requirement</th></tr>
+<tr><td class="label">Surface compatibility</td><td>Must operate on hard flat tile/stone. Robots designed for grass or dirt only are out.</td></tr>
+<tr><td class="label">Weather rating</td><td>Minimum IP54 (dust + rain splash). Ideally IP55 or higher. Must tolerate Florida humidity without condensation damage.</td></tr>
+<tr><td class="label">Debris handling</td><td>Must pick up leaves and light debris, not just fine dust. Rules out residential robot vacuums and most floor scrubbers.</td></tr>
+<tr><td class="label">Guest-area safety</td><td>Independent safety certification OR proven deployment in guest-facing hospitality environments. Must have visual/audio warning system for pedestrian awareness.</td></tr>
+</table>
+
+<h3>Preference Factors (Weighted)</h3>
+
+<table>
+<tr><th style="width:25%">Factor</th><th style="width:18%">Weight</th><th>Why it matters</th></tr>
+<tr><td class="label">Coverage rate (m²/hr)</td><td>High</td><td>Full courtyard must be cleanable in one operating window (2&ndash;3 hrs max)</td></tr>
+<tr><td class="label">Bin / debris capacity</td><td>High</td><td>Tropical litter fills small bins fast; frequent emptying defeats the purpose</td></tr>
+<tr><td class="label">Visual aesthetics &amp; noise</td><td>High</td><td>Guest-facing environment; robot should look intentional, not industrial</td></tr>
+<tr><td class="label">Total cost of operation</td><td>Medium</td><td>Capex + service + consumables + software fees, amortized over 36 months</td></tr>
+</table>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     3. CATEGORIES
+============================================================= -->
+<h2>3. Robot Categories Considered</h2>
+
+<p>Six product categories were scanned. Only Categories A and B produced viable candidates for this specific use case.</p>
+
+<table>
+<tr>
+  <th>Category</th>
+  <th>Typical Price</th>
+  <th>Fit for Use Case</th>
+  <th>Why</th>
+</tr>
+<tr class="highlight">
+  <td class="label">A. Commercial outdoor sweepers</td>
+  <td class="num">$22K&ndash;$35K</td>
+  <td><strong>Strong fit</strong></td>
+  <td>Purpose-built for semi-outdoor hardscape, rain-rated, sweep big debris</td>
+</tr>
+<tr class="highlight">
+  <td class="label">B. Commercial indoor/semi-outdoor sweepers</td>
+  <td class="num">$15K&ndash;$25K</td>
+  <td><strong>Fallback option</strong></td>
+  <td>Cheaper, but no weather sealing &mdash; only works under cover</td>
+</tr>
+<tr class="amber">
+  <td class="label">C. Modular outdoor yard robots</td>
+  <td class="num">$4K&ndash;$8K</td>
+  <td>Partial fit</td>
+  <td>Good for gathering leaves into piles but don't collect them; need staff pickup</td>
+</tr>
+<tr class="amber">
+  <td class="label">D. Consumer patio vacuums</td>
+  <td class="num">$700&ndash;$1,800</td>
+  <td>Weak fit</td>
+  <td>Built for small residential patios, no leaf capacity, limited weather rating</td>
+</tr>
+<tr class="reject">
+  <td class="label">E. Autonomous industrial street sweepers</td>
+  <td class="num">$100K+</td>
+  <td>Rejected</td>
+  <td>Too large, designed for airports/streets, won't fit through courtyard access</td>
+</tr>
+<tr class="reject">
+  <td class="label">F. Wet floor scrubbers</td>
+  <td class="num">$15K&ndash;$60K</td>
+  <td>Rejected</td>
+  <td>Wrong tool &mdash; they scrub wet floors, not sweep dry leaves</td>
+</tr>
+<tr class="reject">
+  <td class="label">G. Robot lawn mowers</td>
+  <td class="num">$700&ndash;$5,000</td>
+  <td>Rejected</td>
+  <td>Cut grass, no debris collection, require boundary wires; hardscape-incompatible</td>
+</tr>
+</table>
+
+<hr>
+
+<!-- =============================================================
+     4. DEEP-DIVE CANDIDATES
+============================================================= -->
+<h2>4. Candidate Deep-Dives</h2>
+
+<p>Fourteen robots were evaluated individually. Each was graded <strong>Top Pick</strong>, <strong>Strong Candidate</strong>, <strong>Weak Fit</strong>, or <strong>Rejected</strong> based on the criteria in Section 2.</p>
+
+<!-- ======================= CANDIDATE 1 ======================= -->
+<div class="robot-card top">
+  <h3>1. PUDU MT1 Max <span class="tier-badge top">Top Pick</span></h3>
+  <p class="section-label">Category A &mdash; Commercial Outdoor Sweeper &middot; Manufacturer: Pudu Robotics</p>
+
+  <p>The MT1 Max is the newest flagship in Pudu's sweeper line, launched specifically to address semi-outdoor environments like courtyards, apartment complexes, and parking structures. It is the only robot in this evaluation that is <em>purpose-built for exactly this use case</em>.</p>
+
+  <div class="spec-grid">
+    <div><strong>IP rating:</strong> IP54 (dust + rain splash)</div>
+    <div><strong>Rain sensor:</strong> Yes &mdash; auto-returns to safe zone</div>
+    <div><strong>Sweep width:</strong> 27.5 in (70 cm)</div>
+    <div><strong>Waste bin:</strong> 9.2 gal (35 L)</div>
+    <div><strong>Cleaning rate:</strong> 1,800&ndash;6,000 m²/hr</div>
+    <div><strong>Runtime:</strong> 4&ndash;8 hrs, auto-dock</div>
+    <div><strong>Brushes:</strong> Dual-disc + main roller</div>
+    <div><strong>Sensing:</strong> 3D LiDAR + AI cameras, 150 m detection</div>
+    <div><strong>Safety:</strong> 1.2 m warning light + audible alarms</div>
+    <div><strong>Indicative price:</strong> ~$24,000 US (list)</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>IP54 + rain sensor handles Florida showers</li>
+        <li>Dual-disc brushes actually pick up palm fronds and leaves (not just vacuum fines)</li>
+        <li>35 L bin = half-day of tropical debris without emptying</li>
+        <li>AI debris recognition continuously learns new litter types</li>
+        <li>3D LiDAR navigates glass rails, sculptures, and planters safely</li>
+        <li>Hospitality-grade design &mdash; looks intentional, not industrial</li>
+        <li>Auto-dock and 24/7 operation &mdash; runs three cycles per day unattended</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>IP54 &ne; waterproof &mdash; direct heavy rain will still dock the robot</li>
+        <li>US distributor density is lighter than Europe; lead time TBD</li>
+        <li>1.2 m warning light is tall &mdash; confirm it doesn't clash with courtyard sightlines</li>
+        <li>~$24K capex; must be wrapped into RaaS or financed</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 2 ======================= -->
+<div class="robot-card strong">
+  <h3>2. PUDU MT1 (Base Model) <span class="tier-badge strong">Strong Candidate</span></h3>
+  <p class="section-label">Category B &mdash; Commercial Semi-Outdoor Sweeper &middot; Manufacturer: Pudu Robotics</p>
+
+  <p>The original MT1 on which the Max is based. Same AI platform, same dual-disc brush design, same 35 L bin, but without the IP54 rating, without the 3D LiDAR upgrade, and without the water-drop sensor. Best suited for covered or indoor areas.</p>
+
+  <div class="spec-grid">
+    <div><strong>IP rating:</strong> None rated (indoor/covered only)</div>
+    <div><strong>Sweep width:</strong> 27.5 in (70 cm)</div>
+    <div><strong>Waste bin:</strong> 9.2 gal (35 L)</div>
+    <div><strong>Cleaning rate:</strong> 1,800 m²/hr standard</div>
+    <div><strong>Runtime:</strong> 4&ndash;8 hrs, auto-dock</div>
+    <div><strong>Sensing:</strong> LiDAR SLAM + VSLAM</div>
+    <div><strong>Target area:</strong> Up to 100,000 m²</div>
+    <div><strong>Indicative price:</strong> ~$17&ndash;$19K US (~30% less than Max)</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>30% cheaper than MT1 Max with the same debris-handling brush system</li>
+        <li>Excellent fit if the courtyard is covered (atrium / glass roof)</li>
+        <li>Proven in indoor hospitality deployments worldwide</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>No weather sealing &mdash; direct rain is a hard stop</li>
+        <li>No rain detection; needs manual return if weather turns</li>
+        <li>Only makes sense if 100% of the sweep path is under cover</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 3 ======================= -->
+<div class="robot-card strong">
+  <h3>3. Gausium Phantas <span class="tier-badge strong">Strong Candidate</span></h3>
+  <p class="section-label">Category B &mdash; Commercial Indoor 4-in-1 Cleaner &middot; Manufacturer: Gausium</p>
+
+  <p>Gausium's Phantas is a compact 4-in-1 robot that vacuums, sweeps, scrubs, and dust mops. Designed for hotel lobbies and offices &mdash; the size and noise level are hospitality-friendly, but it is fundamentally an indoor robot.</p>
+
+  <div class="spec-grid">
+    <div><strong>IP rating:</strong> Indoor only (not rated)</div>
+    <div><strong>Width:</strong> 17.3 in (44 cm)</div>
+    <div><strong>Cleaning rate:</strong> 1,000&ndash;1,180 m²/hr</div>
+    <div><strong>Runtime:</strong> 4&ndash;14 hrs (mode dependent)</div>
+    <div><strong>Noise:</strong> &lt;65 dB (guest-friendly)</div>
+    <div><strong>Modes:</strong> Vacuum, sweep, scrub, dust mop</div>
+    <div><strong>Recharge:</strong> 2 hours to full</div>
+    <div><strong>Indicative price:</strong> ~$15&ndash;$20K US</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Quiet (&lt;65 dB) &mdash; can run during guest hours</li>
+        <li>4-in-1 modes handle mixed interior floor types</li>
+        <li>Compact enough to clean under tables and through tight spaces</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Not built for outdoor use &mdash; ends the evaluation right there for this courtyard</li>
+        <li>Suction-forward design; palm fronds and larger leaves will jam the intake</li>
+        <li>Small bin capacity relative to outdoor debris load</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ======================= CANDIDATE 4 ======================= -->
+<div class="robot-card strong">
+  <h3>4. ECOVACS Commercial CC1 <span class="tier-badge strong">Strong Candidate</span></h3>
+  <p class="section-label">Category B &mdash; Commercial Indoor 4-in-1 Cleaner &middot; Manufacturer: ECOVACS Commercial</p>
+
+  <p>ECOVACS Commercial's four-in-one answer to Gausium Phantas. Sweeps, scrubs, vacuums, and mops in a single machine; aimed squarely at hotels, hospitals, and retail. Again &mdash; indoor only.</p>
+
+  <div class="spec-grid">
+    <div><strong>IP rating:</strong> Indoor only</div>
+    <div><strong>Cleaning rate:</strong> 700&ndash;1,000 m²/hr</div>
+    <div><strong>Modes:</strong> 4-in-1 sweep / scrub / vacuum / mop</div>
+    <div><strong>Target:</strong> Hotels, hospitals, restaurants, retail</div>
+    <div><strong>Indicative price:</strong> ~$18&ndash;$22K US</div>
+    <div><strong>Platform:</strong> ECOVACS Commercial Cloud</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Well-known hospitality brand; easier procurement story</li>
+        <li>Four modes in one chassis reduce total robot count</li>
+        <li>Proven in hotel lobby deployments</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Same indoor-only limitation as Phantas</li>
+        <li>Lower coverage rate than the Pudu MT1 line</li>
+        <li>Service/support in US is still maturing</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 5 ======================= -->
+<div class="robot-card strong">
+  <h3>5. Keenon KleenBot C55 <span class="tier-badge strong">Strong Candidate</span></h3>
+  <p class="section-label">Category B &mdash; Commercial Indoor Sweeper &middot; Manufacturer: Keenon</p>
+
+  <p>Keenon's newest large-scale cleaner, unveiled at ISSA North America Expo. Sized for spaces over 3,000 m². Indoor-focused, but listed here because Accelerate Robotics already operates the Keenon fleet at Thesis Hotel &mdash; operational continuity is a plus.</p>
+
+  <div class="spec-grid">
+    <div><strong>IP rating:</strong> Indoor only</div>
+    <div><strong>Target area:</strong> 3,000+ m²</div>
+    <div><strong>Integration:</strong> Same Keenon app/fleet as existing C30, C40, W3 at Thesis</div>
+    <div><strong>Indicative price:</strong> TBD (quote required)</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Already part of the Accelerate RaaS fleet at Thesis &mdash; single service contract</li>
+        <li>Staff training already covers the Keenon UX</li>
+        <li>Warranty and parts pipeline already established</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Indoor only &mdash; disqualifies it for direct courtyard duty</li>
+        <li>Might make sense as an adjacent indoor lobby cleaner to complement an outdoor robot</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 6 ======================= -->
+<div class="robot-card weak">
+  <h3>6. Avidbots Kas <span class="tier-badge weak">Weak Fit</span></h3>
+  <p class="section-label">Category B &mdash; Commercial Indoor Floor Scrubber &middot; Manufacturer: Avidbots</p>
+
+  <p>Avidbots' smaller floor scrubber, built for retail and transport environments with tight aisles. A well-engineered robot but fundamentally a <em>scrubber</em>, not a sweeper &mdash; wrong tool for this courtyard.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Floor scrubber (wet cleaning)</div>
+    <div><strong>Target:</strong> Retail, transport, healthcare, education</div>
+    <div><strong>Indoor only:</strong> Yes</div>
+    <div><strong>Indicative price:</strong> ~$30&ndash;$40K US</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>High-quality safety certification and enterprise support</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Scrubber design &mdash; water tanks, squeegees, solution &mdash; not leaves</li>
+        <li>No outdoor rating</li>
+        <li>Most expensive serious option in the evaluation</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ======================= CANDIDATE 7 ======================= -->
+<div class="robot-card weak">
+  <h3>7. Nilfisk Liberty SC50 <span class="tier-badge weak">Weak Fit</span></h3>
+  <p class="section-label">Category B / F &mdash; Commercial Autonomous Scrubber &middot; Manufacturer: Nilfisk</p>
+
+  <p>The only floor scrubber in the market with independent North American + EU safety certification. A serious commercial machine &mdash; just not one designed for dry leaf debris or outdoor use.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Autonomous floor scrubber</div>
+    <div><strong>Coverage:</strong> 55,000 sq ft / 6 hr runtime</div>
+    <div><strong>Scrub head:</strong> 20 in REV head, 15 gal solution tank</div>
+    <div><strong>Safety certification:</strong> NA + EU third-party certified (rare)</div>
+    <div><strong>Indoor only:</strong> Yes</div>
+    <div><strong>Indicative price:</strong> ~$40&ndash;$55K US</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Best-in-class safety certification for public spaces</li>
+        <li>Very high coverage rate per charge</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Wet scrubbing, not dry sweeping &mdash; wrong category</li>
+        <li>Indoor only</li>
+        <li>Heavy and expensive for a courtyard footprint</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 8 ======================= -->
+<div class="robot-card reject">
+  <h3>8. Gausium Scrubber 75 <span class="tier-badge reject">Rejected</span></h3>
+  <p class="section-label">Category F &mdash; Industrial Floor Scrubber &middot; Manufacturer: Gausium</p>
+
+  <p>Heavy-duty industrial scrubber for warehouses, factories, and logistics floors. Sweeps and scrubs in a single pass. Rejected because it is a wet machine for dry-leaf work.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Industrial scrubber-sweeper</div>
+    <div><strong>Scrub width:</strong> 750 mm</div>
+    <div><strong>Coverage:</strong> 3,000 m²/hr</div>
+    <div><strong>Clean water tank:</strong> 75 L</div>
+    <div><strong>Indicative price:</strong> ~$50&ndash;$75K US</div>
+  </div>
+
+  <div class="callout-red"><strong>Reject:</strong> A wet industrial scrubber in a hotel courtyard is visually and functionally the wrong tool. Move on.</div>
+</div>
+
+<!-- ======================= CANDIDATE 9 ======================= -->
+<div class="robot-card reject">
+  <h3>9. Trombia Free <span class="tier-badge reject">Rejected</span></h3>
+  <p class="section-label">Category E &mdash; Autonomous Street Sweeper &middot; Manufacturer: Trombia Technologies</p>
+
+  <p>Finnish autonomous street sweeper used by municipalities and airports. Impressive machine &mdash; but sized for city blocks and airfield aprons, not hotel courtyards.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Full-size autonomous street sweeper</div>
+    <div><strong>Coverage:</strong> 5,000&ndash;15,000 m²/hr</div>
+    <div><strong>Capacity:</strong> 3,000&ndash;4,000 lbs debris</div>
+    <div><strong>Power draw:</strong> 6&ndash;10 kW (street-sweeper scale)</div>
+    <div><strong>Indicative price:</strong> $150K+ (quote only)</div>
+  </div>
+
+  <div class="callout-red"><strong>Reject:</strong> Too large to fit through any hotel access point, massively oversized for a 1,500 m² courtyard, visually wrong for a luxury hospitality environment. Right tool for an airport tarmac &mdash; not a courtyard.</div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ======================= CANDIDATE 10 ======================= -->
+<div class="robot-card weak">
+  <h3>10. Yarbo 4-in-1 Modular System (Leaf Blower Module) <span class="tier-badge weak">Weak Fit</span></h3>
+  <p class="section-label">Category C &mdash; Modular Outdoor Yard Robot &middot; Manufacturer: Yarbo</p>
+
+  <p>The interesting outlier. Yarbo is a modular RTK-GPS yard robot with swappable modules &mdash; lawn mower, snow blower, and leaf blower. The leaf blower module gathers leaves into piles for human pickup.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Modular outdoor yard robot</div>
+    <div><strong>Leaf blower:</strong> 2,000W, 190 MPH, 760 CFM</div>
+    <div><strong>Slope handling:</strong> Up to 35° (70%)</div>
+    <div><strong>Navigation:</strong> RTK GPS + AI vision + auto-mapping</div>
+    <div><strong>Leaf strategy:</strong> Blows debris into piles (does not collect)</div>
+    <div><strong>Indicative price:</strong> $3,500&ndash;$4,900 base + ~$4,800 leaf blower module</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Purpose-built for outdoor use &mdash; no weather-rating problem</li>
+        <li>Significantly cheaper than any commercial option</li>
+        <li>Modular &mdash; could handle future hurricane debris or other tasks</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li><strong>Piles leaves, does not collect them.</strong> Staff still needs to pick up the piles &mdash; this is not a fully autonomous clean</li>
+        <li>760 CFM blower in a courtyard with seated guests will generate noise and dust complaints</li>
+        <li>RTK GPS requires clear sky view &mdash; works great open yards, less so courtyards surrounded by buildings</li>
+        <li>Built for residential properties; durability in 24/7 commercial use is unproven</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 11 ======================= -->
+<div class="robot-card weak">
+  <h3>11. Narwal Flow <span class="tier-badge weak">Weak Fit</span></h3>
+  <p class="section-label">Category D &mdash; Consumer Patio Vacuum &middot; Manufacturer: Narwal</p>
+
+  <p>Recent consumer crossover vacuum marketed for indoor and patio use. 22,000 Pa suction &mdash; the highest in consumer class &mdash; but still a residential device.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Consumer robot vacuum (indoor + patio)</div>
+    <div><strong>Suction:</strong> 22,000 Pa</div>
+    <div><strong>Target area:</strong> Small residential patios</div>
+    <div><strong>Weather rating:</strong> Splash only</div>
+    <div><strong>Indicative price:</strong> ~$1,400 US</div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Why it fits</h4>
+      <ul>
+        <li>Cheap enough to experiment with on a small area</li>
+        <li>Very high suction for a consumer robot</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Watch-outs</h4>
+      <ul>
+        <li>Suction-only &mdash; palm fronds and broad leaves will clog the intake in minutes</li>
+        <li>Dust bin is too small for a commercial courtyard load</li>
+        <li>Not engineered for 24/7 duty cycle</li>
+        <li>No commercial service/SLA &mdash; when it breaks, it goes back to Amazon</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CANDIDATE 12 ======================= -->
+<div class="robot-card weak">
+  <h3>12. Narwal Freo Z Ultra <span class="tier-badge weak">Weak Fit</span></h3>
+  <p class="section-label">Category D &mdash; Consumer Robot Vacuum &middot; Manufacturer: Narwal</p>
+
+  <p>Narwal's flagship consumer vacuum/mop combo, sometimes marketed as "outdoor patio capable" because of its weatherproof body. 8,200 Pa suction &mdash; strong for the category but not commercial grade.</p>
+
+  <div class="spec-grid">
+    <div><strong>Type:</strong> Consumer robot vacuum / mop</div>
+    <div><strong>Suction:</strong> 8,200 Pa</div>
+    <div><strong>Target area:</strong> Mixed indoor + small patio</div>
+    <div><strong>Indicative price:</strong> ~$1,500 US</div>
+  </div>
+
+  <div class="callout-amber"><strong>Watch-out:</strong> Consumer-grade reliability in a hospitality environment is a constant fire drill. Avoid unless the use case is a single small patio with grass-free zones and light debris only.</div>
+</div>
+
+<!-- ======================= CANDIDATE 13 ======================= -->
+<div class="robot-card reject">
+  <h3>13. Husqvarna Automower <span class="tier-badge reject">Rejected</span></h3>
+  <p class="section-label">Category G &mdash; Robot Lawn Mower &middot; Manufacturer: Husqvarna</p>
+
+  <p>Market-leading robot lawn mower. Not a cleaner &mdash; it <em>mulches</em> grass clippings in place. Included here only because "yard robot" searches surface it.</p>
+
+  <div class="callout-red"><strong>Reject:</strong> It is a mower, not a sweeper. It operates on grass, not hardscape. It has no debris collection. It is the wrong tool.</div>
+</div>
+
+<!-- ======================= CANDIDATE 14 ======================= -->
+<div class="robot-card reject">
+  <h3>14. Worx Landroid Vision <span class="tier-badge reject">Rejected</span></h3>
+  <p class="section-label">Category G &mdash; Robot Lawn Mower &middot; Manufacturer: Worx</p>
+
+  <p>Newer AI-vision Worx mower that can follow hardscape borders intelligently. Still a mower &mdash; same rejection logic as the Automower.</p>
+
+  <div class="callout-red"><strong>Reject:</strong> Mower, not cleaner. Cutting deck instead of brush/bin. Wrong tool.</div>
+</div>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     5. SIDE-BY-SIDE COMPARISON
+============================================================= -->
+<h2>5. Side-by-Side Comparison Table</h2>
+
+<p>All fourteen candidates ranked by fit. Top two are the only robots that should be taken to a vendor demo.</p>
+
+<table>
+<tr>
+  <th>#</th>
+  <th>Model</th>
+  <th>Category</th>
+  <th style="text-align:center">Outdoor?</th>
+  <th style="text-align:center">IP</th>
+  <th style="text-align:right">Coverage</th>
+  <th style="text-align:right">Bin</th>
+  <th style="text-align:right">Price (USD)</th>
+  <th style="text-align:center">Fit</th>
+</tr>
+<tr class="highlight">
+  <td>1</td>
+  <td class="label"><strong>PUDU MT1 Max</strong></td>
+  <td>Outdoor sweeper</td>
+  <td class="center">Yes</td>
+  <td class="center">IP54</td>
+  <td class="num">1,800&ndash;6,000 m²/hr</td>
+  <td class="num">35 L</td>
+  <td class="num">~$24K</td>
+  <td class="center"><strong>9/10</strong></td>
+</tr>
+<tr class="highlight">
+  <td>2</td>
+  <td class="label">PUDU MT1</td>
+  <td>Indoor sweeper</td>
+  <td class="center">Covered</td>
+  <td class="center">&mdash;</td>
+  <td class="num">1,800 m²/hr</td>
+  <td class="num">35 L</td>
+  <td class="num">~$17&ndash;19K</td>
+  <td class="center"><strong>7/10</strong></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td class="label">Gausium Phantas</td>
+  <td>Indoor 4-in-1</td>
+  <td class="center">No</td>
+  <td class="center">&mdash;</td>
+  <td class="num">1,000&ndash;1,180 m²/hr</td>
+  <td class="num">Small</td>
+  <td class="num">~$15&ndash;20K</td>
+  <td class="center">5/10</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td class="label">ECOVACS CC1</td>
+  <td>Indoor 4-in-1</td>
+  <td class="center">No</td>
+  <td class="center">&mdash;</td>
+  <td class="num">700&ndash;1,000 m²/hr</td>
+  <td class="num">Small</td>
+  <td class="num">~$18&ndash;22K</td>
+  <td class="center">5/10</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td class="label">Keenon C55</td>
+  <td>Indoor sweeper</td>
+  <td class="center">No</td>
+  <td class="center">&mdash;</td>
+  <td class="num">TBD</td>
+  <td class="num">TBD</td>
+  <td class="num">Quote</td>
+  <td class="center">5/10</td>
+</tr>
+<tr class="amber">
+  <td>6</td>
+  <td class="label">Yarbo 4-in-1</td>
+  <td>Outdoor modular</td>
+  <td class="center">Yes</td>
+  <td class="center">Outdoor</td>
+  <td class="num">Varies</td>
+  <td class="num">None (piles)</td>
+  <td class="num">~$8&ndash;10K</td>
+  <td class="center">4/10</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td class="label">Avidbots Kas</td>
+  <td>Indoor scrubber</td>
+  <td class="center">No</td>
+  <td class="center">&mdash;</td>
+  <td class="num">~1,500 m²/hr</td>
+  <td class="num">N/A</td>
+  <td class="num">~$30&ndash;40K</td>
+  <td class="center">3/10</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td class="label">Nilfisk Liberty SC50</td>
+  <td>Indoor scrubber</td>
+  <td class="center">No</td>
+  <td class="center">&mdash;</td>
+  <td class="num">5,100 m²/6hr</td>
+  <td class="num">N/A</td>
+  <td class="num">~$40&ndash;55K</td>
+  <td class="center">3/10</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td class="label">Narwal Flow</td>
+  <td>Consumer vacuum</td>
+  <td class="center">Light</td>
+  <td class="center">Splash</td>
+  <td class="num">Small</td>
+  <td class="num">0.5 L</td>
+  <td class="num">~$1,400</td>
+  <td class="center">3/10</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td class="label">Narwal Freo Z Ultra</td>
+  <td>Consumer vacuum</td>
+  <td class="center">Light</td>
+  <td class="center">Splash</td>
+  <td class="num">Small</td>
+  <td class="num">0.5 L</td>
+  <td class="num">~$1,500</td>
+  <td class="center">3/10</td>
+</tr>
+<tr class="reject">
+  <td>11</td>
+  <td class="label">Gausium Scrubber 75</td>
+  <td>Industrial scrubber</td>
+  <td class="center">No</td>
+  <td class="center">&mdash;</td>
+  <td class="num">3,000 m²/hr</td>
+  <td class="num">N/A</td>
+  <td class="num">~$50&ndash;75K</td>
+  <td class="center">1/10</td>
+</tr>
+<tr class="reject">
+  <td>12</td>
+  <td class="label">Trombia Free</td>
+  <td>Street sweeper</td>
+  <td class="center">Yes</td>
+  <td class="center">Full</td>
+  <td class="num">5&ndash;15K m²/hr</td>
+  <td class="num">3,000 lb</td>
+  <td class="num">$150K+</td>
+  <td class="center">1/10</td>
+</tr>
+<tr class="reject">
+  <td>13</td>
+  <td class="label">Husqvarna Automower</td>
+  <td>Lawn mower</td>
+  <td class="center">Yes</td>
+  <td class="center">Full</td>
+  <td class="num">N/A</td>
+  <td class="num">None</td>
+  <td class="num">~$700&ndash;5K</td>
+  <td class="center">0/10</td>
+</tr>
+<tr class="reject">
+  <td>14</td>
+  <td class="label">Worx Landroid Vision</td>
+  <td>Lawn mower</td>
+  <td class="center">Yes</td>
+  <td class="center">Full</td>
+  <td class="num">N/A</td>
+  <td class="num">None</td>
+  <td class="num">~$1.5&ndash;2K</td>
+  <td class="center">0/10</td>
+</tr>
+</table>
+
+<hr>
+
+<!-- =============================================================
+     6. RECOMMENDATION
+============================================================= -->
+<h2>6. Recommendation</h2>
+
+<div class="stat-grid">
+  <div class="stat-box">
+    <span class="number">PUDU MT1 Max</span>
+    <span class="label">Primary Choice</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">~$24K</span>
+    <span class="label">Capex (List)</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">IP54</span>
+    <span class="label">Weather Rated</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">9/10</span>
+    <span class="label">Fit Score</span>
+  </div>
+</div>
+
+<h3>Primary: PUDU MT1 Max</h3>
+
+<p>The MT1 Max is the <strong>only</strong> robot in the fourteen-candidate scan that was purpose-built for this exact environment. IP54 weather sealing, dual-disc brushes that physically sweep palm fronds and leaves, 35 L bin for tropical debris volume, 3D LiDAR for the obstacle-dense courtyard, rain-drop sensor for the Florida afternoon showers, and hospitality-grade visual aesthetics.</p>
+
+<p>Every other commercial option either (a) is indoor-only and will fail on the first rainy day, or (b) is a scrubber that's wrong for dry leaves, or (c) is a consumer vacuum that will die on the first palm frond. The MT1 Max is the only machine that clears all four hard gates.</p>
+
+<h3>Runner-up: PUDU MT1 (if courtyard is fully covered)</h3>
+
+<p>If site inspection reveals that the courtyard sweep path is 100% under a glass roof, atrium structure, or loggia &mdash; the base MT1 is a ~30% cheaper path to the same brush and bin hardware. Confirm first that <em>no</em> robot path is exposed to direct rain or sprinkler overspray.</p>
+
+<h3>Experimental backup: Yarbo leaf-blower module</h3>
+
+<p>Only if the cleaning window allows staff to follow behind and pick up blower piles. Not a complete solution &mdash; but a cheap complement to handle heavy post-storm debris that would overwhelm a sweeper's bin.</p>
+
+<hr>
+
+<div class="page-break"></div>
+
+<!-- =============================================================
+     7. PILOT PATH
+============================================================= -->
+<h2>7. Pilot Path</h2>
+
+<p>This is the recommended 4-week sequence to evaluate and deploy the MT1 Max at the Thesis Hotel courtyard. It mirrors the indoor-fleet playbook that is already running at the same property, so the hotel's GM sees a consistent process.</p>
+
+<h3>Week 1 &mdash; Site Survey</h3>
+
+<ul>
+  <li>On-site walk with a PUDU US distributor representative</li>
+  <li>Confirm courtyard dimensions, door widths, elevator cab clearances</li>
+  <li>Map the sweep path, no-go zones, and docking station location</li>
+  <li>Measure typical debris load (weight / day) to validate the 35 L bin assumption</li>
+  <li>Confirm Wi-Fi coverage and charging power availability</li>
+</ul>
+
+<h3>Week 2 &mdash; Loaner Evaluation</h3>
+
+<ul>
+  <li>7-day on-site loaner from PUDU distributor</li>
+  <li>Run both a morning and evening cleaning cycle</li>
+  <li>Stress test: trigger rain event, measure response time of water-drop sensor</li>
+  <li>Collect guest feedback via GM + front-desk log</li>
+  <li>Document edge cases (fountain splash, planter overshoot, stair avoidance)</li>
+</ul>
+
+<h3>Week 3 &mdash; Commercial Proposal</h3>
+
+<ul>
+  <li>Present RaaS pricing to Thesis Hotel GM (~$2,850/mo flat, bundled with indoor fleet)</li>
+  <li>Draft Phase 4 addendum to the existing proposal document</li>
+  <li>Confirm maintenance SLA and spare-parts access</li>
+</ul>
+
+<h3>Week 4 &mdash; Commissioning</h3>
+
+<ul>
+  <li>Ship the production unit</li>
+  <li>3-day on-site setup, mapping, and staff training (same playbook as indoor fleet)</li>
+  <li>Go-live + 30-day monitoring window</li>
+</ul>
+
+<hr>
+
+<!-- =============================================================
+     8. RISKS
+============================================================= -->
+<h2>8. Deployment Risks Specific to Outdoor Use</h2>
+
+<table>
+<tr>
+  <th>Risk</th>
+  <th>Likelihood</th>
+  <th>Impact</th>
+  <th>Mitigation</th>
+</tr>
+<tr>
+  <td class="label">Heavy rain event exceeds IP54 protection</td>
+  <td>High</td>
+  <td>Medium</td>
+  <td>Water-drop sensor returns robot to covered dock. Verify dock is under a canopy/loggia during site survey.</td>
+</tr>
+<tr>
+  <td class="label">Salt-air corrosion of chassis over time</td>
+  <td>Medium</td>
+  <td>Medium</td>
+  <td>Include salt-wipe protocol in weekly maintenance. Negotiate salt corrosion into warranty terms with distributor.</td>
+</tr>
+<tr>
+  <td class="label">Direct UV exposure damages cameras / LiDAR housing</td>
+  <td>Low</td>
+  <td>Medium</td>
+  <td>Position dock in shaded area; schedule cleaning cycles to avoid peak sun (late morning / early evening).</td>
+</tr>
+<tr>
+  <td class="label">Robot falls down step / ledge not detected</td>
+  <td>Low</td>
+  <td>High</td>
+  <td>During commissioning, explicitly map all drop-offs as no-go zones. Test 3D LiDAR step detection in real courtyard conditions.</td>
+</tr>
+<tr>
+  <td class="label">Guest collision or startle event</td>
+  <td>Medium</td>
+  <td>High</td>
+  <td>Rely on 1.2 m warning light + audible alerts. Schedule most aggressive cleaning in off-peak hours (5&ndash;7 AM).</td>
+</tr>
+<tr>
+  <td class="label">Large debris (storm/hurricane aftermath) overwhelms robot</td>
+  <td>Medium</td>
+  <td>Medium</td>
+  <td>Manual pre-sweep by facilities staff after any severe weather. Robot handles the detail, humans handle the bulk.</td>
+</tr>
+<tr>
+  <td class="label">Humidity-driven condensation damages electronics</td>
+  <td>Medium</td>
+  <td>High</td>
+  <td>Climate-controlled dock enclosure. Run full dry-down cycle before docking in wet conditions.</td>
+</tr>
+<tr>
+  <td class="label">RaaS margin compression from consumables in salt air</td>
+  <td>Medium</td>
+  <td>Low</td>
+  <td>Build in 15% maintenance premium for outdoor units in the financial model. Track actual vs. planned consumables for 6 months.</td>
+</tr>
+</table>
+
+<hr>
+
+<!-- =============================================================
+     9. CONCLUSION
+============================================================= -->
+<h2>9. Conclusion</h2>
+
+<blockquote>Fourteen robots looked at; exactly one was designed for this job. The PUDU MT1 Max is the only commercial-grade, hospitality-aesthetic, weather-rated, leaf-capable, fleet-managed sweeper that exists in the current market for an outdoor hotel courtyard in Florida. Everything else is either indoor, residential, wrong-category, or wrong-scale.</blockquote>
+
+<p>Recommend moving directly to a site survey and loaner evaluation with PUDU. Reassess only if (a) site survey reveals full-coverage roof, in which case the base MT1 becomes viable, or (b) PUDU US distribution lead time is unacceptable, in which case the fallback is to bundle Yarbo's leaf-blower module with a human follow-up crew as a temporary bridge.</p>
+
+<p>A Phase 4 addendum to the Thesis Hotel proposal is the cleanest commercial structure: one additional RaaS line item, ~$2,850/mo flat, integrated with the existing indoor-fleet service contract.</p>
+
+<div class="footer">
+  Accelerate Robotics &middot; acceleraterobotics.ai &middot; Miami, Florida<br>
+  Outdoor Robot Evaluation &middot; Q2 2026 &middot; Confidential &middot; Working Draft
+</div>
+
+</body>
+</html>

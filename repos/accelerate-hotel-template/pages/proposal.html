@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<!--
+  HOTEL PROPOSAL TEMPLATE — proposal.html
+  -------------------------------------------------------------------
+  Source of truth for a per-hotel printable/shareable proposal.
+  Two customization levers:
+    1. {{PLACEHOLDER}}          — fill from config.yml (1:1 mapping, see CUSTOMIZATION-GUIDE.md)
+    2. <!-- CUSTOMIZE-BLOCK --> — hand-edited prose for property-specific content
+
+  Copy this file into a new hotel repo at pages/proposal.html, then:
+    · Replace every {{PLACEHOLDER}} with the value from config.yml
+    · Edit the contents of each CUSTOMIZE-BLOCK to match the property
+    · Keep the structural skeleton unchanged so the aesthetic stays consistent
+  -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{HOTEL_SHORT_NAME}} — {{PROPOSAL_SUBTITLE}}</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        /* CUSTOMIZE-BLOCK: color-palette
+           Each property overrides these six values to match its material language.
+           Thesis uses gold/navy/cream. Moore uses bronze/blackened/ivory.
+           Choose three hex values for primary/light/soft accent, and three for
+           the dark background / mid-tone / light cream. -->
+        --accent: {{CSS_ACCENT_PRIMARY}};          /* e.g. #b8965a (Thesis gold) or #8a6f47 (Moore bronze) */
+        --accent-light: {{CSS_ACCENT_LIGHT}};      /* lighter tint of the accent */
+        --accent-soft: {{CSS_ACCENT_SOFT}};        /* soft/pale tint for backgrounds */
+        --dark: {{CSS_DARK_PRIMARY}};              /* e.g. #0d2137 (Thesis navy) or #151515 (Moore blackened) */
+        --dark-mid: {{CSS_DARK_MID}};              /* mid-tone dark */
+        --cream: {{CSS_CREAM_PRIMARY}};            /* e.g. #f8f5ef (Thesis) or #f6f1e8 (Moore ivory) */
+        --cream-warm: {{CSS_CREAM_WARM}};
+        --cream-deep: {{CSS_CREAM_DEEP}};
+        /* END CUSTOMIZE-BLOCK */
+
+        --accel-blue: #0055ff;
+        --accel-cyan: #00c8ff;
+        --accel-purple: #7c3aed;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; }
+    .accent-gradient { background: linear-gradient(135deg, var(--accent), var(--accent-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .accel-gradient { background: linear-gradient(135deg, var(--accel-blue), var(--accel-cyan), var(--accel-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    .callout-soft { background: var(--cream); border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 0.75rem; }
+    .callout-warm { background: var(--cream-warm); border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 0.75rem; }
+    .callout-deep { background: var(--cream-deep); border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 0.75rem; }
+    .callout-dark { background: var(--dark); color: #fff; border-radius: 0.75rem; }
+    .callout-dark h3, .callout-dark h4 { color: var(--accent-light); }
+
+    .brand-dot   { color: var(--accent); font-weight: 700; }
+    .brand-check { color: var(--accent); font-weight: 700; }
+
+    .step-circle { width: 1.75rem; height: 1.75rem; border-radius: 999px; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; font-family: 'Space Grotesk', sans-serif; }
+    .recommended-pill { background: var(--accent); color: #fff; font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.65rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    .tier-a { background: var(--cream); color: var(--dark); border: 1px solid rgba(0,0,0,0.1); }
+    .tier-b { background: var(--cream-deep); color: var(--dark); border: 1px solid rgba(0,0,0,0.15); }
+    .tier-c { background: var(--accent); color: #fff; }
+    .tier-badge { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .data-table th { background: var(--dark); color: #fff; font-weight: 700; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.7rem; }
+    .data-table th.center { text-align: center; }
+    .data-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    .data-table tr:nth-child(even) td { background: #f9fafb; }
+    .data-table td.num { text-align: right; font-family: 'Space Grotesk', monospace; }
+    .data-table td.center { text-align: center; }
+    .data-table td.label { font-weight: 600; color: var(--dark); }
+    .data-table tr.section-header td { background: var(--dark) !important; color: #fff; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
+    .data-table tr.total td { background: var(--cream-warm) !important; font-weight: 700; border-top: 2px solid var(--accent); }
+    .data-table tr.highlight td { background: var(--cream) !important; }
+
+    @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .page-break { page-break-before: always; }
+        .no-print { display: none; }
+    }
+
+    .section-divider { border: none; height: 1px; background: linear-gradient(to right, transparent, var(--accent-light), transparent); margin: 3rem 0; }
+</style>
+</head>
+<body class="bg-white text-gray-900">
+
+<!-- HEADER -->
+<header class="text-white px-8 py-12 relative overflow-hidden" style="background: linear-gradient(135deg, var(--dark) 0%, var(--dark-mid) 50%, var(--dark) 100%);">
+    <div class="max-w-5xl mx-auto relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-14 h-14 rounded-xl border-2 flex items-center justify-center" style="border-color: var(--accent-light);">
+                        <span class="font-bold text-2xl headline" style="color: var(--accent-light);">{{HOTEL_INITIAL}}</span>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">{{HOTEL_DISPLAY_NAME_HTML}}</h1>
+                        <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">{{PROPOSAL_SUBTITLE}}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                    </div>
+                    <span class="text-sm font-bold tracking-tight accel-gradient tech-font">Accelerate Robotics</span>
+                </div>
+                <div class="text-[10px] text-gray-400 text-right tracking-wide">
+                    One Brain. Many Bots.<br>
+                    <span class="text-gray-500">{{PROPOSAL_DATE}} · {{OPPORTUNITY_ID}}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CUSTOMIZE-BLOCK: hero-stats
+             Four chips at the bottom of the header. Customize the numbers and
+             labels to match the property's top-line pitch. -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold tech-font" style="color: var(--accent-light);">Up to {{TIER_C_FLEET_COUNT}}</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Autonomous Robots</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold tech-font" style="color: var(--accent-light);">24/7</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">{{HERO_STAT_2_LABEL}}</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold tech-font" style="color: var(--accent-light);">3</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Scalable Tiers</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold tech-font" style="color: var(--accent-light);">$0</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Capital Required</div>
+            </div>
+        </div>
+        <!-- END CUSTOMIZE-BLOCK -->
+    </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-8 py-12">
+
+<!-- COVER LETTER -->
+<section class="mb-12">
+    <p class="text-xs tracking-widest uppercase mb-2" style="color: var(--accent);">Cover Letter</p>
+    <h2 class="headline text-3xl md:text-4xl font-bold mb-6" style="color: var(--dark);">Dear {{COVER_LETTER_SALUTATION}},</h2>
+
+    <!-- CUSTOMIZE-BLOCK: cover-letter-body
+         3–5 paragraphs establishing context, the core idea, the fleet's place
+         in the property's brand, and the headline outcome. Pull from
+         docs/proposal/proposal.md §Cover Letter. -->
+    <div class="space-y-4 text-gray-700 leading-relaxed">
+        <p>{{COVER_LETTER_PARAGRAPH_1}}</p>
+        <p>{{COVER_LETTER_PARAGRAPH_2}}</p>
+        <p>{{COVER_LETTER_PARAGRAPH_3}}</p>
+        <p>{{COVER_LETTER_PARAGRAPH_4}}</p>
+    </div>
+    <!-- END CUSTOMIZE-BLOCK -->
+
+    <div class="mt-8 callout-soft p-5">
+        <h3 class="tech-font font-bold mb-3 text-sm uppercase tracking-wider" style="color: var(--dark);">Three Options, Scaled to Appetite</h3>
+        <!-- CUSTOMIZE-BLOCK: tier-summary-list
+             One bullet per tier. Short description — robot count + what's included. -->
+        <ul class="space-y-2 text-sm text-gray-700">
+            <li><span class="tier-badge tier-a">A</span> <strong>{{TIER_A_NAME}}</strong> — {{TIER_A_FLEET_COUNT}} robots. {{TIER_A_SHORT_DESCRIPTION}}</li>
+            <li><span class="tier-badge tier-b">B</span> <strong>{{TIER_B_NAME}}</strong> — {{TIER_B_FLEET_COUNT}} robots. {{TIER_B_SHORT_DESCRIPTION}}</li>
+            <li><span class="tier-badge tier-c">C</span> <strong>{{TIER_C_NAME}}</strong> <span class="recommended-pill ml-2">Recommended</span> — {{TIER_C_FLEET_COUNT}} robots + Facility Intelligence Platform. 24/7 coverage.</li>
+        </ul>
+        <!-- END CUSTOMIZE-BLOCK -->
+    </div>
+
+    <div class="mt-8 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center headline font-bold text-xl" style="background: var(--dark); color: var(--accent-light);">E</div>
+        <div>
+            <div class="font-bold" style="color: var(--dark);">Eric Race</div>
+            <div class="text-xs text-gray-500">Founder &amp; CEO, Accelerate Robotics</div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- GUEST/MEMBER EXPERIENCE -->
+<section class="mb-12">
+    <p class="text-xs tracking-widest uppercase mb-2" style="color: var(--accent);">{{EXPERIENCE_SECTION_LABEL}}</p>
+    <!-- CUSTOMIZE-BLOCK: guest-experience-story
+         The "what the guest sees" vs. "what they don't see" split.
+         Customize for the property: in-room dining at 2 AM, breakfast to the
+         courtyard, event turnover, residence bellhop, etc. -->
+    <h2 class="headline text-3xl font-bold mb-6" style="color: var(--dark);">{{EXPERIENCE_HEADLINE}}</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="callout-warm p-6">
+            <h3 class="headline text-xl font-semibold mb-3" style="color: var(--dark);">What {{GUEST_TERM_TITLE}}s See</h3>
+            <p class="text-sm text-gray-700 leading-relaxed mb-3">{{GUEST_SEES_PARAGRAPH_1}}</p>
+            <p class="text-sm text-gray-700 leading-relaxed">{{GUEST_SEES_PARAGRAPH_2}}</p>
+        </div>
+        <div class="callout-deep p-6">
+            <h3 class="headline text-xl font-semibold mb-3" style="color: var(--dark);">What {{GUEST_TERM_TITLE}}s Don't See</h3>
+            <ul class="text-sm text-gray-700 space-y-2">
+                <li><span class="brand-dot">◆</span> {{BEHIND_THE_SCENES_BULLET_1}}</li>
+                <li><span class="brand-dot">◆</span> {{BEHIND_THE_SCENES_BULLET_2}}</li>
+                <li><span class="brand-dot">◆</span> {{BEHIND_THE_SCENES_BULLET_3}}</li>
+            </ul>
+        </div>
+    </div>
+    <!-- END CUSTOMIZE-BLOCK -->
+</section>
+
+<hr class="section-divider">
+
+<!-- FLEET OPTIONS -->
+<section class="mb-12">
+    <p class="text-xs tracking-widest uppercase mb-2" style="color: var(--accent);">Fleet Options</p>
+    <h2 class="headline text-3xl font-bold mb-6" style="color: var(--dark);">Three Tiers</h2>
+    <div class="overflow-x-auto">
+        <!-- CUSTOMIZE-BLOCK: fleet-composition-table
+             Rows vary by property. Typical pattern:
+               · Cleaning section (C40 for hard floors, C30 for carpet)
+               · Guest services & transport (W3, S100, S300)
+               · Facility Intelligence (Tier C only)
+             Each row shows counts for A / B / C. Use "—" for "not in this tier". -->
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Robot</th>
+                    <th class="center">A — {{TIER_A_NAME}}<br><span class="text-[10px] font-normal opacity-70">{{TIER_A_TAGLINE}}</span></th>
+                    <th class="center">B — {{TIER_B_NAME}}<br><span class="text-[10px] font-normal opacity-70">{{TIER_B_TAGLINE}}</span></th>
+                    <th class="center">C — {{TIER_C_NAME}}<br><span class="text-[10px] font-normal opacity-70">Recommended</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="section-header"><td colspan="4">Cleaning</td></tr>
+                <tr><td class="label">C40 — Hard floor scrubber</td><td class="center">{{FLEET_C40_A}}</td><td class="center">{{FLEET_C40_B}}</td><td class="center">{{FLEET_C40_C}}</td></tr>
+                <tr><td class="label">C30 — Carpet &amp; rug vacuum</td><td class="center">{{FLEET_C30_A}}</td><td class="center">{{FLEET_C30_B}}</td><td class="center">{{FLEET_C30_C}}</td></tr>
+                <tr class="section-header"><td colspan="4">Guest Services &amp; Transport</td></tr>
+                <tr><td class="label">W3 — Enclosed delivery</td><td class="center">{{FLEET_W3_A}}</td><td class="center">{{FLEET_W3_B}}</td><td class="center">{{FLEET_W3_C}}</td></tr>
+                <tr><td class="label">S100 — In-room dining cart</td><td class="center">{{FLEET_S100_A}}</td><td class="center">{{FLEET_S100_B}}</td><td class="center">{{FLEET_S100_C}}</td></tr>
+                <tr><td class="label">S300 — Linens / tabletop / event transport</td><td class="center">{{FLEET_S300_A}}</td><td class="center">{{FLEET_S300_B}}</td><td class="center">{{FLEET_S300_C}}</td></tr>
+                <tr class="section-header"><td colspan="4">Facility Intelligence</td></tr>
+                <tr><td class="label">BLE/UWB indoor positioning ({{BLE_ANCHOR_COUNT}}+{{UWB_ANCHOR_COUNT}} anchors)</td><td class="center">—</td><td class="center">—</td><td class="center">Yes</td></tr>
+                <tr><td class="label">Asset tracking ({{ASSET_TAG_COUNT}}+ tags)</td><td class="center">—</td><td class="center">—</td><td class="center">Yes</td></tr>
+                <tr><td class="label">Smart dispatch + workflow analytics</td><td class="center">—</td><td class="center">—</td><td class="center">Yes</td></tr>
+                <tr class="total"><td class="label">TOTAL ROBOTS</td><td class="center">{{TIER_A_FLEET_COUNT}}</td><td class="center">{{TIER_B_FLEET_COUNT}}</td><td class="center">{{TIER_C_FLEET_COUNT}}</td></tr>
+            </tbody>
+        </table>
+        <!-- END CUSTOMIZE-BLOCK -->
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- IN-ROOM DINING / SIGNATURE WORKFLOW -->
+<section class="mb-12">
+    <!-- CUSTOMIZE-BLOCK: signature-workflow
+         Every property has one or two "signature workflow" callouts —
+         the human-handoff story that makes the robot feel premium.
+         · Thesis: breakfast-to-courtyard, in-room dining
+         · Moore: Torno × S100 in-residence dining
+         Use 4–6 numbered steps showing the human-robot-human choreography. -->
+    <p class="text-xs tracking-widest uppercase mb-2" style="color: var(--accent);">{{SIGNATURE_WORKFLOW_EYEBROW}}</p>
+    <h2 class="headline text-3xl font-bold mb-4" style="color: var(--dark);">{{SIGNATURE_WORKFLOW_HEADLINE}}</h2>
+    <p class="text-sm text-gray-700 mb-6">{{SIGNATURE_WORKFLOW_LEAD}}</p>
+    <div class="grid md:grid-cols-2 gap-4">
+        <div class="callout-soft p-5">
+            <div class="flex items-start gap-3 mb-2"><span class="step-circle">1</span><strong>{{WORKFLOW_STEP_1_TITLE}}</strong></div>
+            <p class="text-sm text-gray-700 pl-9">{{WORKFLOW_STEP_1_DETAIL}}</p>
+        </div>
+        <div class="callout-soft p-5">
+            <div class="flex items-start gap-3 mb-2"><span class="step-circle">2</span><strong>{{WORKFLOW_STEP_2_TITLE}}</strong></div>
+            <p class="text-sm text-gray-700 pl-9">{{WORKFLOW_STEP_2_DETAIL}}</p>
+        </div>
+        <div class="callout-soft p-5">
+            <div class="flex items-start gap-3 mb-2"><span class="step-circle">3</span><strong>{{WORKFLOW_STEP_3_TITLE}}</strong></div>
+            <p class="text-sm text-gray-700 pl-9">{{WORKFLOW_STEP_3_DETAIL}}</p>
+        </div>
+        <div class="callout-soft p-5">
+            <div class="flex items-start gap-3 mb-2"><span class="step-circle">4</span><strong>{{WORKFLOW_STEP_4_TITLE}}</strong></div>
+            <p class="text-sm text-gray-700 pl-9">{{WORKFLOW_STEP_4_DETAIL}}</p>
+        </div>
+        <div class="callout-soft p-5">
+            <div class="flex items-start gap-3 mb-2"><span class="step-circle">5</span><strong>{{WORKFLOW_STEP_5_TITLE}}</strong></div>
+            <p class="text-sm text-gray-700 pl-9">{{WORKFLOW_STEP_5_DETAIL}}</p>
+        </div>
+        <div class="callout-soft p-5">
+            <div class="flex items-start gap-3 mb-2"><span class="step-circle">6</span><strong>{{WORKFLOW_STEP_6_TITLE}}</strong></div>
+            <p class="text-sm text-gray-700 pl-9">{{WORKFLOW_STEP_6_DETAIL}}</p>
+        </div>
+    </div>
+    <!-- END CUSTOMIZE-BLOCK -->
+</section>
+
+<hr class="section-divider">
+
+<!-- ELEVATOR OPERATIONS -->
+<section class="mb-12">
+    <p class="text-xs tracking-widest uppercase mb-2" style="color: var(--accent);">Elevator Operations</p>
+    <!-- CUSTOMIZE-BLOCK: elevator-operations
+         Adapts to the property's elevator situation.
+         · OEM name varies (Otis, ThyssenKrupp, Schindler, KONE, Mitsubishi)
+         · Count varies
+         · Scheduling windows reflect property's peak/off-peak hours -->
+    <h2 class="headline text-3xl font-bold mb-4" style="color: var(--dark);">{{ELEVATOR_HEADLINE}}</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+        <div>
+            <h3 class="tech-font font-bold mb-3 text-sm uppercase tracking-wider" style="color: var(--dark);">How It Works</h3>
+            <ul class="text-sm text-gray-700 space-y-2">
+                <li><span class="brand-dot">◆</span> <strong>{{GUEST_TERM_TITLE}}-yield protocol:</strong> Robots always yield to waiting {{GUEST_TERM_PLURAL}}</li>
+                <li><span class="brand-dot">◆</span> <strong>Off-peak scheduling:</strong> Cleaning {{CLEANING_WINDOW}}</li>
+                <li><span class="brand-dot">◆</span> <strong>Batch transport:</strong> S300 carries full loads per trip</li>
+                <li><span class="brand-dot">◆</span> <strong>On-demand delivery:</strong> W3/S100 single short trips</li>
+                <li><span class="brand-dot">◆</span> <strong>Button emulator:</strong> Non-invasive, reversible</li>
+            </ul>
+        </div>
+        <div class="callout-dark p-5">
+            <h3 class="font-bold mb-3 text-sm uppercase tracking-wider">{{ELEVATOR_OEM_SHORT}} Contingency</h3>
+            <p class="text-sm leading-relaxed mb-2">We take the risk of {{ELEVATOR_OEM_SHORTEST}}'s review rather than forcing it onto {{HOTEL_SHORT_NAME}}:</p>
+            <ul class="text-sm space-y-1.5 opacity-90">
+                <li>· Pre-deployment design-package review</li>
+                <li>· {{ELEVATOR_OEM_SHORTEST}}-supervised install, paid by Accelerate</li>
+                <li>· Service-contract preservation guarantee</li>
+                <li>· Per-floor fallback if {{ELEVATOR_OEM_SHORTEST}} refuses</li>
+                <li>· No-cost exit if Phase 2 blocked 60 days</li>
+            </ul>
+        </div>
+    </div>
+    <!-- END CUSTOMIZE-BLOCK -->
+</section>
+
+<hr class="section-divider">
+
+<!-- PRICING -->
+<section class="mb-12 page-break">
+    <p class="text-xs tracking-widest uppercase mb-2" style="color: var(--accent);">Pricing</p>
+    <h2 class="headline text-3xl font-bold mb-2" style="color: var(--dark);">Robot-as-a-Service — ${{RAAS_RATE_USD}} per robot per month</h2>
+    <p class="text-sm text-gray-600 mb-6">One predictable line item per robot per month. Custom branding and material accessories are included — not an add-on.</p>
+    <div class="overflow-x-auto">
+        <!-- CUSTOMIZE-BLOCK: pricing-table
+             All numeric values flow from config.yml tier counts × RaaS rate.
+             Intelligence Platform Y1/Y2 only applies to Tier C. -->
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th class="center">Option A</th>
+                    <th class="center">Option B</th>
+                    <th class="center">Option C</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="label">Robots</td><td class="center num">{{TIER_A_FLEET_COUNT}}</td><td class="center num">{{TIER_B_FLEET_COUNT}}</td><td class="center num">{{TIER_C_FLEET_COUNT}}</td></tr>
+                <tr><td class="label">Monthly RaaS</td><td class="num">${{TIER_A_MONTHLY}}</td><td class="num">${{TIER_B_MONTHLY}}</td><td class="num">${{TIER_C_MONTHLY}}</td></tr>
+                <tr class="total"><td class="label">Monthly Total</td><td class="num">${{TIER_A_MONTHLY}}</td><td class="num">${{TIER_B_MONTHLY}}</td><td class="num">${{TIER_C_MONTHLY}}</td></tr>
+                <tr><td class="label">Annualized</td><td class="num">${{TIER_A_ANNUAL}}</td><td class="num">${{TIER_B_ANNUAL}}</td><td class="num">${{TIER_C_ANNUAL}}</td></tr>
+                <tr class="section-header"><td colspan="4">Intelligence Platform (Option C only)</td></tr>
+                <tr><td class="label">Year 1 install (one-time)</td><td>—</td><td>—</td><td class="num">${{INTEL_PLATFORM_Y1_USD}}</td></tr>
+                <tr><td class="label">Year 2+ annual license</td><td>—</td><td>—</td><td class="num">${{INTEL_PLATFORM_Y2_USD}}/yr</td></tr>
+                <tr class="highlight"><td class="label">Year 1 All-In</td><td class="num">${{TIER_A_ANNUAL}}</td><td class="num">${{TIER_B_ANNUAL}}</td><td class="num">${{TIER_C_YEAR1_TOTAL}}</td></tr>
+                <tr class="highlight"><td class="label">Year 2+ Steady-State</td><td class="num">${{TIER_A_ANNUAL}}</td><td class="num">${{TIER_B_ANNUAL}}</td><td class="num">${{TIER_C_STEADY_STATE}}</td></tr>
+            </tbody>
+        </table>
+        <!-- END CUSTOMIZE-BLOCK -->
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ROI / OPERATIONAL EFFICIENCY -->
+<section class="mb-12">
+    <p class="text-xs tracking-widest uppercase mb-2" style="color: var(--accent);">Operational Efficiency</p>
+    <!-- CUSTOMIZE-BLOCK: roi-framing
+         Two modes:
+           · "Cost-savings first" (Thesis): lead with labor savings, capacity is the chaser
+           · "Amenity extension first" (Moore): lead with service extension, savings are the second story
+         Pick the framing that matches the property's positioning. -->
+    <h2 class="headline text-3xl font-bold mb-4" style="color: var(--dark);">{{ROI_HEADLINE}}</h2>
+    <p class="text-sm text-gray-700 mb-6">{{ROI_LEAD_PARAGRAPH}}</p>
+    <div class="overflow-x-auto mb-6">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th class="center">Option A</th>
+                    <th class="center">Option B</th>
+                    <th class="center">Option C</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="label">Monthly Fleet Cost</td><td class="num">${{TIER_A_MONTHLY}}</td><td class="num">${{TIER_B_MONTHLY}}</td><td class="num">${{TIER_C_MONTHLY}}</td></tr>
+                <tr><td class="label">Monthly Hard Savings</td><td class="num">${{TIER_A_MONTHLY_SAVINGS}}</td><td class="num">${{TIER_B_MONTHLY_SAVINGS}}</td><td class="num">${{TIER_C_MONTHLY_SAVINGS}}</td></tr>
+                <tr class="total"><td class="label">Monthly Net Cash Benefit</td><td class="num">{{TIER_A_NET_MONTHLY}}</td><td class="num">{{TIER_B_NET_MONTHLY}}</td><td class="num">{{TIER_C_NET_MONTHLY}}</td></tr>
+                <tr class="highlight"><td class="label">Annual Net Cash Benefit</td><td class="num">{{TIER_A_NET_ANNUAL}}</td><td class="num">{{TIER_B_NET_ANNUAL}}</td><td class="num">{{TIER_C_NET_ANNUAL}}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="callout-warm p-5">
+        <h3 class="tech-font font-bold mb-2 text-sm uppercase tracking-wider" style="color: var(--dark);">Capacity Created — The Real Story</h3>
+        <p class="text-sm text-gray-700 mb-3">Staff hours returned for {{GUEST_TERM}}-facing work, and service extension into hours staffing can't economically cover.</p>
+        <table class="data-table">
+            <tbody>
+                <tr><td class="label">Staff hours returned/day</td><td class="center">{{TIER_A_STAFF_HOURS}}</td><td class="center">{{TIER_B_STAFF_HOURS}}</td><td class="center">{{TIER_C_STAFF_HOURS}}</td></tr>
+                <tr><td class="label">Extended service hours</td><td class="center">{{TIER_A_SERVICE_EXT}}</td><td class="center">{{TIER_B_SERVICE_EXT}}</td><td class="center"><strong>{{TIER_C_SERVICE_EXT}}</strong></td></tr>
+            </tbody>
+        </table>
+    </div>
+    <!-- END CUSTOMIZE-BLOCK -->
+</section>
+
+<hr class="section-divider">
+
+<!-- PHASED DEPLOYMENT -->
+<section class="mb-12">
+    <p class="text-xs tracking-widest uppercase mb-2" style="color: var(--accent);">Phased Deployment</p>
+    <h2 class="headline text-3xl font-bold mb-6" style="color: var(--dark);">Low-Commitment Pilot, Then Scale</h2>
+    <!-- CUSTOMIZE-BLOCK: phased-deployment
+         Typical 5-phase sequence — reshape as needed for the property.
+         Phase 1: pilot (1 robot, 30 days)
+         Phase 2: elevator integration + core fleet
+         Phase 3: full fleet
+         Phase 4: facility intelligence install
+         Phase 5: smart operations / POS integration -->
+    <div class="space-y-3">
+        <div class="callout-soft p-5 flex gap-4 items-start">
+            <span class="step-circle flex-shrink-0">1</span>
+            <div>
+                <h3 class="font-bold" style="color: var(--dark);">Phase 1 — Pilot (Month 1)</h3>
+                <p class="text-sm text-gray-700">{{PHASE_1_DETAIL}}</p>
+            </div>
+        </div>
+        <div class="callout-soft p-5 flex gap-4 items-start">
+            <span class="step-circle flex-shrink-0">2</span>
+            <div>
+                <h3 class="font-bold" style="color: var(--dark);">Phase 2 — Core Fleet (Month 2–3)</h3>
+                <p class="text-sm text-gray-700">{{PHASE_2_DETAIL}}</p>
+            </div>
+        </div>
+        <div class="callout-soft p-5 flex gap-4 items-start">
+            <span class="step-circle flex-shrink-0">3</span>
+            <div>
+                <h3 class="font-bold" style="color: var(--dark);">Phase 3 — Full Fleet (Month 4–5)</h3>
+                <p class="text-sm text-gray-700">{{PHASE_3_DETAIL}}</p>
+            </div>
+        </div>
+        <div class="callout-soft p-5 flex gap-4 items-start">
+            <span class="step-circle flex-shrink-0">4</span>
+            <div>
+                <h3 class="font-bold" style="color: var(--dark);">Phase 4 — Facility Intelligence (Month 6–7)</h3>
+                <p class="text-sm text-gray-700">{{PHASE_4_DETAIL}}</p>
+            </div>
+        </div>
+        <div class="callout-soft p-5 flex gap-4 items-start">
+            <span class="step-circle flex-shrink-0">5</span>
+            <div>
+                <h3 class="font-bold" style="color: var(--dark);">Phase 5 — Smart Operations (Month 8)</h3>
+                <p class="text-sm text-gray-700">{{PHASE_5_DETAIL}}</p>
+            </div>
+        </div>
+    </div>
+    <!-- END CUSTOMIZE-BLOCK -->
+</section>
+
+<hr class="section-divider">
+
+<!-- COMMITMENT TERMS -->
+<section class="mb-12">
+    <p class="text-xs tracking-widest uppercase mb-2" style="color: var(--accent);">Commitment</p>
+    <h2 class="headline text-3xl font-bold mb-6" style="color: var(--dark);">Low Risk, No Lock-In</h2>
+    <div class="grid md:grid-cols-2 gap-4">
+        <div class="callout-deep p-5">
+            <ul class="text-sm text-gray-700 space-y-2">
+                <li><span class="brand-check">✓</span> <strong>30-day pilot</strong> — one robot, defined success criteria</li>
+                <li><span class="brand-check">✓</span> <strong>90-day minimum</strong> — covers pilot + Phase 2 start</li>
+                <li><span class="brand-check">✓</span> <strong>30-day cancellation</strong> — no penalty after the minimum</li>
+            </ul>
+        </div>
+        <div class="callout-deep p-5">
+            <ul class="text-sm text-gray-700 space-y-2">
+                <li><span class="brand-check">✓</span> <strong>No long-term lock-in</strong> — service agreement, not lease</li>
+                <li><span class="brand-check">✓</span> <strong>Right-sizing</strong> — add/remove at phase boundaries</li>
+                <li><span class="brand-check">✓</span> <strong>Upgrade path</strong> — A → B → C at any time</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- THE ASK -->
+<section class="mb-12">
+    <div class="callout-dark p-8">
+        <p class="text-xs tracking-widest uppercase opacity-70 mb-2">The Ask</p>
+        <h2 class="headline text-3xl font-bold mb-4">Four Steps to Start</h2>
+        <!-- CUSTOMIZE-BLOCK: the-ask
+             Customize the internal-alignment bullet to name the right stakeholders
+             (ownership, F&B outlets, facilities, guest/member experience). -->
+        <div class="grid md:grid-cols-2 gap-4">
+            <div class="flex gap-3 items-start"><span class="step-circle flex-shrink-0">1</span><div><strong>Choose your tier.</strong> A, B, or C.</div></div>
+            <div class="flex gap-3 items-start"><span class="step-circle flex-shrink-0">2</span><div><strong>Align internally.</strong> {{ASK_ALIGN_STAKEHOLDERS}}</div></div>
+            <div class="flex gap-3 items-start"><span class="step-circle flex-shrink-0">3</span><div><strong>Sign Phase 1 pilot.</strong> One robot, 30 days, measurable outcomes.</div></div>
+            <div class="flex gap-3 items-start"><span class="step-circle flex-shrink-0">4</span><div><strong>Grant Phase 1 facility access.</strong> Charging outlet, WiFi, cleaning schedule.</div></div>
+        </div>
+        <!-- END CUSTOMIZE-BLOCK -->
+    </div>
+</section>
+
+<!-- CONTACT -->
+<section class="mb-8 text-center">
+    <div class="inline-flex items-center gap-4">
+        <div class="w-14 h-14 rounded-full flex items-center justify-center headline font-bold text-2xl" style="background: var(--dark); color: var(--accent-light);">E</div>
+        <div class="text-left">
+            <div class="font-bold text-lg" style="color: var(--dark);">Eric Race</div>
+            <div class="text-sm text-gray-500">Founder &amp; CEO · Accelerate Robotics · Miami, Florida</div>
+            <div class="text-xs text-gray-400 mt-1">Direct founder access through Phase 1 and beyond.</div>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer class="text-gray-400 px-8 py-6 text-center text-xs" style="background: var(--dark);">
+    Accelerate Robotics · acceleraterobotics.ai · Confidential · {{PROPOSAL_DATE}} · Opportunity {{OPPORTUNITY_ID}}
+</footer>
+
+<div class="no-print text-center py-6">
+    <button onclick="window.print()" class="px-8 py-3 text-white rounded-xl font-bold text-sm transition shadow-lg" style="background: var(--accent);">
+        Print / Save as PDF
+    </button>
+</div>
+
+</body>
+</html>

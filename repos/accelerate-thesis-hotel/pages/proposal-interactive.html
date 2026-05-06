@@ -1,0 +1,2259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thesis Hotel — Interactive Fleet Configurator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --gold: #b8965a;
+        --gold-light: #d4b07a;
+        --gold-soft: #e6d9b8;
+        --navy: #0d2137;
+        --navy-light: #1a2d44;
+        --navy-deep: #071423;
+        --charcoal: #1a1a2e;
+        --cream: #f8f5ef;
+        --cream-warm: #faf7f0;
+        --cream-deep: #f0ece2;
+        --green: #2f7a3a;
+        --red: #8a3a2e;
+        --accel-blue: #0055ff;
+        --accel-cyan: #00c8ff;
+        --accel-purple: #7c3aed;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fff; color: #1f2937; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; font-feature-settings: 'tnum'; }
+    .gold-gradient { background: linear-gradient(135deg, var(--gold), var(--gold-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .accel-gradient { background: linear-gradient(135deg, var(--accel-blue), var(--accel-cyan), var(--accel-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ── Configurator ───────────────────────────────────────────── */
+    .config-panel {
+        background: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%);
+        color: #fff;
+        border-radius: 1.5rem;
+        box-shadow: 0 30px 80px rgba(13, 33, 55, 0.35);
+        position: relative;
+        overflow: hidden;
+    }
+    .config-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle at 20% 0%, rgba(184, 150, 90, 0.15), transparent 40%),
+                          radial-gradient(circle at 80% 100%, rgba(0, 200, 255, 0.08), transparent 40%);
+        pointer-events: none;
+    }
+    .config-panel > * { position: relative; }
+
+    /* Slider track */
+    .slider-wrap {
+        position: relative;
+        padding: 1.5rem 0;
+    }
+    .slider-track {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        position: relative;
+        margin: 0 12px;
+    }
+    .slider-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 100%);
+        border-radius: 999px;
+        box-shadow: 0 0 20px rgba(184, 150, 90, 0.5);
+        transition: width 0.25s ease;
+    }
+    .slider-ticks {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 12px;
+        pointer-events: none;
+    }
+    .tick {
+        width: 2px;
+        height: 12px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 2px;
+    }
+    .tick.tier-marker {
+        width: 3px;
+        height: 18px;
+        background: var(--gold);
+        box-shadow: 0 0 8px rgba(184, 150, 90, 0.6);
+    }
+    .slider-input {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        background: transparent;
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        transform: translateY(-50%);
+        height: 40px;
+        cursor: pointer;
+        padding: 0 12px;
+    }
+    .slider-input::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--gold-light), var(--gold));
+        border: 3px solid #fff;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px rgba(184, 150, 90, 0.6), 0 0 0 1px rgba(0,0,0,0.2);
+        transition: transform 0.15s ease;
+    }
+    .slider-input::-webkit-slider-thumb:active {
+        transform: scale(1.15);
+        cursor: grabbing;
+    }
+    .slider-input::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--gold-light), var(--gold));
+        border: 3px solid #fff;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px rgba(184, 150, 90, 0.6);
+    }
+
+    /* Fleet grid */
+    .robot-slot {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.75rem;
+        padding: 0.875rem 0.75rem;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        opacity: 0.4;
+        filter: grayscale(0.6);
+    }
+    .robot-slot.active {
+        background: linear-gradient(140deg, rgba(184, 150, 90, 0.18), rgba(184, 150, 90, 0.06));
+        border-color: rgba(184, 150, 90, 0.5);
+        opacity: 1;
+        filter: none;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    .robot-slot.active::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 10px;
+        height: 10px;
+        margin: 8px;
+        background: var(--gold);
+        border-radius: 50%;
+        box-shadow: 0 0 12px var(--gold);
+    }
+    .robot-slot.just-added {
+        animation: pop-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes pop-in {
+        0% { transform: scale(0.9) translateY(4px); }
+        50% { transform: scale(1.03) translateY(-2px); }
+        100% { transform: scale(1) translateY(-1px); }
+    }
+    .robot-chip-mini {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.5rem;
+        background: rgba(184, 150, 90, 0.18);
+        color: var(--gold-light);
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
+    }
+    .robot-slot.active .robot-chip-mini {
+        background: var(--gold);
+        color: #fff;
+    }
+    /* Robot thumbnail inside each fleet card — "comes alive" when active */
+    .robot-photo {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: contain;
+        object-position: center;
+        margin-bottom: 0.5rem;
+        background:
+            radial-gradient(circle at 50% 60%, rgba(184, 150, 90, 0.12), transparent 65%),
+            linear-gradient(140deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
+        border-radius: 0.5rem;
+        padding: 0.25rem;
+        filter: grayscale(0.85) brightness(0.7);
+        transition: filter 0.5s ease, transform 0.5s ease;
+    }
+    .robot-slot.active .robot-photo {
+        filter: grayscale(0) brightness(1);
+        transform: scale(1.02);
+    }
+
+    /* Stat tiles */
+    .stat-tile {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        transition: all 0.3s ease;
+    }
+    .stat-tile.accent {
+        background: linear-gradient(135deg, rgba(184, 150, 90, 0.18), rgba(184, 150, 90, 0.05));
+        border-color: rgba(184, 150, 90, 0.4);
+    }
+    .stat-tile.accent-green {
+        background: linear-gradient(135deg, rgba(47, 122, 58, 0.22), rgba(47, 122, 58, 0.08));
+        border-color: rgba(90, 180, 100, 0.4);
+    }
+
+    /* Toggle switches */
+    .toggle {
+        display: inline-flex;
+        align-items: center;
+        width: 52px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        flex-shrink: 0;
+    }
+    .toggle::after {
+        content: '';
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        background: #fff;
+        border-radius: 50%;
+        top: 3px;
+        left: 3px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle.on {
+        background: var(--gold);
+    }
+    .toggle.on::after {
+        left: 27px;
+    }
+
+    /* Preset chips */
+    .preset-chip {
+        padding: 0.5rem 1rem;
+        border-radius: 0.6rem;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.85);
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+    .preset-chip:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(184, 150, 90, 0.4);
+    }
+    .preset-chip.active {
+        background: var(--gold);
+        color: #fff;
+        border-color: var(--gold);
+        box-shadow: 0 4px 16px rgba(184, 150, 90, 0.4);
+    }
+
+    /* Phase timeline */
+    .phase-timeline {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.5rem;
+    }
+    .phase-card {
+        background: var(--cream);
+        border: 1px solid rgba(13, 33, 55, 0.15);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
+    .phase-card.included {
+        background: var(--cream-warm);
+        border-color: var(--gold);
+        border-width: 1px;
+    }
+    .phase-card.skipped {
+        opacity: 0.35;
+        filter: grayscale(0.8);
+    }
+
+    /* Tables */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th { background: var(--navy); color: #fff; font-weight: 700; text-align: left; padding: 0.65rem 0.85rem; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .data-table th.right { text-align: right; }
+    .data-table td { padding: 0.6rem 0.85rem; border-bottom: 1px solid #e5e7eb; }
+    .data-table tr:nth-child(even) td { background: #fafafa; }
+    .data-table td.num { text-align: right; font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
+    .data-table tr.total td { background: var(--cream-warm) !important; font-weight: 700; border-top: 2px solid var(--gold); }
+
+    /* Callouts */
+    .callout-cream { background: var(--cream); border: 1px solid rgba(184, 150, 90, 0.25); border-radius: 1rem; }
+    .callout-navy { background: linear-gradient(160deg, var(--navy), var(--navy-deep)); color: #fff; border-radius: 1rem; }
+    .callout-navy h3 { color: var(--gold); }
+
+    /* Number count animation helper */
+    .counting { display: inline-block; }
+
+    /* Scrollbar in scrollable panels */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+
+    /* Print */
+    @media print {
+        /* ── Print Reset ────────────────────────────────── */
+        .no-print { display: none !important; }
+        body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            background: #fff !important;
+            color: #000 !important;
+            font-size: 11pt;
+        }
+
+        /* ── Page breaks ────────────────────────────────── */
+        section { break-inside: avoid; page-break-inside: avoid; }
+        h2, h3, .headline { break-after: avoid; page-break-after: avoid; }
+        .macbook-wrap, .device-showcase, .iphone-wrap { break-inside: avoid; page-break-inside: avoid; }
+        .phase-timeline { break-inside: avoid; page-break-inside: avoid; }
+
+        /* ── Remove interactive controls from print ──── */
+        .slider-wrap, .preset-chips, .toggle-row { display: none !important; }
+
+        /* ── Dark panels → print-friendly ────────────── */
+        .dark-panel, [style*="background"][style*="#1"] {
+            background: #1a1a1a !important;
+            box-shadow: none !important;
+        }
+
+        /* ── Robot cards: contain images, readable text ── */
+        .robot-slot {
+            opacity: 1 !important;
+            filter: none !important;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            border: 1px solid #ccc !important;
+        }
+        .robot-slot.active {
+            box-shadow: none !important;
+            transform: none !important;
+        }
+        .robot-slot.active::after {
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            overflow: hidden !important;
+            box-shadow: none !important;
+            width: 8px !important;
+            height: 8px !important;
+            background: #2e7d32 !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+        .robot-photo {
+            filter: none !important;
+            transform: none !important;
+            max-height: 120px;
+            object-fit: contain;
+        }
+
+        /* ── LED indicators: static, no animation ────── */
+        .led-dot {
+            animation: none !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+        .led-indicator.on .led-dot {
+            background: #00c853 !important;
+            box-shadow: none !important;
+            animation: none !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+        }
+
+        /* ── Fleet Command dots: force circles ───────── */
+        .fc-topbar .status .dot,
+        .fc-robot .dot,
+        .fc-robot .dot.green,
+        .fc-robot .dot.amber,
+        .fc-robot .dot.grey,
+        .dot {
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            overflow: hidden !important;
+            box-shadow: none !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+        .fc-robot .dot.green {
+            background: #2e7d32 !important;
+        }
+
+        /* ── Stat tiles: borders for clarity ─────────── */
+        .stat-tile {
+            border: 1px solid #ddd !important;
+            box-shadow: none !important;
+        }
+
+        /* ── Service lines grid: contain within page ─── */
+        .svc-grid, .led-grid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        /* ── Device mockups: simplify for print ──────── */
+        .device-macbook, .device-iphone {
+            box-shadow: none !important;
+            border: 1px solid #333 !important;
+        }
+        .macbook-base { display: none !important; }
+
+        /* ── Tables: force borders ───────────────────── */
+        .data-table td, .data-table th {
+            border: 1px solid #ccc !important;
+        }
+
+        /* ── Reduce excessive whitespace ─────────────── */
+        .section-pad { padding: 1.5rem 0 !important; }
+        .py-20 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+
+        /* ── Phase cards: contain properly ────────────── */
+        .phase-card {
+            break-inside: avoid;
+            page-break-inside: avoid;
+            box-shadow: none !important;
+        }
+
+        /* ── Fleet Command mockup: keep together ─────── */
+        .fc-wrap { break-inside: avoid; page-break-inside: avoid; }
+        .fc-building { break-inside: avoid; page-break-inside: avoid; }
+
+        /* ── Kill all animations & transitions ───────── */
+        *, *::before, *::after {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        /* ── Links: show URL after text ──────────────── */
+        a[href^="http"]::after {
+            content: " (" attr(href) ")";
+            font-size: 9pt;
+            color: #666;
+            word-break: break-all;
+        }
+
+        /* ── Fixed/sticky elements: make static ──────── */
+        .fixed, [style*="position: fixed"], [style*="position:fixed"],
+        .sticky, [style*="position: sticky"], [style*="position:sticky"] {
+            position: static !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .phase-timeline { grid-template-columns: 1fr; }
+    }
+
+    /* ────────────────────────────────────────────────────────────────
+       Fleet trading cards — uniform format per robot
+       ──────────────────────────────────────────────────────────────── */
+    .fleet-card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.25rem;
+    }
+    .fleet-card {
+        background: #fff;
+        border: 1px solid rgba(13, 33, 55, 0.08);
+        border-radius: 1rem;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 6px 24px rgba(13, 33, 55, 0.05);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .fleet-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(13, 33, 55, 0.09);
+    }
+    .fleet-card-photo {
+        aspect-ratio: 4 / 3;
+        background: linear-gradient(160deg, #f0e8d8 0%, #f8f5ef 100%);
+        position: relative;
+    }
+    .fleet-card-photo img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 0.75rem;
+    }
+    .fleet-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.9rem 1rem 0.5rem;
+        border-bottom: 1px solid rgba(13, 33, 55, 0.05);
+    }
+    .fleet-card-category {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #b8965a;
+    }
+    .fleet-card-code {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: #fff;
+        background: #0d2137;
+        padding: 3px 8px;
+        border-radius: 4px;
+    }
+    .fleet-card-body {
+        padding: 0.9rem 1rem 1rem;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+    .fleet-card-name {
+        font-family: 'Playfair Display', serif;
+        font-size: 17px;
+        font-weight: 700;
+        color: #0d2137;
+        line-height: 1.15;
+        margin-bottom: 0.25rem;
+    }
+    .fleet-card-tagline {
+        font-size: 12px;
+        font-style: italic;
+        color: #b8965a;
+        margin-bottom: 0.6rem;
+    }
+    .fleet-card-desc {
+        font-size: 12.5px;
+        color: #4a5568;
+        line-height: 1.45;
+        margin-bottom: 0.85rem;
+    }
+    .fleet-card-stats {
+        background: #f8f5ef;
+        border-radius: 0.5rem;
+        padding: 0.65rem 0.75rem;
+        margin: 0 0 0.85rem 0;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.3rem;
+    }
+    .fleet-card-stats > div {
+        display: grid;
+        grid-template-columns: 70px 1fr;
+        gap: 0.5rem;
+        align-items: baseline;
+        padding: 2px 0;
+        border-bottom: 1px dashed rgba(13, 33, 55, 0.08);
+    }
+    .fleet-card-stats > div:last-child { border-bottom: none; }
+    .fleet-card-stats dt {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #8a8a8a;
+    }
+    .fleet-card-stats dd {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: #0d2137;
+        line-height: 1.3;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    /* WHY: inline SVG flags — rendered at a consistent size that pairs with 11.5px dd text. */
+    .flag-svg {
+        width: 20px;
+        height: 13.3px;
+        display: inline-block;
+        flex-shrink: 0;
+        border-radius: 2px;
+        box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+    }
+    .flag-city { display: inline-block; }
+    .fleet-card-unlock {
+        margin-top: auto;
+        padding-top: 0.7rem;
+        border-top: 1px solid rgba(184, 150, 90, 0.2);
+        font-size: 11.5px;
+        color: #0d2137;
+        font-style: italic;
+        line-height: 1.4;
+    }
+    .fleet-card-unlock::before {
+        content: '"';
+        font-family: 'Playfair Display', serif;
+        color: #b8965a;
+        font-size: 1.4em;
+        line-height: 0;
+        margin-right: 2px;
+        vertical-align: -0.3em;
+    }
+    .fleet-card-unlock::after {
+        content: '"';
+        font-family: 'Playfair Display', serif;
+        color: #b8965a;
+        font-size: 1.4em;
+        line-height: 0;
+        margin-left: 2px;
+        vertical-align: -0.3em;
+    }
+    /* Guest-amenity variant (Volley) — dark navy card */
+    .fleet-card.accent-amenity { background: linear-gradient(145deg, #0d2137, #1a2d44); border-color: rgba(184, 150, 90, 0.4); }
+    .fleet-card.accent-amenity .fleet-card-header { border-bottom-color: rgba(255,255,255,0.08); }
+    .fleet-card.accent-amenity .fleet-card-name { color: #fff; }
+    .fleet-card.accent-amenity .fleet-card-code { background: #d4b07a; color: #0d2137; }
+    .fleet-card.accent-amenity .fleet-card-category { color: #d4b07a; }
+    .fleet-card.accent-amenity .fleet-card-desc { color: #c9d0da; }
+    .fleet-card.accent-amenity .fleet-card-stats { background: rgba(255,255,255,0.05); }
+    .fleet-card.accent-amenity .fleet-card-stats > div { border-bottom-color: rgba(255,255,255,0.08); }
+    .fleet-card.accent-amenity .fleet-card-stats dt { color: #a0a8b4; }
+    .fleet-card.accent-amenity .fleet-card-stats dd { color: #fff; }
+    .fleet-card.accent-amenity .fleet-card-unlock { color: #c9d0da; border-top-color: rgba(184, 150, 90, 0.3); }
+    .fleet-card.accent-amenity .fleet-card-photo { background: radial-gradient(circle at 50% 55%, rgba(184, 150, 90, 0.2), transparent 70%), linear-gradient(145deg, #0d2137, #1a2d44); }
+
+    /* ────────────────────────────────────────────────────────────────
+       One Application, Two Audiences — guest app + ops backend split
+       ──────────────────────────────────────────────────────────────── */
+    .app-split-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .app-panel {
+        border-radius: 20px;
+        padding: 0 0 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        position: relative;
+        overflow: hidden;
+    }
+    /* Mockup hero — sits at top of each panel. Each panel picks the right
+       image via its variant class. Image is sized to crop/fit elegantly. */
+    .app-panel-mockup {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 340px;
+        overflow: hidden;
+        position: relative;
+    }
+    .app-panel-mockup img {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 14px 24px rgba(0,0,0,0.18));
+    }
+    /* Guest panel: cream backdrop for the iPhone */
+    .app-panel-guest .app-panel-mockup {
+        background:
+            radial-gradient(circle at 50% 40%, rgba(184, 150, 90, 0.12), transparent 60%),
+            linear-gradient(145deg, #ffffff 0%, #f0ebdf 100%);
+        border-bottom: 1px solid rgba(184, 150, 90, 0.25);
+    }
+    /* Ops panel: deeper navy for the MacBook to sit on */
+    .app-panel-ops .app-panel-mockup {
+        background:
+            radial-gradient(circle at 50% 50%, rgba(212, 176, 122, 0.18), transparent 65%),
+            linear-gradient(145deg, #081828 0%, #0d2137 100%);
+        border-bottom: 1px solid rgba(184, 150, 90, 0.2);
+    }
+    /* Inner padding restored on the content beneath the mockup */
+    .app-panel-inner {
+        padding: 1.75rem 1.75rem 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+    /* Guest panel: cream, brass-warm — "luxury" side */
+    .app-panel-guest {
+        background: linear-gradient(145deg, #f8f5ef 0%, #f0ebdf 100%);
+        border: 1px solid rgba(184, 150, 90, 0.3);
+    }
+    /* Ops panel: navy, brass-accented — "command" side */
+    .app-panel-ops {
+        background: linear-gradient(145deg, #0d2137 0%, #1a2d44 100%);
+        border: 1px solid rgba(184, 150, 90, 0.35);
+        color: #e8ecf2;
+    }
+    .app-panel-header {
+        border-bottom: 1px solid rgba(184, 150, 90, 0.2);
+        padding-bottom: 1rem;
+    }
+    .app-panel-ops .app-panel-header { border-bottom-color: rgba(255,255,255,0.08); }
+    .app-panel-label {
+        display: block;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: #b8965a;
+        margin-bottom: 0.5rem;
+    }
+    .app-panel-ops .app-panel-label { color: #d4b07a; }
+    .app-panel-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.25;
+        color: #0d2137;
+        margin: 0;
+    }
+    .app-panel-ops .app-panel-title { color: #ffffff; }
+    .app-panel-lede {
+        font-size: 14px;
+        line-height: 1.55;
+        color: #4a5463;
+        margin: 0;
+    }
+    .app-panel-ops .app-panel-lede { color: #c9d0da; }
+    .app-feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+    }
+    .app-feature-list li {
+        font-size: 13.5px;
+        line-height: 1.5;
+        color: #334155;
+        padding-left: 1.25rem;
+        position: relative;
+    }
+    .app-feature-list li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0.55em;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #b8965a;
+    }
+    .app-panel-ops .app-feature-list li { color: #d0d6e0; }
+    .app-panel-ops .app-feature-list li::before { background: #d4b07a; box-shadow: 0 0 8px rgba(212, 176, 122, 0.5); }
+    .app-feature-list strong {
+        font-weight: 700;
+        color: #0d2137;
+    }
+    .app-panel-ops .app-feature-list strong { color: #ffffff; }
+    .app-panel-footer {
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(184, 150, 90, 0.2);
+        font-size: 11.5px;
+        color: #6b7280;
+        font-style: italic;
+        line-height: 1.5;
+    }
+    .app-panel-ops .app-panel-footer { border-top-color: rgba(255,255,255,0.08); color: #a0a8b4; }
+
+    /* Unifier ribbon — ties the two panels back together */
+    .app-unifier {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 1.25rem 1.75rem;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(184, 150, 90, 0.12), rgba(184, 150, 90, 0.04));
+        border: 1px solid rgba(184, 150, 90, 0.3);
+    }
+    .app-unifier-badge {
+        flex-shrink: 0;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: #ffffff;
+        background: #0d2137;
+        padding: 0.55rem 0.9rem;
+        border-radius: 999px;
+        border: 1px solid #b8965a;
+    }
+    .app-unifier p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.55;
+        color: #0d2137;
+    }
+    .app-unifier strong { color: #b8965a; font-weight: 700; }
+    @media (max-width: 640px) {
+        .app-unifier { flex-direction: column; align-items: flex-start; }
+    }
+
+    /* ────────────────────────────────────────────────────────────────
+       Volley "lessons per day" mini-slider — collapses when toggle is off
+       ──────────────────────────────────────────────────────────────── */
+    .volley-lessons-panel {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+        border-top-color: transparent !important;
+        transition: max-height 0.35s ease, opacity 0.3s ease, margin-top 0.3s ease, padding-top 0.3s ease, border-top-color 0.3s ease;
+    }
+    .volley-lessons-panel.open {
+        max-height: 120px;
+        opacity: 1;
+        padding-top: 0.75rem !important;
+        margin-top: 0.75rem !important;
+        border-top-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    .mini-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 4px;
+        border-radius: 2px;
+        background: linear-gradient(to right, #b8965a var(--fill, 45%), rgba(255,255,255,0.15) var(--fill, 45%));
+        outline: none;
+        cursor: pointer;
+    }
+    .mini-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #d4b07a;
+        border: 2px solid #0d2137;
+        box-shadow: 0 0 8px rgba(212, 176, 122, 0.5);
+        cursor: grab;
+    }
+    .mini-slider::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #d4b07a;
+        border: 2px solid #0d2137;
+        box-shadow: 0 0 8px rgba(212, 176, 122, 0.5);
+        cursor: grab;
+    }
+
+    /* ────────────────────────────────────────────────────────────────
+       Service-line indicator lights — "powered on" as fleet grows
+       Used inside the dark configurator panel (navy bg)
+       ──────────────────────────────────────────────────────────────── */
+    .led-indicator {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 11px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: background 0.35s ease, border-color 0.35s ease;
+    }
+    .led-indicator.on {
+        background: rgba(184, 150, 90, 0.09);
+        border-color: rgba(184, 150, 90, 0.35);
+    }
+    .led-dot {
+        flex: 0 0 auto;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #3a4050;
+        box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+        transition: background 0.35s ease, box-shadow 0.35s ease;
+    }
+    .led-indicator.on .led-dot {
+        background: #5eff88;
+        box-shadow: 0 0 9px rgba(94, 255, 136, 0.75), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.6);
+        animation: ledPulse 2.4s ease-in-out infinite;
+    }
+    /* Stagger the pulse so the grid feels alive, not synchronized */
+    .led-indicator.on:nth-child(3n)   .led-dot { animation-delay: 0.3s; }
+    .led-indicator.on:nth-child(3n+1) .led-dot { animation-delay: 0.8s; }
+    .led-indicator.on:nth-child(3n+2) .led-dot { animation-delay: 1.4s; }
+
+    @keyframes ledPulse {
+        0%, 100% { box-shadow: 0 0 8px rgba(94, 255, 136, 0.65), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.5); }
+        50%      { box-shadow: 0 0 14px rgba(94, 255, 136, 0.95), 0 0 4px #5eff88, inset 0 0 2px rgba(255,255,255,0.7); }
+    }
+    .led-label {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.45);
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        transition: color 0.35s ease, font-weight 0.35s ease;
+        line-height: 1.25;
+    }
+    .led-indicator.on .led-label {
+        color: #ffffff;
+        font-weight: 600;
+    }
+    .led-threshold {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.3);
+        margin-left: auto;
+        letter-spacing: 0.05em;
+    }
+    .led-indicator.on .led-threshold {
+        color: #d4b07a;
+    }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- HEADER -->
+<!-- ================================================================ -->
+<header class="bg-gradient-to-br from-[#0d2137] via-[#1a2d44] to-[#0d2137] text-white px-6 md:px-8 py-10 md:py-12 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%221%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+    <div class="max-w-6xl mx-auto relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-xl border-2 border-[#b8965a] flex items-center justify-center">
+                    <span class="text-[#b8965a] font-bold text-2xl headline">T</span>
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">
+                        TH<span class="text-[#b8965a]">e</span>sis Hotel Miami
+                    </h1>
+                    <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Interactive Fleet Configurator</p>
+                </div>
+            </div>
+            <div class="flex flex-col md:items-end gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                    </div>
+                    <span class="text-sm font-bold tracking-tight accel-gradient tech-font">Accelerate Robotics</span>
+                </div>
+                <div class="text-[10px] text-gray-400 md:text-right tracking-wide">
+                    One Brain. Many Bots.<br>
+                    <span class="text-gray-500">Dynamic Proposal · April 2026</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ================================================================ -->
+<!-- INTRO -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 pt-10 pb-4">
+    <div class="max-w-3xl">
+        <p class="text-sm uppercase tracking-widest text-[#b8965a] font-semibold mb-3">Build Your Fleet</p>
+        <h2 class="headline text-3xl md:text-4xl font-bold text-[#0d2137] mb-4 leading-tight">
+            Drag the slider. Watch the ROI move with it.
+        </h2>
+        <p class="text-gray-600 leading-relaxed">
+            This isn't a three-tier menu — it's a live configurator. Start at one robot, scale to thirteen, and see exactly what changes at each step: monthly fleet cost, hard-dollar labor savings, staff hours returned, and annual net cash benefit. Toggle the Volley Trainer and Intelligence Platform on and off to see how the unit economics shift. When you find the configuration that matches your operating goals, that's your proposal.
+        </p>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- CONFIGURATOR -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-8">
+    <div class="config-panel p-6 md:p-10">
+
+        <!-- Fleet size header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+            <div>
+                <p class="text-[11px] uppercase tracking-widest text-[#d4b07a] font-semibold mb-2">Fleet Size</p>
+                <div class="flex items-baseline gap-3">
+                    <div class="text-6xl md:text-7xl font-bold tech-font text-white" id="fleetCount">4</div>
+                    <div class="text-xl text-gray-400 font-light">/ 13 robots</div>
+                </div>
+                <p class="text-sm text-gray-400 mt-1" id="tierLabel">Signature Automation</p>
+            </div>
+            <div class="flex flex-wrap gap-2" id="presetChips">
+                <button class="preset-chip" data-count="1">Phase 1 Pilot · 1</button>
+                <button class="preset-chip active" data-count="4">Signature · 4</button>
+                <button class="preset-chip" data-count="8">Full-Property · 8</button>
+                <button class="preset-chip" data-count="13">Thesis Autonomous · 13</button>
+            </div>
+        </div>
+
+        <!-- Slider -->
+        <div class="slider-wrap mb-2">
+            <div class="slider-track">
+                <div class="slider-fill" id="sliderFill" style="width: 30.77%"></div>
+                <div class="slider-ticks" id="sliderTicks"></div>
+            </div>
+            <input type="range" min="1" max="13" value="4" step="1" class="slider-input" id="fleetSlider">
+        </div>
+        <div class="flex justify-between text-[10px] text-gray-500 uppercase tracking-wider px-3 mb-8">
+            <span>1 · Pilot</span>
+            <span>·</span>
+            <span>4 · A</span>
+            <span>·</span>
+            <span>8 · B</span>
+            <span>·</span>
+            <span>13 · C</span>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Fleet Cost</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="monthlyCost">$11,400</span></p>
+                <p class="text-[11px] text-gray-500 mt-1" id="costBreakdownLine">4 robots × $2,850</p>
+            </div>
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Gains</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-[#d4b07a]"><span id="monthlySavings">$12,275</span></p>
+                <p class="text-[11px] text-gray-500 mt-1" id="gainsBreakdownLine">Hard labor savings only</p>
+            </div>
+            <div class="stat-tile accent-green">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Net Monthly Benefit</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="netMonthly">+$875</span></p>
+                <p class="text-[11px] text-gray-300 mt-1"><span id="annualNet">+$10,500</span> annualized</p>
+            </div>
+            <div class="stat-tile accent">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Staff Hours Returned</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="staffHours">30</span> <span class="text-base text-gray-300 font-normal">/ day</span></p>
+                <p class="text-[11px] text-gray-300 mt-1">High-value guest work</p>
+            </div>
+        </div>
+
+        <!-- Add-on toggles -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
+            <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="flex-1 pr-4">
+                    <p class="text-sm font-semibold text-white">Revenue Enhancement</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Delivery fees + incremental F&amp;B unlocked by the fleet · <span class="text-[#d4b07a]" id="revenueToggleHint">auto-calculated</span></p>
+                </div>
+                <div class="toggle" id="revenueToggle" data-key="revenue"></div>
+            </div>
+            <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1 pr-1">
+                        <p class="text-sm font-semibold text-white">Volley AI Padel Trainer</p>
+                        <p class="text-[11px] text-gray-400 mt-0.5">Paseo Courtyard · $2,000/mo cost · <span class="text-[#d4b07a]" id="volleyRevHint">+$7,500/mo lesson revenue</span></p>
+                    </div>
+                    <div class="toggle flex-shrink-0" id="volleyToggle" data-key="volley"></div>
+                </div>
+                <!-- Lessons/day mini-slider — visible only when Volley is on -->
+                <div class="volley-lessons-panel mt-3 pt-3 border-t border-white/10" id="volleyLessonsPanel">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <p class="text-[10px] uppercase tracking-widest text-[#d4b07a] font-semibold">Lessons / day</p>
+                        <p class="text-[10px] text-gray-400 tech-font">
+                            <span class="text-white font-bold text-xs" id="volleyLessonsVal">5</span> × $50 × 30 =
+                            <span class="text-[#d4b07a] font-bold" id="volleyMonthlyVal">$7,500</span>/mo
+                        </p>
+                    </div>
+                    <input type="range" min="1" max="10" value="5" step="1" class="mini-slider" id="volleyLessonsSlider">
+                    <div class="flex justify-between text-[9px] text-gray-500 tech-font mt-1 px-0.5">
+                        <span>1</span><span>·</span><span>·</span><span>·</span><span>5</span><span>·</span><span>·</span><span>·</span><span>·</span><span>10</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="flex-1 pr-4">
+                    <p class="text-sm font-semibold text-white">Facility Intelligence Platform</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">77 BLE + 11 UWB + 102 tags · $58,100 Y1 install · $13K/yr license</p>
+                </div>
+                <div class="toggle" id="intelToggle" data-key="intel"></div>
+            </div>
+        </div>
+
+        <!-- Robot grid -->
+        <div>
+            <p class="text-[11px] uppercase tracking-widest text-[#d4b07a] font-semibold mb-3">Fleet Composition</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5" id="robotGrid"></div>
+        </div>
+
+        <!-- Service-line indicator lights -->
+        <div class="mt-8">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[11px] uppercase tracking-widest text-[#d4b07a] font-semibold">Service Lines — System Status</p>
+                <p class="text-[10px] uppercase tracking-widest text-gray-400">
+                    <span class="tech-font text-[#5eff88] font-bold" id="serviceOnCount">4</span>
+                    <span class="text-gray-500"> / 13 online</span>
+                </p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2" id="serviceLedGrid"></div>
+        </div>
+
+        <!-- Annual summary callout -->
+        <div class="mt-8 p-5 rounded-xl" style="background: linear-gradient(135deg, rgba(184, 150, 90, 0.15), rgba(184, 150, 90, 0.04)); border: 1px solid rgba(184, 150, 90, 0.35);">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center md:text-left">
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#d4b07a] font-semibold mb-1">Year 1 All-In</p>
+                    <p class="text-2xl font-bold tech-font text-white" id="year1AllIn">$136,800</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#d4b07a] font-semibold mb-1">Year 2+ Steady-State</p>
+                    <p class="text-2xl font-bold tech-font text-white" id="year2SteadyState">$136,800</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-[#d4b07a] font-semibold mb-1">Annual Net Cash Benefit</p>
+                    <p class="text-2xl font-bold tech-font text-[#d4b07a]" id="annualBenefitBig">+$10,500</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- vs. Hiring comparison -->
+        <div class="mt-6 p-6 rounded-xl" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12);">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-[11px] uppercase tracking-widest text-[#d4b07a] font-semibold">vs. Hiring — Fully Loaded Labor Comparison</p>
+                <span class="text-[10px] text-gray-400 italic">Miami-Dade hospitality, 2026</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Your Fleet</p>
+                    <p class="text-3xl font-bold tech-font text-white"><span id="fleetCostCompare">$11,400</span><span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1" id="fleetCostBreakdown">Hardware, service, maintenance, training, upgrades — all-in</p>
+                </div>
+                <div class="text-center text-3xl text-gray-500 font-light hidden md:block">→</div>
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Equivalent FTE Coverage</p>
+                    <p class="text-3xl font-bold tech-font text-white"><span id="fteEquivCost">$27,000</span><span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1"><span id="fteEquivCount">6.0</span> FTEs × $4,500/mo fully-loaded</p>
+                </div>
+            </div>
+            <div class="mt-5 pt-5 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-3">
+                <p class="text-sm text-gray-300">The fleet delivers this coverage for</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-[#d4b07a]" id="fteSavings">$15,600/mo less</p>
+                <p class="text-sm text-gray-300"><span id="fteSavingsPct">58%</span> cheaper · <span id="fteSavingsAnnual">$187,200/yr</span> delta</p>
+            </div>
+            <p class="text-[10px] text-gray-500 italic mt-4 leading-relaxed">
+                Not counted in this comparison: recruiting costs, turnover (hospitality runs 70–100%/yr), overtime premiums, shift differentials, agency markup for peak coverage, uniforms, training — each typically adds 20–40% on top of base FTE cost.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- MEET THE FLEET — Uniform trading-card grid -->
+<!-- ================================================================ -->
+<section class="max-w-7xl mx-auto px-6 md:px-8 py-16">
+    <div class="max-w-3xl mb-10">
+        <p class="text-sm uppercase tracking-widest text-[#b8965a] font-semibold mb-3">Meet the Fleet</p>
+        <h2 class="headline text-3xl md:text-4xl font-bold text-[#0d2137] mb-4 leading-tight">
+            Designed for luxury. Built for operations.
+        </h2>
+        <p class="text-gray-600 leading-relaxed">
+            These aren't warehouse bots dressed up for guests — they're purpose-built for hospitality: quiet drive-trains, guest-aware behavior, finishes chosen to belong in a lobby. Same spec block on every card — compare them like trading cards.
+        </p>
+    </div>
+
+    <!-- Trading-card grid populated from FLEET_CARDS data -->
+    <div class="fleet-card-grid" id="fleetCardsGrid"></div>
+
+    <!-- Aesthetic footer strip -->
+    <div class="mt-10 p-6 rounded-2xl text-center" style="background: linear-gradient(135deg, rgba(184, 150, 90, 0.07), rgba(184, 150, 90, 0.02)); border: 1px solid rgba(184, 150, 90, 0.2);">
+        <p class="text-[11px] uppercase tracking-widest text-[#b8965a] font-semibold mb-2">A unified design language</p>
+        <p class="text-[#0d2137] max-w-3xl mx-auto leading-relaxed">
+            Matte finishes, warm metallic accents, guest-aware lighting. Every robot — from the lobby to the residences — reads as part of the same hotel, not a collection of vendors.
+        </p>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- ONE APPLICATION, TWO AUDIENCES -->
+<!-- Unified guest app + enterprise ops backend that ties the fleet together.
+     WHY: Hardware is the visible layer; the software is how the fleet actually
+     coheres into a single branded experience for guests AND gives the ops team
+     full control. -->
+<!-- ================================================================ -->
+<section class="max-w-7xl mx-auto px-6 md:px-8 py-16">
+    <div class="max-w-3xl mb-10">
+        <p class="text-sm uppercase tracking-widest text-[#b8965a] font-semibold mb-3">One Application. Two Audiences.</p>
+        <h2 class="headline text-3xl md:text-4xl font-bold text-[#0d2137] mb-4 leading-tight">
+            The fleet is the hardware. This is how it becomes a service.
+        </h2>
+        <p class="text-gray-600 leading-relaxed">
+            Every robot, every service line, every workflow lives behind a single software layer — a polished guest-facing app and an operations backend for your team. One system of record. One brand voice. Nothing for the guest to download if they don't want to, nothing for your team to juggle across vendor portals.
+        </p>
+    </div>
+
+    <div class="app-split-grid">
+        <!-- Guest-facing app -->
+        <article class="app-panel app-panel-guest">
+            <div class="app-panel-mockup">
+                <img src="../assets/mockups/iphone-guest-app.png" alt="Thesis guest app running on iPhone" loading="lazy">
+            </div>
+            <div class="app-panel-inner">
+                <div class="app-panel-header">
+                    <span class="app-panel-label">For your guests</span>
+                    <h3 class="app-panel-title">The in-room concierge, in their pocket.</h3>
+                </div>
+                <div class="app-panel-body">
+                    <p class="app-panel-lede">A branded web app — no download required. Accessible via in-room QR, texted link at check-in, or from the hotel's existing guest portal.</p>
+                    <ul class="app-feature-list">
+                        <li><strong>Summon.</strong> Request fresh towels, a nightcap, or laundry pickup — delivered by the fleet.</li>
+                        <li><strong>Track.</strong> Live ETA on every robot order. No more "where's my cart?"</li>
+                        <li><strong>Book.</strong> Reserve the Volley padel court, the rooftop cabana, the spa slot.</li>
+                        <li><strong>Discover.</strong> Curated amenities, dining, and experiences — tap to engage.</li>
+                        <li><strong>Pay.</strong> Folio charges, tips, upsells — all without touching a desk.</li>
+                    </ul>
+                    <div class="app-panel-footer">
+                        <span>Your branding · Your voice · Zero third-party logos shown to the guest.</span>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Operations backend -->
+        <article class="app-panel app-panel-ops">
+            <div class="app-panel-mockup">
+                <img src="../assets/mockups/macbook-ops-backend.png" alt="Thesis ops backend on a MacBook Pro — fleet dashboard" loading="lazy">
+            </div>
+            <div class="app-panel-inner">
+                <div class="app-panel-header">
+                    <span class="app-panel-label">For your operations team</span>
+                    <h3 class="app-panel-title">Fleet command &amp; control — one pane of glass.</h3>
+                </div>
+                <div class="app-panel-body">
+                    <p class="app-panel-lede">An enterprise dashboard for the GM, engineering, housekeeping, and F&amp;B leads. Browser-based. Role-based permissions. Live by default.</p>
+                    <ul class="app-feature-list">
+                        <li><strong>Live fleet map.</strong> Every robot, every task, every floor — in real time.</li>
+                        <li><strong>Task routing.</strong> Assign, reassign, override. Priority queues for VIPs and incidents.</li>
+                        <li><strong>Utilization analytics.</strong> Heatmaps, shift-by-shift throughput, ROI against baseline.</li>
+                        <li><strong>Alerts &amp; exceptions.</strong> Stuck robot, low battery, failed delivery — pinged to the right person.</li>
+                        <li><strong>Integrations.</strong> PMS, POS, elevator controls, door access, work-order systems.</li>
+                    </ul>
+                    <div class="app-panel-footer">
+                        <span>Exportable reports · SSO · Audit-ready logs · Included in the $2,850/robot/mo.</span>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <div class="app-unifier">
+        <div class="app-unifier-badge">One Platform</div>
+        <p>
+            Every robot on the property — cleaning, delivery, amenity — talks to the same backend. A single guest request flows through intake, routing, dispatch, execution, and billing without a human relaying it between systems. <strong>That's the moat.</strong> Competitors sell robots; we deliver the software that turns a fleet into a service.
+        </p>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- WHAT YOUR GUESTS NOTICE (Service/Luxury Unlocks) -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="flex items-end justify-between mb-6 flex-wrap gap-4">
+        <div>
+            <p class="text-sm uppercase tracking-widest text-[#b8965a] font-semibold mb-3">What Your Guests Notice</p>
+            <h2 class="headline text-3xl font-bold text-[#0d2137] mb-1">Service unlocks that scale with the fleet</h2>
+            <p class="text-gray-600 text-sm">The more robots you deploy, the more luxury and hospitality moments become physically possible.</p>
+        </div>
+    </div>
+
+    <!-- Service tier hero callout -->
+    <div id="serviceTierCallout" class="p-6 md:p-8 rounded-2xl mb-6 text-white" style="background: linear-gradient(135deg, #0d2137 0%, #1a2d44 100%); border: 1px solid rgba(184, 150, 90, 0.4);">
+        <div class="flex items-start justify-between flex-wrap gap-4 mb-3">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-[#d4b07a] font-semibold mb-2">At <span id="tierFleetCount">4</span> robots, your guest experience is:</p>
+                <h3 class="headline text-3xl md:text-4xl font-bold"><span id="tierName">Signature Luxury</span></h3>
+                <p class="text-[11px] uppercase tracking-widest text-[#d4b07a] mt-1" id="tierTag">Guest-facing automation</p>
+            </div>
+            <div class="tech-font text-5xl font-bold text-[#d4b07a]/30 tracking-tighter" id="tierBadge">II</div>
+        </div>
+        <p class="text-gray-300 leading-relaxed max-w-3xl" id="tierDescription">The baseline luxury automation story. Cleaning + delivery running autonomously. Amenity requests fulfilled in minutes. The experience guests photograph and share.</p>
+    </div>
+
+    <!-- Unlock cards grid -->
+    <p class="text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-3">Active Capabilities</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8" id="unlockGrid"></div>
+
+    <!-- Preview of what's still locked -->
+    <div id="lockedPreview">
+        <p class="text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-3">Next To Unlock</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="lockedGrid"></div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- HOSPITALITY LABOR REFERENCE -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12 bg-gradient-to-br from-[#f8f5ef] to-white rounded-3xl">
+    <p class="text-sm uppercase tracking-widest text-[#b8965a] font-semibold mb-3">Reference — Hospitality Labor Costs</p>
+    <h2 class="headline text-3xl font-bold text-[#0d2137] mb-2">What a Miami hotel FTE actually costs</h2>
+    <p class="text-gray-600 mb-6 max-w-3xl">
+        Fully-loaded monthly cost — base wage plus employer taxes, benefits, PTO, uniforms, and training burden. Does not include turnover, OT premiums, shift differentials, or agency markup for peak coverage.
+    </p>
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    <th>Base Wage</th>
+                    <th>Fully-Loaded Rate</th>
+                    <th class="right">Monthly (FT)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="font-semibold">Housekeeper / Room Attendant</td><td>$16–18/hr</td><td>$21–23/hr</td><td class="num">$3,600 – $4,000</td></tr>
+                <tr><td class="font-semibold">Houseman / Porter (day shift)</td><td>$16–18/hr</td><td>$21–23/hr</td><td class="num">$3,600 – $4,000</td></tr>
+                <tr><td class="font-semibold">Overnight Porter (w/ shift diff.)</td><td>$18–20/hr</td><td>$24–27/hr</td><td class="num">$4,200 – $4,700</td></tr>
+                <tr><td class="font-semibold">F&amp;B Runner / Room Service</td><td>$14–17/hr</td><td>$19–22/hr</td><td class="num">$3,300 – $3,800</td></tr>
+                <tr><td class="font-semibold">Bellhop / Bellperson</td><td>$14–18/hr</td><td>$19–24/hr</td><td class="num">$3,300 – $4,200</td></tr>
+                <tr><td class="font-semibold">Agency Temp (peak / event)</td><td>—</td><td>1.8× loaded rate</td><td class="num">$5,800 – $7,200</td></tr>
+                <tr class="total"><td><strong>Blended Hospitality FTE (this model)</strong></td><td>—</td><td>—</td><td class="num"><strong>$4,500 / mo</strong></td></tr>
+                <tr style="background: rgba(184, 150, 90, 0.15) !important;"><td class="font-semibold" style="color: #0d2137;">Robot (avg, all-inclusive)</td><td style="color: #0d2137;">—</td><td style="color: #0d2137;">Runs 60+ hrs/wk</td><td class="num font-bold" style="color: #0d2137;">$2,850 / mo</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="text-xs text-gray-500 mt-4 italic">Sources: Florida BLS hospitality wage data 2025, local Miami-Dade hotel payroll benchmarks, hospitality industry burden-rate studies (30% employer-side load, typical).</p>
+</section>
+
+<!-- ================================================================ -->
+<!-- WHAT THIS FLEET DOES -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <p class="text-sm uppercase tracking-widest text-[#b8965a] font-semibold mb-3">What This Fleet Does</p>
+    <h2 class="headline text-3xl font-bold text-[#0d2137] mb-6">Line-by-line breakdown of your configuration</h2>
+
+    <div class="grid md:grid-cols-2 gap-6">
+        <!-- Savings breakdown -->
+        <div class="callout-cream p-6">
+            <h3 class="text-sm uppercase tracking-widest text-[#0d2137] font-semibold mb-4">Hard Labor Savings</h3>
+            <div id="savingsBreakdown" class="space-y-2"></div>
+            <div class="border-t border-[#d4b07a] pt-3 mt-4">
+                <div class="flex justify-between font-bold text-[#0d2137]">
+                    <span>Monthly Labor Savings</span>
+                    <span class="tech-font" id="savingsTotal">$12,275</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Capacity breakdown -->
+        <div class="callout-navy p-6">
+            <h3 class="text-sm uppercase tracking-widest font-semibold mb-4">Staff Capacity Created</h3>
+            <p class="text-sm text-gray-300 mb-4">Hours returned per day — <em>not counted in ROI</em>. These hours redirect to high-value guest work.</p>
+            <div id="capacityBreakdown" class="space-y-2"></div>
+            <div class="border-t border-[#b8965a] pt-3 mt-4">
+                <div class="flex justify-between font-bold">
+                    <span>Hours / day</span>
+                    <span class="tech-font text-[#d4b07a]" id="capacityTotal">30</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Enhancement panel (toggleable) -->
+    <div id="revenuePanel" class="mt-6 callout-cream p-6 hidden" style="background: linear-gradient(135deg, rgba(47, 122, 58, 0.08), rgba(184, 150, 90, 0.04)); border: 1px solid rgba(47, 122, 58, 0.3);">
+        <div class="flex items-start justify-between gap-4 mb-4">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-[#2f7a3a] font-semibold mb-1">Revenue Enhancement · Upside</p>
+                <h3 class="text-lg font-bold text-[#0d2137]">New revenue streams unlocked by the fleet</h3>
+            </div>
+            <span class="text-[10px] uppercase tracking-wider text-[#2f7a3a] bg-[#2f7a3a]/10 px-2 py-1 rounded-full font-semibold whitespace-nowrap">Toggled ON</span>
+        </div>
+        <p class="text-xs text-gray-600 mb-4">
+            Figures are conservative per-unit estimates. Unlike the labor savings above, these are <em>net-new revenue lines</em> that scale with occupancy.
+            Delivery fees follow industry convention ($5–$8 per in-room delivery). Incremental F&amp;B reflects 24/7 availability lifting what would otherwise be lost orders.
+        </p>
+        <div id="revenueBreakdown" class="space-y-2"></div>
+        <div class="border-t border-[#2f7a3a]/40 pt-3 mt-4">
+            <div class="flex justify-between font-bold text-[#0d2137]">
+                <span>Monthly Revenue Enhancement</span>
+                <span class="tech-font text-[#2f7a3a]" id="revenueTotal">$0</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- DEPLOYMENT PHASES -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12 bg-gradient-to-br from-[#f8f5ef] to-white rounded-3xl">
+    <p class="text-sm uppercase tracking-widest text-[#b8965a] font-semibold mb-3">Phased Deployment</p>
+    <h2 class="headline text-3xl font-bold text-[#0d2137] mb-2">Your rollout timeline</h2>
+    <p class="text-gray-600 mb-6">Every configuration begins with the same 30-day pilot. Additional phases scale with fleet size.</p>
+
+    <div class="phase-timeline" id="phaseTimeline"></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- WHAT'S INCLUDED -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <p class="text-sm uppercase tracking-widest text-[#b8965a] font-semibold mb-3">All-Inclusive Service</p>
+    <h2 class="headline text-3xl font-bold text-[#0d2137] mb-6">What the $2,850 per robot covers</h2>
+
+    <div class="grid md:grid-cols-3 gap-4">
+        <div class="callout-cream p-5">
+            <h3 class="text-sm uppercase tracking-wider font-semibold text-[#0d2137] mb-3">Hardware & Deployment</h3>
+            <ul class="space-y-2 text-sm text-gray-700">
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> Robot hardware on our balance sheet</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> Thesis custom branding — wraps, walnut/brass/leather service cart, UI</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> SLAM mapping & commissioning</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> Elevator integration (button emulator, non-invasive)</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> <strong>Branded guest web app + ops backend live on day one</strong></li>
+            </ul>
+        </div>
+        <div class="callout-cream p-5">
+            <h3 class="text-sm uppercase tracking-wider font-semibold text-[#0d2137] mb-3">Ongoing Service</h3>
+            <ul class="space-y-2 text-sm text-gray-700">
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> 24/7 monitoring + 2-hr on-site response (Miami-Dade)</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> Preventive maintenance + break-fix repair</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> All consumables (brushes, filters, leather conditioning)</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> Loaner robot within 24 hrs during extended service</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> <strong>Platform updates, new features, PMS/POS integration tuning</strong></li>
+            </ul>
+        </div>
+        <div class="callout-cream p-5">
+            <h3 class="text-sm uppercase tracking-wider font-semibold text-[#0d2137] mb-3">Training & Governance</h3>
+            <ul class="space-y-2 text-sm text-gray-700">
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> 3-day on-site staff training at deployment</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> Quarterly refresher training</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> Monthly operational review & performance report</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> Annual safety inspection</li>
+                <li class="flex gap-2"><span class="text-[#b8965a] font-bold">·</span> <strong>Admin training on ops backend — GM, engineering, housekeeping</strong></li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- COMMITMENT TERMS -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="callout-navy p-8">
+        <p class="text-sm uppercase tracking-widest text-[#d4b07a] font-semibold mb-3">Commitment Terms</p>
+        <h2 class="headline text-3xl font-bold mb-6">Risk sits with us, not you</h2>
+        <div class="grid md:grid-cols-2 gap-6 text-sm">
+            <div class="space-y-3">
+                <div class="flex gap-3"><span class="text-[#d4b07a] font-bold">✓</span><div><strong>30-day pilot</strong> — one robot, defined success criteria agreed before kickoff</div></div>
+                <div class="flex gap-3"><span class="text-[#d4b07a] font-bold">✓</span><div><strong>90-day minimum term</strong> — covers pilot + start of Phase 2</div></div>
+                <div class="flex gap-3"><span class="text-[#d4b07a] font-bold">✓</span><div><strong>30-day cancellation notice</strong> after minimum, no penalty</div></div>
+                <div class="flex gap-3"><span class="text-[#d4b07a] font-bold">✓</span><div><strong>No long-term lock-in</strong> — service agreement, not finance lease</div></div>
+            </div>
+            <div class="space-y-3">
+                <div class="flex gap-3"><span class="text-[#d4b07a] font-bold">✓</span><div><strong>Right-sizing</strong> — add or remove robots at phase boundaries</div></div>
+                <div class="flex gap-3"><span class="text-[#d4b07a] font-bold">✓</span><div><strong>Upgrade path</strong> — start small, expand any time</div></div>
+                <div class="flex gap-3"><span class="text-[#d4b07a] font-bold">✓</span><div><strong>Founder on-site</strong> for entirety of Phase 1 and Phase 2</div></div>
+                <div class="flex gap-3"><span class="text-[#d4b07a] font-bold">✓</span><div><strong>Hilton / Pyramid listed as additional insureds</strong> at no cost</div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- FOOTER CTA -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12 text-center">
+    <h2 class="headline text-4xl font-bold text-[#0d2137] mb-4">Ready to move?</h2>
+    <p class="text-gray-600 max-w-2xl mx-auto mb-6">
+        The Phase 1 pilot is one robot, 30 days, with measurable outcomes agreed upfront. If it doesn't hit the success criteria, both parties walk away at no cost. That's the lowest-commitment way to see if this works for Thesis.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <a href="mailto:eric@accelerate.bot" class="inline-flex items-center gap-2 bg-[#0d2137] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#1a2d44] transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            Contact Eric Race
+        </a>
+        <a href="proposal.html" class="inline-flex items-center gap-2 border border-[#0d2137] text-[#0d2137] px-6 py-3 rounded-lg font-semibold hover:bg-[#f8f5ef] transition">
+            View Full Static Proposal
+        </a>
+    </div>
+    <div class="mt-10 pt-6 border-t border-gray-200 text-sm text-gray-500">
+        <p><strong>Eric Race</strong> — Founder & CEO, Accelerate Robotics · Miami, FL</p>
+        <p class="mt-1 text-xs">Accelerate Robotics — One brain, many bots.</p>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- DATA + LOGIC -->
+<!-- ================================================================ -->
+<script>
+/* ──────────────────────────────────────────────────────────────────
+   ROBOT LADDER — order of addition by marginal ROI
+   Each slot specifies: code, model, role, monthly labor savings, hours/day freed
+   Savings values sum to the exact tier totals from proposal.md:
+     4 robots (Option A)  → $12,275/mo  ✓
+     8 robots (Option B)  → $24,875/mo  ✓
+     13 robots (Option C) → $40,975/mo  ✓
+   ────────────────────────────────────────────────────────────────── */
+// Per-robot revenue, FTE coverage, and guest-experience unlocks.
+//
+// REVENUE (only counted when Revenue Enhancement toggled on):
+//   W3 #1:    $3,000/mo   → ~20 deliveries/day × $5 delivery fee × 30 days
+//   S100 #1:  $5,000/mo   → $8 dining service fee × 15 deliveries/day + incremental 24/7 F&B
+//   S300 food: $2,000/mo  → Incremental pool/rooftop F&B from runner-free dispatch
+//   W3 #2:    $4,500/mo   → Unlocks overnight + pre-dawn amenity orders a runner can't cover
+//   S100 #2:  $3,500/mo   → Incremental dining at peak windows that otherwise cap out
+//
+// FTE COVERAGE: how many fully-loaded hospitality FTEs each robot's capacity equals.
+// Based on per-robot active hours (~60 hrs/week) divided by effective FTE availability
+// (~37 hrs/week after PTO/breaks), adjusted up for 24/7 roles that need multi-shift coverage.
+const ROBOTS = [
+    { code: 'C30',  label: 'C30 · Guest-floor carpet',             role: 'Daily carpet rotation floors 4–10',                 photo: '../assets/robots/photos/keenon-c30-white.png',              savings: 4040, revenue: 0,    revenueDesc: '',                                                      hours: 7,  fte: 1.5, captures: 'Housekeeping OT −20 hrs/wk + third-party carpet contract terminated',         unlock: 'Corridors always look already-vacuumed, never mid-clean during guest hours',      category: 'Cleaning' },
+    { code: 'C40',  label: 'C40 · Lobby & restaurant hard floor',  role: 'Pre-service scrubs, lobby dust-push, kitchen deep sweep',  photo: '../assets/robots/photos/keenon-c40-cleaning.png',    savings: 4435, revenue: 0, revenueDesc: '',                                             hours: 7,  fte: 1.5, captures: 'Overnight porter shift eliminated + engineering OT −8 hrs/wk',                 unlock: 'Guests never see a mop bucket during waking hours',                                category: 'Cleaning' },
+    { code: 'W3',   label: 'W3 · Amenity & room delivery',         role: 'Enclosed delivery to guest rooms, 11 PM–6 AM core', photo: '../assets/robots/photos/keenon-w3-thesis-branded.png',       savings: 2000, revenue: 3000, revenueDesc: 'Delivery fees — $5 × ~20 deliveries/day',              hours: 6,  fte: 1.3, captures: 'Overnight amenity runner PT role eliminated',                                  unlock: 'Amenity requests fulfilled in 3 minutes — no "I\'ll send someone up"',             category: 'Delivery' },
+    { code: 'S300', label: 'S300 · Linens transport',              role: 'Floor-to-laundry hourly batch runs',                photo: '../assets/robots/photos/keenon-s300-linen-bin.png',          savings: 1800, revenue: 0,    revenueDesc: '',                                                      hours: 6,  fte: 1.0, captures: 'Linen transport PT handler position',                                          unlock: 'Housekeepers stay on guest floors — never ride elevators with laundry carts',      category: 'Logistics' },
+    { code: 'S100', label: 'S100 · In-room dining & bellhop',      role: 'Walnut + brass service cart, swappable toppers',    photo: '../assets/robots/photos/keenon-s100-luxury-cart-hero.png',   savings: 4200, revenue: 5000, revenueDesc: 'Dining service fees + incremental 24/7 F&B',            hours: 9,  fte: 1.5, captures: 'F&B runner OT at peak + bellhop peak-shift OT',                                 unlock: 'Room service arrives under walnut & brass thermal tiers — not a rolling cart',     category: 'Luxury' },
+    { code: 'C30',  label: 'C30 · Residences wing',                role: 'Carpet + passive corridor monitoring',              photo: '../assets/robots/photos/keenon-c30-white.png',               savings: 2800, revenue: 0,    revenueDesc: '',                                                      hours: 7,  fte: 1.0, captures: 'Residences overnight porter shift',                                            unlock: 'Residences get hotel-grade corridors + passive safety monitoring',                  category: 'Residences' },
+    { code: 'S300', label: 'S300 · Food to pool deck',             role: 'Kitchen → pool/rooftop delivery cabinet',           photo: '../assets/robots/photos/keenon-s300.png',                    savings: 3800, revenue: 2000, revenueDesc: 'Incremental pool/rooftop F&B (runner no longer bottleneck)', hours: 8, fte: 1.2, captures: 'Pool/rooftop beverage runner PT + BOH supply-runner batching',                 unlock: 'Poolside food arrives as fast as at the restaurant — no runner bottleneck',        category: 'Luxury' },
+    { code: 'MT1',  label: 'MT1 Max · Paseo Courtyard',            role: 'Outdoor sweeping, automatically paused for events', photo: '../assets/robots/photos/pudu-mt1-max.png',                   savings: 1800, revenue: 0,    revenueDesc: '',                                                      hours: 5,  fte: 0.5, captures: 'Third-party courtyard sweeping contract terminated',                           unlock: 'Paseo Courtyard swept nightly — guest-ready by first espresso',                    category: 'Amenity' },
+    { code: 'C40',  label: 'C40 · Peak hard-floor coverage',       role: 'Second hard-floor unit for events / BOH depth',     photo: '../assets/robots/photos/keenon-c40-cleaning.png',            savings: 3200, revenue: 0,    revenueDesc: '',                                                      hours: 7,  fte: 1.0, captures: 'BOH cleaning contract terminated',                                             unlock: 'Events leave no trace — floors reset between functions',                           category: 'Depth' },
+    { code: 'C30',  label: 'C30 · Peak carpet rotation',           role: 'Third C30 covering mid-day touch-ups and events',   photo: '../assets/robots/photos/keenon-c30-white.png',               savings: 2750, revenue: 0,   revenueDesc: '',                                                      hours: 7,  fte: 0.8, captures: 'Overnight housekeeping FTE not backfilled (share 1/2)',                        unlock: 'Mid-day carpet touch-ups are never skipped, even on high-turnover days',           category: 'Depth' },
+    { code: 'W3',   label: 'W3 · 24/7 amenity coverage',           role: 'Second delivery unit for round-the-clock service',  photo: '../assets/robots/photos/keenon-w3-silver.webp',              savings: 4650, revenue: 4500, revenueDesc: 'Overnight + pre-dawn orders a runner can\'t staff',     hours: 8,  fte: 1.8, captures: 'Second overnight amenity runner + overnight FTE (share 1/2)',                  unlock: 'Tap the app. Count to 180. It\'s at your door. 3 AM or 3 PM.',                     category: 'Concierge' },
+    { code: 'S100', label: 'S100 · Peak dining coverage',          role: 'Second service cart for peak dining windows',       photo: '../assets/robots/photos/keenon-s100-luxury-cart-loaded.png', savings: 1500, revenue: 3500, revenueDesc: 'Incremental dining orders at peak windows',             hours: 8,  fte: 1.2, captures: 'Cross-department OT reduction (partial)',                                      unlock: 'Parallel breakfast + dinner service — no 45-minute dining queues',                 category: 'Concierge' },
+    { code: 'S300', label: 'S300 · Housekeeping supply',           role: 'BOH → housekeeping closet restock, 24/7',           photo: '../assets/robots/photos/keenon-s300-linen-bin.png',          savings: 4000, revenue: 0,    revenueDesc: '',                                                      hours: 7,  fte: 1.0, captures: 'Agency temp spend −50% + cross-dept OT (remainder)',                           unlock: 'Housekeeping carts restock themselves — nobody leaves the floor',                  category: 'Concierge' },
+];
+
+const RAAS_PER_ROBOT = 2850;  // flat monthly RaaS rate per robot
+const VOLLEY_COST = 2000;     // monthly lease
+// Volley revenue is now user-adjustable via a lessons/day sub-slider (1–10).
+// Default 5/day × $50 × 30 days = $7,500/mo. Cap at 10/day = $15K/mo (stretch).
+// WHY: prior fixed $18K baked in ~10 sessions/day which is aggressive for a
+// single court at a boutique hotel — let the operator pick utilization.
+const VOLLEY_PRICE_PER_LESSON = 50;  // per-session booking fee
+const VOLLEY_DAYS_PER_MONTH = 30;    // billing/reporting month
+function volleyRevenue() {
+    return state.volleyLessons * VOLLEY_PRICE_PER_LESSON * VOLLEY_DAYS_PER_MONTH;
+}
+const INTEL_Y1_INSTALL = 58100;  // one-time capex
+const INTEL_Y2_LICENSE = 13000;  // annual software license
+
+// Blended fully-loaded hospitality FTE monthly cost — Miami-Dade 2026.
+// Source mix: housekeeping ($3,600/mo loaded), porter ($3,800/mo), F&B runner ($3,900/mo),
+// overnight shift w/ differential ($4,600/mo), weighted for a typical mid-luxury hotel role mix.
+// Includes wages + employer taxes (FICA, FUTA) + benefits + PTO + uniforms + training burden.
+// Does NOT include: turnover replacement cost, OT premiums, agency markup for peak coverage.
+const FTE_MONTHLY_COST = 4500;
+
+// Service tier narratives — what guests experience at each fleet size
+const SERVICE_TIERS = [
+    { min: 1,  max: 1,  name: 'Pilot Mode',         tag: 'Proof of concept',       color: '#8a8a8a', description: 'One cleaning robot on guest-floor carpets. 30 days, success-criteria gated. See how autonomous hospitality works before committing further.' },
+    { min: 2,  max: 3,  name: 'Essential Cleaning', tag: 'Always clean',           color: '#6b8e23', description: 'Cleaning coverage starts — floors look perpetually maintained without visible staff logistics during guest hours.' },
+    { min: 4,  max: 6,  name: 'Signature Luxury',   tag: 'Guest-facing automation', color: '#b8965a', description: 'The baseline luxury automation story. Cleaning + delivery running autonomously. Amenity requests fulfilled in minutes. The experience guests photograph and share.' },
+    { min: 7,  max: 9,  name: 'Full Property',      tag: 'Every surface, every shift', color: '#b8965a', description: 'Every major guest-facing and back-of-house task automated. Residences, pool deck, courtyard. Walnut-and-brass in-room dining service. The first hotel in Coral Gables delivering this caliber of service.' },
+    { min: 10, max: 13, name: 'Concierge-Grade',    tag: 'Instant, 24/7',          color: '#d4a040', description: 'Anything, to any room, any hour. Tap the app — it arrives in minutes. Overnight amenity, pre-dawn coffee, late-night dining, weekend brunch at 3 AM. No amount of human staffing can sustainably deliver this level of service.' },
+];
+
+function currentServiceTier(n) {
+    return SERVICE_TIERS.find(t => n >= t.min && n <= t.max) || SERVICE_TIERS[0];
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Fleet trading cards — one per UNIQUE robot type (not per deployment slot).
+// Specs sourced from Keenon / Pudu / Volley public datasheets. Signature
+// stat is chosen to highlight each robot's defining capability.
+// ────────────────────────────────────────────────────────────────────
+// Flag SVGs — inline so we don't depend on OS emoji font rendering (Chrome on
+// Windows, for example, renders flag emoji as letter pairs like "CN" / "US").
+// Stylized but recognizable at the card's 20×14 display size.
+const FLAGS = {
+    CN: `<svg class="flag-svg" viewBox="0 0 30 20" xmlns="http://www.w3.org/2000/svg"><rect width="30" height="20" fill="#de2910"/><g fill="#ffde00"><path d="M6 3.4 L6.94 6.29 L9.97 6.29 L7.52 8.08 L8.46 10.97 L6 9.18 L3.54 10.97 L4.48 8.08 L2.03 6.29 L5.06 6.29 Z"/><circle cx="11" cy="2.5" r="0.55"/><circle cx="12.5" cy="4.3" r="0.55"/><circle cx="12.5" cy="6.7" r="0.55"/><circle cx="11" cy="8.5" r="0.55"/></g></svg>`,
+    US: `<svg class="flag-svg" viewBox="0 0 30 20" xmlns="http://www.w3.org/2000/svg"><rect width="30" height="20" fill="#fff"/><g fill="#b22234"><rect y="0" width="30" height="1.54"/><rect y="3.08" width="30" height="1.54"/><rect y="6.15" width="30" height="1.54"/><rect y="9.23" width="30" height="1.54"/><rect y="12.31" width="30" height="1.54"/><rect y="15.38" width="30" height="1.54"/><rect y="18.46" width="30" height="1.54"/></g><rect width="12" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2" cy="2" r="0.55"/><circle cx="4.4" cy="2" r="0.55"/><circle cx="6.8" cy="2" r="0.55"/><circle cx="9.2" cy="2" r="0.55"/><circle cx="3.2" cy="3.8" r="0.55"/><circle cx="5.6" cy="3.8" r="0.55"/><circle cx="8" cy="3.8" r="0.55"/><circle cx="2" cy="5.6" r="0.55"/><circle cx="4.4" cy="5.6" r="0.55"/><circle cx="6.8" cy="5.6" r="0.55"/><circle cx="9.2" cy="5.6" r="0.55"/><circle cx="3.2" cy="7.4" r="0.55"/><circle cx="5.6" cy="7.4" r="0.55"/><circle cx="8" cy="7.4" r="0.55"/><circle cx="2" cy="9.2" r="0.55"/><circle cx="4.4" cy="9.2" r="0.55"/><circle cx="6.8" cy="9.2" r="0.55"/><circle cx="9.2" cy="9.2" r="0.55"/></g></svg>`,
+};
+
+const FLEET_CARDS = [
+    {
+        code: 'C30',
+        category: 'Carpet Cleaning',
+        name: 'Guest-Floor Carpet',
+        tagline: 'Whisper-quiet vacuum.',
+        desc: 'Patrols carpeted corridors with a soft-edged chassis and suction calibrated for plush pile. Moves slowly when guests are present.',
+        photo: '../assets/robots/photos/keenon-c30-white.png',
+        unlock: 'Corridors always look already-vacuumed, never mid-clean during guest hours.',
+        stats: {
+            Maker:     'Keenon Robotics',
+            Origin:    { country: 'CN', city: 'Shanghai' },
+            Runtime:   '4.5 hrs · 2 hr charge',
+            Payload:   '2 L dust capacity',
+            Sensors:   '3D LiDAR · RGBD · ultrasonic',
+            Navigation: 'VSLAM auto-dock',
+            Signature: '<55 dB — quieter than a library',
+        },
+    },
+    {
+        code: 'C40',
+        category: 'Hard Floor Cleaning',
+        name: 'Lobby & Restaurant Scrubber',
+        tagline: 'Squeegee and dry in one pass.',
+        desc: 'Pre-service scrubs the lobby, restaurant, and kitchen floors. Recovers its own water so nothing is wet behind it.',
+        photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+        unlock: 'Guests never see a mop bucket during waking hours.',
+        stats: {
+            Maker:     'Keenon Robotics',
+            Origin:    { country: 'CN', city: 'Shanghai' },
+            Runtime:   '4 hrs · 4 hr charge',
+            Payload:   '35 L clean / 30 L waste',
+            Sensors:   '3D LiDAR · 2× RGBD · drop sensors',
+            Navigation: 'VSLAM auto-dock',
+            Signature: '500 mm cleaning width',
+        },
+    },
+    {
+        code: 'W3',
+        category: 'Enclosed Delivery',
+        name: 'Amenity & Room Delivery',
+        tagline: 'Biometric, branded, enclosed.',
+        desc: 'Sealed four-compartment delivery for room amenities and F&B. Custom-wrapped in your brand — guests see a piece of the hotel identity.',
+        photo: '../assets/robots/photos/keenon-w3-thesis-branded.png',
+        unlock: 'Amenity requests fulfilled in 3 minutes — no "I\'ll send someone up."',
+        stats: {
+            Maker:     'Keenon Robotics',
+            Origin:    { country: 'CN', city: 'Shanghai' },
+            Runtime:   '12 hrs · 4 hr charge',
+            Payload:   '30 kg · 4 cubbies',
+            Sensors:   '3D LiDAR · TOF · RGBD · ultrasonic',
+            Navigation: 'VSLAM + elevator',
+            Signature: 'Biometric per-compartment unlock',
+        },
+    },
+    {
+        code: 'S100',
+        category: 'Luxury Delivery',
+        name: 'Signature Service Cart',
+        tagline: 'Walnut, brass, thermal covers.',
+        desc: 'Custom-built service cart with swappable tiers for hot & cold dining, bellhop, and amenity. Arrives looking like room service — not a logistics platform.',
+        photo: '../assets/robots/photos/keenon-s100-luxury-cart-hero.png',
+        unlock: 'Room service arrives under walnut & brass thermal tiers — not a rolling cart.',
+        stats: {
+            Maker:     'Keenon Robotics',
+            Origin:    { country: 'CN', city: 'Shanghai' },
+            Runtime:   '13 hrs · 4 hr charge',
+            Payload:   '40 kg · 3 tiers',
+            Sensors:   '3D LiDAR · RGBD · TOF',
+            Navigation: 'Multi-floor + elevator',
+            Signature: 'Custom finish — walnut/brass',
+        },
+    },
+    {
+        code: 'S300',
+        category: 'Heavy Logistics',
+        name: 'Linens & Supply Transport',
+        tagline: '200 kg, service-elevator priority.',
+        desc: 'Moves laundry, housekeeping supplies, and BOH pallets so staff never ride guest elevators with carts. Auto-docks with roll-off bins.',
+        photo: '../assets/robots/photos/keenon-s300-linen-bin.png',
+        unlock: 'Housekeepers stay on guest floors — never ride elevators with laundry carts.',
+        stats: {
+            Maker:     'Keenon Robotics',
+            Origin:    { country: 'CN', city: 'Shanghai' },
+            Runtime:   '12 hrs · 4 hr charge',
+            Payload:   '200 kg capacity',
+            Sensors:   '3D LiDAR · RGBD · TOF · ultrasonic',
+            Navigation: 'VSLAM + service elevator',
+            Signature: 'Roll-off cart auto-docking',
+        },
+    },
+    {
+        code: 'MT1',
+        category: 'Outdoor Cleaning',
+        name: 'Paseo Courtyard Sweeper',
+        tagline: 'Dawn patrol, silent.',
+        desc: 'Sweeps the outdoor courtyard before the first espresso. Senses event setups and auto-pauses so it never interrupts.',
+        photo: '../assets/robots/photos/pudu-mt1-max.png',
+        unlock: 'Paseo Courtyard swept nightly — guest-ready by first espresso.',
+        stats: {
+            Maker:     'Pudu Robotics',
+            Origin:    { country: 'CN', city: 'Shenzhen' },
+            Runtime:   '6 hrs · 3 hr charge',
+            Payload:   '60 L debris bin',
+            Sensors:   '3D LiDAR · RGB · GPS-RTK · 4G',
+            Navigation: 'Outdoor SLAM + GPS',
+            Signature: 'IP66 all-weather rating',
+        },
+    },
+    {
+        code: 'VLY',
+        category: 'Guest Amenity',
+        name: 'Volley AI Padel Trainer',
+        tagline: "Brent's coach, on-demand.",
+        desc: 'AI ball machine that plays drills, tracks player performance, and adjusts difficulty live. Booked through a branded app.',
+        photo: '../assets/robots/photos/volley-trainer.png',
+        unlock: 'Padel coach on-demand — the amenity guests book the hotel for.',
+        accent: 'amenity',  // dark navy card
+        stats: {
+            Maker:     'Volley',
+            Origin:    { country: 'US', city: 'Austin, TX' },
+            Runtime:   'AC-powered · continuous',
+            Payload:   '~200 ball capacity',
+            Sensors:   'Dual-cam player tracking · AI vision',
+            Navigation: 'Fixed-court — full coverage',
+            Signature: '500+ drill library, app-booked',
+        },
+    },
+];
+
+// Service lines — each aligned to the robot slot that enables it.
+// Thresholds match the ROBOTS ladder: as you add the Nth robot, its service line lights up.
+// WHY: tightly coupled to ROBOTS order so the LEDs flip on in lockstep with fleet growth.
+const SERVICE_LINES = [
+    { id: 'carpet',      label: 'Carpet Cleaning',       activateAt: 1 },
+    { id: 'hardfloor',   label: 'Hard-Floor Cleaning',   activateAt: 2 },
+    { id: 'delivery',    label: 'Guest Room Delivery',   activateAt: 3 },
+    { id: 'linens',      label: 'Linens Transport',      activateAt: 4 },
+    { id: 'dining',      label: 'In-Room Dining',        activateAt: 5 },
+    { id: 'residences',  label: 'Residences Service',    activateAt: 6 },
+    { id: 'pool',        label: 'Pool & Rooftop F&B',    activateAt: 7 },
+    { id: 'courtyard',   label: 'Paseo Courtyard',       activateAt: 8 },
+    { id: 'events',      label: 'Event Turn-Arounds',    activateAt: 9 },
+    { id: 'peakclean',   label: 'Peak Carpet Rotation',  activateAt: 10 },
+    { id: 'amenity247',  label: '24/7 Amenity',          activateAt: 11 },
+    { id: 'peakdining',  label: 'Peak Dining Service',   activateAt: 12 },
+    { id: 'restock',     label: 'Auto-Restocking',       activateAt: 13 },
+];
+
+const TIERS = {
+    1:  { name: 'Phase 1 Pilot',   phases: 1, note: 'One robot, 30 days, success-criteria gated' },
+    2:  { name: 'Core Cleaning',   phases: 2, note: 'Cleaning coverage starts' },
+    3:  { name: 'Core + Delivery', phases: 2, note: 'Add guest delivery capability' },
+    4:  { name: 'Signature Automation', phases: 3, note: 'Proves the concept — Option A baseline' },
+    5:  { name: 'Signature + Dining',   phases: 3, note: 'Add in-room dining service' },
+    6:  { name: 'Residences Expansion', phases: 3, note: 'Extend to the residences wing' },
+    7:  { name: 'Full Hotel + Pool',    phases: 4, note: 'Pool deck + courtyard coverage' },
+    8:  { name: 'Full-Property Automation', phases: 4, note: 'Option B baseline' },
+    9:  { name: 'Full-Property + Depth',    phases: 4, note: 'Peak hard-floor depth' },
+    10: { name: 'Extended Coverage',        phases: 4, note: 'Peak carpet rotation added' },
+    11: { name: '24/7 Delivery',            phases: 5, note: 'Round-the-clock amenity service' },
+    12: { name: 'Peak Dining Coverage',     phases: 5, note: 'Dual service carts' },
+    13: { name: 'Thesis Autonomous', phases: 5, note: 'Full fleet — Option C baseline' },
+};
+
+/* ──────────────────────────────────────────────────────────────────
+   STATE
+   ────────────────────────────────────────────────────────────────── */
+let state = {
+    count: 4,
+    volley: false,
+    volleyLessons: 5,  // 1–10 lessons per day; default 5 — moderate utilization
+    intel: false,
+    revenue: false,
+};
+
+const $ = (id) => document.getElementById(id);
+
+/* ──────────────────────────────────────────────────────────────────
+   RENDER: Robot grid
+   ────────────────────────────────────────────────────────────────── */
+function renderRobotGrid() {
+    const grid = $('robotGrid');
+    grid.innerHTML = '';
+    ROBOTS.forEach((r, i) => {
+        const active = i < state.count;
+        const slot = document.createElement('div');
+        slot.className = 'robot-slot' + (active ? ' active' : '');
+        slot.innerHTML = `
+            <img class="robot-photo" src="${r.photo}" alt="${r.code}" loading="lazy">
+            <div class="flex items-start gap-2.5">
+                <div class="robot-chip-mini">${r.code}</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[11px] font-semibold text-white leading-snug truncate">${r.label}</p>
+                    <p class="text-[10px] text-gray-400 leading-snug mt-0.5 truncate">${r.role}</p>
+                </div>
+            </div>
+        `;
+        grid.appendChild(slot);
+    });
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   RENDER: Savings + capacity breakdown
+   ────────────────────────────────────────────────────────────────── */
+function renderBreakdowns() {
+    const savingsEl = $('savingsBreakdown');
+    const capacityEl = $('capacityBreakdown');
+    const revenueEl = $('revenueBreakdown');
+    const revenuePanel = $('revenuePanel');
+    savingsEl.innerHTML = '';
+    capacityEl.innerHTML = '';
+    revenueEl.innerHTML = '';
+
+    let totalLaborSavings = 0, totalHours = 0, totalRevenue = 0;
+
+    // Hard labor savings (always shown, separated from revenue)
+    for (let i = 0; i < state.count; i++) {
+        const r = ROBOTS[i];
+        totalLaborSavings += r.savings;
+        totalHours += r.hours;
+
+        const sRow = document.createElement('div');
+        sRow.className = 'flex justify-between items-start gap-3 text-sm';
+        sRow.innerHTML = `
+            <div class="flex-1">
+                <div class="font-semibold text-[#0d2137]">${r.label}</div>
+                <div class="text-xs text-gray-600 mt-0.5">${r.captures}</div>
+            </div>
+            <div class="tech-font font-semibold text-[#0d2137] whitespace-nowrap">+$${r.savings.toLocaleString()}</div>
+        `;
+        savingsEl.appendChild(sRow);
+
+        const cRow = document.createElement('div');
+        cRow.className = 'flex justify-between items-center gap-3 text-sm';
+        cRow.innerHTML = `
+            <div class="text-gray-300">${r.label}</div>
+            <div class="tech-font text-[#d4b07a] whitespace-nowrap">${r.hours} hrs/day</div>
+        `;
+        capacityEl.appendChild(cRow);
+    }
+
+    $('savingsTotal').textContent = '$' + totalLaborSavings.toLocaleString();
+    $('capacityTotal').textContent = totalHours;
+
+    // Revenue Enhancement panel — only shown when toggled on
+    if (state.revenue || state.volley) {
+        revenuePanel.classList.remove('hidden');
+
+        if (state.revenue) {
+            // Per-robot revenue contributions (delivery fees + incremental F&B)
+            for (let i = 0; i < state.count; i++) {
+                const r = ROBOTS[i];
+                if (r.revenue > 0) {
+                    totalRevenue += r.revenue;
+                    const rRow = document.createElement('div');
+                    rRow.className = 'flex justify-between items-start gap-3 text-sm';
+                    rRow.innerHTML = `
+                        <div class="flex-1">
+                            <div class="font-semibold text-[#0d2137]">${r.label}</div>
+                            <div class="text-xs text-gray-600 mt-0.5">${r.revenueDesc}</div>
+                        </div>
+                        <div class="tech-font font-semibold text-[#2f7a3a] whitespace-nowrap">+$${r.revenue.toLocaleString()}</div>
+                    `;
+                    revenueEl.appendChild(rRow);
+                }
+            }
+
+            if (totalRevenue === 0) {
+                // No revenue-generating robots in selected fleet yet
+                const placeholder = document.createElement('div');
+                placeholder.className = 'text-sm italic text-gray-500 py-2';
+                placeholder.textContent = 'Add a W3, S100, or S300 food-transport robot to unlock revenue streams.';
+                revenueEl.appendChild(placeholder);
+            }
+        }
+
+        // Volley padel lessons — broken out as its own revenue line
+        if (state.volley) {
+            const vRev = volleyRevenue();
+            const fleetRevBefore = totalRevenue;
+            totalRevenue += vRev;
+            const vRow = document.createElement('div');
+            vRow.className = 'flex justify-between items-start gap-3 text-sm' + (state.revenue && fleetRevBefore > 0 ? ' pt-2 border-t border-[#2f7a3a]/30' : '');
+            vRow.innerHTML = `
+                <div class="flex-1">
+                    <div class="font-semibold text-[#0d2137]">Volley Trainer · padel lesson revenue</div>
+                    <div class="text-xs text-gray-600 mt-0.5">${state.volleyLessons} session${state.volleyLessons === 1 ? '' : 's'}/day × $${VOLLEY_PRICE_PER_LESSON} × ${VOLLEY_DAYS_PER_MONTH} days</div>
+                </div>
+                <div class="tech-font font-semibold text-[#2f7a3a] whitespace-nowrap">+$${vRev.toLocaleString()}</div>
+            `;
+            revenueEl.appendChild(vRow);
+        }
+
+        $('revenueTotal').textContent = '$' + totalRevenue.toLocaleString();
+    } else {
+        revenuePanel.classList.add('hidden');
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   RENDER: Phase timeline
+   ────────────────────────────────────────────────────────────────── */
+function renderPhases() {
+    const tier = TIERS[state.count];
+    const phaseCount = tier.phases;
+    const timeline = $('phaseTimeline');
+    timeline.innerHTML = '';
+
+    const phaseDefs = [
+        { n: 1, name: 'Pilot',          time: 'Month 1',       detail: '1x C30 on guest-floor carpets. Success criteria agreed in writing. If missed, both parties walk.' },
+        { n: 2, name: 'Core Fleet',     time: 'Months 2–3',    detail: 'Elevator integration (button emulator). Deploy core cleaning + delivery. Custom branding applied.' },
+        { n: 3, name: 'Expansion',      time: 'Months 3–5',    detail: 'Residences wing, pool deck, courtyard. Full walnut/brass/leather service cart fitted to S100.' },
+        { n: 4, name: 'Depth',          time: 'Months 5–7',    detail: 'Peak-coverage robots deployed: second C40, C30, W3, S100, S300. Cross-department orchestration.' },
+        { n: 5, name: 'Intelligence',   time: 'Months 7–8',    detail: 'Facility Intelligence Platform install + commissioning. Smart dispatch, asset tags, analytics dashboard activated.' },
+    ];
+
+    phaseDefs.forEach((p) => {
+        const included = p.n <= phaseCount;
+        const intel = (p.n === 5);
+        const card = document.createElement('div');
+        card.className = 'phase-card' + (included ? ' included' : ' skipped');
+        if (intel && !state.intel) card.classList.add('skipped');
+        card.innerHTML = `
+            <div class="flex items-center gap-2 mb-2">
+                <div class="w-7 h-7 rounded-full bg-[#b8965a] text-white flex items-center justify-center text-xs font-bold tech-font">${p.n}</div>
+                <p class="text-[10px] uppercase tracking-widest text-[#0d2137] font-semibold">${p.time}</p>
+            </div>
+            <p class="font-bold text-[#0d2137] mb-1 text-sm">${p.name}</p>
+            <p class="text-xs text-gray-600 leading-snug">${p.detail}</p>
+            ${intel && !state.intel ? '<p class="text-[10px] mt-2 text-gray-500 italic">Requires Intelligence Platform add-on</p>' : ''}
+        `;
+        timeline.appendChild(card);
+    });
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   RENDER: Top-level stats
+   ────────────────────────────────────────────────────────────────── */
+function renderStats() {
+    const n = state.count;
+    const activeRobots = ROBOTS.slice(0, n);
+
+    const fleetCost = n * RAAS_PER_ROBOT;
+    const laborSavings = activeRobots.reduce((s, r) => s + r.savings, 0);
+    const staffHours = activeRobots.reduce((s, r) => s + r.hours, 0);
+
+    const volleyCost = state.volley ? VOLLEY_COST : 0;
+    const volleyRev = state.volley ? volleyRevenue() : 0;
+
+    // Revenue enhancement: only applies when toggle is ON
+    const fleetRevenue = state.revenue ? activeRobots.reduce((s, r) => s + r.revenue, 0) : 0;
+    // Volley lesson revenue always counted when Volley is ON (it's why you'd add it)
+    const totalRevenue = fleetRevenue + volleyRev;
+
+    const monthlyCost = fleetCost + volleyCost;
+    const monthlyGains = laborSavings + totalRevenue;
+    const netMonthly = monthlyGains - monthlyCost;
+    const annualNet = netMonthly * 12;
+
+    // Intelligence platform adds
+    const intelY1 = state.intel ? INTEL_Y1_INSTALL : 0;
+    const intelY2 = state.intel ? INTEL_Y2_LICENSE : 0;
+    const year1AllIn = monthlyCost * 12 + intelY1;
+    const year2SteadyState = monthlyCost * 12 + intelY2;
+
+    // Tier label
+    const tier = TIERS[n];
+
+    // FTE equivalent coverage
+    const fteCount = activeRobots.reduce((s, r) => s + r.fte, 0);
+    const fteEquivCost = Math.round(fteCount * FTE_MONTHLY_COST);
+    const fteSavings = fteEquivCost - monthlyCost;
+    const fteSavingsPct = fteEquivCost > 0 ? Math.round((fteSavings / fteEquivCost) * 100) : 0;
+
+    $('fleetCount').textContent = n;
+    $('tierLabel').textContent = tier.name;
+    $('monthlyCost').textContent = '$' + monthlyCost.toLocaleString();
+    $('fleetCostCompare').textContent = '$' + monthlyCost.toLocaleString();
+    $('fteEquivCost').textContent = '$' + fteEquivCost.toLocaleString();
+    $('fteEquivCount').textContent = fteCount.toFixed(1);
+    $('fteSavings').textContent = (fteSavings >= 0 ? '$' : '−$') + Math.abs(fteSavings).toLocaleString() + '/mo ' + (fteSavings >= 0 ? 'less' : 'more');
+    $('fteSavingsPct').textContent = Math.abs(fteSavingsPct) + '%';
+    $('fteSavingsAnnual').textContent = (fteSavings >= 0 ? '$' : '−$') + Math.abs(fteSavings * 12).toLocaleString() + '/yr';
+
+    // Fleet cost breakdown line inside the FTE comparison block
+    let feeLine = 'Hardware, service, maintenance, training, upgrades — all-in';
+    if (state.volley) feeLine += ' · incl. Volley lease';
+    $('fleetCostBreakdown').textContent = feeLine;
+
+    // Cost subline — reconciles every line item so the total is always explainable
+    const robotWord = n === 1 ? 'robot' : 'robots';
+    let costLine = `${n} ${robotWord} × $${RAAS_PER_ROBOT.toLocaleString()}`;
+    if (state.volley) costLine += ` + $${VOLLEY_COST.toLocaleString()} Volley`;
+    $('costBreakdownLine').textContent = costLine;
+
+    $('monthlySavings').textContent = '$' + monthlyGains.toLocaleString();
+    $('netMonthly').textContent = (netMonthly >= 0 ? '+$' : '−$') + Math.abs(netMonthly).toLocaleString();
+    $('annualNet').textContent = (annualNet >= 0 ? '+$' : '−$') + Math.abs(annualNet).toLocaleString();
+    $('staffHours').textContent = staffHours;
+    $('year1AllIn').textContent = '$' + year1AllIn.toLocaleString();
+    $('year2SteadyState').textContent = '$' + year2SteadyState.toLocaleString();
+    $('annualBenefitBig').textContent = (annualNet >= 0 ? '+$' : '−$') + Math.abs(annualNet).toLocaleString();
+
+    // Breakdown subline under Monthly Gains
+    const gainsLine = $('gainsBreakdownLine');
+    if (totalRevenue > 0) {
+        gainsLine.innerHTML = `$${laborSavings.toLocaleString()} labor · <span class="text-[#2f7a3a] font-semibold">+$${totalRevenue.toLocaleString()} revenue</span>`;
+    } else {
+        gainsLine.textContent = 'Hard labor savings only';
+    }
+
+    // Revenue-toggle hint: show the actual revenue number when on
+    const revHint = $('revenueToggleHint');
+    if (state.revenue && fleetRevenue > 0) {
+        revHint.textContent = `+$${fleetRevenue.toLocaleString()}/mo from this fleet`;
+    } else if (state.revenue) {
+        revHint.textContent = 'no revenue-generating robots selected yet';
+    } else {
+        revHint.textContent = 'auto-calculated from fleet';
+    }
+
+    // Volley sub-slider: sync UI (panel visibility, value labels, fill ramp, hint)
+    const vRev = volleyRevenue();
+    $('volleyLessonsVal').textContent = state.volleyLessons;
+    $('volleyMonthlyVal').textContent = '$' + vRev.toLocaleString();
+    $('volleyRevHint').textContent = state.volley
+        ? `+$${vRev.toLocaleString()}/mo · ${state.volleyLessons} lesson${state.volleyLessons === 1 ? '' : 's'}/day`
+        : '+$' + vRev.toLocaleString() + '/mo lesson revenue';
+    $('volleyLessonsPanel').classList.toggle('open', state.volley);
+    // Keep the mini-slider in sync in case state was mutated elsewhere (e.g., presets)
+    const miniSlider = $('volleyLessonsSlider');
+    miniSlider.value = state.volleyLessons;
+    // CSS custom property drives the filled portion of the track gradient
+    const miniPct = ((state.volleyLessons - 1) / 9) * 100;
+    miniSlider.style.setProperty('--fill', miniPct + '%');
+
+    // Slider fill
+    const pct = ((n - 1) / 12) * 100;
+    $('sliderFill').style.width = pct + '%';
+
+    // Slider value
+    $('fleetSlider').value = n;
+
+    // Preset chip active state
+    document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+        chip.classList.toggle('active', parseInt(chip.dataset.count) === n);
+    });
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   RENDER: Slider ticks (tier markers at 1, 4, 8, 13)
+   ────────────────────────────────────────────────────────────────── */
+function renderTicks() {
+    const ticks = $('sliderTicks');
+    ticks.innerHTML = '';
+    for (let i = 1; i <= 13; i++) {
+        const tick = document.createElement('div');
+        tick.className = 'tick' + ([1, 4, 8, 13].includes(i) ? ' tier-marker' : '');
+        ticks.appendChild(tick);
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   RENDER: Fleet trading cards (static — render once at init)
+   ────────────────────────────────────────────────────────────────── */
+function renderFleetCards() {
+    const grid = $('fleetCardsGrid');
+    if (!grid) return;
+    grid.innerHTML = FLEET_CARDS.map(r => {
+        const statsHtml = Object.entries(r.stats).map(([k, v]) => {
+            // WHY: Origin is stored as {country, city} so we can render a flag SVG
+            // alongside the city name — consistent across platforms (emoji flags
+            // don't render reliably on Windows Chrome).
+            const value = (v && typeof v === 'object' && v.country)
+                ? `${FLAGS[v.country] || ''}<span class="flag-city">${v.city}</span>`
+                : v;
+            return `
+            <div>
+                <dt>${k}</dt>
+                <dd>${value}</dd>
+            </div>
+        `;
+        }).join('');
+        const accentClass = r.accent ? ` accent-${r.accent}` : '';
+        return `
+            <article class="fleet-card${accentClass}">
+                <div class="fleet-card-photo">
+                    <img src="${r.photo}" alt="${r.name}" loading="lazy">
+                </div>
+                <div class="fleet-card-header">
+                    <span class="fleet-card-category">${r.category}</span>
+                    <span class="fleet-card-code">${r.code}</span>
+                </div>
+                <div class="fleet-card-body">
+                    <h3 class="fleet-card-name">${r.name}</h3>
+                    <p class="fleet-card-tagline">${r.tagline}</p>
+                    <p class="fleet-card-desc">${r.desc}</p>
+                    <dl class="fleet-card-stats">${statsHtml}</dl>
+                    <p class="fleet-card-unlock">${r.unlock}</p>
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   RENDER: Service-line indicator lights
+   LEDs illuminate as the fleet crosses each service's activation threshold
+   ────────────────────────────────────────────────────────────────── */
+function renderServiceLines() {
+    const n = state.count;
+    const grid = $('serviceLedGrid');
+    grid.innerHTML = '';
+    let onCount = 0;
+    SERVICE_LINES.forEach((svc) => {
+        const on = n >= svc.activateAt;
+        if (on) onCount++;
+        const row = document.createElement('div');
+        row.className = 'led-indicator' + (on ? ' on' : '');
+        row.innerHTML = `
+            <span class="led-dot"></span>
+            <span class="led-label">${svc.label}</span>
+            <span class="led-threshold">${svc.activateAt}+</span>
+        `;
+        grid.appendChild(row);
+    });
+    $('serviceOnCount').textContent = onCount;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   RENDER: Service/luxury unlocks — what guests notice at this fleet size
+   ────────────────────────────────────────────────────────────────── */
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+
+// Category → accent color for capability cards. Keeps the palette tied to
+// the existing navy/gold scheme but lets the eye scan by type at a glance.
+const CATEGORY_COLOR = {
+    Cleaning:   '#6b8e23',
+    Delivery:   '#3b7a9a',
+    Logistics:  '#5a6b7a',
+    Luxury:     '#b8965a',
+    Residences: '#8a6a3a',
+    Amenity:    '#7a8a5a',
+    Depth:      '#4a5a6a',
+    Concierge:  '#d4a040',
+};
+
+function renderUnlocks() {
+    const n = state.count;
+    const tier = currentServiceTier(n);
+    const tierIdx = SERVICE_TIERS.indexOf(tier) + 1;
+
+    // Hero callout — narrative tier framing
+    $('tierFleetCount').textContent = n;
+    $('tierName').textContent = tier.name;
+    $('tierTag').textContent = tier.tag;
+    $('tierDescription').textContent = tier.description;
+    $('tierBadge').textContent = ROMAN[tierIdx] || '';
+
+    // Active capabilities — one card per deployed robot
+    const unlockGrid = $('unlockGrid');
+    unlockGrid.innerHTML = '';
+    ROBOTS.slice(0, n).forEach((r) => {
+        const color = CATEGORY_COLOR[r.category] || '#b8965a';
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-lg';
+        card.style.cssText = `background: white; border: 1px solid rgba(13, 33, 55, 0.08); border-left: 3px solid ${color};`;
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-3 mb-2">
+                <span class="tech-font text-[10px] uppercase tracking-widest font-bold" style="color: ${color};">${r.category}</span>
+                <span class="tech-font text-[10px] text-gray-400">${r.code}</span>
+            </div>
+            <p class="text-sm text-[#0d2137] leading-snug">${r.unlock}</p>
+        `;
+        unlockGrid.appendChild(card);
+    });
+
+    // Locked preview — next 3 capabilities, grayed out. Hidden at full fleet.
+    const lockedPreview = $('lockedPreview');
+    const lockedGrid = $('lockedGrid');
+    const remaining = ROBOTS.slice(n, n + 3);
+    if (remaining.length === 0) {
+        lockedPreview.style.display = 'none';
+    } else {
+        lockedPreview.style.display = '';
+        lockedGrid.innerHTML = '';
+        remaining.forEach((r, i) => {
+            const card = document.createElement('div');
+            card.className = 'p-4 rounded-lg';
+            card.style.cssText = 'background: rgba(13, 33, 55, 0.03); border: 1px dashed rgba(13, 33, 55, 0.15); opacity: 0.75;';
+            card.innerHTML = `
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <span class="tech-font text-[10px] uppercase tracking-widest font-bold text-gray-400">+${n + i + 1}th robot</span>
+                    <span class="tech-font text-[10px] text-gray-400">${r.code}</span>
+                </div>
+                <p class="text-sm text-gray-500 leading-snug">${r.unlock}</p>
+            `;
+            lockedGrid.appendChild(card);
+        });
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   RENDER ALL
+   ────────────────────────────────────────────────────────────────── */
+function render() {
+    renderStats();
+    renderRobotGrid();
+    renderBreakdowns();
+    renderPhases();
+    renderServiceLines();
+    renderUnlocks();
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   EVENTS
+   ────────────────────────────────────────────────────────────────── */
+$('fleetSlider').addEventListener('input', (e) => {
+    state.count = parseInt(e.target.value);
+    render();
+});
+
+document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        state.count = parseInt(chip.dataset.count);
+        render();
+    });
+});
+
+$('volleyToggle').addEventListener('click', () => {
+    state.volley = !state.volley;
+    $('volleyToggle').classList.toggle('on', state.volley);
+    render();
+});
+
+$('volleyLessonsSlider').addEventListener('input', (e) => {
+    state.volleyLessons = parseInt(e.target.value);
+    render();
+});
+// WHY: clicking the slider shouldn't also flip the parent toggle,
+// since the slider lives inside the same card as the toggle target.
+$('volleyLessonsSlider').addEventListener('click', (e) => e.stopPropagation());
+
+$('intelToggle').addEventListener('click', () => {
+    state.intel = !state.intel;
+    $('intelToggle').classList.toggle('on', state.intel);
+    render();
+});
+
+$('revenueToggle').addEventListener('click', () => {
+    state.revenue = !state.revenue;
+    $('revenueToggle').classList.toggle('on', state.revenue);
+    render();
+});
+
+/* ──────────────────────────────────────────────────────────────────
+   INIT
+   ────────────────────────────────────────────────────────────────── */
+renderTicks();
+renderFleetCards();  // static — doesn't depend on slider state
+render();
+</script>
+
+</body>
+</html>
