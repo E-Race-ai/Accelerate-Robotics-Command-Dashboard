@@ -872,10 +872,32 @@ function applySize(size) {
 }
 $('ctrlSize').addEventListener('change', (e) => applySize(e.target.value));
 
-$('btnPrint').addEventListener('click', () => {
-  // Guard: don't fire the print dialog if no prospect is selected — that
-  // produces a label with the "— select prospect —" placeholder, which is
-  // exactly what kept happening because the button was eager to fire.
+// Print Label button: server-side direct print. Posts to /api/print-label/send
+// which renders the page → PDF → lp's it to JADENS_Label. No browser dialog.
+async function sendToPrinter(prospectId) {
+  const profile = loadProfile();
+  const size = $('ctrlSize').value;
+  const res = await fetch('/api/print-label/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({
+      prospect_id: prospectId,
+      size,
+      profile: {
+        name: profile.name,
+        role: profile.role,
+        phone: profile.phone,
+        note: profile.note,
+      },
+    }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+  return json;
+}
+
+$('btnPrint').addEventListener('click', async () => {
   if (!CURRENT_PROSPECT) {
     showError('Pick a prospect from the dropdown (or a recent chip) before printing.');
     const sel = $('ctrlHotel');
@@ -884,8 +906,21 @@ $('btnPrint').addEventListener('click', () => {
     return;
   }
   showError('');
-  rememberRecent(CURRENT_PROSPECT);
-  window.print();
+  const btn = $('btnPrint');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending to printer…';
+  try {
+    const result = await sendToPrinter(CURRENT_PROSPECT.id);
+    rememberRecent(CURRENT_PROSPECT);
+    btn.textContent = `✓ Sent · ${result.job_id}`;
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2400);
+  } catch (err) {
+    console.error('print failed:', err);
+    showError('Could not print: ' + err.message);
+    btn.textContent = original;
+    btn.disabled = false;
+  }
 });
 
 // ─── Recent-prospects quick chips ──────────────────────────────────
@@ -924,10 +959,20 @@ function renderRecents() {
       const id = btn.dataset.prospectId;
       $('ctrlHotel').value = id;
       pickProspect(id);
-      // Brief render delay so layout settles, then fire print immediately.
-      await new Promise(r => setTimeout(r, 250));
-      rememberRecent(CURRENT_PROSPECT);
-      window.print();
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.style.color = 'var(--primary)';
+      btn.querySelector('.chip-action').textContent = 'Sending…';
+      try {
+        const r = await sendToPrinter(Number(id));
+        rememberRecent(CURRENT_PROSPECT);
+        btn.querySelector('.chip-action').textContent = `✓ ${r.job_id || 'sent'}`;
+        setTimeout(() => renderRecents(), 2200);
+      } catch (err) {
+        showError('Could not print: ' + err.message);
+        btn.querySelector('.chip-action').textContent = '✗ failed';
+        btn.disabled = false;
+      }
     });
   });
 }
@@ -969,13 +1014,34 @@ function maybeAutoPrint() {
   $('ctrlPhone').value = profile.phone || '';
   $('ctrlNote').value = profile.note || '';
   if (profile.photo) $('photoPreview').src = profile.photo;
-  // Allow ?size=4x6 URL override so headless renderers (Chrome --print-to-pdf,
-  // server-side prints) can specify the right page size without needing to
-  // click the dropdown.
+  // URL overrides — used by server-side renders (the /api/print-label/send
+  // route bakes profile + size into URL params so a fresh headless browser
+  // can render the right label without access to the rep's localStorage).
   const params = new URLSearchParams(location.search);
   const sizeOverride = params.get('size');
   if (sizeOverride && SIZE_PAGE[sizeOverride]) {
     $('ctrlSize').value = sizeOverride;
+  }
+  // Profile fields piggyback on the URL too. WHY: the server-render path
+  // can't read the user's localStorage, so the API forwards profile
+  // values as query params and the page applies them transiently for
+  // this render only (we don't write them back to localStorage from URL).
+  const profileFromUrl = {};
+  ['name', 'role', 'phone', 'note'].forEach(k => {
+    const v = params.get(k);
+    if (v) profileFromUrl[k] = v;
+  });
+  if (Object.keys(profileFromUrl).length > 0) {
+    // Merge into displayed values without polluting saved profile.
+    const merged = { ...loadProfile(), ...profileFromUrl };
+    $('lblName').textContent = merged.name || 'Your Name';
+    $('lblRole').textContent = merged.role || 'Founder';
+    if (merged.phone) $('lblPhone').textContent = regalPhone(merged.phone);
+    if (merged.note) {
+      const noteEl = $('lblNote');
+      noteEl.style.display = '';
+      noteEl.textContent = merged.note;
+    }
   }
   applySize($('ctrlSize').value);
   await loadProspects();

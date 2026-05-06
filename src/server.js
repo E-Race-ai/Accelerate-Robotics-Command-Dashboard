@@ -246,6 +246,12 @@ app.use('/api/glossary-game', glossaryGameRoutes);
 
 app.use('/api/system-settings', systemSettingsRoutes);
 
+// Direct-to-printer label rendering (Chrome headless → PDF → lp).
+// WHY a server route instead of window.print(): the OS print dialog adds
+// a click the rep doesn't need every time. Same machine = the server
+// can lp the PDF straight at the JADENS without the dialog.
+app.use('/api/print-label', require('./routes/print-label'));
+
 // WHY: Proxy /cl/* to the tunnel URL stored in system_settings.creative_labs_url.
 // This serves home-dashboard (running on Eric's MacBook on localhost:3100) to
 // the team via acceleraterobotics.ai, bypassing Eric's local DNS filter that
