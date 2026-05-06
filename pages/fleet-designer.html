@@ -1,0 +1,4329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleet Designer — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<style>
+/* ── Page-specific tokens (brand.css supplies color tokens) ── */
+:root {
+    /* WHY: page-specific overrides not in brand.css */
+    --card: rgba(255,255,255,0.75);
+    --card-hover: rgba(255,255,255,0.95);
+    --muted: #64748b;
+    --red: #dc2626;
+    --pink: #db2777;
+
+    /* WHY: left panel width chosen to fit all inputs comfortably at 360px
+       without taking too much real-estate from the results canvas */
+    --panel-w: 360px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--text);
+    min-height:100vh;
+    background:
+        radial-gradient(ellipse 80% 60% at 20% 30%, rgba(0,200,255,0.10), transparent),
+        radial-gradient(ellipse 60% 50% at 70% 20%, rgba(124,58,237,0.07), transparent),
+        radial-gradient(ellipse 50% 40% at 50% 80%, rgba(0,85,255,0.06), transparent),
+        linear-gradient(180deg, #eef2ff 0%, #f7f8fc 100%);
+    background-attachment:fixed;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow:hidden;
+}
+
+h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
+.mono { font-family:'JetBrains Mono',monospace; }
+
+/* WHY: brand-nav styles come from brand.css — topbar styles removed */
+
+/* ── Robot count badge (kept — page-specific) ── */
+.robot-count-badge {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.72rem;
+    font-weight:600;
+    color:var(--blue);
+    background:rgba(0,85,255,0.06);
+    padding:3px 10px;
+    border-radius:6px;
+    border:1px solid rgba(0,85,255,0.15);
+    margin-left:12px;
+}
+
+/* ── Body: two-column layout ── */
+.body-wrap {
+    flex:1;
+    display:flex;
+    overflow:hidden;
+    min-height:0;
+}
+
+/* ── Left panel — inputs ── */
+.left-panel {
+    width:var(--panel-w);
+    flex-shrink:0;
+    overflow-y:auto;
+    border-right:1px solid var(--border);
+    background:rgba(255,255,255,0.55);
+    padding:20px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+}
+
+/* scrollbar style — subtle to match light theme */
+.left-panel::-webkit-scrollbar { width:4px; }
+.left-panel::-webkit-scrollbar-track { background:transparent; }
+.left-panel::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.12); border-radius:2px; }
+
+/* ── Form section chrome ── */
+.form-section {
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.section-heading {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:1.2px;
+    color:var(--muted);
+    padding-bottom:6px;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+/* ── Form fields ── */
+.field {
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.field-row {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+}
+
+.field label {
+    font-size:0.63rem;
+    font-weight:600;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.7px;
+}
+
+.field input[type="text"],
+.field input[type="number"],
+.field select {
+    padding:8px 11px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.8);
+    color:var(--text);
+    font-size:0.82rem;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    transition:all 0.15s;
+    width:100%;
+}
+
+.field select {
+    cursor:pointer;
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 10px center;
+    padding-right:28px;
+}
+
+.field input:focus,
+.field select:focus {
+    border-color:var(--blue);
+    background:rgba(255,255,255,0.95);
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+}
+
+/* ── Research bar ── */
+.research-bar {
+    display:flex;
+    gap:6px;
+    margin-top:4px;
+}
+
+.research-link {
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:5px 10px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    color:var(--blue);
+    font-size:0.62rem;
+    font-weight:600;
+    text-decoration:none;
+    cursor:pointer;
+    transition:all 0.15s;
+    font-family:'Inter',sans-serif;
+}
+
+.research-link:hover {
+    background:rgba(0,85,255,0.05);
+    border-color:rgba(0,85,255,0.2);
+}
+
+/* ── Add Prospect toggle ── */
+.add-prospect-toggle {
+    margin-left:auto;
+    color:var(--green);
+    border-color:rgba(22,163,74,0.2);
+}
+
+.add-prospect-toggle:hover {
+    background:rgba(22,163,74,0.06);
+    border-color:rgba(22,163,74,0.3);
+}
+
+/* ── Add Prospect form ── */
+.add-prospect-form {
+    background:rgba(255,255,255,0.7);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px;
+    margin-top:6px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.apf-row {
+    display:flex;
+    gap:6px;
+}
+
+.apf-field {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+.apf-field.apf-wide { flex:2; }
+
+.apf-field label {
+    font-size:0.55rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    color:var(--muted);
+}
+
+.apf-field input,
+.apf-field select {
+    padding:6px 8px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:white;
+    color:var(--text);
+    font-size:0.75rem;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    width:100%;
+}
+
+.apf-field input:focus,
+.apf-field select:focus {
+    border-color:var(--blue);
+    box-shadow:0 0 0 2px rgba(0,85,255,0.06);
+}
+
+.apf-actions {
+    display:flex;
+    gap:6px;
+    margin-top:2px;
+}
+
+.apf-save {
+    padding:6px 14px;
+    border-radius:6px;
+    border:none;
+    background:var(--green);
+    color:white;
+    font-size:0.68rem;
+    font-weight:700;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+}
+
+.apf-save:hover { opacity:0.9; }
+
+.apf-cancel {
+    padding:6px 14px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--muted);
+    font-size:0.68rem;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+}
+
+.apf-cancel:hover { background:rgba(0,0,0,0.03); }
+
+/* ── Property type selector ── */
+.prop-type-row {
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+    background:rgba(0,0,0,0.03);
+    padding:3px;
+    border-radius:8px;
+}
+
+.prop-type {
+    padding:6px 8px;
+    border:none;
+    border-radius:6px;
+    background:transparent;
+    font-size:0.62rem;
+    font-weight:600;
+    font-family:'Inter',sans-serif;
+    color:var(--muted);
+    cursor:pointer;
+    transition:all 0.12s;
+    text-align:center;
+    white-space:nowrap;
+}
+
+/* WHY: Free-form "Other" input styled inline with the type buttons */
+.prop-type-other-input {
+    display:none;
+    padding:5px 8px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:0.62rem;
+    font-family:'Inter',sans-serif;
+    background:white;
+    color:var(--text);
+    width:100px;
+    outline:none;
+}
+.prop-type-other-input:focus { border-color:var(--blue); }
+.prop-type-other-input.visible { display:block; }
+
+.prop-type:hover { color:var(--text); }
+
+.prop-type.active {
+    background:white;
+    color:var(--text);
+    box-shadow:0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* ── Property metrics grid ── */
+.prop-metrics {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+}
+
+.prop-metric {
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+}
+
+.prop-metric label {
+    font-size:0.58rem;
+    font-weight:600;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+}
+
+.prop-metric input {
+    padding:7px 10px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.8);
+    color:var(--text);
+    font-size:0.82rem;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    transition:all 0.15s;
+    width:100%;
+}
+
+.prop-metric input:focus {
+    border-color:var(--blue);
+    background:rgba(255,255,255,0.95);
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+}
+
+/* ── Property profile summary ── */
+.prop-profile {
+    padding:8px 10px;
+    border-radius:8px;
+    background:rgba(0,85,255,0.03);
+    border:1px solid rgba(0,85,255,0.08);
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.pp-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:0.62rem;
+}
+
+.pp-label {
+    color:var(--muted);
+    font-weight:500;
+}
+
+.pp-value {
+    font-family:'JetBrains Mono',monospace;
+    font-weight:600;
+    font-size:0.6rem;
+    color:var(--text);
+}
+
+/* ── Surface checkboxes ── */
+.surface-grid {
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+}
+
+.surface-chip {
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:5px 10px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    font-size:0.67rem;
+    font-weight:600;
+    color:var(--muted);
+    cursor:pointer;
+    user-select:none;
+    transition:all 0.15s;
+}
+
+.surface-chip input[type="checkbox"] { display:none; }
+
+.surface-chip:hover {
+    background:rgba(22,163,74,0.06);
+    border-color:rgba(22,163,74,0.3);
+    color:var(--green);
+}
+
+.surface-chip.checked {
+    background:rgba(22,163,74,0.09);
+    border-color:var(--green);
+    color:var(--green);
+}
+
+/* ── Facility detail card ── */
+.facility-expand-btn {
+    width:100%;
+    padding:8px 12px;
+    border:1px dashed var(--blue);
+    border-radius:8px;
+    background:transparent;
+    color:var(--blue);
+    font-size:0.68rem;
+    font-weight:600;
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    transition:all 0.15s;
+    text-align:left;
+}
+
+.facility-expand-btn:hover {
+    background:rgba(0,85,255,0.04);
+    border-style:solid;
+}
+
+.facility-expand-btn .arrow { margin-right:4px; }
+
+.facility-expand-btn .detail-count {
+    color:var(--muted);
+    font-weight:500;
+    font-size:0.6rem;
+}
+
+.facility-detail-card {
+    background:rgba(255,255,255,0.85);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.facility-detail-card.hidden { display:none; }
+
+.fd-group-label {
+    font-size:0.55rem;
+    font-weight:700;
+    color:var(--blue);
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    margin-bottom:4px;
+}
+
+.fd-divider {
+    height:1px;
+    background:var(--border);
+}
+
+.fd-field-row {
+    display:flex;
+    gap:6px;
+}
+
+.fd-field-row .prop-metric { flex:1; }
+
+.fd-elevator-make {
+    width:100%;
+    padding:7px 10px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.8);
+    color:var(--text);
+    font-size:0.82rem;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    transition:all 0.15s;
+}
+
+.fd-elevator-make:focus {
+    border-color:var(--blue);
+    background:rgba(255,255,255,0.95);
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+}
+
+.fd-elevator-custom {
+    margin-top:4px;
+    width:100%;
+    padding:7px 10px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.8);
+    color:var(--text);
+    font-size:0.82rem;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    transition:all 0.15s;
+}
+
+.fd-elevator-custom:focus {
+    border-color:var(--blue);
+    background:rgba(255,255,255,0.95);
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+}
+
+/* ── Amenity chips — same style as surface chips, blue accent ── */
+.amenity-grid {
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+}
+
+.amenity-chip {
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:5px 10px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    font-size:0.67rem;
+    font-weight:600;
+    color:var(--muted);
+    cursor:pointer;
+    user-select:none;
+    transition:all 0.15s;
+}
+
+.amenity-chip input[type="checkbox"] { display:none; }
+
+.amenity-chip:hover {
+    background:rgba(0,85,255,0.06);
+    border-color:rgba(0,85,255,0.3);
+    color:var(--blue);
+}
+
+.amenity-chip.checked {
+    background:rgba(0,85,255,0.09);
+    border-color:var(--blue);
+    color:var(--blue);
+}
+
+/* ── Surface zones ── */
+.zone-group {
+    margin-bottom:6px;
+}
+
+.zone-label {
+    font-size:0.5rem;
+    font-weight:700;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    margin-bottom:2px;
+}
+
+.zone-chips {
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+}
+
+.zone-chip {
+    display:inline-flex;
+    align-items:center;
+    padding:3px 8px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    font-size:0.58rem;
+    font-weight:600;
+    color:var(--muted);
+    cursor:pointer;
+    user-select:none;
+    transition:all 0.15s;
+}
+
+.zone-chip:hover {
+    background:rgba(22,163,74,0.06);
+    border-color:rgba(22,163,74,0.3);
+    color:var(--green);
+}
+
+.zone-chip.checked {
+    background:rgba(22,163,74,0.09);
+    border-color:var(--green);
+    color:var(--green);
+}
+
+/* ── Surface summary line (shown when zones configured) ── */
+.surface-summary {
+    font-size:0.62rem;
+    font-weight:500;
+    color:var(--muted);
+    padding:4px 0;
+    font-style:italic;
+}
+
+/* ── Goal chips ── */
+.goals-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:5px;
+}
+.goal-group-label {
+    grid-column: 1 / -1;
+    font-size:0.6rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--muted);
+    padding:8px 0 2px;
+    border-top:1px solid var(--border);
+    margin-top:4px;
+}
+.goal-group-label:first-child {
+    border-top:none;
+    margin-top:0;
+    padding-top:0;
+}
+
+.goal-chip {
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    padding:10px 12px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    cursor:pointer;
+    user-select:none;
+    transition:all 0.18s;
+    line-height:1.3;
+}
+.goal-chip .goal-title {
+    font-size:0.75rem;
+    font-weight:700;
+    color:var(--muted);
+}
+.goal-chip .goal-desc {
+    font-size:0.6rem;
+    font-weight:400;
+    color:#888;
+    line-height:1.25;
+}
+
+.goal-chip:hover {
+    background:rgba(0,85,255,0.05);
+    border-color:rgba(0,85,255,0.25);
+}
+.goal-chip:hover .goal-title { color:var(--blue); }
+
+.goal-chip.active {
+    background:rgba(0,85,255,0.08);
+    border-color:var(--blue);
+    box-shadow:0 0 0 2px rgba(0,85,255,0.08);
+}
+.goal-chip.active .goal-title { color:var(--blue); }
+.goal-chip.active .goal-desc { color:rgba(0,85,255,0.6); }
+
+/* ── Budget section ── */
+.budget-presets {
+    display:flex;
+    gap:5px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+}
+
+.budget-preset {
+    padding:5px 10px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:transparent;
+    font-size:0.62rem;
+    font-weight:600;
+    font-family:'JetBrains Mono',monospace;
+    color:var(--muted);
+    cursor:pointer;
+    transition:all 0.12s;
+}
+
+.budget-preset:hover {
+    background:rgba(0,85,255,0.04);
+    border-color:var(--blue);
+    color:var(--blue);
+}
+
+.budget-preset.active {
+    background:rgba(0,85,255,0.08);
+    border-color:var(--blue);
+    color:var(--blue);
+}
+
+.budget-range-bar {
+    position:relative;
+    height:6px;
+    border-radius:3px;
+    background:rgba(0,0,0,0.06);
+    margin:16px 0 8px;
+}
+
+.budget-range-fill {
+    position:absolute;
+    height:100%;
+    border-radius:3px;
+    background:linear-gradient(90deg, var(--blue), var(--cyan));
+    transition:left 0.15s, width 0.15s;
+}
+
+.budget-range-labels {
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:10px;
+}
+
+.budget-range-label {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.82rem;
+    font-weight:700;
+    color:var(--text);
+}
+
+.budget-range-label .unit {
+    font-size:0.6rem;
+    font-weight:500;
+    color:var(--muted);
+}
+
+.budget-inputs-row {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+}
+
+.budget-field label {
+    font-size:0.58rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    color:var(--muted);
+    margin-bottom:3px;
+    display:block;
+}
+
+.budget-field input {
+    width:100%;
+    padding:7px 10px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.6);
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.75rem;
+    font-weight:500;
+    color:var(--text);
+    transition:border-color 0.12s;
+}
+
+.budget-field input:focus {
+    outline:none;
+    border-color:var(--blue);
+    box-shadow:0 0 0 3px rgba(0,85,255,0.08);
+}
+
+.budget-hint {
+    margin-top:8px;
+    font-size:0.6rem;
+    color:var(--muted);
+    text-align:center;
+    font-style:italic;
+}
+
+/* ── Generate button ── */
+.generate-btn {
+    width:100%;
+    padding:12px;
+    border-radius:10px;
+    border:none;
+    background:linear-gradient(135deg, var(--blue), var(--cyan));
+    color:white;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:0.9rem;
+    font-weight:700;
+    cursor:pointer;
+    transition:all 0.18s;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    box-shadow:0 4px 16px rgba(0,85,255,0.22);
+    letter-spacing:0.2px;
+}
+
+.generate-btn:hover {
+    transform:translateY(-1px);
+    box-shadow:0 6px 24px rgba(0,85,255,0.32);
+}
+
+.generate-btn:active {
+    transform:translateY(0);
+    box-shadow:0 2px 8px rgba(0,85,255,0.18);
+}
+
+/* ── Right panel ── */
+.right-panel {
+    flex:1;
+    overflow-y:auto;
+    padding:20px 24px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    min-width:0;
+}
+
+.right-panel::-webkit-scrollbar { width:4px; }
+.right-panel::-webkit-scrollbar-track { background:transparent; }
+.right-panel::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.12); border-radius:2px; }
+
+/* ── Summary strip ── */
+.summary-strip {
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.summary-chip {
+    flex:1;
+    min-width:120px;
+    padding:12px 14px;
+    border-radius:10px;
+    background:var(--card);
+    border:1px solid rgba(255,255,255,0.8);
+    box-shadow:0 2px 10px rgba(0,0,0,0.04);
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+.summary-chip .sc-val {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.3rem;
+    color:var(--text);
+    font-variant-numeric:tabular-nums;
+}
+
+.summary-chip .sc-label {
+    font-size:0.58rem;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.8px;
+    font-weight:600;
+}
+
+.summary-chip.chip-robots .sc-val { color:var(--blue); }
+.summary-chip.chip-raas .sc-val { color:var(--green); }
+.summary-chip.chip-savings .sc-val { color:var(--teal); }
+.summary-chip.chip-roi .sc-val { color:var(--purple); }
+
+/* ── Fleet slot cards ── */
+#fleet-slots {
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.fleet-slot {
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:14px 16px;
+    border-radius:12px;
+    background:var(--card);
+    border:1px solid var(--border);
+    box-shadow:0 2px 10px rgba(0,0,0,0.04);
+    cursor:pointer;
+    transition:all 0.15s;
+    position:relative;
+}
+
+.fleet-slot:hover {
+    background:var(--card-hover);
+    box-shadow:0 4px 16px rgba(0,0,0,0.07);
+    transform:translateY(-1px);
+}
+
+.fleet-slot.expanded {
+    border-color:var(--blue);
+    box-shadow:0 4px 16px rgba(0,85,255,0.12);
+}
+
+.slot-num {
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    background:linear-gradient(135deg, var(--blue), var(--cyan));
+    color:white;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.75rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+}
+
+.slot-thumb {
+    width:56px;
+    height:56px;
+    border-radius:8px;
+    object-fit:contain;
+    object-position:center;
+    background:rgba(0,0,0,0.03);
+    flex-shrink:0;
+}
+
+.slot-info {
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+}
+
+.slot-role {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.82rem;
+    color:var(--text);
+}
+
+.slot-robot {
+    font-size:0.72rem;
+    color:var(--muted);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.slot-meta {
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    font-size:0.62rem;
+    color:var(--muted);
+    align-items:center;
+}
+
+.meta-uses {
+    padding:2px 6px;
+    background:rgba(0,85,255,0.06);
+    border-radius:4px;
+    color:var(--blue);
+}
+
+.slot-delete {
+    position:absolute;
+    top:8px;
+    right:8px;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    border:none;
+    background:rgba(0,0,0,0.06);
+    color:var(--muted);
+    font-size:0.7rem;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:all 0.15s;
+    opacity:0;
+    z-index:2;
+}
+.fleet-slot:hover .slot-delete { opacity:1; }
+.slot-delete:hover {
+    background:rgba(220,38,38,0.12);
+    color:#dc2626;
+}
+
+.meta-elevator {
+    padding:2px 6px;
+    border-radius:4px;
+    background:rgba(0,85,255,0.06);
+    color:var(--blue);
+    font-weight:600;
+}
+
+.meta-risk {
+    padding:2px 6px;
+    border-radius:4px;
+    font-weight:600;
+}
+
+.risk-low { background:rgba(22,163,74,0.08); color:var(--green); }
+.risk-med { background:rgba(217,119,6,0.08); color:var(--amber); }
+.risk-high { background:rgba(220,38,38,0.08); color:var(--red); }
+
+.meta-score {
+    font-family:'JetBrains Mono',monospace;
+    font-weight:600;
+    color:var(--purple);
+}
+
+.slot-price {
+    text-align:right;
+    flex-shrink:0;
+}
+
+.slot-price .amount {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.05rem;
+    color:var(--text);
+}
+
+.slot-price .period {
+    font-size:0.6rem;
+    color:var(--muted);
+}
+
+.slot-swap {
+    font-size:0.6rem;
+    font-weight:600;
+    color:var(--blue);
+    margin-top:4px;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.slot-swap:hover { text-decoration:underline; }
+
+/* ── Comparison cards — rich catalog-style ── */
+.comparison {
+    padding:16px;
+    border-radius:12px;
+    background:rgba(0,85,255,0.02);
+    border:1px solid rgba(0,85,255,0.1);
+    margin-top:-4px;
+}
+
+.comp-header {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.72rem;
+    color:var(--muted);
+    margin-bottom:12px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+}
+
+.comp-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+    gap:12px;
+}
+
+.comp-card {
+    border-radius:12px;
+    background:var(--card);
+    border:1px solid var(--border);
+    cursor:pointer;
+    transition:all 0.15s;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+}
+
+.comp-card:hover {
+    background:var(--card-hover);
+    box-shadow:0 4px 16px rgba(0,0,0,0.07);
+}
+
+.comp-card.selected {
+    border-color:var(--blue);
+    box-shadow:0 0 0 2px rgba(0,85,255,0.12);
+}
+
+/* Card header with image */
+.cc-header {
+    display:flex;
+    gap:12px;
+    padding:14px 14px 0;
+    align-items:flex-start;
+}
+
+.cc-img-wrap {
+    width:72px;
+    height:72px;
+    border-radius:8px;
+    background:rgba(0,0,0,0.03);
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+}
+
+.cc-img-wrap img {
+    width:100%;
+    height:100%;
+    object-fit:contain;
+}
+
+.cc-img-placeholder {
+    font-size:0.7rem;
+    color:var(--muted);
+    font-weight:600;
+    text-align:center;
+    line-height:1.2;
+}
+
+.cc-identity {
+    flex:1;
+    min-width:0;
+}
+
+.cc-model {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.92rem;
+    color:var(--text);
+    line-height:1.2;
+}
+
+.cc-company {
+    font-size:0.68rem;
+    color:var(--muted);
+    margin-top:2px;
+    display:flex;
+    align-items:center;
+    gap:4px;
+}
+
+.cc-company img {
+    width:14px;
+    height:14px;
+    border-radius:3px;
+}
+
+.cc-origin {
+    font-size:0.65rem;
+    color:var(--text);
+    margin-top:3px;
+    display:flex;
+    align-items:center;
+    gap:4px;
+}
+
+.cc-origin .flag {
+    font-size:1rem;
+    line-height:1;
+}
+
+.cc-score-badge {
+    flex-shrink:0;
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.78rem;
+    color:white;
+}
+
+.cc-score-badge.score-high { background:var(--green); }
+.cc-score-badge.score-mid { background:var(--amber); }
+.cc-score-badge.score-low { background:var(--red); }
+
+/* Card body — specs grid */
+.cc-body {
+    padding:10px 14px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    flex:1;
+}
+
+.cc-status {
+    display:inline-block;
+    padding:2px 7px;
+    border-radius:5px;
+    font-size:0.56rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    align-self:flex-start;
+}
+
+.cc-status.st-available { background:rgba(22,163,74,0.08); color:var(--green); }
+.cc-status.st-limited { background:rgba(217,119,6,0.08); color:var(--amber); }
+.cc-status.st-early { background:rgba(124,58,237,0.08); color:var(--purple); }
+
+.cc-price-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:6px 0;
+    border-bottom:1px solid rgba(0,0,0,0.06);
+}
+
+.cc-price-est {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1rem;
+    color:var(--text);
+}
+
+.cc-price-est .unit {
+    font-size:0.6rem;
+    font-weight:500;
+    color:var(--muted);
+}
+
+.cc-price-raw {
+    font-size:0.56rem;
+    color:var(--muted);
+    max-width:55%;
+    text-align:right;
+    line-height:1.3;
+}
+
+.cc-specs {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:2px 12px;
+}
+
+.cc-spec {
+    display:flex;
+    justify-content:space-between;
+    font-size:0.62rem;
+    padding:3px 0;
+    border-bottom:1px solid rgba(0,0,0,0.03);
+}
+
+.cc-spec .k { color:var(--muted); }
+.cc-spec .v {
+    font-weight:600;
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.58rem;
+    text-align:right;
+}
+
+.cc-spec .v.yes { color:var(--green); }
+.cc-spec .v.no { color:var(--muted); opacity:0.5; }
+
+/* Use cases */
+.cc-uses {
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+}
+
+.cc-use {
+    padding:2px 6px;
+    border-radius:4px;
+    background:rgba(0,85,255,0.05);
+    font-size:0.56rem;
+    font-weight:500;
+    color:var(--blue);
+}
+
+/* Badges row */
+.cc-badges {
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+}
+
+.cc-badge {
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:0.56rem;
+    font-weight:600;
+}
+
+.cc-badge.b-elev { background:rgba(0,85,255,0.06); color:var(--blue); }
+.cc-badge.b-fleet { background:rgba(0,85,255,0.06); color:var(--blue); }
+.cc-badge.b-outdoor { background:rgba(22,163,74,0.06); color:var(--green); }
+.cc-badge.b-ip { background:rgba(0,0,0,0.04); color:var(--muted); }
+
+/* Import risk bar */
+.cc-risk {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 8px;
+    border-radius:6px;
+    background:rgba(0,0,0,0.02);
+}
+
+.cc-risk-score {
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:0.62rem;
+    color:white;
+    flex-shrink:0;
+}
+
+.cc-risk-score.risk-low { background:var(--green); }
+.cc-risk-score.risk-med { background:var(--amber); }
+.cc-risk-score.risk-high { background:var(--red); }
+
+.cc-risk-info {
+    flex:1;
+    min-width:0;
+}
+
+.cc-risk-label {
+    font-size:0.58rem;
+    font-weight:600;
+}
+
+.cc-risk-label.risk-low { color:var(--green); }
+.cc-risk-label.risk-med { color:var(--amber); }
+.cc-risk-label.risk-high { color:var(--red); }
+
+.cc-risk-detail {
+    font-size:0.52rem;
+    color:var(--muted);
+    line-height:1.3;
+    margin-top:1px;
+}
+
+.cc-risk-tariff {
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.52rem;
+    font-weight:600;
+    color:var(--muted);
+    white-space:nowrap;
+}
+
+/* Key differentiators */
+.cc-diffs {
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+}
+
+.cc-diff {
+    font-size:0.58rem;
+    color:var(--muted);
+    line-height:1.4;
+    padding-left:8px;
+    position:relative;
+}
+
+.cc-diff::before {
+    content:'';
+    position:absolute;
+    left:0;
+    top:6px;
+    width:3px;
+    height:3px;
+    border-radius:50%;
+    background:var(--blue);
+}
+
+/* Notes */
+.cc-notes {
+    font-size:0.55rem;
+    color:var(--muted);
+    line-height:1.4;
+    font-style:italic;
+    border-top:1px solid rgba(0,0,0,0.04);
+    padding-top:6px;
+}
+
+/* Pick button */
+.pick-btn {
+    padding:8px;
+    border-radius:8px;
+    text-align:center;
+    font-size:0.68rem;
+    font-weight:700;
+    cursor:pointer;
+    transition:all 0.12s;
+    margin-top:auto;
+}
+
+.comp-card.selected .pick-btn {
+    background:rgba(0,85,255,0.08);
+    color:var(--blue);
+}
+
+.comp-card:not(.selected) .pick-btn {
+    background:rgba(0,0,0,0.03);
+    color:var(--muted);
+}
+
+.comp-card:not(.selected):hover .pick-btn {
+    background:linear-gradient(135deg, var(--blue), var(--cyan));
+    color:white;
+}
+
+/* ── Export bar ── */
+.export-bar {
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    padding:14px 16px;
+    border-radius:10px;
+    background:var(--card);
+    border:1px solid rgba(255,255,255,0.8);
+    box-shadow:0 2px 10px rgba(0,0,0,0.04);
+    align-items:center;
+}
+
+.export-bar-label {
+    font-size:0.65rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.8px;
+    color:var(--muted);
+    flex-shrink:0;
+    margin-right:4px;
+}
+
+.export-btn {
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:7px 14px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.7);
+    color:var(--text);
+    font-size:0.72rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:all 0.15s;
+    font-family:'Inter',sans-serif;
+}
+
+.export-btn:hover {
+    background:rgba(255,255,255,0.95);
+    box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+
+.export-btn.btn-primary {
+    background:linear-gradient(135deg, var(--blue), var(--cyan));
+    color:white;
+    border-color:transparent;
+    box-shadow:0 2px 8px rgba(0,85,255,0.18);
+}
+
+.export-btn.btn-primary:hover {
+    box-shadow:0 4px 16px rgba(0,85,255,0.28);
+    transform:translateY(-1px);
+}
+
+.export-btn.btn-danger:hover {
+    background:rgba(220,38,38,0.06);
+    color:var(--red);
+    border-color:rgba(220,38,38,0.3);
+}
+
+.export-btn.btn-proposal {
+    background:linear-gradient(135deg, #7c3aed, #a855f7);
+    color:white;
+    border-color:transparent;
+    box-shadow:0 2px 8px rgba(124,58,237,0.2);
+    text-decoration:none;
+    font-weight:700;
+}
+
+.export-btn.btn-proposal:hover {
+    box-shadow:0 4px 16px rgba(124,58,237,0.35);
+    transform:translateY(-1px);
+}
+
+.export-spacer { flex:1; }
+
+/* ── Empty state ── */
+.empty-state {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:60px 40px;
+    gap:14px;
+    border-radius:14px;
+    border:2px dashed rgba(0,0,0,0.08);
+    background:rgba(255,255,255,0.35);
+    min-height:320px;
+}
+
+.empty-title {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.15rem;
+    color:var(--text);
+    opacity:0.5;
+}
+
+.empty-sub {
+    font-size:0.82rem;
+    color:var(--muted);
+    max-width:300px;
+    line-height:1.5;
+}
+
+.empty-hint {
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:7px 14px;
+    border-radius:7px;
+    background:rgba(0,85,255,0.06);
+    border:1px solid rgba(0,85,255,0.15);
+    font-size:0.72rem;
+    font-weight:600;
+    color:var(--blue);
+    margin-top:4px;
+}
+
+/* ── Responsive: stack below 900px ── */
+@media (max-width:900px) {
+    body {
+        height:auto;
+        overflow:auto;
+    }
+    .body-wrap {
+        flex-direction:column;
+        overflow:visible;
+        height:auto;
+    }
+    .left-panel {
+        width:100%;
+        border-right:none;
+        border-bottom:1px solid var(--border);
+        overflow-y:visible;
+    }
+    .right-panel {
+        overflow-y:visible;
+        padding:16px;
+    }
+    .brand-nav { flex-wrap:wrap; }
+}
+
+@media (max-width:600px) {
+    .goals-grid { grid-template-columns:1fr; }
+    .field-row { grid-template-columns:1fr; }
+    .summary-strip { flex-direction:column; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Branded navigation bar ── -->
+<nav class="brand-nav">
+  <div class="brand-nav-logo">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white" stroke="white" stroke-width="1.5"/></svg>
+  </div>
+  <div class="brand-nav-identity">
+    <div class="brand-nav-name">Accelerate <span>Robotics</span></div>
+    <div class="brand-nav-tagline">One Brain. Many Bots.</div>
+  </div>
+  <div class="brand-nav-links">
+    <a href="/admin">Command Center</a>
+    <a href="/admin/deals">Deals</a>
+    <a href="/pages/pipeline-prospects.html">Prospects</a>
+    <a href="/pages/assessments.html">Assessments</a>
+    <a href="/pages/robot-catalog.html">Catalog</a>
+    <a href="/pages/fleet-designer.html" class="active">Fleet</a>
+  </div>
+  <div style="margin-left:16px;display:flex;align-items:center;gap:12px;">
+    <span class="robot-count-badge mono" id="robot-count-badge">loading...</span>
+    <a href="/" style="font-size:0.78rem;color:var(--text-dim);text-decoration:none;">View Site</a>
+  </div>
+</nav>
+
+<!-- ── Two-column body ── -->
+<div class="body-wrap">
+
+    <!-- ────── LEFT PANEL — inputs ────── -->
+    <aside class="left-panel">
+
+        <!-- Property section -->
+        <div class="form-section brand-reveal" data-delay="0.05">
+            <div class="section-heading">
+                Property
+            </div>
+
+            <!-- Property type quick-select -->
+            <div class="prop-type-row">
+                <button class="prop-type active" data-type="hotel" type="button">Hotel</button>
+                <button class="prop-type" data-type="resort" type="button">Resort</button>
+                <button class="prop-type" data-type="hospital" type="button">Hospital</button>
+                <button class="prop-type" data-type="senior" type="button">Senior Living</button>
+                <button class="prop-type" data-type="grocery" type="button">Grocery</button>
+                <button class="prop-type" data-type="theater" type="button">Movie Theater</button>
+                <button class="prop-type" data-type="sports" type="button">Sports Courts</button>
+                <button class="prop-type" data-type="pickleball" type="button">Pickleball</button>
+                <button class="prop-type" data-type="arena" type="button">Arena / Stadium</button>
+                <button class="prop-type" data-type="other" type="button">Other</button>
+                <input class="prop-type-other-input" id="prop-type-other" type="text" placeholder="Type here…">
+            </div>
+
+            <div class="field">
+                <label for="prop-name">Property</label>
+                <select id="prop-name">
+                    <option value="">-- Select a property --</option>
+                    <optgroup label="Miami">
+                        <option value="thesis-hotel">Thesis Hotel — OPP-001</option>
+                        <option value="moore-miami">The Moore Miami — OPP-002</option>
+                    </optgroup>
+                    <optgroup label="Sarasota">
+                        <option value="art-ovation">Art Ovation Hotel — OPP-003</option>
+                    </optgroup>
+                    <optgroup label="East Bay, CA">
+                        <option value="san-ramon-marriott">San Ramon Marriott — OPP-004</option>
+                        <option value="lafayette-park">Lafayette Park Hotel — OPP-005</option>
+                        <option value="claremont-resort">Claremont Resort — OPP-006</option>
+                    </optgroup>
+                    <optgroup label="Sacramento">
+                        <option value="kimpton-sawyer">Kimpton Sawyer — OPP-007</option>
+                        <option value="citizen-hotel">The Citizen Hotel — OPP-008</option>
+                        <option value="westin-riverfront">Westin Riverfront — OPP-009</option>
+                    </optgroup>
+                    <optgroup label="San Francisco (Prospects)">
+                        <option value="prospect-fairmont-san-francisco">Fairmont San Francisco (606 keys)</option>
+                        <option value="prospect-palace-hotel">Palace Hotel (556 keys)</option>
+                        <option value="prospect-intercontinental-san-francisco">InterContinental San Francisco (550 keys)</option>
+                        <option value="prospect-hotel-nikko-san-francisco">Hotel Nikko San Francisco (532 keys)</option>
+                        <option value="prospect-beacon-grand">Beacon Grand (418 keys)</option>
+                    </optgroup>
+                    <optgroup label="Walnut Creek (Prospects)">
+                        <option value="prospect-walnut-creek-marriott">Walnut Creek Marriott (342 keys)</option>
+                        <option value="prospect-renaissance-walnut-creek">Renaissance Walnut Creek (175 keys)</option>
+                        <option value="prospect-embassy-suites-walnut-creek">Embassy Suites Walnut Creek (249 keys)</option>
+                    </optgroup>
+                    <optgroup label="Sacramento (Prospects)">
+                        <option value="prospect-hyatt-regency-sacramento">Hyatt Regency Sacramento (505 keys)</option>
+                        <option value="prospect-sheraton-grand-sacramento">Sheraton Grand Sacramento (503 keys)</option>
+                        <option value="prospect-hyatt-centric-downtown-sacramento">Hyatt Centric Downtown Sacramento (172 keys)</option>
+                        <option value="prospect-the-exchange-sacramento">The Exchange Sacramento (100 keys)</option>
+                        <option value="prospect-fort-sutter-hotel">Fort Sutter Hotel (105 keys)</option>
+                    </optgroup>
+                    <optgroup label="Beverly Hills (Prospects)">
+                        <option value="prospect-waldorf-astoria-beverly-hills">Waldorf Astoria Beverly Hills (170 keys)</option>
+                        <option value="prospect-the-peninsula-beverly-hills">The Peninsula Beverly Hills (195 keys)</option>
+                        <option value="prospect-beverly-wilshire">Beverly Wilshire (345 keys)</option>
+                        <option value="prospect-the-maybourne-beverly-hills">The Maybourne Beverly Hills (205 keys)</option>
+                        <option value="prospect-l-ermitage-beverly-hills">L'Ermitage Beverly Hills (116 keys)</option>
+                    </optgroup>
+                    <optgroup label="Santa Monica (Prospects)">
+                        <option value="prospect-fairmont-miramar-hotel-bungalows">Fairmont Miramar Hotel &amp; Bungalows (297 keys)</option>
+                        <option value="prospect-regent-santa-monica-beach">Regent Santa Monica Beach (167 keys)</option>
+                        <option value="prospect-santa-monica-proper">Santa Monica Proper (267 keys)</option>
+                        <option value="prospect-viceroy-santa-monica">Viceroy Santa Monica (169 keys)</option>
+                        <option value="prospect-shore-hotel">Shore Hotel (164 keys)</option>
+                    </optgroup>
+                    <optgroup label="West Hollywood (Prospects)">
+                        <option value="prospect-the-west-hollywood-edition">The West Hollywood EDITION (190 keys)</option>
+                        <option value="prospect-andaz-west-hollywood">Andaz West Hollywood (239 keys)</option>
+                        <option value="prospect-the-valorian-formerly-mondrian">The Valorian (236 keys)</option>
+                        <option value="prospect-sunset-marquis-hotel-villas">Sunset Marquis Hotel &amp; Villas (152 keys)</option>
+                        <option value="prospect-kimpton-everly-hotel">Kimpton Everly Hotel (216 keys)</option>
+                    </optgroup>
+                    <optgroup label="Venice / Marina del Rey (Prospects)">
+                        <option value="prospect-hotel-erwin">Hotel Erwin (120 keys)</option>
+                        <option value="prospect-ritz-carlton-marina-del-rey">Ritz-Carlton Marina del Rey (304 keys)</option>
+                        <option value="prospect-hotel-mdr-doubletree">Hotel MdR / DoubleTree (283 keys)</option>
+                        <option value="prospect-marina-del-rey-hotel">Marina del Rey Hotel (160 keys)</option>
+                    </optgroup>
+                    <optgroup label="San Diego (Prospects)">
+                        <option value="prospect-pendry-san-diego">Pendry San Diego (317 keys)</option>
+                        <option value="prospect-the-us-grant">The US Grant (270 keys)</option>
+                        <option value="prospect-kimpton-hotel-palomar">Kimpton Hotel Palomar (183 keys)</option>
+                        <option value="prospect-hotel-republic">Hotel Republic (258 keys)</option>
+                        <option value="prospect-carte-hotel">Carte Hotel (246 keys)</option>
+                    </optgroup>
+                    <optgroup label="Miami (Prospects)">
+                        <option value="prospect-jw-marriott-marquis-miami">JW Marriott Marquis Miami (313 keys)</option>
+                        <option value="prospect-four-seasons-hotel-miami">Four Seasons Hotel Miami (221 keys)</option>
+                        <option value="prospect-east-miami">EAST Miami (263 keys)</option>
+                        <option value="prospect-intercontinental-miami">InterContinental Miami (653 keys)</option>
+                        <option value="prospect-jw-marriott-miami-brickell">JW Marriott Miami / Brickell (296 keys)</option>
+                    </optgroup>
+                    <optgroup label="Fort Lauderdale (Prospects)">
+                        <option value="prospect-four-seasons-fort-lauderdale">Four Seasons Fort Lauderdale (148 keys)</option>
+                        <option value="prospect-w-fort-lauderdale">W Fort Lauderdale (517 keys)</option>
+                        <option value="prospect-the-ritz-carlton-fort-lauderdale">The Ritz-Carlton Fort Lauderdale (166 keys)</option>
+                        <option value="prospect-marriott-harbor-beach-resort-spa">Marriott Harbor Beach Resort &amp; Spa (650 keys)</option>
+                        <option value="prospect-diplomat-beach-resort">Diplomat Beach Resort (1,000 keys)</option>
+                    </optgroup>
+                    <optgroup label="Coconut Grove (Prospects)">
+                        <option value="prospect-mayfair-house-hotel-garden">Mayfair House Hotel &amp; Garden (179 keys)</option>
+                        <option value="prospect-the-ritz-carlton-coconut-grove">The Ritz-Carlton Coconut Grove (115 keys)</option>
+                        <option value="prospect-mr-c-miami-coconut-grove">Mr. C Miami (100 keys)</option>
+                        <option value="prospect-courtyard-miami-coconut-grove">Courtyard Miami Coconut Grove (196 keys)</option>
+                        <option value="prospect-the-mutiny-hotel">The Mutiny Hotel (170 keys)</option>
+                    </optgroup>
+                    <optgroup label="Coral Gables (Prospects)">
+                        <option value="prospect-the-biltmore-hotel-miami">The Biltmore Hotel Miami (271 keys)</option>
+                        <option value="prospect-loews-coral-gables">Loews Coral Gables (242 keys)</option>
+                        <option value="prospect-hotel-colonnade-autograph-collection">Hotel Colonnade, Autograph (157 keys)</option>
+                        <option value="prospect-hyatt-regency-coral-gables">Hyatt Regency Coral Gables (254 keys)</option>
+                    </optgroup>
+                    <optgroup label="Sarasota (Prospects)">
+                        <option value="prospect-st-regis-longboat-key-resort">St. Regis Longboat Key Resort (194 keys)</option>
+                        <option value="prospect-the-ritz-carlton-sarasota">The Ritz-Carlton Sarasota (276 keys)</option>
+                        <option value="prospect-the-westin-sarasota">The Westin Sarasota (270 keys)</option>
+                        <option value="prospect-resort-at-longboat-key-club">Resort at Longboat Key Club (226 keys)</option>
+                        <option value="prospect-zota-beach-resort">Zota Beach Resort (187 keys)</option>
+                    </optgroup>
+                    <optgroup label="Dallas (Prospects)">
+                        <option value="prospect-the-statler-dallas">The Statler Dallas (159 keys)</option>
+                        <option value="prospect-hall-arts-hotel-autograph-collection">HALL Arts Hotel, Autograph (183 keys)</option>
+                        <option value="prospect-hotel-crescent-court">Hotel Crescent Court (226 keys)</option>
+                        <option value="prospect-kimpton-pittman-hotel">Kimpton Pittman Hotel (165 keys)</option>
+                        <option value="prospect-virgin-hotels-dallas">Virgin Hotels Dallas (268 keys)</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- WHY: Research + Add Prospect bar hidden for v1 — internal tools, not customer-facing.
+                 Kept in DOM so the JS doesn't throw errors. -->
+            <div class="research-bar" id="research-bar" style="display:none">
+                <a class="research-link" id="research-pipeline" href="/accelerate-robotics/pages/pipeline-prospects.html" target="_blank" rel="noopener" title="Browse 67 hotels across 14 markets">
+                    Prospect Pipeline
+                </a>
+                <a class="research-link" id="research-site" href="#" target="_blank" rel="noopener" style="display:none">
+                    Site Profile
+                </a>
+                <button class="research-link add-prospect-toggle" id="add-prospect-toggle" type="button">
+                    + Add Prospect
+                </button>
+            </div>
+
+            <!-- Add Prospect form — slides open -->
+            <div class="add-prospect-form" id="add-prospect-form" style="display:none">
+                <div class="apf-row">
+                    <div class="apf-field apf-wide">
+                        <label>Hotel Name</label>
+                        <input type="text" id="apf-name" placeholder="The Ritz-Carlton Coconut Grove">
+                    </div>
+                </div>
+                <div class="apf-row">
+                    <div class="apf-field">
+                        <label>Market</label>
+                        <select id="apf-market">
+                            <option value="Miami">Miami</option>
+                            <option value="Sarasota">Sarasota</option>
+                            <option value="East Bay, CA">East Bay, CA</option>
+                            <option value="Sacramento">Sacramento</option>
+                            <option value="Los Angeles">Los Angeles</option>
+                            <option value="San Francisco">San Francisco</option>
+                            <option value="New York">New York</option>
+                            <option value="Dallas">Dallas</option>
+                            <option value="Chicago">Chicago</option>
+                            <option value="Other">Other...</option>
+                        </select>
+                        <input type="text" id="apf-market-custom" placeholder="Market name" style="display:none;margin-top:4px">
+                    </div>
+                    <div class="apf-field">
+                        <label>Type</label>
+                        <select id="apf-type">
+                            <option value="hotel">Hotel</option>
+                            <option value="resort">Resort</option>
+                            <option value="hospital">Hospital</option>
+                            <option value="senior">Senior Living</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="apf-row">
+                    <div class="apf-field"><label>Rooms</label><input type="number" id="apf-rooms" placeholder="250" min="1"></div>
+                    <div class="apf-field"><label>Floors</label><input type="number" id="apf-floors" placeholder="10" min="1"></div>
+                    <div class="apf-field"><label>Elevators</label><input type="number" id="apf-elevators" placeholder="3" min="0"></div>
+                </div>
+                <div class="apf-row">
+                    <div class="apf-field apf-wide">
+                        <label>Brand / Flag</label>
+                        <input type="text" id="apf-brand" placeholder="Independent, Marriott Autograph, Hilton Curio, etc.">
+                    </div>
+                </div>
+                <div class="apf-row">
+                    <div class="apf-field apf-wide">
+                        <label>Notes</label>
+                        <input type="text" id="apf-notes" placeholder="Key signal, management company, why this hotel...">
+                    </div>
+                </div>
+                <div class="apf-actions">
+                    <button class="apf-save" id="apf-save" type="button">Save Prospect</button>
+                    <button class="apf-cancel" id="apf-cancel" type="button">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Size metrics — compact grid -->
+            <div class="prop-metrics">
+                <div class="prop-metric">
+                    <label for="prop-rooms">Rooms</label>
+                    <input type="number" id="prop-rooms" placeholder="250" min="1">
+                </div>
+                <div class="prop-metric">
+                    <label for="prop-floors">Floors</label>
+                    <input type="number" id="prop-floors" placeholder="16" min="1">
+                </div>
+                <div class="prop-metric">
+                    <label for="prop-guest-floors">Guest Floors</label>
+                    <input type="text" id="prop-guest-floors" placeholder="4-16">
+                </div>
+                <div class="prop-metric">
+                    <label for="prop-elevators">Elevators</label>
+                    <input type="number" id="prop-elevators" placeholder="4" min="0">
+                </div>
+            </div>
+
+            <!-- Property profile summary — auto-computed from inputs -->
+            <div class="prop-profile" id="prop-profile">
+                <div class="pp-row">
+                    <span class="pp-label">Scale</span>
+                    <span class="pp-value" id="pp-scale">--</span>
+                </div>
+                <div class="pp-row">
+                    <span class="pp-label">Vertical</span>
+                    <span class="pp-value" id="pp-vertical">--</span>
+                </div>
+                <div class="pp-row">
+                    <span class="pp-label">Elevator ratio</span>
+                    <span class="pp-value" id="pp-elevator-ratio">--</span>
+                </div>
+            </div>
+
+            <!-- Surface chips — legacy global control, hidden when zones are configured -->
+            <div class="field" id="surface-global-wrap">
+                <label>Floor Surfaces</label>
+                <div class="surface-grid">
+                    <label class="surface-chip" id="surface-carpet">
+                        <input type="checkbox" value="carpet">
+                        Carpet
+                    </label>
+                    <label class="surface-chip" id="surface-hardwood">
+                        <input type="checkbox" value="hardwood">
+                        Hardwood
+                    </label>
+                    <label class="surface-chip" id="surface-tile">
+                        <input type="checkbox" value="tile">
+                        Tile
+                    </label>
+                    <label class="surface-chip" id="surface-terrazzo">
+                        <input type="checkbox" value="terrazzo">
+                        Terrazzo
+                    </label>
+                    <label class="surface-chip" id="surface-outdoor">
+                        <input type="checkbox" value="outdoor">
+                        Outdoor
+                    </label>
+                </div>
+            </div>
+
+            <!-- Surface summary — shown when zones are configured, replaces global chips -->
+            <div id="surface-summary-wrap" style="display:none">
+                <label style="font-size:0.58rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;">Floor Surfaces</label>
+                <div class="surface-summary" id="surface-summary-text">--</div>
+            </div>
+
+            <!-- Facility detail expand/collapse -->
+            <button class="facility-expand-btn" id="facility-expand-btn" type="button">
+                <span class="arrow">▸</span> Configure Facility Details
+            </button>
+
+            <!-- Facility detail card — hidden by default -->
+            <div class="facility-detail-card hidden" id="facility-detail-card">
+
+                <!-- ── Elevator sub-group ── -->
+                <div class="fd-group-label">Elevator</div>
+                <div class="prop-metric">
+                    <label for="fd-elevator-make">Make / Model</label>
+                    <select class="fd-elevator-make" id="fd-elevator-make">
+                        <option value="">-- Unknown --</option>
+                        <option value="ThyssenKrupp">ThyssenKrupp</option>
+                        <option value="Otis">Otis</option>
+                        <option value="KONE">KONE</option>
+                        <option value="Schindler">Schindler</option>
+                        <option value="Mitsubishi">Mitsubishi</option>
+                        <option value="Other">Other...</option>
+                    </select>
+                    <input type="text" class="fd-elevator-custom" id="fd-elevator-custom" placeholder="Enter make/model" style="display:none">
+                </div>
+                <div class="fd-field-row">
+                    <div class="prop-metric">
+                        <label for="fd-elevator-guest">Guest Elevators</label>
+                        <input type="number" id="fd-elevator-guest" placeholder="1" min="0">
+                    </div>
+                    <div class="prop-metric">
+                        <label for="fd-elevator-service">Service Elevators</label>
+                        <input type="number" id="fd-elevator-service" placeholder="0" min="0">
+                    </div>
+                </div>
+
+                <div class="fd-divider"></div>
+
+                <!-- ── Amenities sub-group ── -->
+                <div class="fd-group-label">Amenities</div>
+                <div class="amenity-grid" id="amenity-grid">
+                    <label class="amenity-chip" id="amenity-pool">
+                        <input type="checkbox" value="pool"> Pool
+                    </label>
+                    <label class="amenity-chip" id="amenity-rooftop">
+                        <input type="checkbox" value="rooftop"> Rooftop
+                    </label>
+                    <label class="amenity-chip" id="amenity-courtyard">
+                        <input type="checkbox" value="courtyard"> Courtyard
+                    </label>
+                    <label class="amenity-chip" id="amenity-sports">
+                        <input type="checkbox" value="sports"> Sport Courts
+                    </label>
+                    <label class="amenity-chip" id="amenity-garden">
+                        <input type="checkbox" value="garden"> Garden / Grounds
+                    </label>
+                </div>
+                <div class="fd-field-row" style="margin-top:6px">
+                    <div class="prop-metric">
+                        <label for="fd-fb-outlets">F&amp;B Outlets</label>
+                        <input type="number" id="fd-fb-outlets" placeholder="0" min="0" max="20">
+                    </div>
+                    <div class="prop-metric">
+                        <label for="fd-event-sqft">Event Space (sq ft)</label>
+                        <input type="number" id="fd-event-sqft" placeholder="0" min="0">
+                    </div>
+                </div>
+
+                <div class="fd-divider"></div>
+
+                <!-- ── Surface Zones sub-group ── -->
+                <div class="fd-group-label">Surface Zones</div>
+
+                <div class="zone-group" data-zone="corridors">
+                    <div class="zone-label">Guest Corridors</div>
+                    <div class="zone-chips">
+                        <span class="zone-chip" data-surface="carpet">Carpet</span>
+                        <span class="zone-chip" data-surface="hardwood">Hardwood</span>
+                        <span class="zone-chip" data-surface="tile">Tile</span>
+                        <span class="zone-chip" data-surface="terrazzo">Terrazzo</span>
+                    </div>
+                </div>
+                <div class="zone-group" data-zone="lobby">
+                    <div class="zone-label">Lobby / Public</div>
+                    <div class="zone-chips">
+                        <span class="zone-chip" data-surface="carpet">Carpet</span>
+                        <span class="zone-chip" data-surface="hardwood">Hardwood</span>
+                        <span class="zone-chip" data-surface="tile">Tile</span>
+                        <span class="zone-chip" data-surface="terrazzo">Terrazzo</span>
+                    </div>
+                </div>
+                <div class="zone-group" data-zone="fb">
+                    <div class="zone-label">F&amp;B Areas</div>
+                    <div class="zone-chips">
+                        <span class="zone-chip" data-surface="carpet">Carpet</span>
+                        <span class="zone-chip" data-surface="hardwood">Hardwood</span>
+                        <span class="zone-chip" data-surface="tile">Tile</span>
+                        <span class="zone-chip" data-surface="terrazzo">Terrazzo</span>
+                    </div>
+                </div>
+                <div class="zone-group" data-zone="boh">
+                    <div class="zone-label">BOH / Service</div>
+                    <div class="zone-chips">
+                        <span class="zone-chip" data-surface="carpet">Carpet</span>
+                        <span class="zone-chip" data-surface="hardwood">Hardwood</span>
+                        <span class="zone-chip" data-surface="tile">Tile</span>
+                        <span class="zone-chip" data-surface="terrazzo">Terrazzo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Goals & Pain Points section -->
+        <div class="form-section brand-reveal" data-delay="0.1">
+            <div class="section-heading">
+                Goals &amp; Pain Points
+            </div>
+
+            <div class="goals-grid">
+                <!-- ── Delivery & Guest Service ── -->
+                <div class="goal-group-label">Delivery &amp; Guest Service</div>
+                <div class="goal-chip" id="goal-roomservice" data-goal="roomservice" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Full Meal Room Service</span>
+                    <span class="goal-desc">Enclosed, thermal delivery — kitchen to guest room via elevator</span>
+                </div>
+                <div class="goal-chip" id="goal-small-delivery" data-goal="small-delivery" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Small Item Delivery</span>
+                    <span class="goal-desc">Amenities, packages, sundries — front desk to guest door</span>
+                </div>
+                <div class="goal-chip" id="goal-foodrunner" data-goal="foodrunner" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Food Runner</span>
+                    <span class="goal-desc">Kitchen to table in F&amp;B outlets — tray delivery and bussing</span>
+                </div>
+                <div class="goal-chip" id="goal-bellhop" data-goal="bellhop" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Bellhop Bot</span>
+                    <span class="goal-desc">Guest luggage transport — lobby to room, check-in/check-out</span>
+                </div>
+                <div class="goal-chip" id="goal-wow" data-goal="wow" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Guest Experience</span>
+                    <span class="goal-desc">Branded robot greeting, wayfinding, lobby interaction</span>
+                </div>
+
+                <!-- ── Floor Care ── -->
+                <div class="goal-group-label">Floor Care</div>
+                <div class="goal-chip" id="goal-carpet" data-goal="carpet" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Large Carpet Bot</span>
+                    <span class="goal-desc">Overnight vacuuming — corridors, ballrooms, meeting rooms</span>
+                </div>
+                <div class="goal-chip" id="goal-hardfloor" data-goal="hardfloor" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Large Hard Floor Bot</span>
+                    <span class="goal-desc">Lobby, restaurant, and public-area scrubbing and polishing</span>
+                </div>
+
+                <!-- ── Logistics ── -->
+                <div class="goal-group-label">Logistics</div>
+                <div class="goal-chip" id="goal-linen" data-goal="linen" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Linen Transport</span>
+                    <span class="goal-desc">Hauling linens, towels, and supplies between floors</span>
+                </div>
+                <div class="goal-chip" id="goal-heavy-logistics" data-goal="heavy-logistics" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Heavy Item Logistics</span>
+                    <span class="goal-desc">Large or heavy cargo — banquet equipment, supply pallets, carts</span>
+                </div>
+
+                <!-- ── Outdoor & Grounds ── -->
+                <div class="goal-group-label">Outdoor &amp; Grounds</div>
+                <div class="goal-chip" id="goal-outdoor-sweep" data-goal="outdoor-sweep" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Outdoor Sweeping</span>
+                    <span class="goal-desc">Courtyard, garden pathway, and walkway debris sweeping</span>
+                </div>
+                <div class="goal-chip" id="goal-outdoor-mow" data-goal="outdoor-mow" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Lawn Mowing</span>
+                    <span class="goal-desc">Autonomous mowing for grounds, gardens, and green space</span>
+                </div>
+                <div class="goal-chip" id="goal-garage" data-goal="garage" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Parking Garage Sweep</span>
+                    <span class="goal-desc">Garage floor cleaning — trash pickup, dust, and debris</span>
+                </div>
+                <div class="goal-chip" id="goal-pool-clean" data-goal="pool-clean" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Pool Cleaning</span>
+                    <span class="goal-desc">Autonomous in-water pool scrubbing and filtration</span>
+                </div>
+                <div class="goal-chip" id="goal-pooldeck" data-goal="pooldeck" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Pool Deck Cleaning</span>
+                    <span class="goal-desc">Deck surface scrubbing, drainage area, and surrounding walkways</span>
+                </div>
+                <div class="goal-chip" id="goal-padel" data-goal="padel" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Padel / Tennis Court</span>
+                    <span class="goal-desc">Court surface sweeping and maintenance between play sessions</span>
+                </div>
+
+                <!-- ── Safety & Sanitation ── -->
+                <div class="goal-group-label">Safety &amp; Sanitation</div>
+                <div class="goal-chip" id="goal-security" data-goal="security" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">Security Patrol</span>
+                    <span class="goal-desc">Autonomous perimeter and corridor patrol, overnight loops</span>
+                </div>
+                <div class="goal-chip" id="goal-disinfection" data-goal="disinfection" tabindex="0" role="checkbox" aria-checked="false">
+                    <span class="goal-title">UV / Chemical Disinfection</span>
+                    <span class="goal-desc">Scheduled high-touch surface sanitation on a consistent cadence</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget section -->
+        <div class="form-section brand-reveal" data-delay="0.15">
+            <div class="section-heading">
+                Monthly RaaS Budget
+            </div>
+
+            <div class="budget-presets">
+                <button class="budget-preset" data-min="2000" data-max="8000" type="button">Pilot</button>
+                <button class="budget-preset active" data-min="5000" data-max="25000" type="button">Standard</button>
+                <button class="budget-preset" data-min="15000" data-max="50000" type="button">Full-Property</button>
+                <button class="budget-preset" data-min="0" data-max="100000" type="button">No Limit</button>
+            </div>
+
+            <div class="budget-range-labels">
+                <span class="budget-range-label" id="budget-min-label">$5,000 <span class="unit">/mo</span></span>
+                <span class="budget-range-label" id="budget-max-label">$25,000 <span class="unit">/mo</span></span>
+            </div>
+            <div class="budget-range-bar">
+                <div class="budget-range-fill" id="budget-fill"></div>
+            </div>
+
+            <div class="budget-inputs-row">
+                <div class="budget-field">
+                    <label for="budget-min">Min</label>
+                    <input type="number" id="budget-min" value="5000" min="0" max="200000" step="500">
+                </div>
+                <div class="budget-field">
+                    <label for="budget-max">Max</label>
+                    <input type="number" id="budget-max" value="25000" min="0" max="200000" step="500">
+                </div>
+            </div>
+
+            <div class="budget-hint" id="budget-hint">~$5,000 per robot per month (5 robots)</div>
+        </div>
+
+        <!-- Generate button -->
+        <button class="generate-btn brand-btn-primary" id="generate-btn" type="button">
+            Design My Fleet
+        </button>
+
+    </aside>
+
+    <!-- ────── RIGHT PANEL — results ────── -->
+    <main class="right-panel">
+
+        <!-- Summary strip (hidden until results are ready) -->
+        <div class="summary-strip brand-reveal" id="summary-strip" style="display:none">
+            <div class="summary-chip chip-robots brand-glass">
+                <div class="sc-val mono gradient-text" id="sum-robots">—</div>
+                <div class="sc-label">Robots</div>
+            </div>
+            <div class="summary-chip chip-raas brand-glass">
+                <div class="sc-val mono gradient-text" id="sum-raas">—</div>
+                <div class="sc-label">Monthly RaaS</div>
+            </div>
+            <div class="summary-chip chip-savings brand-glass">
+                <div class="sc-val mono gradient-text" id="sum-savings">—</div>
+                <div class="sc-label">Est. Savings / yr</div>
+            </div>
+            <div class="summary-chip chip-roi brand-glass">
+                <div class="sc-val mono gradient-text" id="sum-roi">—</div>
+                <div class="sc-label">ROI Multiple</div>
+            </div>
+        </div>
+
+        <!-- Fleet slot cards injected here by Task 4 -->
+        <div id="fleet-slots"></div>
+
+        <!-- Export bar (hidden until results are ready) -->
+        <div class="export-bar brand-glass brand-reveal" id="export-bar" style="display:none">
+            <a class="export-btn btn-proposal" id="proposal-btn" href="#" target="_blank" rel="noopener" style="display:none">
+                Generate Proposal
+            </a>
+            <span class="export-bar-label">Export</span>
+            <button class="export-btn brand-btn-primary" id="export-yaml-btn" type="button">
+                Export fleet.yml
+            </button>
+            <button class="export-btn" id="copy-clipboard-btn" type="button">
+                Copy to Clipboard
+            </button>
+            <div class="export-spacer"></div>
+            <button class="export-btn btn-danger" id="reset-btn" type="button">
+                ↺ Reset
+            </button>
+        </div>
+
+        <!-- Empty state (visible by default) -->
+        <div class="empty-state brand-reveal" id="empty-state">
+            <div class="empty-title">Design a Fleet</div>
+            <p class="empty-sub">
+                Fill in your property details and goals on the left,
+                then click <strong>Design My Fleet</strong> to get a
+                recommended robot lineup matched to your space and budget.
+            </p>
+            <div class="empty-hint">
+                <span>&larr;</span>
+                <span>Start with property details</span>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────────────────────
+// parseMonthlyPrice — Task 2
+//
+// Extracts a monthly dollar estimate from catalog price strings.
+// Priority:
+//   1. Explicit /month or /mo    → use that number
+//   2. /hour or /hr              → × 720 (24h × 30d)
+//   3. Range $X-$Y               → midpoint ÷ 36 months
+//   4. Single purchase price $X  → ÷ 36 months
+//   5. Unrecognised / null       → return fallback
+//
+// WHY 720: normalises hourly MaaS to a monthly equivalent assuming
+//   continuous 24/7 operation as a conservative upper bound for
+//   comparison; this overstates some models but keeps the floor
+//   within range for budget-match purposes.
+//
+// WHY 36: standard 3-year RaaS/lease amortisation window —
+//   consistent with how the Accelerate proposal templates present ROI.
+// ─────────────────────────────────────────────────────────────
+function parseMonthlyPrice(priceStr, fallback) {
+    if (priceStr == null) return fallback;
+
+    const s = String(priceStr).trim();
+
+    // Guard: clearly non-numeric strings that mean "unknown"
+    if (/not_publicly_listed|not listed|n\/a|contact|undisclosed/i.test(s)) {
+        return fallback;
+    }
+
+    // Helper: strip commas and parse float from a token like "$2,000" or "$100K"
+    function parseNum(token) {
+        const clean = token.replace(/[$,]/g, '');
+        const v = parseFloat(clean);
+        // WHY: catalog prices frequently use K/k suffix (e.g. "$100K", "$5K")
+        if (/k$/i.test(clean)) return v * 1000;
+        if (/m$/i.test(clean)) return v * 1000000;
+        return v;
+    }
+
+    // WHY: K/M suffix pattern used throughout — e.g. "$5K", "$100K", "$1.5M"
+    const numPat = '[\\d,]+(?:\\.\\d+)?[KkMm]?';
+
+    // ── Priority 1a: monthly range "$5K-$10K/mo" → midpoint ─────
+    // WHY: catalog strings like "~$5K-$10K/mo RaaS" — take midpoint of the monthly range
+    const monthRangeMatch = s.match(new RegExp('\\$\\s*(' + numPat + ')\\s*[-–]\\s*\\$?\\s*(' + numPat + ')\\s*/\\s*mo(?:nth)?', 'i'));
+    if (monthRangeMatch) {
+        const lo = parseNum(monthRangeMatch[1]);
+        const hi = parseNum(monthRangeMatch[2]);
+        if (isFinite(lo) && isFinite(hi) && lo > 0 && hi > 0) return Math.round((lo + hi) / 2);
+    }
+
+    // ── Priority 1b: explicit /month or /mo ──────────────────────
+    // Match the number immediately before /month or /mo
+    // e.g. "$2,000/month" or "$599/month lease" or "$5K/mo"
+    const monthMatch = s.match(new RegExp('\\$\\s*(' + numPat + ')\\s*/\\s*mo(?:nth)?', 'i'));
+    if (monthMatch) {
+        const v = parseNum(monthMatch[1]);
+        if (isFinite(v) && v > 0) return v;
+    }
+
+    // ── Priority 2: /hour or /hr ─────────────────────────────────
+    // WHY 720: hours per month at 24/7 utilisation
+    const hourMatch = s.match(new RegExp('\\$\\s*(' + numPat + ')\\s*/\\s*h(?:ou)?r', 'i'));
+    if (hourMatch) {
+        const v = parseNum(hourMatch[1]);
+        if (isFinite(v) && v > 0) return Math.round(v * 720);
+    }
+
+    // ── Priority 3: price range $X-$Y → midpoint ÷ 36 ───────────
+    // Match patterns like "$11,500-$16,400" or "$100K-$150K"
+    const rangeMatch = s.match(new RegExp('\\$\\s*(' + numPat + ')\\s*[-–]\\s*\\$?\\s*(' + numPat + ')', 'i'));
+    if (rangeMatch) {
+        const lo = parseNum(rangeMatch[1]);
+        const hi = parseNum(rangeMatch[2]);
+        if (isFinite(lo) && isFinite(hi) && lo > 0 && hi > 0) {
+            return Math.round((lo + hi) / 2 / 36);
+        }
+    }
+
+    // ── Priority 4: single purchase price $X ÷ 36 ────────────────
+    // Only match a plain dollar amount — not something already claimed
+    // by rules 1-3. Take the FIRST dollar amount in the string.
+    const singleMatch = s.match(new RegExp('\\$\\s*(' + numPat + ')'));
+    if (singleMatch) {
+        const v = parseNum(singleMatch[1]);
+        if (isFinite(v) && v > 0) return Math.round(v / 36);
+    }
+
+    // ── Priority 5: fallback ─────────────────────────────────────
+    return fallback;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Inline self-tests — run at load time, log results to console.
+// These verify against the spec's stated test cases (±15% tol).
+// ─────────────────────────────────────────────────────────────
+(function runTests() {
+    const FALLBACK = 2850;
+    const TOL = 0.15; // 15% tolerance
+
+    function near(actual, expected, label) {
+        if (expected === actual) return; // exact match (for fallback checks)
+        const diff = Math.abs(actual - expected) / expected;
+        if (diff > TOL) {
+            console.warn(`[parseMonthlyPrice] FAIL "${label}": expected ~${expected}, got ${actual} (${(diff*100).toFixed(1)}% off)`);
+        }
+    }
+
+    near(parseMonthlyPrice('$599/month lease; ~$18,000-$25,000 purchase', FALLBACK),  599,   '$599/month');
+    near(parseMonthlyPrice('$2,000/month RaaS (~$75,000/3yr)', FALLBACK),            2000,  '$2,000/month');
+    near(parseMonthlyPrice('$7/hour MaaS (~$100,000 purchase equivalent)', FALLBACK), 5040,  '$7/hr → ×720');
+    near(parseMonthlyPrice('$11,500-$16,400', FALLBACK),                              388,   '$11,500-$16,400 range');
+    near(parseMonthlyPrice('$19,700', FALLBACK),                                      547,   '$19,700 single');
+
+    // K-suffix tests — catalog uses "$100K", "$5K/mo" etc.
+    near(parseMonthlyPrice('~$100K-$150K purchase / ~$5K-$10K/mo RaaS', FALLBACK),  7500,  '$5K-$10K/mo RaaS');
+    near(parseMonthlyPrice('$50K purchase', FALLBACK),                               1389,  '$50K single');
+    near(parseMonthlyPrice('$3K/month', FALLBACK),                                   3000,  '$3K/month');
+
+    const fb1 = parseMonthlyPrice('not_publicly_listed', FALLBACK);
+    if (fb1 !== FALLBACK) console.warn(`[parseMonthlyPrice] FAIL fallback string: got ${fb1}`);
+
+    const fb2 = parseMonthlyPrice(null, FALLBACK);
+    if (fb2 !== FALLBACK) console.warn(`[parseMonthlyPrice] FAIL null: got ${fb2}`);
+
+    console.log('[parseMonthlyPrice] Self-tests complete.');
+})();
+
+
+// ─────────────────────────────────────────────────────────────
+// Pipeline properties — pre-fill form when a known property is selected
+// WHY: saves manual entry for the 9 active pipeline hotels and
+// enables direct linking to each property's proposal page
+// ─────────────────────────────────────────────────────────────
+const PIPELINE = {
+    'thesis-hotel': {
+        name: 'Thesis Hotel',
+        type: 'hotel',
+        rooms: 245, floors: 10, guestFloors: '4-10', elevators: 2,
+        surfaces: ['carpet', 'tile', 'hardwood', 'outdoor'],
+        market: 'Miami',
+        proposalUrl: '/accelerate-thesis-hotel/pages/proposal-interactive.html',
+        siteProfileUrl: '/accelerate-thesis-hotel/pages/site-profile.html',
+        // WHY: ThyssenKrupp TAC32T confirmed during site walk
+        elevatorMake: 'ThyssenKrupp',
+        elevatorGuestCount: 1,
+        elevatorServiceCount: 1,
+        outdoorAmenities: ['pool', 'rooftop'],
+        fbOutlets: 3, // WHY: lobby restaurant + rooftop bar + pool bar
+        eventSpaceSqFt: 5000, // WHY: ground-floor event spaces, approximate
+        surfaceZones: {
+            corridors: ['carpet'],
+            lobby: ['tile', 'hardwood'],
+            fb: ['hardwood'],
+            boh: ['tile']
+        }
+    },
+    'moore-miami': {
+        name: 'The Moore Miami',
+        type: 'hotel', // WHY: members' club, but "hotel" type closest match for fleet sizing
+        rooms: 13, floors: 4, guestFloors: '2-4', elevators: 2,
+        surfaces: ['hardwood', 'tile'],
+        market: 'Miami',
+        proposalUrl: '/accelerate-moore-miami/pages/proposal-interactive.html',
+        siteProfileUrl: '/accelerate-moore-miami/pages/site-profile.html',
+        elevatorMake: null, // WHY: not yet confirmed
+        elevatorGuestCount: 1,
+        elevatorServiceCount: 1,
+        outdoorAmenities: ['rooftop', 'courtyard'],
+        fbOutlets: 5, // WHY: ultra-premium F&B, multiple dining concepts + bars
+        eventSpaceSqFt: 3000, // WHY: members' club event space, approximate
+        surfaceZones: {
+            corridors: ['hardwood'],
+            lobby: ['hardwood', 'tile'],
+            fb: ['hardwood'],
+            boh: ['tile']
+        }
+    },
+    'art-ovation': {
+        name: 'Art Ovation Hotel',
+        type: 'hotel',
+        rooms: 162, floors: 6, guestFloors: '3-6', elevators: 3,
+        surfaces: ['carpet', 'tile', 'hardwood'],
+        market: 'Sarasota',
+        proposalUrl: '/accelerate-art-ovation/pages/proposal-interactive.html',
+        siteProfileUrl: '/accelerate-art-ovation/pages/site-profile.html',
+        elevatorMake: null,
+        elevatorGuestCount: 2,
+        elevatorServiceCount: 1,
+        outdoorAmenities: ['pool'],
+        fbOutlets: 2, // WHY: restaurant + bar
+        eventSpaceSqFt: 8000, // WHY: arts hotel has significant event/gallery space
+        surfaceZones: {
+            corridors: ['carpet'],
+            lobby: ['tile', 'hardwood'],
+            fb: ['hardwood'],
+            boh: ['tile']
+        }
+    },
+    'san-ramon-marriott': {
+        name: 'San Ramon Marriott',
+        type: 'hotel',
+        rooms: 368, floors: 6, guestFloors: '2-6', elevators: 4,
+        surfaces: ['carpet', 'tile'],
+        market: 'East Bay, CA',
+        proposalUrl: null,
+        siteProfileUrl: null,
+        elevatorMake: null,
+        elevatorGuestCount: 3,
+        elevatorServiceCount: 1,
+        outdoorAmenities: ['pool', 'courtyard'],
+        fbOutlets: 2, // WHY: typical full-service Marriott with restaurant + bar
+        eventSpaceSqFt: 18000, // WHY: 18K sq ft meetings per prospect notes
+        surfaceZones: {
+            corridors: ['carpet'],
+            lobby: ['tile'],
+            fb: ['carpet', 'tile'],
+            boh: ['tile']
+        }
+    },
+    'lafayette-park': {
+        name: 'Lafayette Park Hotel & Spa',
+        type: 'hotel',
+        rooms: 136, floors: 4, guestFloors: '2-4', elevators: 2,
+        surfaces: ['carpet', 'hardwood'],
+        market: 'East Bay, CA',
+        proposalUrl: null,
+        siteProfileUrl: null,
+        elevatorMake: null,
+        elevatorGuestCount: 1,
+        elevatorServiceCount: 1,
+        outdoorAmenities: ['garden', 'courtyard'],
+        fbOutlets: 1, // WHY: one main restaurant
+        eventSpaceSqFt: 5000, // WHY: boutique with modest event capability
+        surfaceZones: {
+            corridors: ['carpet'],
+            lobby: ['hardwood'],
+            fb: ['hardwood'],
+            boh: ['tile']
+        }
+    },
+    'claremont-resort': {
+        name: 'Claremont Resort & Club',
+        type: 'resort',
+        rooms: 276, floors: 10, guestFloors: '2-10', elevators: 4,
+        surfaces: ['carpet', 'hardwood', 'tile', 'outdoor'],
+        market: 'East Bay, CA',
+        proposalUrl: null,
+        siteProfileUrl: null,
+        elevatorMake: null,
+        elevatorGuestCount: 3,
+        elevatorServiceCount: 1,
+        outdoorAmenities: ['pool', 'sports', 'garden'],
+        fbOutlets: 3, // WHY: resort with multiple dining venues
+        eventSpaceSqFt: 20000, // WHY: large resort conference and event facilities
+        surfaceZones: {
+            corridors: ['carpet'],
+            lobby: ['hardwood', 'tile'],
+            fb: ['hardwood'],
+            boh: ['tile']
+        }
+    },
+    'kimpton-sawyer': {
+        name: 'Kimpton Sawyer',
+        type: 'hotel',
+        rooms: 250, floors: 16, guestFloors: '4-16', elevators: 4,
+        surfaces: ['carpet', 'tile', 'hardwood'],
+        market: 'Sacramento',
+        proposalUrl: null,
+        siteProfileUrl: null,
+        elevatorMake: null,
+        elevatorGuestCount: 3,
+        elevatorServiceCount: 1,
+        outdoorAmenities: ['pool', 'rooftop'],
+        fbOutlets: 3, // WHY: Kimpton typically has restaurant + bar + rooftop
+        eventSpaceSqFt: 10000, // WHY: convention-adjacent, significant meeting space
+        surfaceZones: {
+            corridors: ['carpet'],
+            lobby: ['tile', 'hardwood'],
+            fb: ['hardwood'],
+            boh: ['tile']
+        }
+    },
+    'citizen-hotel': {
+        name: 'The Citizen Hotel',
+        type: 'hotel',
+        rooms: 196, floors: 14, guestFloors: '3-14', elevators: 3,
+        surfaces: ['carpet', 'hardwood', 'tile'],
+        market: 'Sacramento',
+        proposalUrl: null,
+        siteProfileUrl: null,
+        elevatorMake: null,
+        elevatorGuestCount: 2,
+        elevatorServiceCount: 1,
+        outdoorAmenities: [],
+        fbOutlets: 2, // WHY: restaurant + bar typical for a boutique
+        eventSpaceSqFt: 6000, // WHY: historic hotel with event capability
+        surfaceZones: {
+            corridors: ['carpet'],
+            lobby: ['hardwood', 'tile'],
+            fb: ['hardwood'],
+            boh: ['tile']
+        }
+    },
+    'westin-riverfront': {
+        name: 'Westin Riverfront',
+        type: 'hotel',
+        rooms: 101, floors: 3, guestFloors: '1-3', elevators: 2,
+        surfaces: ['carpet', 'tile'],
+        market: 'Sacramento',
+        proposalUrl: null,
+        siteProfileUrl: null,
+        elevatorMake: null,
+        elevatorGuestCount: 1,
+        elevatorServiceCount: 1,
+        outdoorAmenities: ['courtyard'],
+        fbOutlets: 1, // WHY: small Westin with one restaurant
+        eventSpaceSqFt: 3000, // WHY: modest meeting space
+        surfaceZones: {
+            corridors: ['carpet'],
+            lobby: ['tile'],
+            fb: ['tile'],
+            boh: ['tile']
+        }
+    }
+};
+
+// ─────────────────────────────────────────────────────────────
+// Prospect pipeline — 66 hotels across 14 sub-markets
+// WHY: parsed from docs/pipeline/prospect-list.md so the dropdown
+// can auto-fill specs for any prospect hotel
+// ─────────────────────────────────────────────────────────────
+const PROSPECTS = {
+    'fairmont-san-francisco':{name:'Fairmont San Francisco',market:'San Francisco',rooms:606,floors:23,elevators:4,brand:'Fairmont (Accor)',notes:'Luxury flagship, 3 restaurants, 55K sq ft events'},
+    'palace-hotel':{name:'Palace Hotel',market:'San Francisco',rooms:556,floors:9,elevators:1,brand:'Luxury Collection (Marriott)',notes:'3 ballrooms, 44K sq ft events, near Moscone'},
+    'intercontinental-san-francisco':{name:'InterContinental San Francisco',market:'San Francisco',rooms:550,floors:32,elevators:6,brand:'InterContinental (IHG)',notes:'Tallest in market, Michelin restaurant (Luce), spa'},
+    'hotel-nikko-san-francisco':{name:'Hotel Nikko San Francisco',market:'San Francisco',rooms:532,floors:25,elevators:5,brand:'Independent (Okura Nikko)',notes:'Japanese-managed, Imperial Club lounge, 10K sq ft fitness'},
+    'beacon-grand':{name:'Beacon Grand',market:'San Francisco',rooms:418,floors:21,elevators:4,brand:'Independent',notes:'Rooftop bar, 17K sq ft events, Union Square, fast decisions'},
+    'walnut-creek-marriott':{name:'Walnut Creek Marriott',market:'Walnut Creek',rooms:342,floors:6,elevators:1,brand:'Marriott',notes:'Largest in market, 18K sq ft meetings, restaurant'},
+    'renaissance-walnut-creek':{name:'Renaissance Walnut Creek',market:'Walnut Creek',rooms:175,floors:5,elevators:1,brand:'Renaissance (Marriott)',notes:'Lifestyle brand, spa, 3 pools, Bay Club fitness campus'},
+    'embassy-suites-walnut-creek':{name:'Embassy Suites Walnut Creek',market:'Walnut Creek',rooms:249,floors:8,elevators:1,brand:'Embassy Suites (Hilton)',notes:'All-suite, atrium, 2 daily F&B services, 7K sq ft events'},
+    'hyatt-regency-sacramento':{name:'Hyatt Regency Sacramento',market:'Sacramento',rooms:505,floors:15,elevators:3,brand:'Hyatt Regency',notes:'Largest in market, spa, convention-adjacent, Club lounge'},
+    'sheraton-grand-sacramento':{name:'Sheraton Grand Sacramento',market:'Sacramento',rooms:503,floors:27,elevators:5,brand:'Sheraton Grand (Marriott)',notes:'Tallest in market (27 floors), farm-to-table restaurant, ballroom'},
+    'hyatt-centric-downtown-sacramento':{name:'Hyatt Centric Downtown Sacramento',market:'Sacramento',rooms:172,floors:11,elevators:2,brand:'Hyatt Centric',notes:'Lifestyle soft brand, rooftop bar, Aimbridge-managed'},
+    'the-exchange-sacramento':{name:'The Exchange Sacramento',market:'Sacramento',rooms:100,floors:10,elevators:2,brand:'Curio Collection (Hilton)',notes:'Historic 10-story, Curio soft brand, boutique operator'},
+    'fort-sutter-hotel':{name:'Fort Sutter Hotel',market:'Sacramento',rooms:105,floors:4,elevators:1,brand:'Tapestry (Hilton)',notes:'Soft brand, Midtown location'},
+    'waldorf-astoria-beverly-hills':{name:'Waldorf Astoria Beverly Hills',market:'Beverly Hills',rooms:170,floors:12,elevators:2,brand:'Waldorf Astoria (Hilton)',notes:'2017 tower, rooftop F&B, La Prairie Spa'},
+    'the-peninsula-beverly-hills':{name:'The Peninsula Beverly Hills',market:'Beverly Hills',rooms:195,floors:4,elevators:1,brand:'Peninsula Hotels',notes:'AAA Five Diamond since 1993, 3 restaurants'},
+    'beverly-wilshire':{name:'Beverly Wilshire',market:'Beverly Hills',rooms:345,floors:14,elevators:2,brand:'Independent (post-Four Seasons)',notes:'Largest in BH, Rodeo Drive, mgmt transition = window'},
+    'the-maybourne-beverly-hills':{name:'The Maybourne Beverly Hills',market:'Beverly Hills',rooms:205,floors:9,elevators:1,brand:'Maybourne Hotel Group',notes:'Dante restaurant, 20K sq ft spa, 4 bars'},
+    'l-ermitage-beverly-hills':{name:"L'Ermitage Beverly Hills",market:'Beverly Hills',rooms:116,floors:8,elevators:1,brand:'Independent',notes:'All-suite (805 sq ft avg), rooftop restaurant'},
+    'fairmont-miramar-hotel-bungalows':{name:'Fairmont Miramar Hotel & Bungalows',market:'Santa Monica',rooms:297,floors:10,elevators:2,brand:'Fairmont (Accor)',notes:'5 restaurants, Exhale Spa, 64K sq ft events'},
+    'regent-santa-monica-beach':{name:'Regent Santa Monica Beach',market:'Santa Monica',rooms:167,floors:8,elevators:1,brand:'Regent (IHG)',notes:'Ultra-luxury IHG flagship (opened 2024)'},
+    'santa-monica-proper':{name:'Santa Monica Proper',market:'Santa Monica',rooms:267,floors:7,elevators:1,brand:'Proper Hotels',notes:'Only rooftop pool in SM, Surya Spa'},
+    'viceroy-santa-monica':{name:'Viceroy Santa Monica',market:'Santa Monica',rooms:169,floors:5,elevators:1,brand:'Viceroy',notes:'Beachfront, 2 pools, restaurant'},
+    'shore-hotel':{name:'Shore Hotel',market:'Santa Monica',rooms:164,floors:4,elevators:1,brand:'Independent',notes:'LEED certified, beachfront restaurant, fast decisions'},
+    'the-west-hollywood-edition':{name:'The West Hollywood EDITION',market:'West Hollywood',rooms:190,floors:13,elevators:2,brand:'EDITION (Marriott)',notes:'Rooftop nightclub, Ardor restaurant'},
+    'andaz-west-hollywood':{name:'Andaz West Hollywood',market:'West Hollywood',rooms:239,floors:14,elevators:2,brand:'Andaz (Hyatt)',notes:'Sunset Strip, Panorama Ballroom'},
+    'the-valorian-formerly-mondrian':{name:'The Valorian',market:'West Hollywood',rooms:236,floors:13,elevators:2,brand:'Curio Collection (Hilton)',notes:'Davidson manages dozens — portfolio play'},
+    'sunset-marquis-hotel-villas':{name:'Sunset Marquis Hotel & Villas',market:'West Hollywood',rooms:152,floors:4,elevators:1,brand:'Independent',notes:'All-suite + villas, recording studio'},
+    'kimpton-everly-hotel':{name:'Kimpton Everly Hotel',market:'West Hollywood',rooms:216,floors:15,elevators:3,brand:'Kimpton (IHG)',notes:'15 floors, rooftop pool, IHG cross-sell'},
+    'hotel-erwin':{name:'Hotel Erwin',market:'Venice / Marina del Rey',rooms:120,floors:5,elevators:1,brand:'Independent',notes:'Only 100+ key hotel in Venice proper'},
+    'ritz-carlton-marina-del-rey':{name:'Ritz-Carlton Marina del Rey',market:'Venice / Marina del Rey',rooms:304,floors:12,elevators:2,brand:'Ritz-Carlton (Marriott)',notes:'304 keys, spa, marina, tennis'},
+    'hotel-mdr-doubletree':{name:'Hotel MdR (DoubleTree)',market:'Venice / Marina del Rey',rooms:283,floors:4,elevators:1,brand:'DoubleTree (Hilton)',notes:'283 keys, restaurant, pool'},
+    'marina-del-rey-hotel':{name:'Marina del Rey Hotel',market:'Venice / Marina del Rey',rooms:160,floors:5,elevators:1,brand:'Independent',notes:'Waterfront F&B, marina views'},
+    'pendry-san-diego':{name:'Pendry San Diego',market:'San Diego',rooms:317,floors:12,elevators:2,brand:'Pendry (Montage)',notes:'6 F&B outlets, 35K sq ft events, Gaslamp flagship'},
+    'the-us-grant':{name:'The US Grant',market:'San Diego',rooms:270,floors:11,elevators:2,brand:'Luxury Collection (Marriott)',notes:'AAA Four Diamond, Grant Grill, historic landmark'},
+    'kimpton-hotel-palomar':{name:'Kimpton Hotel Palomar',market:'San Diego',rooms:183,floors:23,elevators:4,brand:'Kimpton (IHG)',notes:'Tallest in cluster (23 floors), rooftop infinity pool'},
+    'hotel-republic':{name:'Hotel Republic',market:'San Diego',rooms:258,floors:19,elevators:3,brand:'Autograph Collection (Marriott)',notes:'Rooftop dining, Club Lounge, 24-hr room service'},
+    'carte-hotel':{name:'Carte Hotel',market:'San Diego',rooms:246,floors:16,elevators:3,brand:'Curio Collection (Hilton)',notes:'Rooftop bar, FIT Athletic Club, modern tower'},
+    'jw-marriott-marquis-miami':{name:'JW Marriott Marquis Miami',market:'Miami',rooms:313,floors:41,elevators:8,brand:'JW Marriott',notes:'20K sq ft ballroom, NBA sports complex, 41 floors'},
+    'four-seasons-hotel-miami':{name:'Four Seasons Hotel Miami',market:'Miami',rooms:221,floors:70,elevators:14,brand:'Four Seasons',notes:'Brickell tower (hotel floors 7-36), Equinox spa'},
+    'east-miami':{name:'EAST Miami',market:'Miami',rooms:263,floors:40,elevators:8,brand:'EAST (Swire Hotels)',notes:'Sugar rooftop (floor 40), 4 pools, innovation-forward'},
+    'intercontinental-miami':{name:'InterContinental Miami',market:'Miami',rooms:653,floors:34,elevators:6,brand:'InterContinental (IHG)',notes:'Largest in market (653 keys), 3 restaurants'},
+    'jw-marriott-miami-brickell':{name:'JW Marriott Miami (Brickell)',market:'Miami',rooms:296,floors:20,elevators:4,brand:'JW Marriott',notes:'Salus Spa, 25K sq ft meetings, JW portfolio play'},
+    'four-seasons-fort-lauderdale':{name:'Four Seasons Fort Lauderdale',market:'Fort Lauderdale',rooms:148,floors:22,elevators:4,brand:'Four Seasons',notes:'Only Five-Diamond in FLL, Michelin-star chef'},
+    'w-fort-lauderdale':{name:'W Fort Lauderdale',market:'Fort Lauderdale',rooms:517,floors:25,elevators:5,brand:'W Hotels (Marriott)',notes:'Largest beachfront, rooftop WET deck, full spa'},
+    'the-ritz-carlton-fort-lauderdale':{name:'The Ritz-Carlton Fort Lauderdale',market:'Fort Lauderdale',rooms:166,floors:24,elevators:4,brand:'Ritz-Carlton (Marriott)',notes:'European spa (17K sq ft), wine room'},
+    'marriott-harbor-beach-resort-spa':{name:'Marriott Harbor Beach Resort & Spa',market:'Fort Lauderdale',rooms:650,floors:12,elevators:2,brand:'Marriott',notes:'16 private beachfront acres, 4 restaurants'},
+    'diplomat-beach-resort':{name:'Diplomat Beach Resort',market:'Fort Lauderdale',rooms:1000,floors:36,elevators:7,brand:'Curio Collection (Hilton)',notes:'Largest in pipeline (1,000 keys), 8 restaurants'},
+    'mayfair-house-hotel-garden':{name:'Mayfair House Hotel & Garden',market:'Coconut Grove',rooms:179,floors:7,elevators:1,brand:'Independent (2 Michelin Keys)',notes:'HEI management, Michelin Keys'},
+    'the-ritz-carlton-coconut-grove':{name:'The Ritz-Carlton Coconut Grove',market:'Coconut Grove',rooms:115,floors:20,elevators:4,brand:'Ritz-Carlton (Marriott)',notes:'Boutique luxury Ritz, tower floors 2-8'},
+    'mr-c-miami-coconut-grove':{name:'Mr. C Miami',market:'Coconut Grove',rooms:100,floors:22,elevators:4,brand:'Independent (Cipriani)',notes:'Owner-operated, Bellini rooftop, direct decision access'},
+    'courtyard-miami-coconut-grove':{name:'Courtyard Miami Coconut Grove',market:'Coconut Grove',rooms:196,floors:20,elevators:4,brand:'Courtyard (Marriott)',notes:'Highest key count in Grove, 20th-floor ballroom'},
+    'the-mutiny-hotel':{name:'The Mutiny Hotel',market:'Coconut Grove',rooms:170,floors:12,elevators:2,brand:'Independent',notes:'F&B + room service, pool; condo-hotel'},
+    'the-biltmore-hotel-miami':{name:'The Biltmore Hotel Miami',market:'Coral Gables',rooms:271,floors:16,elevators:3,brand:'Independent (National Historic Landmark)',notes:'150 acres, golf, largest hotel pool in US'},
+    'loews-coral-gables':{name:'Loews Coral Gables',market:'Coral Gables',rooms:242,floors:18,elevators:3,brand:'Loews Hotels',notes:'4 F&B venues, rooftop lounge, innovation-receptive'},
+    'hotel-colonnade-autograph-collection':{name:'Hotel Colonnade, Autograph Collection',market:'Coral Gables',rooms:157,floors:9,elevators:1,brand:'Autograph Collection (Marriott)',notes:'Miracle Mile, rooftop pool, 28K sq ft meetings'},
+    'hyatt-regency-coral-gables':{name:'Hyatt Regency Coral Gables',market:'Coral Gables',rooms:254,floors:14,elevators:2,brand:'Hyatt Regency',notes:'20K sq ft events, grand ballroom'},
+    'st-regis-longboat-key-resort':{name:'St. Regis Longboat Key Resort',market:'Sarasota',rooms:194,floors:6,elevators:1,brand:'St. Regis (Marriott)',notes:'Brand new ($376M, opened 2024), 5 dining venues'},
+    'the-ritz-carlton-sarasota':{name:'The Ritz-Carlton Sarasota',market:'Sarasota',rooms:276,floors:9,elevators:1,brand:'Ritz-Carlton (Marriott)',notes:'AAA Five Diamond, 26K sq ft meetings, Beach Club'},
+    'the-westin-sarasota':{name:'The Westin Sarasota',market:'Sarasota',rooms:270,floors:19,elevators:3,brand:'Westin (Marriott)',notes:'Tallest in market (19 floors), rooftop bar'},
+    'resort-at-longboat-key-club':{name:'Resort at Longboat Key Club',market:'Sarasota',rooms:226,floors:10,elevators:2,brand:'Independent (AAA Four Diamond)',notes:'5 restaurants, spa, golf, marina'},
+    'zota-beach-resort':{name:'Zota Beach Resort',market:'Sarasota',rooms:187,floors:6,elevators:1,brand:'Independent',notes:'Opal sibling to Longboat Key Club — 2-property deal'},
+    'the-statler-dallas':{name:'The Statler Dallas',market:'Dallas',rooms:159,floors:19,elevators:3,brand:'Curio Collection (Hilton)',notes:'4 restaurants, rooftop bar, Grand Ballroom, Aimbridge'},
+    'hall-arts-hotel-autograph-collection':{name:'HALL Arts Hotel, Autograph Collection',market:'Dallas',rooms:183,floors:11,elevators:2,brand:'Autograph Collection (Marriott)',notes:'Arts District, Aimbridge portfolio play'},
+    'hotel-crescent-court':{name:'Hotel Crescent Court',market:'Dallas',rooms:226,floors:7,elevators:1,brand:'Independent (former Rosewood)',notes:'Nobu restaurant, Crescent Club, direct owner'},
+    'kimpton-pittman-hotel':{name:'Kimpton Pittman Hotel',market:'Dallas',rooms:165,floors:7,elevators:1,brand:'Kimpton (IHG)',notes:'LEED-certified, Deep Ellum, Beaux-Arts landmark'},
+    'virgin-hotels-dallas':{name:'Virgin Hotels Dallas',market:'Dallas',rooms:268,floors:16,elevators:3,brand:'Virgin Hotels',notes:'3 F&B outlets, Design District, tech-brand alignment'}
+};
+
+// ─────────────────────────────────────────────────────────────
+// Robot data — loaded once at page startup
+// ─────────────────────────────────────────────────────────────
+let allRobots = [];
+
+function updateRobotCountBadge(count) {
+    const badge = document.getElementById('robot-count-badge');
+    if (badge) {
+        badge.textContent = `${count} robots`;
+    }
+}
+
+async function loadRobots() {
+    try {
+        const res = await fetch('./data/robots.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status} loading robots.json`);
+        allRobots = await res.json();
+        updateRobotCountBadge(allRobots.length);
+    } catch (err) {
+        console.error('[Fleet Designer] Failed to load robots.json:', err);
+        updateRobotCountBadge(0);
+    }
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Recommendation Engine — Task 4
+// ─────────────────────────────────────────────────────────────
+
+// WHY 2850: median RaaS monthly estimate across the catalog when
+// no public price is available — conservative middle ground
+const DEFAULT_RAAS_MONTHLY = 2850;
+
+// Module-level state for the current fleet recommendation
+let currentSlots = [];
+
+// Country flags — shared with robot-catalog.html
+const FLAGS = {"China":"\ud83c\udde8\ud83c\uddf3","USA":"\ud83c\uddfa\ud83c\uddf8","United States":"\ud83c\uddfa\ud83c\uddf8","Canada":"\ud83c\udde8\ud83c\udde6","South Korea":"\ud83c\uddf0\ud83c\uddf7","Japan":"\ud83c\uddef\ud83c\uddf5","Germany":"\ud83c\udde9\ud83c\uddea","Norway":"\ud83c\uddf3\ud83c\uddf4","Switzerland":"\ud83c\udde8\ud83c\udded","Denmark":"\ud83c\udde9\ud83c\uddf0","Austria":"\ud83c\udde6\ud83c\uddf9","Singapore":"\ud83c\uddf8\ud83c\uddec","Israel":"\ud83c\uddee\ud83c\uddf1","Taiwan":"\ud83c\uddf9\ud83c\uddfc","France":"\ud83c\uddeb\ud83c\uddf7","United Kingdom":"\ud83c\uddec\ud83c\udde7","Australia":"\ud83c\udde6\ud83c\uddfa","India":"\ud83c\uddee\ud83c\uddf3","Sweden":"\ud83c\uddf8\ud83c\uddea","Finland":"\ud83c\uddeb\ud83c\uddee","Netherlands":"\ud83c\uddf3\ud83c\uddf1","Italy":"\ud83c\uddee\ud83c\uddf9"};
+
+// ── GOALS constant — maps each goal ID to filtering/scoring config ──
+const GOALS = {
+    // ── Delivery & Guest Service ────────────────────────────────
+    'goal-roomservice': {
+        categories: ['hotel_delivery_robot'],
+        requireElevator: true,
+        requireKeyword: /room.?service|meal|dining|enclosed|thermal/i,
+        defaultSavings: 3800, // WHY: one FTE room-service runner costs ~$3,800/mo loaded
+        type: 'delivery',
+        serviceLine: 'Full Meal Room Service'
+    },
+    'goal-small-delivery': {
+        categories: ['delivery_robot', 'hotel_delivery_robot'],
+        requireElevator: true,
+        defaultSavings: 2800, // WHY: front desk runner shift for amenities/packages
+        type: 'delivery',
+        serviceLine: 'Small Item Delivery'
+    },
+    'goal-foodrunner': {
+        categories: ['delivery_robot'],
+        requireKeyword: /food|tray|restaurant|dine|deliver/i,
+        defaultSavings: 3200, // WHY: F&B runner labor in a busy outlet
+        type: 'delivery',
+        serviceLine: 'Food Runner'
+    },
+    'goal-bellhop': {
+        categories: ['delivery_robot', 'hotel_delivery_robot'],
+        requireElevator: true,
+        minPayloadKg: 15, // WHY: luggage weighs 15-30 kg per bag
+        defaultSavings: 3500, // WHY: bellhop shift labor cost
+        type: 'delivery',
+        serviceLine: 'Bellhop / Luggage'
+    },
+    'goal-wow': {
+        categories: ['service_robot', 'social_robot', 'telepresence_robot', 'delivery_robot'],
+        requireKeyword: /greet|reception|interact|advertis|display/i,
+        defaultSavings: 1500, // WHY: guest satisfaction / NPS uplift proxy, not direct labor
+        type: 'service',
+        serviceLine: 'Guest Experience'
+    },
+
+    // ── Floor Care ──────────────────────────────────────────────
+    'goal-carpet': {
+        categories: ['cleaning_robot'],
+        requireKeyword: /carpet|vacuum|sweep|dry/i,
+        defaultSavings: 4200, // WHY: EVS corridor/ballroom carpet labor for a 200+ room hotel
+        type: 'cleaning',
+        serviceLine: 'Large Carpet Care'
+    },
+    'goal-hardfloor': {
+        categories: ['cleaning_robot'],
+        requireKeyword: /scrub|mop|hard.?floor|polish|floor.?clean/i,
+        defaultSavings: 3500, // WHY: lobby/public-area hard-floor cleaning shift cost
+        type: 'cleaning',
+        serviceLine: 'Large Hard Floor Care'
+    },
+
+    // ── Logistics ───────────────────────────────────────────────
+    'goal-linen': {
+        categories: ['hospital_logistics_robot', 'delivery_robot', 'hotel_delivery_robot', 'industrial_amr'],
+        requireElevator: true,
+        minPayloadKg: 20, // WHY: a linen cart load is ~20-40 kg minimum
+        defaultSavings: 4500, // WHY: linen runner FTE cost + overtime
+        type: 'logistics',
+        serviceLine: 'Linen Transport'
+    },
+    'goal-heavy-logistics': {
+        categories: ['industrial_amr', 'hospital_logistics_robot'],
+        minPayloadKg: 100, // WHY: banquet tables, supply pallets need 100+ kg capacity
+        defaultSavings: 4000, // WHY: engineering/facilities runner shift for heavy moves
+        type: 'logistics',
+        serviceLine: 'Heavy Item Logistics'
+    },
+
+    // ── Outdoor & Grounds ───────────────────────────────────────
+    'goal-outdoor-sweep': {
+        categories: ['cleaning_robot'],
+        requireOutdoor: true,
+        requireKeyword: /sweep|outdoor|semi.?outdoor|parking/i,
+        defaultSavings: 2500, // WHY: grounds crew partial offset for pathway sweeping
+        type: 'cleaning',
+        serviceLine: 'Outdoor Sweeping'
+    },
+    'goal-outdoor-mow': {
+        categories: ['consumer_robot'], // WHY: Keenmow K1 is categorized as consumer_robot
+        requireOutdoor: true,
+        requireKeyword: /mow|lawn|grass/i,
+        defaultSavings: 1800, // WHY: landscaping contract partial offset
+        type: 'cleaning',
+        serviceLine: 'Lawn Mowing'
+    },
+    'goal-garage': {
+        categories: ['cleaning_robot'],
+        requireKeyword: /sweep|scrub|large.?area|warehouse|parking|industrial/i,
+        defaultSavings: 2200, // WHY: garage cleaning labor is typically outsourced
+        type: 'cleaning',
+        serviceLine: 'Parking Garage Sweep'
+    },
+    'goal-pool-clean': {
+        categories: ['outdoor_cleaning_robot', 'pool_cleaning_robot'],
+        requireOutdoor: true,
+        defaultSavings: 1500, // WHY: pool maintenance labor partial offset
+        type: 'cleaning',
+        serviceLine: 'Pool Cleaning'
+    },
+    'goal-pooldeck': {
+        categories: ['cleaning_robot'],
+        requireOutdoor: true,
+        requireKeyword: /scrub|deck|outdoor.*clean|semi.?outdoor/i,
+        defaultSavings: 1800, // WHY: pool deck scrubbing labor
+        type: 'cleaning',
+        serviceLine: 'Pool Deck Cleaning'
+    },
+    'goal-padel': {
+        categories: ['cleaning_robot'],
+        requireOutdoor: true,
+        requireKeyword: /sweep|court|outdoor/i,
+        defaultSavings: 1200, // WHY: court maintenance labor is minimal — mostly convenience
+        type: 'cleaning',
+        serviceLine: 'Padel / Tennis Court'
+    },
+
+    // ── Safety & Sanitation ─────────────────────────────────────
+    'goal-security': {
+        categories: ['security_robot', 'quadruped_robot'],
+        defaultSavings: 5000, // WHY: overnight security guard shift cost
+        type: 'security',
+        serviceLine: 'Security Patrol'
+    },
+    'goal-disinfection': {
+        categories: ['disinfection_robot'],
+        defaultSavings: 3000, // WHY: infection control labor + chemical savings
+        type: 'cleaning',
+        serviceLine: 'Disinfection'
+    },
+};
+
+
+// ─────────────────────────────────────────────────────────────
+// scoreRobot — returns {score: 0-100, breakdown: {...}, monthlyEstimate}
+//
+// Five weighted factors that sum to 100:
+//   Category relevance (30%), Import risk (25%), Price fit (20%),
+//   Spec match (15%), Market validation (10%)
+// ─────────────────────────────────────────────────────────────
+function scoreRobot(robot, goal, budgetPerSlot) {
+    const breakdown = {};
+
+    // ── 1. Category relevance (30%) ──────────────────────────────
+    let catScore = 0;
+    if (goal.categories.length > 0 && goal.categories.includes(robot.primary_category)) {
+        catScore = 100; // exact primary_category match
+    } else {
+        // Check use-case keyword match
+        const useCases = (robot.primary_use_cases || []).join(' ').toLowerCase();
+        const differentiators = (robot.key_differentiators || []).join(' ').toLowerCase();
+        const combined = useCases + ' ' + differentiators + ' ' + (robot.notes || '').toLowerCase();
+
+        if (goal.requireKeyword && goal.requireKeyword.test(combined)) {
+            catScore = 70;
+        } else if (goal.categories.length === 0 && goal.requireOutdoor && robot.outdoor_capable) {
+            // WHY: outdoor goal has empty categories — outdoor_capable IS the relevance signal
+            catScore = 100;
+        } else {
+            // Check if robot targets hospitality
+            const industries = (robot.target_industries || []).join(' ').toLowerCase();
+            if (/hotel|hospitality|hostel|resort/i.test(industries)) {
+                catScore = 40;
+            }
+        }
+    }
+    breakdown.categoryRelevance = catScore;
+
+    // ── 2. Import risk (25%) ─────────────────────────────────────
+    // Lower risk = higher score. Risk score is 0-10, so invert it.
+    const riskScore = robot.import_risk_score != null ? robot.import_risk_score : 5;
+    const importScore = Math.max(0, Math.min(100, (10 - riskScore) * 10));
+    breakdown.importRisk = Math.round(importScore);
+
+    // ── 3. Price fit (20%) ───────────────────────────────────────
+    const monthlyEstimate = parseMonthlyPrice(robot.public_price, DEFAULT_RAAS_MONTHLY);
+    let priceScore = 0;
+    if (budgetPerSlot > 0) {
+        const ratio = monthlyEstimate / budgetPerSlot;
+        if (ratio <= 1) {
+            // Under budget: 60 base + proportional bonus up to 100
+            // WHY: prefer robots that use the budget well (not too cheap = likely underspec)
+            priceScore = 60 + Math.round(ratio * 40);
+        } else {
+            // Over budget: penalize linearly, floor at 0
+            priceScore = Math.max(0, Math.round(100 - (ratio - 1) * 100));
+        }
+    } else {
+        priceScore = 50; // No budget info — neutral
+    }
+    breakdown.priceFit = priceScore;
+
+    // ── 4. Spec match (15%) ──────────────────────────────────────
+    // Sum raw points, then normalize to 0-100 (max possible = 115)
+    let specPoints = 0;
+    const MAX_SPEC_POINTS = 115;
+
+    if (goal.requireElevator && robot.elevator_integration) {
+        specPoints += 30;
+    }
+    if (goal.minPayloadKg && robot.payload_kg >= goal.minPayloadKg) {
+        specPoints += 20;
+    } else if (!goal.minPayloadKg && robot.payload_kg > 0) {
+        specPoints += 10; // any payload data is a mild positive
+    }
+    if (robot.runtime_hours >= 6) {
+        specPoints += 20; // WHY: 6h minimum for a useful shift
+    }
+    if (robot.fleet_management) {
+        specPoints += 15;
+    }
+    if (goal.requireOutdoor && robot.outdoor_capable) {
+        specPoints += 30;
+    }
+
+    const specScore = Math.round((specPoints / MAX_SPEC_POINTS) * 100);
+    breakdown.specMatch = specScore;
+
+    // ── 5. Market validation (10%) ───────────────────────────────
+    let marketScore = 0;
+    if (robot.status === 'commercially_available') {
+        marketScore = 60;
+    } else if (robot.status === 'limited_production' || robot.status === 'early_access') {
+        marketScore = 30;
+    }
+    // Deployment evidence in notes
+    const notes = (robot.notes || '').toLowerCase();
+    if (/deploy|install|operat|live|running|active fleet/i.test(notes)) {
+        marketScore += 20;
+    }
+    // Named customers
+    if (/hilton|marriott|hyatt|ihg|accor|starwood|four seasons|ritz|intercontinental|westin/i.test(notes)) {
+        marketScore += 20;
+    }
+    breakdown.marketValidation = Math.min(100, marketScore);
+
+    // ── Weighted total ───────────────────────────────────────────
+    let total = Math.round(
+        breakdown.categoryRelevance * 0.30 +
+        breakdown.importRisk * 0.25 +
+        breakdown.priceFit * 0.20 +
+        breakdown.specMatch * 0.15 +
+        breakdown.marketValidation * 0.10
+    );
+
+    // WHY: Keenon is the primary vendor (existing partnership, proven hotel deployments).
+    // PUDU fills gaps where Keenon lacks a category match. The +12 boost ensures Keenon
+    // wins head-to-head when both vendors have a viable robot for the same goal, but
+    // isn't so large that a poorly-matched Keenon robot beats a perfect PUDU fit.
+    if (robot.company === 'Keenon') {
+        total += 12;
+    }
+
+    return {
+        score: Math.min(100, Math.max(0, total)),
+        breakdown,
+        monthlyEstimate
+    };
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// generateFleet — reads form inputs, filters/scores/selects per goal
+// ─────────────────────────────────────────────────────────────
+function generateFleet(robots) {
+    const activeGoals = [...document.querySelectorAll('.goal-chip.active')].map(c => c.id);
+    const floors = parseInt(document.getElementById('prop-floors').value, 10) || 1;
+    const elevators = parseInt(document.getElementById('prop-elevators').value, 10) || 0;
+    const budgetMin = parseInt(document.getElementById('budget-min').value, 10) || 5000;
+    const budgetMax = parseInt(document.getElementById('budget-max').value, 10) || 50000;
+
+    // WHY: divide max budget evenly across goals to get per-slot budget ceiling
+    const budgetPerSlot = activeGoals.length > 0 ? budgetMax / activeGoals.length : budgetMax;
+
+    // WHY: F&B-heavy and event-capable properties benefit more from delivery/logistics robots
+    const fbOutlets = parseInt(document.getElementById('fd-fb-outlets').value, 10) || 0;
+    const eventSqFt = parseInt(document.getElementById('fd-event-sqft').value, 10) || 0;
+
+    const isMultiFloor = floors > 1;
+
+    const slots = [];
+
+    for (const goalId of activeGoals) {
+        const goal = GOALS[goalId];
+        if (!goal) continue;
+
+        // ── Filter candidates ────────────────────────────────
+        const candidates = robots.filter(robot => {
+            // WHY: V1 proposals only recommend Keenon and PUDU robots — these are the two
+            // vendors with confirmed US availability and partnership readiness. The full
+            // 222-robot catalog remains for browsing; this gate scopes fleet recommendations.
+            const V1_VENDORS = ['Keenon', 'Pudu'];
+            if (!V1_VENDORS.some(v => robot.company.toLowerCase().includes(v.toLowerCase()))) return false;
+
+            // Status gate: only production-ready or near-ready
+            const validStatuses = ['commercially_available', 'limited_production', 'early_access'];
+            if (!validStatuses.includes(robot.status)) return false;
+
+            // Category or keyword match
+            let categoryMatch = false;
+            if (goal.categories.length > 0) {
+                categoryMatch = goal.categories.includes(robot.primary_category);
+            }
+            if (!categoryMatch && goal.requireKeyword) {
+                const text = [
+                    ...(robot.primary_use_cases || []),
+                    ...(robot.key_differentiators || []),
+                    robot.notes || ''
+                ].join(' ');
+                categoryMatch = goal.requireKeyword.test(text);
+            }
+            // WHY: outdoor goal uses outdoor_capable as primary filter, not category
+            if (!categoryMatch && goal.categories.length === 0 && goal.requireOutdoor) {
+                categoryMatch = robot.outdoor_capable === true;
+            }
+            if (!categoryMatch) return false;
+
+            // Elevator requirement: if multi-floor and goal needs elevator access
+            if (goal.requireElevator && isMultiFloor && elevators > 0) {
+                // Don't hard-exclude — but this will be scored in specMatch
+                // Only exclude if building has NO elevators (robot literally can't reach floors)
+            }
+
+            // Outdoor requirement
+            if (goal.requireOutdoor && !robot.outdoor_capable) return false;
+
+            // Payload minimum — only exclude if payload is known AND below threshold
+            // WHY: robots with null payload_kg shouldn't be dropped; they'll score lower in specMatch instead
+            if (goal.minPayloadKg && robot.payload_kg != null && robot.payload_kg < goal.minPayloadKg) return false;
+
+            return true;
+        });
+
+        // ── Score each candidate ─────────────────────────────
+        const scored = candidates.map(robot => {
+            const result = scoreRobot(robot, goal, budgetPerSlot);
+            let adjustedScore = result.score;
+
+            // WHY: 10% boost for delivery/logistics goals when property has 3+ F&B outlets —
+            // more F&B = more delivery traffic = higher value from delivery robots
+            if (fbOutlets >= 3 && (goal.type === 'delivery' || goal.type === 'logistics')) {
+                adjustedScore = Math.min(100, Math.round(adjustedScore * 1.10));
+            }
+
+            // WHY: 10% boost for logistics goals when property has event space —
+            // events mean linen/supply surge, logistics robots earn their keep faster
+            if (eventSqFt > 0 && goal.type === 'logistics') {
+                adjustedScore = Math.min(100, Math.round(adjustedScore * 1.10));
+            }
+
+            return { robot, ...result, score: adjustedScore };
+        });
+
+        // ── Sort by score descending, take top 3 ─────────────
+        scored.sort((a, b) => b.score - a.score);
+        const top3 = scored.slice(0, 3);
+
+        const selected = top3[0] || null;
+        const alternatives = top3.slice(1);
+
+        slots.push({
+            goalId,
+            label: goal.serviceLine,
+            type: goal.type,
+            serviceLine: goal.serviceLine,
+            defaultSavings: goal.defaultSavings,
+            savings: goal.defaultSavings,
+            selected: selected ? {
+                robot: selected.robot,
+                score: selected.score,
+                breakdown: selected.breakdown,
+                monthlyEstimate: selected.monthlyEstimate
+            } : null,
+            alternatives: alternatives.map(a => ({
+                robot: a.robot,
+                score: a.score,
+                breakdown: a.breakdown,
+                monthlyEstimate: a.monthlyEstimate
+            })),
+            allCandidates: candidates.length
+        });
+    }
+
+    return slots;
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// renderFleet — displays results in the right panel
+// ─────────────────────────────────────────────────────────────
+function renderFleet(slots) {
+    const emptyState = document.getElementById('empty-state');
+    const summaryStrip = document.getElementById('summary-strip');
+    const exportBar = document.getElementById('export-bar');
+    const fleetSlotsContainer = document.getElementById('fleet-slots');
+
+    // Hide empty state, show summary and export
+    emptyState.style.display = 'none';
+    summaryStrip.style.display = 'flex';
+    exportBar.style.display = 'flex';
+    updateProposalButton();
+
+    // ── Summary calculations ─────────────────────────────────
+    let totalRobots = 0;
+    let totalMonthlyCost = 0;
+    let totalAnnualSavings = 0;
+
+    for (const slot of slots) {
+        if (slot.selected) {
+            totalRobots++;
+            totalMonthlyCost += slot.selected.monthlyEstimate;
+            totalAnnualSavings += slot.savings * 12;
+        }
+    }
+
+    const annualCost = totalMonthlyCost * 12;
+    // WHY: ROI multiple = annual savings / annual cost — how many times the investment pays back
+    const roiMultiple = annualCost > 0 ? (totalAnnualSavings / annualCost) : 0;
+
+    // Update summary chips
+    document.getElementById('sum-robots').textContent = totalRobots;
+    document.getElementById('sum-raas').textContent = '$' + totalMonthlyCost.toLocaleString('en-US');
+    document.getElementById('sum-savings').textContent = '$' + totalAnnualSavings.toLocaleString('en-US');
+    document.getElementById('sum-roi').textContent = roiMultiple.toFixed(1) + 'x';
+
+    // ── Render fleet slots ───────────────────────────────────
+    fleetSlotsContainer.innerHTML = '';
+
+    slots.forEach((slot, idx) => {
+        const slotEl = document.createElement('div');
+        slotEl.className = 'fleet-slot';
+        slotEl.dataset.slotIndex = idx;
+
+        if (!slot.selected) {
+            slotEl.innerHTML = `
+                <button class="slot-delete" data-delete="${idx}" title="Remove from fleet">&times;</button>
+                <div class="slot-num">${idx + 1}</div>
+                <div class="slot-info">
+                    <div class="slot-role">${slot.label}</div>
+                    <div class="slot-robot">No suitable robot found</div>
+                    <div class="slot-meta">0 candidates in catalog</div>
+                </div>
+            `;
+        } else {
+            const robot = slot.selected.robot;
+            const score = slot.selected.score;
+            const monthlyEst = slot.selected.monthlyEstimate;
+            const riskScore = robot.import_risk_score != null ? robot.import_risk_score : 5;
+            const riskClass = riskScore <= 3 ? 'risk-low' : riskScore <= 6 ? 'risk-med' : 'risk-high';
+            const riskLabel = riskScore <= 3 ? 'Low' : riskScore <= 6 ? 'Med' : 'High';
+            const useCases = (robot.primary_use_cases || []).slice(0, 2).join(', ');
+            const altCount = slot.alternatives.length;
+            const elevatorIcon = robot.elevator_integration ? 'Elevator' : '';
+
+            slotEl.innerHTML = `
+                <button class="slot-delete" data-delete="${idx}" title="Remove from fleet">&times;</button>
+                <div class="slot-num">${idx + 1}</div>
+                ${robot.image_url ? `<img class="slot-thumb" src="${robot.image_url}" alt="${robot.model_name}" loading="lazy">` : ''}
+                <div class="slot-info">
+                    <div class="slot-role">${slot.label}</div>
+                    <div class="slot-robot">${robot.company} ${robot.model_name}</div>
+                    <div class="slot-meta">
+                        ${useCases ? `<span class="meta-uses">${useCases}</span>` : ''}
+                        ${elevatorIcon ? `<span class="meta-elevator">${elevatorIcon}</span>` : ''}
+                        <span class="meta-risk ${riskClass}">Risk: ${riskLabel}</span>
+                        <span class="meta-score">Score: ${score}</span>
+                    </div>
+                </div>
+                <div class="slot-price">
+                    <span class="amount">$${monthlyEst.toLocaleString('en-US')}</span>
+                    <span class="period">/mo</span>
+                </div>
+                ${altCount > 0 ? `<div class="slot-swap" data-slot="${idx}">compare ${altCount} &rarr;</div>` : ''}
+            `;
+        }
+
+        // Wire delete button
+        const deleteBtn = slotEl.querySelector('.slot-delete');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // WHY: Don't trigger the comparison toggle
+                currentSlots.splice(idx, 1);
+                renderFleet(currentSlots);
+            });
+        }
+
+        // Wire click handler — clicking slot toggles comparison panel
+        if (slot.selected && slot.alternatives.length > 0) {
+            slotEl.addEventListener('click', () => toggleComparison(idx));
+        }
+
+        fleetSlotsContainer.appendChild(slotEl);
+
+        // Comparison container (hidden until user clicks)
+        const compDiv = document.createElement('div');
+        compDiv.className = 'comparison';
+        compDiv.id = `comp-${idx}`;
+        compDiv.style.display = 'none';
+        fleetSlotsContainer.appendChild(compDiv);
+    });
+
+    // Store current slots for other tasks (export, comparison)
+    currentSlots = slots;
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Comparison view — expand/collapse + render top-3 cards
+// ─────────────────────────────────────────────────────────────
+function toggleComparison(slotIdx) {
+    const el = document.getElementById('comp-' + slotIdx);
+    const slotEl = el.previousElementSibling;
+
+    if (el.style.display === 'none') {
+        // Close all other comparisons first
+        document.querySelectorAll('.comparison').forEach(c => { c.style.display = 'none'; });
+        document.querySelectorAll('.fleet-slot').forEach(s => s.classList.remove('expanded'));
+
+        el.style.display = 'block';
+        slotEl.classList.add('expanded');
+        renderComparison(slotIdx);
+    } else {
+        el.style.display = 'none';
+        slotEl.classList.remove('expanded');
+    }
+}
+
+function renderComparison(slotIdx) {
+    const slot = currentSlots[slotIdx];
+    if (!slot || !slot.selected) return;
+
+    const all = [slot.selected, ...slot.alternatives].filter(Boolean);
+    const el = document.getElementById('comp-' + slotIdx);
+
+    // Helper: format a value with unit, or em-dash if missing
+    function fv(v, unit) { return v != null ? v + (unit || '') : '\u2014'; }
+
+    // Helper: status label
+    function statusLabel(s) {
+        if (s === 'commercially_available') return 'Available';
+        if (s === 'limited_production') return 'Limited';
+        if (s === 'early_access') return 'Early Access';
+        return s || '';
+    }
+    function statusClass(s) {
+        if (s === 'commercially_available') return 'st-available';
+        if (s === 'limited_production') return 'st-limited';
+        return 'st-early';
+    }
+
+    el.innerHTML = `
+        <div class="comp-header">Top ${all.length} candidates for ${slot.label} (${slot.allCandidates} evaluated)</div>
+        <div class="comp-grid">
+            ${all.map((c, ci) => {
+                const r = c.robot;
+                const isSelected = ci === 0;
+                const riskScore = r.import_risk_score != null ? r.import_risk_score : 5;
+                const riskClass = riskScore <= 3 ? 'risk-low' : riskScore <= 6 ? 'risk-med' : 'risk-high';
+                const riskLabel = r.import_risk_level || (riskScore <= 3 ? 'Low' : riskScore <= 6 ? 'Medium' : 'High');
+                const scoreClass = c.score >= 75 ? 'score-high' : c.score >= 50 ? 'score-mid' : 'score-low';
+                const flag = FLAGS[r.country] || '';
+                const diffs = (r.key_differentiators || []).slice(0, 3);
+                const useCases = (r.primary_use_cases || []).slice(0, 4);
+                const el_yes = r.elevator_integration === true;
+
+                const imgHtml = r.image_url
+                    ? `<img src="${r.image_url}" alt="${r.model_name}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=cc-img-placeholder>${r.model_name.substring(0,6)}</div>'">`
+                    : `<div class="cc-img-placeholder">${r.model_name.substring(0,6)}</div>`;
+
+                const logoHtml = r.logo_url
+                    ? `<img src="${r.logo_url}" alt="">`
+                    : '';
+
+                const companyLink = r.company_website
+                    ? `<a href="${r.company_website}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none" onclick="event.stopPropagation()">${r.company}</a>`
+                    : r.company;
+
+                return `<div class="comp-card ${isSelected ? 'selected' : ''}" data-slot="${slotIdx}" data-candidate="${ci}">
+                    <div class="cc-header">
+                        <div class="cc-img-wrap">${imgHtml}</div>
+                        <div class="cc-identity">
+                            <div class="cc-model">${r.product_url ? `<a href="${r.product_url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none" onclick="event.stopPropagation()">${r.model_name}</a>` : r.model_name}</div>
+                            <div class="cc-company">${logoHtml} ${companyLink}</div>
+                            <div class="cc-origin"><span class="flag">${flag}</span> ${r.country}${r.hq_city ? ' \u00b7 ' + r.hq_city : ''}</div>
+                        </div>
+                        <div class="cc-score-badge ${scoreClass}">${c.score}</div>
+                    </div>
+
+                    <div class="cc-body">
+                        <span class="cc-status ${statusClass(r.status)}">${statusLabel(r.status)}</span>
+
+                        <div class="cc-price-row">
+                            <span class="cc-price-est">$${(c.monthlyEstimate || 0).toLocaleString('en-US')} <span class="unit">/mo est.</span></span>
+                            <span class="cc-price-raw">${r.public_price && r.public_price !== 'not_publicly_listed' ? r.public_price : 'Price not listed'}</span>
+                        </div>
+
+                        <div class="cc-specs">
+                            <div class="cc-spec"><span class="k">Payload</span><span class="v">${fv(r.payload_kg, ' kg')}</span></div>
+                            <div class="cc-spec"><span class="k">Runtime</span><span class="v">${fv(r.runtime_hours, 'h')}</span></div>
+                            <div class="cc-spec"><span class="k">Speed</span><span class="v">${fv(r.max_speed_mps, ' m/s')}</span></div>
+                            <div class="cc-spec"><span class="k">Weight</span><span class="v">${fv(r.weight_kg, ' kg')}</span></div>
+                            <div class="cc-spec"><span class="k">Elevator</span><span class="v ${el_yes ? 'yes' : 'no'}">${el_yes ? 'Yes' : 'No'}</span></div>
+                            <div class="cc-spec"><span class="k">Nav</span><span class="v" style="font-size:0.52rem">${r.navigation_method || '\u2014'}</span></div>
+                        </div>
+
+                        ${useCases.length ? `<div class="cc-uses">${useCases.map(u => `<span class="cc-use">${u}</span>`).join('')}</div>` : ''}
+
+                        <div class="cc-badges">
+                            ${el_yes ? '<span class="cc-badge b-elev">Elevator</span>' : ''}
+                            ${r.fleet_management ? `<span class="cc-badge b-fleet">${r.fleet_management}</span>` : ''}
+                            ${r.outdoor_capable ? '<span class="cc-badge b-outdoor">Outdoor</span>' : ''}
+                            ${r.ip_rating ? `<span class="cc-badge b-ip">${r.ip_rating}</span>` : ''}
+                        </div>
+
+                        ${r.import_risk_score != null ? `
+                        <div class="cc-risk">
+                            <div class="cc-risk-score ${riskClass}">${r.import_risk_score}</div>
+                            <div class="cc-risk-info">
+                                <div class="cc-risk-label ${riskClass}">Import Risk: ${riskLabel}</div>
+                                ${r.import_risk_summary ? `<div class="cc-risk-detail">${r.import_risk_summary}</div>` : ''}
+                            </div>
+                            ${r.import_tariff_rate ? `<div class="cc-risk-tariff">${r.import_tariff_rate}</div>` : ''}
+                        </div>` : ''}
+
+                        ${diffs.length ? `<div class="cc-diffs">${diffs.map(d => `<div class="cc-diff">${d}</div>`).join('')}</div>` : ''}
+
+                        ${r.notes ? `<div class="cc-notes">${r.notes}</div>` : ''}
+
+                        <div class="pick-btn">${isSelected ? 'Selected' : 'Swap to this'}</div>
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+    `;
+
+    // Wire swap click handlers via delegation
+    el.querySelectorAll('.comp-card:not(.selected)').forEach(card => {
+        card.addEventListener('click', () => {
+            const si = parseInt(card.dataset.slot, 10);
+            const ci = parseInt(card.dataset.candidate, 10);
+            swapRobot(si, ci);
+        });
+    });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// swapRobot — promote an alternative to selected, re-render
+// ─────────────────────────────────────────────────────────────
+function swapRobot(slotIdx, candidateIdx) {
+    const slot = currentSlots[slotIdx];
+    if (!slot || candidateIdx === 0) return;
+
+    const all = [slot.selected, ...slot.alternatives].filter(Boolean);
+
+    // Promote the clicked candidate; everyone else becomes an alternative
+    slot.selected = all[candidateIdx];
+    slot.alternatives = all.filter((_, i) => i !== candidateIdx);
+
+    // Re-render the entire fleet (updates summary totals)
+    renderFleet(currentSlots);
+
+    // Re-open the comparison for this slot after render
+    // WHY: setTimeout 0 lets the DOM update before we try to expand
+    setTimeout(() => toggleComparison(slotIdx), 0);
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Property type selector + profile summary
+// ─────────────────────────────────────────────────────────────
+function updatePropertyProfile() {
+    const rooms = parseInt(document.getElementById('prop-rooms').value, 10) || 0;
+    const floors = parseInt(document.getElementById('prop-floors').value, 10) || 0;
+    const elevators = parseInt(document.getElementById('prop-elevators').value, 10) || 0;
+
+    const scaleEl = document.getElementById('pp-scale');
+    const verticalEl = document.getElementById('pp-vertical');
+    const ratioEl = document.getElementById('pp-elevator-ratio');
+
+    // Scale classification
+    if (rooms === 0) {
+        scaleEl.textContent = '--';
+    } else if (rooms <= 80) {
+        scaleEl.textContent = 'Boutique (' + rooms + ' keys)';
+    } else if (rooms <= 200) {
+        scaleEl.textContent = 'Mid-scale (' + rooms + ' keys)';
+    } else if (rooms <= 500) {
+        scaleEl.textContent = 'Full-service (' + rooms + ' keys)';
+    } else {
+        scaleEl.textContent = 'Large-scale (' + rooms + ' keys)';
+    }
+
+    // Vertical profile
+    if (floors === 0) {
+        verticalEl.textContent = '--';
+    } else if (floors <= 3) {
+        verticalEl.textContent = 'Low-rise (' + floors + ' floors)';
+    } else if (floors <= 10) {
+        verticalEl.textContent = 'Mid-rise (' + floors + ' floors)';
+    } else {
+        verticalEl.textContent = 'High-rise (' + floors + ' floors)';
+    }
+
+    // Elevator ratio
+    if (floors <= 1 || elevators === 0) {
+        ratioEl.textContent = floors <= 1 ? 'N/A — single floor' : 'None — stairs only';
+        ratioEl.style.color = floors <= 1 ? 'var(--muted)' : 'var(--amber)';
+    } else {
+        const floorsPerElev = (floors / elevators).toFixed(1);
+        // WHY: <4 floors per elevator is good coverage for robot operations
+        const quality = floorsPerElev <= 4 ? 'Good' : floorsPerElev <= 6 ? 'Adequate' : 'Constrained';
+        const color = floorsPerElev <= 4 ? 'var(--green)' : floorsPerElev <= 6 ? 'var(--text)' : 'var(--amber)';
+        ratioEl.textContent = floorsPerElev + ' floors/elev — ' + quality;
+        ratioEl.style.color = color;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Custom prospects — stored in localStorage, loaded into dropdown
+// ─────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'accelerate-fleet-prospects';
+
+function loadCustomProspects() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch { return []; }
+}
+
+function saveCustomProspects(prospects) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prospects));
+}
+
+function rebuildDropdownProspects() {
+    const select = document.getElementById('prop-name');
+    // Remove any existing custom optgroups (they have data-custom attribute)
+    select.querySelectorAll('optgroup[data-custom]').forEach(g => g.remove());
+
+    const prospects = loadCustomProspects();
+    if (prospects.length === 0) return;
+
+    // Group by market
+    const byMarket = {};
+    prospects.forEach(p => {
+        if (!byMarket[p.market]) byMarket[p.market] = [];
+        byMarket[p.market].push(p);
+    });
+
+    // Add optgroups before the closing </select>
+    Object.keys(byMarket).sort().forEach(market => {
+        const group = document.createElement('optgroup');
+        group.label = market + ' (Prospects)';
+        group.dataset.custom = 'true';
+        byMarket[market].forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = 'prospect-' + p.id;
+            opt.textContent = p.name;
+            group.appendChild(opt);
+        });
+        select.appendChild(group);
+    });
+}
+
+function getProspectById(id) {
+    return loadCustomProspects().find(p => p.id === id) || null;
+}
+
+function initPropertySection() {
+    // Property type toggle
+    document.querySelectorAll('.prop-type').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.prop-type').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // WHY: Show free-form input when "Other" is selected so user can type a custom property type
+            const otherInput = document.getElementById('prop-type-other');
+            if (btn.dataset.type === 'other') {
+                otherInput.classList.add('visible');
+                otherInput.focus();
+            } else {
+                otherInput.classList.remove('visible');
+            }
+        });
+    });
+
+    // Load saved prospects into dropdown
+    rebuildDropdownProspects();
+
+    // Property dropdown — auto-fill form when a property is selected
+    const propSelect = document.getElementById('prop-name');
+
+    propSelect.addEventListener('change', () => {
+        const key = propSelect.value;
+
+        // Check pipeline properties first, then PROSPECTS constant, then localStorage custom prospects
+        let p = PIPELINE[key];
+        if (!p && key.startsWith('prospect-')) {
+            const prospectKey = key.replace('prospect-', '');
+            // Check the PROSPECTS constant (66 researched hotels from prospect-list.md)
+            const researchedProspect = PROSPECTS[prospectKey];
+            // Check localStorage custom prospects
+            const customProspect = getProspectById(prospectKey);
+            const source = researchedProspect || customProspect;
+            if (source) {
+                p = {
+                    name: source.name,
+                    type: source.type || 'hotel',
+                    rooms: source.rooms || 0,
+                    floors: source.floors || 0,
+                    guestFloors: source.guestFloors || '',
+                    elevators: source.elevators || 0,
+                    surfaces: source.surfaces || [],
+                    market: source.market,
+                    proposalUrl: null,
+                    siteProfileUrl: null
+                };
+            }
+        }
+
+        if (!p) {
+            // Reset facility details to empty
+            fillFacilityDetails({
+                elevatorMake: null, elevatorGuestCount: 0, elevatorServiceCount: 0,
+                outdoorAmenities: [], fbOutlets: 0, eventSpaceSqFt: 0,
+                surfaceZones: { corridors: [], lobby: [], fb: [], boh: [] }
+            });
+            updateProposalButton();
+            updateResearchLinks();
+            return;
+        }
+
+        // Fill metrics
+        document.getElementById('prop-rooms').value = p.rooms;
+        document.getElementById('prop-floors').value = p.floors;
+        document.getElementById('prop-guest-floors').value = p.guestFloors || '';
+        document.getElementById('prop-elevators').value = p.elevators;
+
+        // Set property type
+        document.querySelectorAll('.prop-type').forEach(b => {
+            b.classList.toggle('active', b.dataset.type === p.type);
+        });
+
+        // Set surfaces
+        const allSurfaces = ['carpet', 'hardwood', 'tile', 'terrazzo', 'outdoor'];
+        allSurfaces.forEach(s => {
+            const chip = document.getElementById('surface-' + s);
+            if (!chip) return;
+            const cb = chip.querySelector('input[type="checkbox"]');
+            const checked = (p.surfaces || []).includes(s);
+            cb.checked = checked;
+            chip.classList.toggle('checked', checked);
+        });
+
+        updatePropertyProfile();
+        updateProposalButton();
+        updateResearchLinks();
+
+        // Fill facility detail fields
+        fillFacilityDetails(p);
+    });
+
+    // Auto-update profile on input changes
+    ['prop-rooms', 'prop-floors', 'prop-elevators'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updatePropertyProfile);
+    });
+
+    // ── Facility detail expand/collapse ──────────────────────
+    const expandBtn = document.getElementById('facility-expand-btn');
+    const detailCard = document.getElementById('facility-detail-card');
+
+    expandBtn.addEventListener('click', () => {
+        detailCard.classList.toggle('hidden');
+        updateExpandButton();
+    });
+
+    // ── Elevator make — show custom text input when "Other" selected ──
+    const elevMakeSelect = document.getElementById('fd-elevator-make');
+    const elevCustomInput = document.getElementById('fd-elevator-custom');
+
+    elevMakeSelect.addEventListener('change', () => {
+        elevCustomInput.style.display = elevMakeSelect.value === 'Other' ? '' : 'none';
+        updateExpandButton();
+    });
+
+    elevCustomInput.addEventListener('input', updateExpandButton);
+    document.getElementById('fd-elevator-guest').addEventListener('input', updateExpandButton);
+    document.getElementById('fd-elevator-service').addEventListener('input', updateExpandButton);
+    document.getElementById('fd-fb-outlets').addEventListener('input', updateExpandButton);
+    document.getElementById('fd-event-sqft').addEventListener('input', updateExpandButton);
+
+    // ── Amenity chips — toggle checked class ──
+    document.querySelectorAll('.amenity-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const cb = chip.querySelector('input[type="checkbox"]');
+            cb.checked = !cb.checked;
+            chip.classList.toggle('checked', cb.checked);
+            syncSurfacesFromZones();
+            updateExpandButton();
+        });
+    });
+
+    // ── Zone chips — toggle checked class + sync global surfaces ──
+    document.querySelectorAll('.zone-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            chip.classList.toggle('checked');
+            syncSurfacesFromZones();
+            updateExpandButton();
+        });
+    });
+
+    // ── Add Prospect form ────────────────────────────────────
+    const toggleBtn = document.getElementById('add-prospect-toggle');
+    const form = document.getElementById('add-prospect-form');
+    const marketSelect = document.getElementById('apf-market');
+    const marketCustom = document.getElementById('apf-market-custom');
+
+    toggleBtn.addEventListener('click', () => {
+        const visible = form.style.display !== 'none';
+        form.style.display = visible ? 'none' : 'block';
+        toggleBtn.textContent = visible ? '+ Add Prospect' : 'Cancel';
+    });
+
+    document.getElementById('apf-cancel').addEventListener('click', () => {
+        form.style.display = 'none';
+        toggleBtn.textContent = '+ Add Prospect';
+    });
+
+    marketSelect.addEventListener('change', () => {
+        marketCustom.style.display = marketSelect.value === 'Other' ? 'block' : 'none';
+    });
+
+    document.getElementById('apf-save').addEventListener('click', () => {
+        const name = document.getElementById('apf-name').value.trim();
+        if (!name) {
+            document.getElementById('apf-name').style.borderColor = 'var(--red)';
+            return;
+        }
+
+        const market = marketSelect.value === 'Other'
+            ? (marketCustom.value.trim() || 'Other')
+            : marketSelect.value;
+
+        const prospect = {
+            id: Date.now().toString(36),
+            name,
+            market,
+            type: document.getElementById('apf-type').value,
+            rooms: parseInt(document.getElementById('apf-rooms').value, 10) || 0,
+            floors: parseInt(document.getElementById('apf-floors').value, 10) || 0,
+            guestFloors: '',
+            elevators: parseInt(document.getElementById('apf-elevators').value, 10) || 0,
+            surfaces: [],
+            brand: document.getElementById('apf-brand').value.trim(),
+            notes: document.getElementById('apf-notes').value.trim(),
+            dateAdded: new Date().toISOString().slice(0, 10)
+        };
+
+        // Save to localStorage
+        const all = loadCustomProspects();
+        all.push(prospect);
+        saveCustomProspects(all);
+
+        // Rebuild dropdown and select the new prospect
+        rebuildDropdownProspects();
+        propSelect.value = 'prospect-' + prospect.id;
+        propSelect.dispatchEvent(new Event('change'));
+
+        // Reset and hide form
+        form.style.display = 'none';
+        toggleBtn.textContent = '+ Add Prospect';
+        document.getElementById('apf-name').value = '';
+        document.getElementById('apf-rooms').value = '';
+        document.getElementById('apf-floors').value = '';
+        document.getElementById('apf-elevators').value = '';
+        document.getElementById('apf-brand').value = '';
+        document.getElementById('apf-notes').value = '';
+    });
+
+    updatePropertyProfile();
+}
+
+// ─────────────────────────────────────────────────────────────
+// fillFacilityDetails — populate facility detail card from property data
+// WHY: auto-fills elevator, amenities, and surface zones when
+// a pipeline property is selected from the dropdown
+// ─────────────────────────────────────────────────────────────
+function fillFacilityDetails(p) {
+    // Elevator
+    const makeSelect = document.getElementById('fd-elevator-make');
+    const customInput = document.getElementById('fd-elevator-custom');
+    const makeValue = p.elevatorMake || '';
+
+    // WHY: check if value matches a dropdown option; if not, select "Other" and fill custom input
+    const knownMakes = ['ThyssenKrupp', 'Otis', 'KONE', 'Schindler', 'Mitsubishi'];
+    if (makeValue && !knownMakes.includes(makeValue)) {
+        makeSelect.value = 'Other';
+        customInput.value = makeValue;
+        customInput.style.display = '';
+    } else {
+        makeSelect.value = makeValue;
+        customInput.value = '';
+        customInput.style.display = 'none';
+    }
+
+    document.getElementById('fd-elevator-guest').value = p.elevatorGuestCount || '';
+    document.getElementById('fd-elevator-service').value = p.elevatorServiceCount || '';
+
+    // Amenities
+    const allAmenities = ['pool', 'rooftop', 'courtyard', 'sports', 'garden'];
+    const activeAmenities = p.outdoorAmenities || [];
+    allAmenities.forEach(a => {
+        const chip = document.getElementById('amenity-' + a);
+        if (!chip) return;
+        const cb = chip.querySelector('input[type="checkbox"]');
+        const isActive = activeAmenities.includes(a);
+        cb.checked = isActive;
+        chip.classList.toggle('checked', isActive);
+    });
+
+    document.getElementById('fd-fb-outlets').value = p.fbOutlets || '';
+    document.getElementById('fd-event-sqft').value = p.eventSpaceSqFt || '';
+
+    // Surface zones
+    const zones = p.surfaceZones || { corridors: [], lobby: [], fb: [], boh: [] };
+    document.querySelectorAll('.zone-group').forEach(group => {
+        const zoneKey = group.dataset.zone;
+        const activeSurfaces = zones[zoneKey] || [];
+        group.querySelectorAll('.zone-chip').forEach(chip => {
+            chip.classList.toggle('checked', activeSurfaces.includes(chip.dataset.surface));
+        });
+    });
+
+    // Sync global surfaces from zones
+    syncSurfacesFromZones();
+    updateExpandButton();
+}
+
+// ─────────────────────────────────────────────────────────────
+// syncSurfacesFromZones — derive global surfaces from zone selections
+// WHY: the fleet algorithm reads the legacy surface checkboxes;
+// zone-based surfaces auto-sync to keep backward compatibility
+// ─────────────────────────────────────────────────────────────
+function syncSurfacesFromZones() {
+    const allSurfaces = ['carpet', 'hardwood', 'tile', 'terrazzo', 'outdoor'];
+    const zoneChips = document.querySelectorAll('.zone-chip.checked');
+    const activeSurfaces = new Set();
+
+    zoneChips.forEach(chip => activeSurfaces.add(chip.dataset.surface));
+
+    // WHY: if any outdoor amenity is checked, add 'outdoor' to global surfaces
+    const anyOutdoor = document.querySelectorAll('#amenity-grid .amenity-chip.checked').length > 0;
+    if (anyOutdoor) activeSurfaces.add('outdoor');
+
+    // Sync legacy global surface checkboxes
+    allSurfaces.forEach(s => {
+        const chip = document.getElementById('surface-' + s);
+        if (!chip) return;
+        const cb = chip.querySelector('input[type="checkbox"]');
+        const shouldBeChecked = activeSurfaces.has(s);
+        cb.checked = shouldBeChecked;
+        chip.classList.toggle('checked', shouldBeChecked);
+    });
+
+    // Toggle global chips vs summary
+    const hasZones = zoneChips.length > 0;
+    document.getElementById('surface-global-wrap').style.display = hasZones ? 'none' : '';
+    const summaryWrap = document.getElementById('surface-summary-wrap');
+    summaryWrap.style.display = hasZones ? '' : 'none';
+    if (hasZones) {
+        const names = [...activeSurfaces].map(s => s.charAt(0).toUpperCase() + s.slice(1));
+        document.getElementById('surface-summary-text').textContent = names.join(', ') || 'None selected';
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// countFacilityDetails — count how many detail fields are set
+// WHY: shown on the expand button as "N details set" indicator
+// ─────────────────────────────────────────────────────────────
+function countFacilityDetails() {
+    let count = 0;
+    if (document.getElementById('fd-elevator-make').value) count++;
+    if (parseInt(document.getElementById('fd-elevator-guest').value, 10) > 0) count++;
+    if (parseInt(document.getElementById('fd-elevator-service').value, 10) > 0) count++;
+    if (document.querySelectorAll('#amenity-grid .amenity-chip.checked').length > 0) count++;
+    if (parseInt(document.getElementById('fd-fb-outlets').value, 10) > 0) count++;
+    if (parseInt(document.getElementById('fd-event-sqft').value, 10) > 0) count++;
+    if (document.querySelectorAll('.zone-chip.checked').length > 0) count++;
+    return count;
+}
+
+// ─────────────────────────────────────────────────────────────
+// updateExpandButton — refresh the expand button label
+// ─────────────────────────────────────────────────────────────
+function updateExpandButton() {
+    const btn = document.getElementById('facility-expand-btn');
+    const card = document.getElementById('facility-detail-card');
+    const isExpanded = !card.classList.contains('hidden');
+    const count = countFacilityDetails();
+
+    if (isExpanded) {
+        btn.innerHTML = '<span class="arrow">▾</span> Facility Details';
+    } else if (count > 0) {
+        btn.innerHTML = '<span class="arrow">▸</span> Configure Facility Details <span class="detail-count">· ' + count + ' detail' + (count === 1 ? '' : 's') + ' set</span>';
+    } else {
+        btn.innerHTML = '<span class="arrow">▸</span> Configure Facility Details';
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Proposal button — always visible when fleet is generated.
+// Links to existing proposal page or downloads config.yml.
+// ─────────────────────────────────────────────────────────────
+function updateProposalButton() {
+    const btn = document.getElementById('proposal-btn');
+    if (!btn) return;
+
+    const key = document.getElementById('prop-name').value;
+    const p = PIPELINE[key];
+
+    // Always show the button when fleet results are visible
+    btn.style.display = 'inline-flex';
+
+    if (p && p.proposalUrl) {
+        // Known property with existing proposal page — link directly
+        btn.href = p.proposalUrl;
+        btn.title = 'Open ' + p.name + ' proposal';
+        btn.onclick = null;
+    } else {
+        // No existing proposal — launch universal proposal page
+        btn.href = '#';
+        btn.title = 'Generate interactive proposal';
+        btn.onclick = function(e) {
+            e.preventDefault();
+            launchProposal();
+        };
+    }
+}
+
+function updateResearchLinks() {
+    const key = document.getElementById('prop-name').value;
+    const prospectKey = key.startsWith('prospect-') ? key.replace('prospect-', '') : null;
+    // WHY: check all three sources — pipeline properties, researched prospects, localStorage prospects
+    const p = PIPELINE[key] || (prospectKey && PROSPECTS[prospectKey]) || null;
+    const siteLink = document.getElementById('research-site');
+    const pipelineLink = document.getElementById('research-pipeline');
+
+    // Site profile — show when a pipeline property with a profile is selected
+    const pipelineProp = PIPELINE[key];
+    if (pipelineProp && pipelineProp.siteProfileUrl) {
+        siteLink.style.display = 'inline-flex';
+        siteLink.href = pipelineProp.siteProfileUrl;
+        siteLink.textContent = pipelineProp.name + ' Site Profile';
+    } else {
+        siteLink.style.display = 'none';
+    }
+
+    // Pipeline link — update to filter by market if a property is selected
+    if (p && p.market) {
+        // WHY: hash fragment lets the pipeline page scroll to the right market section
+        const marketSlug = p.market.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        pipelineLink.href = '/accelerate-robotics/pages/pipeline-prospects.html#' + marketSlug;
+        pipelineLink.textContent = p.market + ' Pipeline';
+    } else {
+        pipelineLink.href = '/accelerate-robotics/pages/pipeline-prospects.html';
+        pipelineLink.textContent = 'Prospect Pipeline';
+    }
+}
+
+function downloadProposalConfig() {
+    const propSelect = document.getElementById('prop-name');
+    const propKey = propSelect.value;
+    const p = PIPELINE[propKey];
+    const name = p ? p.name : (propSelect.options[propSelect.selectedIndex]?.text || 'New Property');
+    const rooms = document.getElementById('prop-rooms').value || '0';
+    const floors = document.getElementById('prop-floors').value || '1';
+    const guestFloors = document.getElementById('prop-guest-floors').value || '';
+    const elevators = document.getElementById('prop-elevators').value || '0';
+
+    // Gather active type
+    const activeType = document.querySelector('.prop-type.active');
+    // WHY: When "Other" is selected, use the free-form input value as the property type
+    const propType = activeType?.dataset.type === 'other'
+        ? (document.getElementById('prop-type-other').value.trim() || 'other')
+        : (activeType?.dataset.type || 'hotel');
+
+    // Gather surfaces (global, derived from zones or manual)
+    const surfaces = [];
+    document.querySelectorAll('.surface-chip input:checked').forEach(cb => surfaces.push(cb.value));
+
+    // Gather elevator details
+    const elevMakeSelect = document.getElementById('fd-elevator-make');
+    const elevCustom = document.getElementById('fd-elevator-custom');
+    let elevMake = elevMakeSelect.value;
+    if (elevMake === 'Other' && elevCustom.value.trim()) {
+        elevMake = elevCustom.value.trim();
+    }
+    const elevGuest = document.getElementById('fd-elevator-guest').value || '0';
+    const elevService = document.getElementById('fd-elevator-service').value || '0';
+
+    // Gather amenities
+    const outdoorAmenities = [];
+    document.querySelectorAll('#amenity-grid .amenity-chip input:checked').forEach(cb => outdoorAmenities.push(cb.value));
+    const fbOutlets = document.getElementById('fd-fb-outlets').value || '0';
+    const eventSqFt = document.getElementById('fd-event-sqft').value || '0';
+
+    // Gather surface zones
+    const surfaceZones = {};
+    document.querySelectorAll('.zone-group').forEach(group => {
+        const zoneKey = group.dataset.zone;
+        const checked = [];
+        group.querySelectorAll('.zone-chip.checked').forEach(chip => checked.push(chip.dataset.surface));
+        if (checked.length > 0) surfaceZones[zoneKey] = checked;
+    });
+
+    // Gather fleet
+    const activeSlots = currentSlots.filter(s => s.selected);
+    const totalCost = activeSlots.reduce((sum, s) => sum + s.selected.monthlyEstimate, 0);
+
+    let fleetLines = '';
+    activeSlots.forEach((slot, i) => {
+        const r = slot.selected.robot;
+        fleetLines += `  # ${slot.label} — Score: ${slot.selected.score}\n`;
+        fleetLines += `  - model: "${r.model_name}"\n`;
+        fleetLines += `    company: "${r.company}"\n`;
+        fleetLines += `    category: "${r.primary_category}"\n`;
+        fleetLines += `    monthly_raas: ${slot.selected.monthlyEstimate}\n`;
+        fleetLines += `    role: "${slot.serviceLine}"\n\n`;
+    });
+
+    // Build surface_zones YAML
+    let zoneLines = '';
+    for (const [zone, surfs] of Object.entries(surfaceZones)) {
+        zoneLines += `  ${zone}: [${surfs.map(s => '"' + s + '"').join(', ')}]\n`;
+    }
+
+    const yaml = `# Accelerate Robotics — Proposal Config
+# Generated by Fleet Designer on ${new Date().toISOString().slice(0, 10)}
+# Use with accelerate-hotel-template to generate a full proposal.
+
+hotel:
+  full_name: "${name}"
+  short_name: "${name.split(' ')[0]}"
+  property_type: "${propType}"
+
+property:
+  floor_count: ${floors}
+  room_count: ${rooms}
+  guest_floors: "${guestFloors}"
+  floor_surfaces: "${surfaces.join(', ')}"
+
+elevator:
+  count: ${elevators}
+  make: "${elevMake || 'Unknown'}"
+  guest_elevators: ${elevGuest}
+  service_elevators: ${elevService}
+
+amenities:
+  outdoor: [${outdoorAmenities.map(a => '"' + a + '"').join(', ')}]
+  fb_outlets: ${fbOutlets}
+  event_space_sqft: ${eventSqFt}
+
+${zoneLines ? 'surface_zones:\n' + zoneLines : '# surface_zones: (not configured)'}
+
+fleet_counts:
+  total: ${activeSlots.length}
+
+pricing:
+  raas_rate_usd: ${activeSlots.length > 0 ? Math.round(totalCost / activeSlots.length) : 2850}
+  total_monthly_usd: ${totalCost}
+
+fleet:
+${fleetLines}`;
+
+    const blob = new Blob([yaml], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (name.toLowerCase().replace(/[^a-z0-9]+/g, '-')) + '-config.yml';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────────────────────
+// launchProposal — writes fleet data to localStorage and opens
+// the universal proposal page in a new tab.
+// ─────────────────────────────────────────────────────────────
+function launchProposal() {
+    const propSelect = document.getElementById('prop-name');
+    const propKey = propSelect.value;
+    const pipelineProp = PIPELINE[propKey];
+    const prospectKey = propKey.startsWith('prospect-') ? propKey.replace('prospect-', '') : null;
+    const prospect = prospectKey ? PROSPECTS[prospectKey] : null;
+    const p = pipelineProp || prospect;
+    const name = p ? p.name : (propSelect.options[propSelect.selectedIndex]?.text || 'New Property');
+
+    // Gather property basics from the form
+    const property = {
+        name: name,
+        // WHY: When "Other" is selected, use the free-form input value as the property type
+        type: (() => {
+            const activeBtn = document.querySelector('.prop-type.active');
+            const t = activeBtn?.dataset.type || 'hotel';
+            if (t === 'other') return document.getElementById('prop-type-other').value.trim() || 'other';
+            return t;
+        })(),
+        rooms: parseInt(document.getElementById('prop-rooms').value) || 0,
+        floors: parseInt(document.getElementById('prop-floors').value) || 1,
+        guestFloors: document.getElementById('prop-guest-floors').value || '',
+        elevators: parseInt(document.getElementById('prop-elevators').value) || 0,
+        market: p?.market || null,
+    };
+
+    // Gather facility details
+    const elevMakeSelect = document.getElementById('fd-elevator-make');
+    const elevCustom = document.getElementById('fd-elevator-custom');
+    let elevMake = elevMakeSelect.value;
+    if (elevMake === 'Other' && elevCustom.value.trim()) {
+        elevMake = elevCustom.value.trim();
+    }
+
+    const outdoorAmenities = [];
+    document.querySelectorAll('#amenity-grid .amenity-chip input:checked').forEach(cb => outdoorAmenities.push(cb.value));
+
+    const surfaceZones = {};
+    document.querySelectorAll('.zone-group').forEach(group => {
+        const zoneKey = group.dataset.zone;
+        const checked = [];
+        group.querySelectorAll('.zone-chip.checked').forEach(chip => checked.push(chip.dataset.surface));
+        if (checked.length > 0) surfaceZones[zoneKey] = checked;
+    });
+
+    const surfaces = [];
+    document.querySelectorAll('.surface-chip input:checked').forEach(cb => surfaces.push(cb.value));
+
+    const facility = {
+        elevatorMake: elevMake || null,
+        elevatorGuestCount: parseInt(document.getElementById('fd-elevator-guest').value) || 0,
+        elevatorServiceCount: parseInt(document.getElementById('fd-elevator-service').value) || 0,
+        outdoorAmenities,
+        fbOutlets: parseInt(document.getElementById('fd-fb-outlets').value) || 0,
+        eventSpaceSqFt: parseInt(document.getElementById('fd-event-sqft').value) || 0,
+        surfaceZones: Object.keys(surfaceZones).length > 0 ? surfaceZones : null,
+        surfaces,
+    };
+
+    // Gather fleet slots (only those with a selected robot)
+    const fleet = currentSlots.filter(s => s.selected).map(s => ({
+        goalId: s.goalId,
+        serviceLine: s.serviceLine,
+        type: s.type,
+        savings: s.savings,
+        robot: {
+            company: s.selected.robot.company,
+            model_name: s.selected.robot.model_name,
+            image_url: s.selected.robot.image_url || '',
+            primary_use_cases: s.selected.robot.primary_use_cases || [],
+            payload_kg: s.selected.robot.payload_kg,
+            elevator_integration: s.selected.robot.elevator_integration || false,
+            public_price: s.selected.robot.public_price || '',
+        },
+        score: s.selected.score,
+        monthlyEstimate: s.selected.monthlyEstimate,
+    }));
+
+    // Compute summary
+    const totalMonthlyCost = fleet.reduce((sum, s) => sum + s.monthlyEstimate, 0);
+    const totalAnnualSavings = fleet.reduce((sum, s) => sum + s.savings, 0) * 12;
+    const annualCost = totalMonthlyCost * 12;
+    // WHY: ROI multiple = annual savings / annual cost — how many times the investment pays back
+    const roiMultiple = annualCost > 0 ? (totalAnnualSavings / annualCost) : 0;
+
+    const payload = {
+        property,
+        facility,
+        fleet,
+        summary: {
+            totalRobots: fleet.length,
+            totalMonthlyCost,
+            totalAnnualSavings,
+            roiMultiple: parseFloat(roiMultiple.toFixed(1)),
+        },
+        generatedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem('accelerate-proposal', JSON.stringify(payload));
+    window.open('proposal.html', '_blank');
+}
+
+// ─────────────────────────────────────────────────────────────
+// Goal chips — toggle .active class + aria-checked
+// ─────────────────────────────────────────────────────────────
+function initGoalChips() {
+    const chips = document.querySelectorAll('.goal-chip');
+
+    chips.forEach(chip => {
+        function toggle() {
+            const isActive = chip.classList.toggle('active');
+            chip.setAttribute('aria-checked', isActive ? 'true' : 'false');
+        }
+
+        chip.addEventListener('click', toggle);
+
+        // WHY: keyboard accessibility — space/enter should toggle chips
+        chip.addEventListener('keydown', e => {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                toggle();
+            }
+        });
+    });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Surface chips — sync visual state with underlying checkbox
+// ─────────────────────────────────────────────────────────────
+function initSurfaceChips() {
+    const chips = document.querySelectorAll('.surface-chip');
+    chips.forEach(chip => {
+        const cb = chip.querySelector('input[type="checkbox"]');
+        // WHY: change event alone is sufficient — the click listener caused
+        // double-toggle race conditions in some browsers
+        cb.addEventListener('change', () => {
+            chip.classList.toggle('checked', cb.checked);
+        });
+    });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Budget controls — presets, range bar, per-robot hint
+// ─────────────────────────────────────────────────────────────
+// WHY 200000: hard ceiling for the visual range bar — no hotel
+// needs >$200K/mo in robot RaaS; keeps the bar proportional
+const BUDGET_CEIL = 200000;
+
+function formatBudgetLabel(value) {
+    const n = parseInt(value, 10);
+    if (!isFinite(n) || n < 0) return '$0';
+    if (n >= 1000) return '$' + (n / 1000).toLocaleString('en-US', { maximumFractionDigits: 0 }) + 'K';
+    return '$' + n.toLocaleString('en-US');
+}
+
+function updateBudgetUI() {
+    const minInput = document.getElementById('budget-min');
+    const maxInput = document.getElementById('budget-max');
+    const minLabel = document.getElementById('budget-min-label');
+    const maxLabel = document.getElementById('budget-max-label');
+    const fill = document.getElementById('budget-fill');
+    const hint = document.getElementById('budget-hint');
+
+    const minVal = parseInt(minInput.value, 10) || 0;
+    const maxVal = parseInt(maxInput.value, 10) || 0;
+
+    // Update labels
+    minLabel.innerHTML = formatBudgetLabel(minVal) + ' <span class="unit">/mo</span>';
+    maxLabel.innerHTML = formatBudgetLabel(maxVal) + ' <span class="unit">/mo</span>';
+
+    // Update range fill bar position
+    const leftPct = Math.min(100, (minVal / BUDGET_CEIL) * 100);
+    const rightPct = Math.min(100, (maxVal / BUDGET_CEIL) * 100);
+    fill.style.left = leftPct + '%';
+    fill.style.width = Math.max(0, rightPct - leftPct) + '%';
+
+    // Update per-robot hint based on active goals
+    const activeGoals = document.querySelectorAll('.goal-chip.active').length;
+    const robotCount = activeGoals || 5; // default to 5 if no goals selected yet
+    const perRobot = maxVal > 0 ? Math.round(maxVal / robotCount) : 0;
+    hint.textContent = `~$${perRobot.toLocaleString('en-US')} per robot per month (${robotCount} robot${robotCount !== 1 ? 's' : ''})`;
+
+    // Highlight matching preset
+    document.querySelectorAll('.budget-preset').forEach(btn => {
+        const pMin = parseInt(btn.dataset.min, 10);
+        const pMax = parseInt(btn.dataset.max, 10);
+        btn.classList.toggle('active', pMin === minVal && pMax === maxVal);
+    });
+}
+
+function initBudgetControls() {
+    const minInput = document.getElementById('budget-min');
+    const maxInput = document.getElementById('budget-max');
+
+    // Live update on typing
+    minInput.addEventListener('input', updateBudgetUI);
+    maxInput.addEventListener('input', updateBudgetUI);
+
+    // Preset buttons
+    document.querySelectorAll('.budget-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            minInput.value = btn.dataset.min;
+            maxInput.value = btn.dataset.max;
+            updateBudgetUI();
+        });
+    });
+
+    // Re-calculate per-robot hint when goals change
+    document.querySelectorAll('.goal-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            // WHY: setTimeout 0 lets the active class toggle before we recount
+            setTimeout(updateBudgetUI, 0);
+        });
+    });
+
+    // Initial render
+    updateBudgetUI();
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Generate button — wired to recommendation engine
+// ─────────────────────────────────────────────────────────────
+function initGenerateButton() {
+    const btn = document.getElementById('generate-btn');
+    btn.addEventListener('click', () => {
+        // Validate: at least one goal must be active
+        const activeGoals = document.querySelectorAll('.goal-chip.active');
+        if (activeGoals.length === 0) {
+            // WHY: brief visual feedback without modal — shake the goals section
+            const goalsGrid = document.querySelector('.goals-grid');
+            goalsGrid.style.outline = '2px solid var(--red)';
+            goalsGrid.style.outlineOffset = '4px';
+            goalsGrid.style.borderRadius = '10px';
+            setTimeout(() => {
+                goalsGrid.style.outline = 'none';
+            }, 1500);
+            return;
+        }
+
+        if (allRobots.length === 0) {
+            console.warn('[Fleet Designer] No robots loaded — cannot generate fleet');
+            return;
+        }
+
+        const slots = generateFleet(allRobots);
+        renderFleet(slots);
+    });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// fleet.yml export — generates proposal-ready YAML
+//
+// Format matches the proposal generator's expected schema
+// (accelerate-hotel-template). Each robot entry includes a
+// source comment with score and alternatives for traceability.
+// ─────────────────────────────────────────────────────────────
+function generateFleetYaml() {
+    const propSelect = document.getElementById('prop-name');
+    const propKey = propSelect.value;
+    // WHY: select value is a key like "thesis-hotel" or "prospect-xxxxx"; resolve to display name
+    const propName = PIPELINE[propKey]
+        ? PIPELINE[propKey].name
+        : (propSelect.options[propSelect.selectedIndex]?.text || 'Untitled Property');
+    const today = new Date().toISOString().slice(0, 10);
+
+    let totalCost = 0;
+    let totalSavings = 0;
+    const activeSlots = currentSlots.filter(s => s.selected);
+    for (const s of activeSlots) {
+        totalCost += s.selected.monthlyEstimate;
+        totalSavings += s.savings;
+    }
+
+    let yaml = `# Generated by Fleet Designer — ${today}\n`;
+    yaml += `# Property: ${propName}\n`;
+    yaml += `# Total: ${activeSlots.length} robots, $${totalCost.toLocaleString('en-US')}/mo RaaS, $${totalSavings.toLocaleString('en-US')}/mo est. savings\n\n`;
+    yaml += `robots:\n`;
+
+    activeSlots.forEach((slot, i) => {
+        const r = slot.selected.robot;
+        // WHY: code is an abbreviated model name — strip common brand prefixes
+        const code = r.model_name
+            .replace(/^(DINERBOT|KLEENBOT|CLOi|DeliveryBot)\s*/i, '')
+            .replace(/\s+/g, '-');
+        const companySlug = r.company.toLowerCase().replace(/\s+/g, '-');
+        const altStr = slot.alternatives
+            .map(a => `${a.robot.model_name} (${a.score})`)
+            .join(', ');
+
+        yaml += `  - code: "${code}"\n`;
+        yaml += `    label: "${slot.label}"\n`;
+        yaml += `    role: "${slot.label} — ${r.company} ${r.model_name}"\n`;
+        yaml += `    photo: "../assets/robots/photos/${companySlug}-${code.toLowerCase()}.png"\n`;
+        yaml += `    type: ${slot.type}\n`;
+        yaml += `    captures: "${slot.serviceLine} labor offset"\n`;
+        yaml += `    savings: ${slot.savings}\n`;
+        yaml += `    service_line: "${slot.serviceLine}"\n`;
+        yaml += `    unlock_text: ""\n`;
+        // WHY: tier 1 = pilot (slot 0), tier 2 = signature (slots 1-2), tier 3 = full-property (rest)
+        yaml += `    tier: ${i < 1 ? 1 : i < 3 ? 2 : 3}\n`;
+        yaml += `    # Source: robots.json — ${r.company} ${r.model_name} (score: ${slot.selected.score}/100)\n`;
+        if (altStr) yaml += `    # Alternatives: ${altStr}\n`;
+        yaml += `\n`;
+    });
+
+    // Presets — auto-generated based on fleet size
+    const count = activeSlots.length;
+    yaml += `presets:\n`;
+    yaml += `  - name: "Pilot"\n    count: 1\n`;
+    if (count >= 3) yaml += `  - name: "Signature"\n    count: ${Math.min(3, count)}\n`;
+    if (count >= 4) yaml += `  - name: "Full-Property"\n    count: ${count}\n`;
+    // WHY: default_preset 1 = Signature (most common starting point for proposals)
+    yaml += `\ndefault_preset: ${count >= 3 ? 1 : 0}\n`;
+
+    return yaml;
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Export button wiring
+// ─────────────────────────────────────────────────────────────
+function initExportButtons() {
+    // Download fleet.yml
+    document.getElementById('export-yaml-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentSlots.length === 0) return;
+
+        const yaml = generateFleetYaml();
+        const blob = new Blob([yaml], { type: 'text/yaml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'fleet.yml';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // Copy to clipboard
+    document.getElementById('copy-clipboard-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentSlots.length === 0) return;
+
+        const yaml = generateFleetYaml();
+        navigator.clipboard.writeText(yaml).then(() => {
+            const btn = document.getElementById('copy-clipboard-btn');
+            const original = btn.innerHTML;
+            btn.innerHTML = '✓ Copied!';
+            setTimeout(() => { btn.innerHTML = original; }, 2000);
+        });
+    });
+
+    // Reset fleet
+    document.getElementById('reset-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentSlots = [];
+        document.getElementById('fleet-slots').innerHTML = '';
+        document.getElementById('summary-strip').style.display = 'none';
+        document.getElementById('export-bar').style.display = 'none';
+        document.getElementById('empty-state').style.display = 'flex';
+    });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    loadRobots();
+    initPropertySection();
+    initGoalChips();
+    initSurfaceChips();
+    initBudgetControls();
+    initGenerateButton();
+    initExportButtons();
+});
+</script>
+<script src="/js/brand.js"></script>
+</body>
+</html>

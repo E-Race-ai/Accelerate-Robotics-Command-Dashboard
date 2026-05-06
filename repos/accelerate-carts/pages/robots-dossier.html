@@ -1,0 +1,1805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Technical Dossier — Keenon S100 · Keenon S300 · Pudu T300</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #f7f8fc;
+        --surface: #ffffff;
+        --surface-2: #f0f1f5;
+        --surface-3: #e8e9ef;
+        --border: #d5d7e0;
+        --border-bright: #b0b3c0;
+        --text: #1a1a2e;
+        --text-dim: #5a5d6e;
+        --text-faint: #8a8d9e;
+        --accent: #0055ff;
+        --green: #00a854;
+        --red: #e53935;
+        --warn: #e6a000;
+        --purple: #7c3aed;
+        --amber: #e68a00;
+        --keenon: #0891b2;
+        --pudu: #c2410c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body {
+        font-family: 'Inter', system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+        font-size: 15px;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .tech { font-family: 'Space Grotesk', sans-serif; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; background: var(--surface-2); padding: 1px 6px; border-radius: 3px; color: var(--accent); }
+
+    /* Top bar */
+    .topbar { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 12px 0; }
+    .topbar-inner { max-width: 1280px; margin: 0 auto; padding: 0 32px; display: flex; align-items: center; gap: 24px; }
+    .topbar-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: -0.01em; }
+    .topbar-title .accent { color: var(--accent); }
+    .topbar-nav { display: flex; gap: 18px; margin-left: auto; flex-wrap: wrap; }
+    .topbar-nav a { font-size: 12px; color: var(--text-dim); letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; font-family: 'Space Grotesk', sans-serif; }
+    .topbar-nav a:hover { color: var(--accent); text-decoration: none; }
+
+    /* Hero */
+    .hero { border-bottom: 1px solid var(--border); padding: 48px 0 40px; background: linear-gradient(180deg, #ffffff 0%, #f0f1f5 100%); }
+    .hero-inner { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+    .eyebrow { font-family: 'Space Grotesk', sans-serif; font-size: 11px; color: var(--accent); letter-spacing: 0.24em; text-transform: uppercase; font-weight: 700; }
+    h1 { font-size: 48px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin: 12px 0 0; max-width: 900px; }
+    .hero-sub { margin-top: 16px; font-size: 16px; color: var(--text-dim); max-width: 760px; line-height: 1.6; }
+    .meta-row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 22px; }
+    .meta-chip { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; }
+    .meta-chip .k { color: var(--text-dim); margin-right: 6px; }
+
+    main { max-width: 1280px; margin: 0 auto; padding: 48px 32px 80px; }
+    section { margin-bottom: 80px; scroll-margin-top: 80px; }
+    .section-head { border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 28px; display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+    .section-num { font-family: 'Space Grotesk', sans-serif; font-size: 14px; color: var(--text-faint); font-weight: 600; letter-spacing: 0.1em; }
+    h2 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+    h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin: 32px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); margin: 22px 0 10px; font-family: 'Space Grotesk', sans-serif; }
+
+    /* Robot hero card */
+    .robot-hero { display: grid; grid-template-columns: minmax(280px, 1fr) 2fr; gap: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .robot-hero.keenon { border-top: 4px solid var(--keenon); }
+    .robot-hero.pudu { border-top: 4px solid var(--pudu); }
+    .robot-hero-img { background: #ffffff; padding: 30px; display: flex; align-items: center; justify-content: center; min-height: 420px; }
+    .robot-hero-img img { max-width: 100%; max-height: 440px; object-fit: contain; }
+    .robot-hero-body { padding: 28px 32px 30px; }
+    .vendor-line { display: flex; align-items: center; gap: 10px; }
+    .vendor-pill { font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+    .vendor-pill.keenon { background: rgba(8,145,178,0.10); color: var(--keenon); }
+    .vendor-pill.pudu { background: rgba(194,65,12,0.10); color: var(--pudu); }
+    .model-code { font-family: 'Space Grotesk', sans-serif; font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; margin-top: 10px; }
+    .model-name { font-size: 18px; color: var(--text-dim); margin-top: 6px; }
+    .model-pos { font-size: 14px; color: var(--text); margin-top: 10px; max-width: 520px; line-height: 1.5; }
+    .robot-quickgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 22px; }
+    .qg { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+    .qg .k { font-family: 'Space Grotesk', sans-serif; font-size: 10px; letter-spacing: 0.12em; color: var(--text-dim); text-transform: uppercase; }
+    .qg .v { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text); font-weight: 500; margin-top: 4px; }
+
+    /* Published specs table */
+    .specs { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 14px; }
+    .specs th, .specs td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .specs thead th { background: var(--surface-2); font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; border-bottom: 1px solid var(--border-bright); }
+    .specs tbody tr:last-child td { border-bottom: none; }
+    .specs td.k { color: var(--text-dim); width: 40%; font-weight: 500; }
+    .specs td.v { color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    .specs td.v.gap { color: var(--warn); }
+
+    /* Quick compare master table */
+    .compare-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+    .compare { width: 100%; border-collapse: collapse; background: var(--surface); font-size: 14px; min-width: 900px; }
+    .compare th, .compare td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    .compare thead th { background: var(--surface-2); font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+    .compare th.s100 { color: var(--keenon); }
+    .compare th.s300 { color: var(--keenon); }
+    .compare th.t300 { color: var(--pudu); }
+    .compare td { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    .compare td:first-child { font-family: 'Inter', sans-serif; color: var(--text-dim); font-weight: 500; }
+    .compare tbody tr:last-child td { border-bottom: none; }
+
+    /* Gallery */
+    .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .gallery a { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: block; }
+    .gallery a:hover { border-color: var(--accent); }
+    .gallery .wrap { background: #ffffff; aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center; }
+    .gallery img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .gallery .caption { padding: 8px 12px; font-size: 12px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+
+    /* Big image — for dimension drawings */
+    .big-image { background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-top: 10px; }
+    .big-image img { max-width: 100%; display: block; margin: 0 auto; }
+    .big-image .caption { margin-top: 12px; text-align: center; font-size: 12px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; background: transparent; }
+
+    /* Doc library cards */
+    .docs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+    .doc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+    .doc-head { display: flex; align-items: center; gap: 12px; }
+    .doc-ic { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; color: #ffffff; background: var(--red); width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .doc-title { font-weight: 600; font-size: 14px; }
+    .doc-size { font-size: 11px; color: var(--text-dim); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+    .doc-desc { font-size: 13px; color: var(--text-dim); margin: 10px 0 14px; line-height: 1.5; }
+    .doc-actions { display: flex; gap: 10px; font-size: 13px; }
+    .btn { font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; padding: 7px 12px; border-radius: 5px; border: 1px solid; background: transparent; cursor: pointer; }
+    .btn-accent { color: var(--accent); border-color: var(--accent); }
+    .btn-accent:hover { background: var(--accent); color: #ffffff; text-decoration: none; }
+    .btn-dim { color: var(--text-dim); border-color: var(--border-bright); }
+    .btn-dim:hover { color: var(--text); border-color: var(--text); text-decoration: none; }
+
+    /* PDF embed */
+    .pdf-embed { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); margin-top: 12px; }
+    .pdf-embed iframe { width: 100%; height: 700px; border: 0; display: block; background: #fff; }
+
+    /* Mode cards (Pudu T300) */
+    .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .mode { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .mode-img { background: #ffffff; padding: 16px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+    .mode-img img { max-width: 100%; max-height: 140px; object-fit: contain; }
+    .mode-body { padding: 12px 14px 14px; }
+    .mode-name { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; color: var(--pudu); letter-spacing: 0.05em; text-transform: uppercase; }
+    .mode-desc { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.5; }
+
+    /* Analysis card */
+    .analysis { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 20px 24px; }
+    .analysis h4 { color: var(--accent); margin-top: 0; }
+    .analysis ul { padding-left: 22px; font-size: 14px; line-height: 1.7; }
+    .analysis ul li { margin-bottom: 4px; }
+
+    /* Callout */
+    .callout { border: 1px solid var(--warn); border-left: 3px solid var(--warn); background: rgba(230,160,0,0.06); padding: 14px 18px; border-radius: 6px; font-size: 14px; color: var(--text); margin: 16px 0; }
+    .callout .tag { font-family: 'Space Grotesk', sans-serif; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--warn); font-weight: 700; margin-right: 10px; }
+    .callout.ok { border-color: var(--green); border-left-color: var(--green); background: rgba(0,168,84,0.06); }
+    .callout.ok .tag { color: var(--green); }
+    .callout.red { border-color: var(--red); border-left-color: var(--red); background: rgba(229,57,53,0.06); }
+    .callout.red .tag { color: var(--red); }
+
+    /* Link list */
+    .linklist { font-size: 13px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; line-height: 1.9; }
+    .linklist a { word-break: break-all; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    @media (max-width: 900px) {
+        .two-col { grid-template-columns: 1fr; }
+        .robot-hero { grid-template-columns: 1fr; }
+        .robot-hero-img { min-height: 340px; }
+    }
+
+    /* Footer */
+    footer { border-top: 1px solid var(--border); padding: 28px 32px; }
+    .footer-inner { max-width: 1280px; margin: 0 auto; color: var(--text-dim); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 18px; }
+
+    /* Compliance matrix */
+    .matrix { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 13px; }
+    .matrix th, .matrix td { padding: 12px 14px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); text-align: left; vertical-align: top; }
+    .matrix thead th { background: var(--surface-2); font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+    .matrix tbody th { background: var(--surface-2); color: var(--text); font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; width: 220px; }
+    .matrix td { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+    .matrix tr:last-child td, .matrix tr:last-child th { border-bottom: none; }
+    .matrix td:last-child, .matrix th:last-child { border-right: none; }
+    .status { font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 999px; display: inline-block; margin-right: 6px; }
+    .status.ok { background: rgba(0,168,84,0.12); color: var(--green); }
+    .status.warn { background: rgba(230,160,0,0.12); color: var(--warn); }
+    .status.red { background: rgba(229,57,53,0.12); color: var(--red); }
+    .status.na { background: var(--surface-3); color: var(--text-dim); }
+
+    /* SVG diagram container */
+    .svg-stage { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
+    .svg-stage .title { font-family: 'Space Grotesk', sans-serif; font-size: 11px; color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; margin-bottom: 18px; text-align: center; }
+    .svg-stage svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+    .svg-legend { display: flex; justify-content: center; gap: 22px; margin-top: 16px; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
+    .legend-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+
+    /* Kit spec card */
+    .kit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+    .kit-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; border-top: 3px solid var(--accent); }
+    .kit-card.s100 { border-top-color: var(--keenon); }
+    .kit-card.s300 { border-top-color: var(--keenon); }
+    .kit-card.t300 { border-top-color: var(--pudu); }
+    .kit-card h4 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); margin: 0 0 4px; text-transform: none; letter-spacing: -0.01em; }
+    .kit-card .kit-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); margin-bottom: 14px; }
+    .kit-card dl { margin: 0; font-size: 13px; }
+    .kit-card dt { font-family: 'Space Grotesk', sans-serif; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-top: 10px; font-weight: 600; }
+    .kit-card dd { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); margin: 2px 0 0; }
+    .kit-card dd.gap { color: var(--warn); }
+
+    /* Checklist */
+    .checklist { list-style: none; padding: 0; margin: 16px 0; }
+    .checklist li { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; margin-bottom: 8px; font-size: 14px; display: flex; align-items: flex-start; gap: 12px; }
+    .checklist li::before { content: ''; display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border-bright); border-radius: 4px; flex-shrink: 0; margin-top: 2px; background: var(--bg); }
+    .checklist li strong { color: var(--accent); font-weight: 600; margin-right: 6px; }
+    .checklist li .note { color: var(--text-dim); font-size: 12px; font-family: 'JetBrains Mono', monospace; display: block; margin-top: 4px; }
+
+    /* Risk table */
+    .risks { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 13px; }
+    .risks th, .risks td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    .risks thead th { background: var(--surface-2); font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+    .risks td.sev { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+    .risks td.sev.high { color: var(--red); }
+    .risks td.sev.med { color: var(--warn); }
+    .risks td.sev.low { color: var(--text-dim); }
+    .risks tr:last-child td { border-bottom: none; }
+
+    /* BOM table */
+    .bom { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .bom th, .bom td { padding: 8px 12px; border-bottom: 1px dashed var(--border); text-align: left; }
+    .bom thead th { font-family: 'Space Grotesk', sans-serif; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+    .bom td { font-family: 'JetBrains Mono', monospace; color: var(--text); }
+
+    /* TOC */
+    .toc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 40px; }
+    .toc-title { font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 12px; }
+    .toc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 18px; font-size: 13px; }
+    .toc-grid a { color: var(--text); display: block; padding: 4px 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .toc-grid a:hover { color: var(--accent); text-decoration: none; }
+    .toc-grid a .num { color: var(--text-faint); margin-right: 10px; display: inline-block; width: 36px; }
+
+    /* Elevation stack diagram */
+    .stack { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 28px; }
+    .stack-layer { position: relative; margin-bottom: 2px; padding: 14px 20px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+    .stack-layer .label { color: var(--text); font-weight: 600; }
+    .stack-layer .val { color: var(--text-dim); font-size: 12px; }
+    .stack-layer.floor { background: #e0e1e8; color: var(--text-dim); padding: 10px 20px; }
+    .stack-layer.robot { background: rgba(8,145,178,0.08); border-left: 3px solid var(--keenon); }
+    .stack-layer.kit { background: rgba(230,160,0,0.08); border-left: 3px solid var(--warn); }
+    .stack-layer.lift { background: rgba(0,168,84,0.08); border-left: 3px solid var(--green); }
+    .stack-layer.clearance { background: var(--surface-2); border-left: 3px solid var(--border-bright); color: var(--text-dim); padding: 10px 20px; font-size: 12px; }
+    .stack-layer.cart { background: rgba(124,58,237,0.08); border-left: 3px solid var(--purple); }
+
+    /* Print */
+    @media print {
+        :root {
+            --bg: #fff; --surface: #fff; --surface-2: #f6f6f7; --surface-3: #f0f0f3;
+            --border: #d1d5db; --border-bright: #9ca3af;
+            --text: #0a0a0f; --text-dim: #4b5563; --accent: #0369a1;
+            --keenon: #0891b2; --pudu: #c2410c;
+        }
+        body { font-size: 10pt; }
+        .topbar { display: none; }
+        .toc { display: none; }
+        section { page-break-inside: avoid; }
+        .robot-hero { page-break-inside: avoid; }
+        .pdf-embed { display: none; }
+    }
+    @media (max-width: 680px) {
+        h1 { font-size: 32px; }
+        .topbar-nav { display: none; }
+        main { padding: 32px 20px 60px; }
+        .hero-inner { padding: 0 20px; }
+        .model-code { font-size: 42px; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<div class="topbar">
+    <div class="topbar-inner">
+        <div class="topbar-title">Accelerate <span class="accent">Cart Platform</span> · Robot Technical Dossier</div>
+        <nav class="topbar-nav">
+            <a href="#matrix">Compliance</a>
+            <a href="#compare">Compare</a>
+            <a href="#s100">S100</a>
+            <a href="#s300">S300</a>
+            <a href="#t300">T300</a>
+            <a href="#cross">Cross-ref</a>
+            <a href="#envelopes">Kit Envelopes</a>
+            <a href="#electrical">Integration</a>
+            <a href="#site">Site</a>
+            <a href="#standard">Standard</a>
+            <a href="#carts">Carts</a>
+            <a href="#kits">Lift Kits</a>
+            <a href="#procurement">Procurement</a>
+            <a href="#risks">Risks</a>
+            <a href="#asks">Asks</a>
+            <a href="#kickoff">Day-1</a>
+            <a href="#files">Files</a>
+        </nav>
+    </div>
+</div>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+    <div class="hero-inner">
+        <div class="eyebrow">Robot Technical Dossier · v1</div>
+        <h1>Three robots. One technical package.</h1>
+        <p class="hero-sub">
+            The Accelerate Cart Platform targets three autonomous delivery robots from two OEMs. This document consolidates
+            the vendor-published specifications, product photography, dimensional diagrams, and technical documents
+            (brochures, datasheets, operation manuals) needed to integrate cart-dock hardware against any of them — and
+            identifies exactly what we still need to ask each vendor for.
+        </p>
+        <div class="meta-row">
+            <div class="meta-chip"><span class="k">DOSSIER</span>v1.0 · 2026-04-15</div>
+            <div class="meta-chip"><span class="k">KEENON S100</span>100 kg payload</div>
+            <div class="meta-chip"><span class="k">KEENON S300</span>300 kg payload</div>
+            <div class="meta-chip"><span class="k">PUDU T300</span>300 kg payload, 4 modes</div>
+            <div class="meta-chip"><span class="k">UNITS</span>SI (mm, kg, m/s)</div>
+        </div>
+    </div>
+</header>
+
+<main>
+
+<!-- ============ TABLE OF CONTENTS ============ -->
+<div class="toc">
+    <div class="toc-title">Contents — 17 sections</div>
+    <div class="toc-grid">
+        <a href="#matrix"><span class="num">§ 1</span>Dock Standard v1 compliance matrix</a>
+        <a href="#compare"><span class="num">§ 2</span>Side-by-side comparison</a>
+        <a href="#s100"><span class="num">§ 3</span>Keenon S100</a>
+        <a href="#s300"><span class="num">§ 4</span>Keenon S300</a>
+        <a href="#t300"><span class="num">§ 5</span>Pudu T300</a>
+        <a href="#cross"><span class="num">§ 6</span>Cross-robot dimensional comparison</a>
+        <a href="#envelopes"><span class="num">§ 7</span>Lift-kit engineering envelopes</a>
+        <a href="#electrical"><span class="num">§ 8</span>Electrical &amp; control integration</a>
+        <a href="#site"><span class="num">§ 9</span>Operating envelope &amp; site requirements</a>
+        <a href="#standard"><span class="num">§ 10</span>Dock Standard v1 — full normative text</a>
+        <a href="#carts"><span class="num">§ 11</span>Reference cart library (C1 / L1 / H1)</a>
+        <a href="#kits"><span class="num">§ 12</span>Lift-kit reference designs</a>
+        <a href="#procurement"><span class="num">§ 13</span>Procurement &amp; vendor relationships</a>
+        <a href="#risks"><span class="num">§ 14</span>Risk register</a>
+        <a href="#asks"><span class="num">§ 15</span>Consolidated vendor asks</a>
+        <a href="#kickoff"><span class="num">§ 16</span>Day-1 engineering kickoff checklist</a>
+        <a href="#files"><span class="num">§ 17</span>File index</a>
+    </div>
+</div>
+
+<!-- ============ §1 COMPLIANCE MATRIX ============ -->
+<section id="matrix">
+    <div class="section-head">
+        <div class="section-num">§ 1</div>
+        <h2>Dock Standard v1 compliance matrix</h2>
+    </div>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        The eight normative requirements of <a href="#standard">Dock Standard v1</a> (§10 below) define whether a robot can be
+        fitted with a lift kit that engages any compliant cart. This matrix is a go/no-go read for each robot against
+        each requirement, using the best currently-available data (vendor public pages + our internal reference specs).
+        A <span class="status red">✗</span> means the robot cannot be used until the underlying parameter is acquired and resolved.
+    </p>
+
+    <div class="compare-wrap" style="margin-top: 22px;">
+    <table class="matrix">
+        <thead>
+            <tr>
+                <th>Requirement</th>
+                <th style="color: var(--keenon);">Keenon S100</th>
+                <th style="color: var(--keenon);">Keenon S300</th>
+                <th style="color: var(--pudu);">Pudu T300</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th>§ 3.1 Dock 900 × 550 mm<br><span style="font-weight: 400; color: var(--text-dim); font-family: 'JetBrains Mono',mono; font-size: 11px;">Robot base fits inside</span></th>
+                <td><span class="status ok">Fits</span>Base ≈ 550 × 700 mm<br>Margin: ~200 mm long × -50 mm wide<br><em style="color: var(--warn);">Narrow-margin review needed on width.</em></td>
+                <td><span class="status warn">Tight</span>Base ≈ 700 × 900 mm per our ref<br>900 mm dim aligns with dock 900 → zero margin<br><em style="color: var(--warn);">Vendor CAD needed to confirm base vs body.</em></td>
+                <td><span class="status ok">Fits</span>Body 835 × 500 mm<br>Margin: 65 mm long × 50 mm wide<br><em style="color: var(--text-dim);">Chassis-only footprint assumed ≈ body.</em></td>
+            </tr>
+            <tr>
+                <th>§ 3.2 Clearance ≥ 260 mm<br><span style="font-weight: 400; color: var(--text-dim); font-family: 'JetBrains Mono',mono; font-size: 11px;">Cart underside to floor, with kit mounted</span></th>
+                <td><span class="status warn">Zero margin</span>Base 200 mm + S100-LK 60 mm = 260 mm<br><em style="color: var(--warn);">Validate dim of real S100 unit before freeze.</em></td>
+                <td><span class="status warn">Zero margin</span>Base 240 mm + S300-LK 20 mm = 260 mm<br><em style="color: var(--warn);">Drives the S300-LK low-profile cam design.</em></td>
+                <td><span class="status red">Unknown</span>Base height not published; 1350 mm overall H includes mast.<br><em style="color: var(--red);">Blocks T300-LK height spec.</em></td>
+            </tr>
+            <tr>
+                <th>§ 3.3 Lift-pad pattern 750 × 400<br><span style="font-weight: 400; color: var(--text-dim); font-family: 'JetBrains Mono',mono; font-size: 11px;">Flat top-plate area, bolt-pattern</span></th>
+                <td><span class="status warn">Geometry OK</span>Flat platform wider than 750 × 400.<br><em style="color: var(--warn);">Bolt-hole CAD not in hand.</em></td>
+                <td><span class="status ok">Geometry OK</span>Native 860 × 600 platform &gt; 750 × 400 with 55 mm margin.<br><em style="color: var(--warn);">Bolt-hole CAD not in hand.</em></td>
+                <td><span class="status red">Unknown</span>Top-plate dimensions &amp; bolt pattern not published.<br><em style="color: var(--red);">Blocks T300-LK mount design.</em></td>
+            </tr>
+            <tr>
+                <th>§ 3.4 Lift travel 8 mm ± 1 mm<br><span style="font-weight: 400; color: var(--text-dim); font-family: 'JetBrains Mono',mono; font-size: 11px;">Delivered by kit mechanism</span></th>
+                <td><span class="status ok">Kit delivers</span>S100-LK cam + 12 V solenoid, 8 mm stroke.</td>
+                <td><span class="status ok">Kit delivers</span>S300-LK low-profile cam + 24 V solenoid, 8 mm stroke.</td>
+                <td><span class="status warn">Native lift</span>WTIDL1 SKU has a scissor lift — may exceed 8 mm. Lift stroke is a vendor ask.</td>
+            </tr>
+            <tr>
+                <th>§ 3.5 AprilTag 36h11 detection<br><span style="font-weight: 400; color: var(--text-dim); font-family: 'JetBrains Mono',mono; font-size: 11px;">80 mm tag, read 0.5–1.5 m</span></th>
+                <td><span class="status ok">Kit camera</span>S100-LK adds USB wide-angle + on-Android detection.</td>
+                <td><span class="status ok">Kit camera</span>Same camera + detection as S100-LK.</td>
+                <td><span class="status warn">Verify</span>T300 has depth cameras native — confirm field + software access.</td>
+            </tr>
+            <tr>
+                <th>§ 3.6 Alignment ± 15 mm / ± 3°<br><span style="font-weight: 400; color: var(--text-dim); font-family: 'JetBrains Mono',mono; font-size: 11px;">Achievable at engagement</span></th>
+                <td><span class="status ok">Achievable</span>Corridor-grade nav + visual servo on AprilTag.</td>
+                <td><span class="status ok">Achievable</span>LiDAR SLAM + stereo + visual servo.</td>
+                <td><span class="status ok">Achievable</span>ISO 3691-4 + VSLAM/LiDAR fusion.</td>
+            </tr>
+            <tr>
+                <th>§ 3.7 Gross mass ≤ 350 kg<br><span style="font-weight: 400; color: var(--text-dim); font-family: 'JetBrains Mono',mono; font-size: 11px;">Cart + payload limit</span></th>
+                <td><span class="status warn">Light carts only</span>100 kg payload → cart tare + load ≤ 100 kg. C1 @ 95 kg OK; L1 excluded.</td>
+                <td><span class="status ok">Full cap</span>300 kg payload + 50 kg cart tare budget = 350 kg.</td>
+                <td><span class="status ok">Full cap</span>300 kg chassis payload. Lifting-mode payload (distinct) is a vendor ask.</td>
+            </tr>
+            <tr>
+                <th>§ 3.8 Passive cart<br><span style="font-weight: 400; color: var(--text-dim); font-family: 'JetBrains Mono',mono; font-size: 11px;">No cart electronics</span></th>
+                <td><span class="status ok">Yes</span>v1 carts are passive; BLE stick-on tag optional.</td>
+                <td><span class="status ok">Yes</span>Same passive interface.</td>
+                <td><span class="status ok">Yes</span>Same passive interface.</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <div class="two-col" style="margin-top: 22px;">
+        <div class="callout ok">
+            <span class="tag">Can proceed now</span>
+            <strong>S100 + S300 Phase 1 engineering</strong> can start on the data in this dossier. The only hard block is the Keenon
+            accessory-plate bolt-hole CAD, which is a single vendor ask (see §15).
+        </div>
+        <div class="callout red">
+            <span class="tag">Blocks T300</span>
+            <strong>T300 integration cannot begin</strong> until Pudu provides (a) chassis base height, (b) top-plate bolt pattern,
+            and (c) WTIDL1 lift stroke. Phases 0–2 do not depend on this; Phase 3 does.
+        </div>
+    </div>
+</section>
+
+<!-- ============ §2 QUICK COMPARE ============ -->
+<section id="compare">
+    <div class="section-head">
+        <div class="section-num">§ 2</div>
+        <h2>Side-by-side comparison</h2>
+    </div>
+    <p style="max-width: 820px; color: var(--text-dim);">
+        Vendor-published parameters from the three robots' official product pages. All figures are the OEM's public disclosure
+        as of 2026-04-15. "Published: —" means the vendor does not disclose this specification on the public product page;
+        it is a formal ask (see §15).
+    </p>
+
+    <div class="compare-wrap" style="margin-top: 22px;">
+    <table class="compare">
+        <thead>
+            <tr>
+                <th>Parameter</th>
+                <th class="s100">Keenon S100</th>
+                <th class="s300">Keenon S300</th>
+                <th class="t300">Pudu T300</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Overall dimensions (W × D × H)</td><td>925 × 620 × 1282 mm</td><td>925 × 640 × 1282 mm</td><td>835 × 500 × 1350 mm</td></tr>
+            <tr><td>Weight (incl. battery)</td><td>87.5 kg</td><td>115 kg</td><td>65 kg</td></tr>
+            <tr><td>Max payload</td><td>100 kg +</td><td>300 kg</td><td>300 kg</td></tr>
+            <tr><td>Max operating speed</td><td>1.0 m/s</td><td style="color: var(--warn);">Published: —</td><td>1.2 m/s</td></tr>
+            <tr><td>Battery life (full load)</td><td>8 h</td><td>6 h</td><td>6 h · 12 h no-load</td></tr>
+            <tr><td>Charging time</td><td>2.5 h</td><td>3.5 h (0–100 %)</td><td>2 h (0–90 %)</td></tr>
+            <tr><td>Battery swap</td><td>15 s</td><td>Yes (manual + auto + swap)</td><td>Yes (easy-change)</td></tr>
+            <tr><td>Min passage width</td><td>90 cm</td><td style="color: var(--warn);">Published: —</td><td>60 cm</td></tr>
+            <tr><td>Chassis ground clearance</td><td style="color: var(--warn);">Published: —</td><td>230 mm</td><td style="color: var(--warn);">Published: —</td></tr>
+            <tr><td>Threshold crossing</td><td style="color: var(--warn);">Published: —</td><td style="color: var(--warn);">Published: —</td><td>20 mm</td></tr>
+            <tr><td>Groove crossing</td><td style="color: var(--warn);">Published: —</td><td style="color: var(--warn);">Published: —</td><td>35 mm</td></tr>
+            <tr><td>Slope / gradient</td><td style="color: var(--warn);">Published: —</td><td style="color: var(--warn);">Published: —</td><td style="color: var(--warn);">Published: —</td></tr>
+            <tr><td>Navigation</td><td>LiDAR + stereo vision</td><td>LiDAR SLAM + stereo + VSLAM</td><td>VSLAM + LiDAR SLAM</td></tr>
+            <tr><td>Safety</td><td>Anti-collision strip + 3 e-stops</td><td>Triple e-stops</td><td>LiDAR + cameras + collision + e-stops</td></tr>
+            <tr><td>Operating temp</td><td style="color: var(--warn);">Published: —</td><td style="color: var(--warn);">Published: —</td><td>0–40 °C</td></tr>
+            <tr><td>Compliance</td><td style="color: var(--warn);">Published: —</td><td style="color: var(--warn);">Published: —</td><td>ISO 3691-4</td></tr>
+            <tr><td>Operating modes</td><td>1 (flat platform)</td><td>1 (flat platform)</td><td>4 (standard / shelf / lifting / towing)</td></tr>
+            <tr><td>Model codes</td><td>S100</td><td>S300</td><td>WTID01 (std) · WTIDL1 (with lift)</td></tr>
+            <tr><td>Public PDF datasheet</td><td style="color: var(--red);">No</td><td style="color: var(--red);">No</td><td style="color: var(--green);">Yes — 3 docs</td></tr>
+            <tr><td>Product page</td><td><a href="https://www.keenon.com/en/product/S100/index.html">keenon.com</a></td><td><a href="https://www.keenon.com/en/product/S300/index.html">keenon.com</a></td><td><a href="https://www.pudurobotics.com/en/products/pudut300">pudurobotics.com</a></td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <div class="callout" style="margin-top: 18px;">
+        <span class="tag">Why it matters</span>
+        Both Keenon pages publish fewer dimensions than Pudu's. <strong>Max speed, slope, threshold crossing, and bolt-pattern</strong>
+        are not on Keenon's public S300 page — they need to be requested directly before freezing lift-kit geometry.
+    </div>
+</section>
+
+<!-- ============ §3 KEENON S100 ============ -->
+<section id="s100">
+    <div class="section-head">
+        <div class="section-num">§ 3</div>
+        <h2>Keenon S100 — CarryBot Delivery Robot</h2>
+    </div>
+
+    <!-- Hero -->
+    <div class="robot-hero keenon">
+        <div class="robot-hero-img">
+            <img src="../assets/robots/keenon-s100/hero.png" alt="Keenon S100 flat-platform delivery robot with screen and handle">
+        </div>
+        <div class="robot-hero-body">
+            <div class="vendor-line">
+                <div class="vendor-pill keenon">KEENON ROBOTICS</div>
+            </div>
+            <div class="model-code" style="color: var(--keenon);">S100</div>
+            <div class="model-name">CarryBot · Light-payload delivery robot</div>
+            <div class="model-pos">
+                Flat-platform AMR positioned for warehouse, light-industrial, hospitality and clinical small-cart delivery.
+                In our fleet: <strong>autonomous luggage transport</strong> (lobby → guest room) and the primary target for
+                the S100-LK lift kit when the gross cart load is under 100 kg.
+            </div>
+
+            <div class="robot-quickgrid">
+                <div class="qg"><div class="k">Dims</div><div class="v">925 × 620 × 1282</div></div>
+                <div class="qg"><div class="k">Weight</div><div class="v">87.5 kg</div></div>
+                <div class="qg"><div class="k">Payload</div><div class="v">100 kg +</div></div>
+                <div class="qg"><div class="k">Speed</div><div class="v">1.0 m/s</div></div>
+                <div class="qg"><div class="k">Battery</div><div class="v">8 h · 2.5 h chg</div></div>
+                <div class="qg"><div class="k">Passage</div><div class="v">90 cm</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Specs table -->
+    <h3>Published specifications <span style="font-weight: 400; font-size: 14px; color: var(--text-dim);">— verbatim from Keenon official page</span></h3>
+    <table class="specs">
+        <tbody>
+            <tr><td class="k">Overall dimensions (W × D × H)</td><td class="v">92.5 × 62.0 × 128.2 cm (36.42 × 24.41 × 50.47 in)</td></tr>
+            <tr><td class="k">Weight</td><td class="v">87.5 kg (192.9 lb)</td></tr>
+            <tr><td class="k">Total load capacity</td><td class="v">100 kg + (220 lb +)</td></tr>
+            <tr><td class="k">Max moving speed</td><td class="v">1 m/s (3.28 ft/s)</td></tr>
+            <tr><td class="k">Battery life</td><td class="v">Up to 8 h</td></tr>
+            <tr><td class="k">Charging time</td><td class="v">2.5 h</td></tr>
+            <tr><td class="k">Standard shelf size</td><td class="v">86.5 × 60.0 × 80.0 cm (34.06 × 23.62 × 31.50 in)</td></tr>
+            <tr><td class="k">Minimum passage width</td><td class="v">90 cm (29.53 in) — without rotation</td></tr>
+            <tr><td class="k">Obstacle avoidance</td><td class="v">360 degrees</td></tr>
+            <tr><td class="k">Safety</td><td class="v">Anti-collision strip + 3 × emergency-stop buttons</td></tr>
+            <tr><td class="k">Sensors</td><td class="v">LiDAR + stereo vision</td></tr>
+            <tr><td class="k">Charging options</td><td class="v">Charging pile · adapter · 15-second battery swap</td></tr>
+        </tbody>
+    </table>
+
+    <!-- Dimension & spec diagrams -->
+    <h3>Published dimension &amp; feature diagrams</h3>
+    <p style="color: var(--text-dim); font-size: 13px;">Downloaded from the official product page and authorized EU distributor. Click any diagram to open full-size.</p>
+    <div class="gallery" style="margin-top: 14px;">
+        <a href="../assets/robots/keenon-s100/dimensions-spec1.png" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s100/dimensions-spec1.png" alt="S100 spec diagram 1"></div><div class="caption">dimensions-spec1.png</div></a>
+        <a href="../assets/robots/keenon-s100/dimensions-spec2.png" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s100/dimensions-spec2.png" alt="S100 spec diagram 2"></div><div class="caption">dimensions-spec2.png</div></a>
+        <a href="../assets/robots/keenon-s100/dimensions-spec3.png" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s100/dimensions-spec3.png" alt="S100 spec diagram 3"></div><div class="caption">dimensions-spec3.png</div></a>
+        <a href="../assets/robots/keenon-s100/dimensions-spec4.png" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s100/dimensions-spec4.png" alt="S100 spec diagram 4"></div><div class="caption">dimensions-spec4.png</div></a>
+    </div>
+
+    <h3>Product photography</h3>
+    <div class="gallery">
+        <a href="../assets/robots/keenon-s100/photo-official-1.png" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s100/photo-official-1.png" alt="S100 official photo 1"></div><div class="caption">photo-official-1.png</div></a>
+        <a href="../assets/robots/keenon-s100/photo-official-2.png" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s100/photo-official-2.png" alt="S100 official photo 2"></div><div class="caption">photo-official-2.png</div></a>
+        <a href="../assets/robots/keenon-s100/photo-official-3.png" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s100/photo-official-3.png" alt="S100 official photo 3"></div><div class="caption">photo-official-3.png</div></a>
+        <a href="../assets/robots/keenon-s100/photo-official-4.png" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s100/photo-official-4.png" alt="S100 official photo 4"></div><div class="caption">photo-official-4.png</div></a>
+    </div>
+
+    <!-- Analysis for cart-kit -->
+    <h3>Dock-kit integration analysis</h3>
+    <div class="two-col">
+        <div class="analysis">
+            <h4>Fits the Dock Standard v1 envelope</h4>
+            <ul>
+                <li><strong>Base footprint:</strong> ~550 × 700 mm chassis (tall mast brings overall H to 1282 mm) — fits comfortably under the 900 × 550 mm dock zone with ~200 mm forward/aft margin.</li>
+                <li><strong>Base height:</strong> ~200 mm chassis height. With the 60 mm S100-LK stack-up, combined height is right at the 260 mm §3.2 minimum. <em>Validate before kit freeze.</em></li>
+                <li><strong>Payload:</strong> 100 kg rating limits the S100 to lighter v1-compliant carts (C1 food @ 95 kg gross, H1 housekeeping @ 110 kg gross — borderline, size-load carefully).</li>
+                <li><strong>Accessory mount:</strong> Flat platform with bolt-hole pattern + low-voltage connector — suitable for the S100-LK mechanical mount. <em>Exact pattern must be requested from Keenon.</em></li>
+            </ul>
+        </div>
+        <div class="analysis">
+            <h4>Known gaps (need from Keenon)</h4>
+            <ul>
+                <li>Threshold / groove crossing — not published. Affects corridor-sill + elevator-transition viability.</li>
+                <li>Gradient / slope rating — not published. Internal estimate is ~5° from the Keenon family default.</li>
+                <li>Accessory-plate bolt-hole CAD — <strong>gating S100-LK mechanical mount design</strong>.</li>
+                <li>Accessory-connector pinout — gates any v2 electrical integration.</li>
+                <li>IP rating / environmental — affects outdoor-covered walkway use cases.</li>
+                <li>SDK / fleet API — gates software integration path beyond PEANUT APP.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>Source links</h3>
+    <div class="linklist">
+        <div>● Official: <a href="https://www.keenon.com/en/product/S100/index.html">keenon.com/en/product/S100/index.html</a></div>
+        <div>● EU distributor (identical spec table): <a href="https://keenrobotic.eu/en/keenon-s100/">keenrobotic.eu/en/keenon-s100/</a></div>
+        <div>● US reseller: <a href="https://www.helpinghandrobotics.com/robot-pricing/p/s100-by-keenon-robotics-industrial-carrier-72nfk">helpinghandrobotics.com</a></div>
+        <div>● User manual index (interstitial): <a href="https://www.manualslib.com/manual/3574763/Keenon-Robotics-S100.html">manualslib.com</a></div>
+    </div>
+</section>
+
+<!-- ============ §4 KEENON S300 ============ -->
+<section id="s300">
+    <div class="section-head">
+        <div class="section-num">§ 4</div>
+        <h2>Keenon S300 — Heavy-Load Intelligent Delivery Robot</h2>
+    </div>
+
+    <div class="robot-hero keenon">
+        <div class="robot-hero-img">
+            <img src="../assets/robots/keenon-s300/hero.png" alt="Keenon S300 heavy-load delivery robot with screen">
+        </div>
+        <div class="robot-hero-body">
+            <div class="vendor-line">
+                <div class="vendor-pill keenon">KEENON ROBOTICS</div>
+            </div>
+            <div class="model-code" style="color: var(--keenon);">S300</div>
+            <div class="model-name">Heavy-load delivery · 300 kg payload</div>
+            <div class="model-pos">
+                Keenon's heavy-payload entry in the same platform family as the S100. Designed for factory, warehouse,
+                large-hotel and hospital bulk logistics. For our fleet: <strong>linen hauls</strong> and
+                <strong>food kitchen-to-floor</strong> transport. Payload rating is the binding driver of the
+                Dock Standard §3.7 350 kg gross-mass limit.
+            </div>
+
+            <div class="robot-quickgrid">
+                <div class="qg"><div class="k">Dims</div><div class="v">925 × 640 × 1282</div></div>
+                <div class="qg"><div class="k">Weight</div><div class="v">115 kg</div></div>
+                <div class="qg"><div class="k">Payload</div><div class="v">300 kg</div></div>
+                <div class="qg"><div class="k">Platform</div><div class="v">860 × 600 mm</div></div>
+                <div class="qg"><div class="k">Clearance</div><div class="v">230 mm</div></div>
+                <div class="qg"><div class="k">Battery</div><div class="v">6 h · 3.5 h chg</div></div>
+            </div>
+        </div>
+    </div>
+
+    <h3>Published specifications <span style="font-weight: 400; font-size: 14px; color: var(--text-dim);">— verbatim from Keenon official page</span></h3>
+    <table class="specs">
+        <tbody>
+            <tr><td class="k">Overall dimensions (W × D × H)</td><td class="v">925 × 640 × 1282 mm</td></tr>
+            <tr><td class="k">Weight (incl. battery)</td><td class="v">115 kg</td></tr>
+            <tr><td class="k">Max payload</td><td class="v">300 kg</td></tr>
+            <tr><td class="k">Loading platform</td><td class="v">860 × 600 mm</td></tr>
+            <tr><td class="k">Compatible shelf size</td><td class="v">up to 1200 × 1200 mm</td></tr>
+            <tr><td class="k">Battery life</td><td class="v">6 h under full-load operation</td></tr>
+            <tr><td class="k">Charging time</td><td class="v">3.5 h (0 → 100 %)</td></tr>
+            <tr><td class="k">Charging modes</td><td class="v">Automatic · manual · battery swap</td></tr>
+            <tr><td class="k">Chassis ground clearance</td><td class="v">230 mm</td></tr>
+            <tr><td class="k">Navigation</td><td class="v">LiDAR SLAM + stereo vision fusion + VSLAM</td></tr>
+            <tr><td class="k">Sensing</td><td class="v">3D vision + dual LiDAR + VSLAM</td></tr>
+            <tr><td class="k">Safety</td><td class="v">Triple emergency stops</td></tr>
+            <tr><td class="k">Deployment time</td><td class="v">1 day (vs claimed 3–6 months traditional)</td></tr>
+            <tr><td class="k">Max moving speed</td><td class="v gap">Not published — request from vendor</td></tr>
+            <tr><td class="k">Threshold / groove crossing</td><td class="v gap">Not published — request from vendor</td></tr>
+            <tr><td class="k">Gradient / slope</td><td class="v gap">Not published — request from vendor</td></tr>
+            <tr><td class="k">Min passage width</td><td class="v gap">Not published — request from vendor</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Product &amp; deployment photography</h3>
+    <div class="gallery">
+        <a href="../assets/robots/keenon-s300/hero.png" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s300/hero.png" alt="S300 hero"></div><div class="caption">hero.png — studio product shot</div></a>
+        <a href="../assets/robots/keenon-s300/photo-deployment.jpg" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s300/photo-deployment.jpg" alt="S300 deployment"></div><div class="caption">photo-deployment.jpg — in service</div></a>
+        <a href="../assets/robots/keenon-s300/photo-setup.jpg" target="_blank"><div class="wrap"><img src="../assets/robots/keenon-s300/photo-setup.jpg" alt="S300 commissioning"></div><div class="caption">photo-setup.jpg — commissioning</div></a>
+    </div>
+
+    <h3>Dock-kit integration analysis</h3>
+    <div class="two-col">
+        <div class="analysis">
+            <h4>Binds two Dock Standard parameters</h4>
+            <ul>
+                <li><strong>§3.1 dock footprint:</strong> the 900 × 550 mm dock zone was sized around the S300's ~700 × 900 mm base footprint — 200 mm of approach margin on the long axis.</li>
+                <li><strong>§3.2 clearance:</strong> the S300's base is ~240 mm tall; with the 20 mm low-profile S300-LK on top, combined height sits exactly at the 260 mm minimum. <strong>Zero margin.</strong> This drives the kit's cam-mechanism profile.</li>
+                <li><strong>§3.7 gross mass:</strong> 300 kg payload + ~50 kg cart tare = 350 kg cap. If the S300 payload rating is confirmed conservative, v2 could lift the cap.</li>
+                <li><strong>Platform:</strong> 860 × 600 mm native — fits the 750 × 400 pad pattern with 55 mm margin around it.</li>
+            </ul>
+        </div>
+        <div class="analysis">
+            <h4>Known gaps (need from Keenon)</h4>
+            <ul>
+                <li>Max moving speed — critical for drive-under sequencing; need documented value.</li>
+                <li>Slope rating — informs 3° yaw + grade tipping validation with 300 kg payload.</li>
+                <li>Accessory bolt-hole CAD + connector pinout (shared ask with S100).</li>
+                <li>Sensor tower clearance from accessory-platform top — must not intrude above 260 mm.</li>
+                <li>LiDAR mounting geometry — if top-LiDAR shadow crosses the dock zone plane, cart mass shifts may disrupt localization.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="callout" style="margin-top: 22px;">
+        <span class="tag">S300-LK binding constraint</span>
+        The 20 mm kit-height budget on top of the 240 mm base drives a <strong>low-profile cam design</strong> distinct from the S100-LK's 60 mm allowance. The S300-LK reuses ~85 % of S100-LK subcomponents but requires different frame/cam parts. Manufacturing partner selection blocks on this.
+    </div>
+
+    <h3>Source links</h3>
+    <div class="linklist">
+        <div>● Official: <a href="https://www.keenon.com/en/product/S300/index.html">keenon.com/en/product/S300/index.html</a> <span style="color: var(--text-faint);">(page assets dated 2025-10-10)</span></div>
+        <div>● Distributor: <a href="https://www.helpinghandrobotics.com/robot-pricing/p/s100-by-keenon-robotics-industrial-carrier-72nfk">helpinghandrobotics.com</a></div>
+        <div>● Launch announcement: <a href="https://www.facebook.com/robotkeenon/videos/new-arrival-keenon-s300-the-heavy-load-intelligent-delivery-robot-built-to-trans/2310922752696835/">Keenon Facebook</a></div>
+    </div>
+</section>
+
+<!-- ============ §5 PUDU T300 ============ -->
+<section id="t300">
+    <div class="section-head">
+        <div class="section-num">§ 5</div>
+        <h2>Pudu T300 — Industrial AMR</h2>
+    </div>
+
+    <div class="robot-hero pudu">
+        <div class="robot-hero-img">
+            <img src="../assets/robots/pudu-t300/hero.webp" alt="Pudu T300 industrial autonomous mobile robot">
+        </div>
+        <div class="robot-hero-body">
+            <div class="vendor-line">
+                <div class="vendor-pill pudu">PUDU ROBOTICS</div>
+            </div>
+            <div class="model-code" style="color: var(--pudu);">T300</div>
+            <div class="model-name">Industrial AMR · 300 kg payload · 4 operating modes</div>
+            <div class="model-pos">
+                Pudu's industrial-class AMR. Single chassis supports four swappable payload modes — flat, shelf, lifting
+                (drive-under), and towing. Certified ISO 3691-4. For our fleet: <strong>vendor-agnostic alternative to Keenon S300</strong>
+                for heavy-payload cart pickup; T300-LK design is gated on acquisition of bolt-hole CAD from Pudu.
+            </div>
+
+            <div class="robot-quickgrid">
+                <div class="qg"><div class="k">Dims</div><div class="v">835 × 500 × 1350</div></div>
+                <div class="qg"><div class="k">Weight</div><div class="v">65 kg</div></div>
+                <div class="qg"><div class="k">Payload</div><div class="v">300 kg</div></div>
+                <div class="qg"><div class="k">Speed</div><div class="v">1.2 m/s</div></div>
+                <div class="qg"><div class="k">Threshold</div><div class="v">20 mm</div></div>
+                <div class="qg"><div class="k">Groove</div><div class="v">35 mm</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 modes -->
+    <h3>Four operating modes</h3>
+    <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 14px;">The T300 is a single chassis that accepts four payload interfaces. Mode is determined by the top-fixture installed. For the Accelerate Cart Platform, the <strong>Lifting Mode (WTIDL1 SKU)</strong> is the integration target — it includes a drive-under scissor lift that may or may not reach the 8 mm Dock Standard §3.4 travel.</p>
+    <div class="modes">
+        <div class="mode">
+            <div class="mode-img"><img src="../assets/robots/pudu-t300/photo-mode-standard.webp" alt="Standard mode"></div>
+            <div class="mode-body"><div class="mode-name">Standard Mode</div><div class="mode-desc">Flat top surface for direct payload placement.</div></div>
+        </div>
+        <div class="mode">
+            <div class="mode-img"><img src="../assets/robots/pudu-t300/photo-mode-shelf.webp" alt="Shelf mode"></div>
+            <div class="mode-body"><div class="mode-name">Shelf Mode</div><div class="mode-desc">Fixed top-mounted shelving for stacked payload.</div></div>
+        </div>
+        <div class="mode">
+            <div class="mode-img"><img src="../assets/robots/pudu-t300/photo-mode-lifting.webp" alt="Lifting mode"></div>
+            <div class="mode-body"><div class="mode-name">Lifting Mode<br><span style="color: var(--accent); font-weight: 400; text-transform: none; letter-spacing: normal; font-size: 10px;">WTIDL1 SKU — our integration target</span></div><div class="mode-desc">Scissor / platform lift for drive-under pickup. Dimensions TBD.</div></div>
+        </div>
+        <div class="mode">
+            <div class="mode-img"><img src="../assets/robots/pudu-t300/photo-mode-towing.webp" alt="Towing mode"></div>
+            <div class="mode-body"><div class="mode-name">Towing Mode</div><div class="mode-desc">Pulls trailed carts via rear hitch.</div></div>
+        </div>
+    </div>
+
+    <h3>Published specifications <span style="font-weight: 400; font-size: 14px; color: var(--text-dim);">— verbatim from Pudu official page</span></h3>
+    <table class="specs">
+        <tbody>
+            <tr><td class="k">Machine dimensions (W × D × H)</td><td class="v">835 × 500 × 1350 mm (32.87 × 19.69 × 53.15 in)</td></tr>
+            <tr><td class="k">Machine weight</td><td class="v">65 kg (standard mode) · 143.30 lb</td></tr>
+            <tr><td class="k">Maximum payload</td><td class="v">300 kg (661.39 lb)</td></tr>
+            <tr><td class="k">Max operating speed</td><td class="v">1.2 m/s (3.94 ft/s)</td></tr>
+            <tr><td class="k">Battery capacity</td><td class="v">30 Ah</td></tr>
+            <tr><td class="k">Charging time</td><td class="v">2 h (0 → 90 %)</td></tr>
+            <tr><td class="k">Runtime</td><td class="v">12 h no-load · 6 h fully loaded</td></tr>
+            <tr><td class="k">Navigation</td><td class="v">VSLAM + LiDAR SLAM</td></tr>
+            <tr><td class="k">Min path clearance</td><td class="v">60 cm (23.62 in)</td></tr>
+            <tr><td class="k">Max threshold crossing</td><td class="v">20 mm (0.79 in)</td></tr>
+            <tr><td class="k">Max groove crossing</td><td class="v">35 mm (1.38 in)</td></tr>
+            <tr><td class="k">Operating temperature</td><td class="v">0 °C to 40 °C</td></tr>
+            <tr><td class="k">Site requirements</td><td class="v">Indoor, flat ground</td></tr>
+            <tr><td class="k">Compliance</td><td class="v">ISO 3691-4</td></tr>
+            <tr><td class="k">Sensors</td><td class="v">LiDAR · depth cameras · collision protection · e-stops</td></tr>
+            <tr><td class="k">Model codes</td><td class="v">WTID01 (standard) · WTIDL1 (with lift)</td></tr>
+        </tbody>
+    </table>
+
+    <!-- Dimension diagram -->
+    <h3>Dimensional diagram</h3>
+    <div class="big-image">
+        <a href="../assets/robots/pudu-t300/dimensions.webp" target="_blank"><img src="../assets/robots/pudu-t300/dimensions.webp" alt="Pudu T300 dimensional drawing"></a>
+        <div class="caption">dimensions.webp — from Pudu official product page. Click to open full size.</div>
+    </div>
+
+    <h3>Parameters reference</h3>
+    <div class="big-image">
+        <a href="../assets/robots/pudu-t300/parameters.png" target="_blank"><img src="../assets/robots/pudu-t300/parameters.png" alt="Pudu T300 parameters table image"></a>
+        <div class="caption">parameters.png — parameter table from Pudu product page (authoritative version).</div>
+    </div>
+
+    <!-- Documents -->
+    <h3>Official PDF documents</h3>
+    <div class="docs">
+        <div class="doc">
+            <div class="doc-head">
+                <div class="doc-ic">PDF</div>
+                <div><div class="doc-title">Product Brochure</div><div class="doc-size">brochure.pdf · 4.6 MB</div></div>
+            </div>
+            <div class="doc-desc">Official Pudu T300 product brochure. Marketing + dimensional overview + mode descriptions. Good starting point for a stakeholder walkthrough.</div>
+            <div class="doc-actions">
+                <a class="btn btn-accent" href="../assets/robots/pudu-t300/brochure.pdf" target="_blank">Open</a>
+                <a class="btn btn-dim" href="../assets/robots/pudu-t300/brochure.pdf" download>Download</a>
+            </div>
+        </div>
+        <div class="doc">
+            <div class="doc-head">
+                <div class="doc-ic">PDF</div>
+                <div><div class="doc-title">Technical Datasheet / Presentation</div><div class="doc-size">datasheet.pdf · 5.6 MB</div></div>
+            </div>
+            <div class="doc-desc">Pudu T300 presentation deck via EU distributor (Generation Robots). Extended technical detail, mode-specific parameters, use-case diagrams.</div>
+            <div class="doc-actions">
+                <a class="btn btn-accent" href="../assets/robots/pudu-t300/datasheet.pdf" target="_blank">Open</a>
+                <a class="btn btn-dim" href="../assets/robots/pudu-t300/datasheet.pdf" download>Download</a>
+            </div>
+        </div>
+        <div class="doc">
+            <div class="doc-head">
+                <div class="doc-ic">PDF</div>
+                <div><div class="doc-title">Operation Guide (User Manual)</div><div class="doc-size">manual.pdf · 2.6 MB · v1.0.2 · Aug 2024</div></div>
+            </div>
+            <div class="doc-desc">Official Pudu T300 Operation Guide. Setup, power-on, mapping, charging, basic troubleshooting. Essential for commissioning and staff training.</div>
+            <div class="doc-actions">
+                <a class="btn btn-accent" href="../assets/robots/pudu-t300/manual.pdf" target="_blank">Open</a>
+                <a class="btn btn-dim" href="../assets/robots/pudu-t300/manual.pdf" download>Download</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inline PDF preview -->
+    <h3>Brochure preview (inline)</h3>
+    <p style="color: var(--text-dim); font-size: 13px;">If your browser supports PDF rendering, the brochure preview is embedded below. Otherwise, use the "Open" / "Download" buttons above.</p>
+    <div class="pdf-embed">
+        <iframe src="../assets/robots/pudu-t300/brochure.pdf#view=FitH" title="Pudu T300 brochure"></iframe>
+    </div>
+
+    <h3>Dock-kit integration analysis</h3>
+    <div class="two-col">
+        <div class="analysis">
+            <h4>Likely fits the envelope — TBD on details</h4>
+            <ul>
+                <li><strong>Footprint (835 × 500 mm)</strong> fits under the 900 × 550 mm dock zone with ~65 mm lateral and forward margin each side.</li>
+                <li><strong>Overall height (1350 mm)</strong> is the mast; we need the <em>chassis (base)</em> height separately to check §3.2 clearance.</li>
+                <li><strong>Payload (300 kg)</strong> covers all v1-compliant carts including L1 Linen (250 kg payload at full load).</li>
+                <li><strong>Threshold 20 mm / groove 35 mm</strong> covers most corridor sills without ramp accommodation — a hotel-grade capability.</li>
+                <li><strong>ISO 3691-4 compliant</strong> — helps with insurance and facility reviews versus the Keenon pair (compliance not disclosed).</li>
+            </ul>
+        </div>
+        <div class="analysis">
+            <h4>Critical unknowns (blocking T300-LK design)</h4>
+            <ul>
+                <li><strong>Lifting mode mechanical spec (WTIDL1):</strong> lift stroke, lift speed, lift payload (may be lower than chassis 300 kg), platform flatness.</li>
+                <li><strong>Chassis base height</strong> (separate from 1350 mm overall). Needed for §3.2 clearance check.</li>
+                <li><strong>Top-plate bolt-hole pattern + load rating.</strong></li>
+                <li><strong>Pudu Open Platform SDK / API</strong> — referenced on the product page but public docs not found.</li>
+                <li><strong>Towing-mode hitch dimensions + max trailer load</strong> (if towing becomes a backup pickup strategy).</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>Source links</h3>
+    <div class="linklist">
+        <div>● Official: <a href="https://www.pudurobotics.com/en/products/pudut300">pudurobotics.com/en/products/pudut300</a></div>
+        <div>● Brochure (direct): <a href="https://log-robot.com/files/dateien/Downloads/PUDU_T300_Brochure.pdf">log-robot.com … PUDU_T300_Brochure.pdf</a></div>
+        <div>● Operation Guide: <a href="https://cdn.robotshop.com/media/P/Pud/RB-Pud-04/pdf/pudu-t300-20240828-operational-guide.pdf">robotshop.com … operational-guide.pdf</a></div>
+        <div>● EU distributor deck: <a href="https://static.generation-robots.com/media/presentation-pudu-t300-en-2.pdf">generation-robots.com … presentation-pudu-t300</a></div>
+        <div>● WTIDL1 (with lift) SKU: <a href="https://ca.robotshop.com/products/pudu-t300-industrial-delivery-robot-with-lift">ca.robotshop.com … with-lift</a></div>
+        <div>● US distributor: <a href="https://www.robotlab.com/pudu-t300">robotlab.com/pudu-t300</a></div>
+    </div>
+</section>
+
+<!-- ============ §6 CROSS-ROBOT DIMENSIONAL COMPARISON ============ -->
+<section id="cross">
+    <div class="section-head">
+        <div class="section-num">§ 6</div>
+        <h2>Cross-robot dimensional comparison</h2>
+    </div>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        Scale overlays of the three robots' published footprints against the Dock Standard v1 900 × 550 mm dock zone, and an
+        elevation stack-up showing how each kit consumes the 260 mm clearance budget. Use these to validate CAD decisions
+        before committing to lift-kit geometry.
+    </p>
+
+    <h3>Top-down footprints — all three robots vs dock zone</h3>
+    <div class="svg-stage">
+        <div class="title">TOP VIEW · 1 px = 1 mm · all robots centered on dock zone · cart travel direction ↑</div>
+        <svg viewBox="0 0 1100 1050" preserveAspectRatio="xMidYMid meet" style="max-width: 820px;">
+            <!-- Grid -->
+            <defs>
+                <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                    <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#d5d7e0" stroke-width="0.5"/>
+                </pattern>
+            </defs>
+            <rect width="1100" height="1050" fill="url(#grid)"/>
+
+            <!-- Dock zone 900×550 mm (900 long in travel direction Y-axis, 550 wide in X-axis) -->
+            <!-- Center dock at (550, 525). Long axis vertical (parallel to travel). -->
+            <rect x="275" y="75" width="550" height="900" fill="rgba(0,85,255,0.05)" stroke="#0055ff" stroke-width="3" stroke-dasharray="10,6" rx="6"/>
+            <text x="285" y="100" fill="#0055ff" font-size="16" font-family="Space Grotesk" font-weight="700">Dock Zone · 900 × 550 mm</text>
+            <text x="285" y="960" fill="#0055ff" font-size="12" font-family="JetBrains Mono">leading edge ↑</text>
+
+            <!-- Lift pad rectangle 750×400 centered on dock -->
+            <rect x="350" y="150" width="400" height="750" fill="none" stroke="#e6a000" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <!-- Four pads -->
+            <rect x="335" y="135" width="30" height="30" fill="#e6a000"/>
+            <rect x="735" y="135" width="30" height="30" fill="#e6a000"/>
+            <rect x="335" y="885" width="30" height="30" fill="#e6a000"/>
+            <rect x="735" y="885" width="30" height="30" fill="#e6a000"/>
+            <!-- Fiducial 200mm from leading edge -->
+            <rect x="510" y="235" width="80" height="80" fill="white" stroke="#aaa" stroke-width="0.5"/>
+            <rect x="518" y="243" width="64" height="64" fill="black"/>
+            <text x="550" y="340" text-anchor="middle" fill="#5a5d6e" font-size="10" font-family="JetBrains Mono">AprilTag 36h11 · 80 mm · 200 mm from leading edge</text>
+
+            <!-- S300 footprint: 900W × 700L (per ref). Approximation - longest axis in travel dir. -->
+            <rect x="100" y="175" width="900" height="700" fill="rgba(8,145,178,0.08)" stroke="#0891b2" stroke-width="2"/>
+            <text x="110" y="200" fill="#0891b2" font-size="14" font-family="Space Grotesk" font-weight="700">Keenon S300 — 700L × 900W (ref)</text>
+            <text x="110" y="218" fill="#0891b2" font-size="11" font-family="JetBrains Mono">body 925 × 640 mm per vendor · chassis CAD required</text>
+
+            <!-- S100 footprint: 700L × 550W (per ref). -->
+            <rect x="275" y="175" width="550" height="700" fill="rgba(8,145,178,0.12)" stroke="#0891b2" stroke-width="2"/>
+            <text x="285" y="865" fill="#0891b2" font-size="14" font-family="Space Grotesk" font-weight="700">Keenon S100 — 700L × 550W (ref)</text>
+
+            <!-- T300 footprint: 835L × 500W (from vendor body dims 835×500). -->
+            <rect x="300" y="108" width="500" height="835" fill="none" stroke="#c2410c" stroke-width="2" stroke-dasharray="6,4"/>
+            <text x="310" y="928" fill="#c2410c" font-size="14" font-family="Space Grotesk" font-weight="700">Pudu T300 — 835L × 500W (vendor body)</text>
+        </svg>
+        <div class="svg-legend">
+            <span><span class="legend-swatch" style="background: #0055ff; opacity: 0.6;"></span>Dock zone (§ 3.1)</span>
+            <span><span class="legend-swatch" style="background: #e6a000;"></span>Lift pads (§ 3.3)</span>
+            <span><span class="legend-swatch" style="background: #0891b2; opacity: 0.5;"></span>Keenon S300 base</span>
+            <span><span class="legend-swatch" style="background: #0891b2; opacity: 0.8;"></span>Keenon S100 base</span>
+            <span><span class="legend-swatch" style="background: transparent; border: 2px dashed #c2410c;"></span>Pudu T300 body</span>
+        </div>
+        <p style="color: var(--text-dim); font-size: 12px; margin-top: 16px; max-width: 700px; margin-left: auto; margin-right: auto; text-align: center;">
+            S300 "700 × 900 mm" is our internal ref-spec approximation; vendor publishes 925 × 640 mm body. The two figures describe
+            different things (driving chassis vs full shell) and both are noted pending vendor CAD.
+            <strong>Only the chassis portion below 260 mm height must fit inside the dashed dock-zone rectangle.</strong>
+        </p>
+    </div>
+
+    <h3 style="margin-top: 40px;">Elevation stack-up — the 260 mm clearance budget</h3>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        The Dock Standard requires 260 mm of vertical clearance between the floor and the cart underside (§3.2). The robot
+        base plus lift-kit height plus 8 mm lift stroke all must fit inside this budget. These diagrams show the stack-up
+        per robot against the 260 mm ceiling.
+    </p>
+
+    <div class="two-col" style="margin-top: 18px;">
+        <div>
+            <h4 style="color: var(--keenon);">Keenon S100 + S100-LK</h4>
+            <div class="stack">
+                <div class="stack-layer cart"><span class="label">Cart underside (dock plane)</span><span class="val">260 mm</span></div>
+                <div class="stack-layer lift"><span class="label">↑ 8 mm lift travel (§3.4)</span><span class="val">252–260 mm</span></div>
+                <div class="stack-layer kit"><span class="label">S100-LK kit (≤ 60 mm)</span><span class="val">200–260 mm</span></div>
+                <div class="stack-layer robot"><span class="label">S100 base (~ 200 mm)</span><span class="val">0–200 mm</span></div>
+                <div class="stack-layer floor"><span class="label">Floor</span><span class="val">0 mm</span></div>
+            </div>
+            <p style="color: var(--text-dim); font-size: 12px; margin-top: 10px;">200 + 60 = 260 → exactly meets §3.2. Zero margin.</p>
+        </div>
+        <div>
+            <h4 style="color: var(--keenon);">Keenon S300 + S300-LK</h4>
+            <div class="stack">
+                <div class="stack-layer cart"><span class="label">Cart underside (dock plane)</span><span class="val">260 mm</span></div>
+                <div class="stack-layer lift"><span class="label">↑ 8 mm lift travel (§3.4)</span><span class="val">252–260 mm</span></div>
+                <div class="stack-layer kit"><span class="label">S300-LK low-profile (≤ 20 mm)</span><span class="val">240–260 mm</span></div>
+                <div class="stack-layer robot"><span class="label">S300 base (~ 240 mm)</span><span class="val">0–240 mm</span></div>
+                <div class="stack-layer floor"><span class="label">Floor</span><span class="val">0 mm</span></div>
+            </div>
+            <p style="color: var(--text-dim); font-size: 12px; margin-top: 10px;">240 + 20 = 260 → exactly meets §3.2. Drives the S300-LK's low-profile cam design.</p>
+        </div>
+    </div>
+
+    <div class="stack" style="margin-top: 18px;">
+        <h4 style="color: var(--pudu); margin-top: 0;">Pudu T300 + T300-LK — pending Pudu data</h4>
+        <div class="stack-layer cart"><span class="label">Cart underside (dock plane)</span><span class="val">260 mm</span></div>
+        <div class="stack-layer lift"><span class="label">↑ 8 mm lift travel (§3.4) or WTIDL1 native</span><span class="val">? mm</span></div>
+        <div class="stack-layer kit"><span class="label">T300-LK kit — height TBD on base height</span><span class="val">? mm</span></div>
+        <div class="stack-layer robot"><span class="label">T300 chassis base — height not published</span><span class="val">0–? mm</span></div>
+        <div class="stack-layer floor"><span class="label">Floor</span><span class="val">0 mm</span></div>
+        <p style="color: var(--warn); font-size: 12px; margin: 12px 0 0;">Published overall height 1350 mm is the mast; chassis-only base height must come from Pudu before T300-LK envelope can be fixed.</p>
+    </div>
+</section>
+
+<!-- ============ §7 LIFT-KIT ENGINEERING ENVELOPES ============ -->
+<section id="envelopes">
+    <div class="section-head">
+        <div class="section-num">§ 7</div>
+        <h2>Lift-kit engineering envelopes</h2>
+    </div>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        Per-robot mass, power, and dimensional budgets for the lift-kit designer. These numbers come from the reference-design
+        docs (<code>docs/lift-kits/</code>) and the compliance analysis above, and are the starting point for CAD and
+        procurement. Figures marked TBD unlock on vendor CAD acquisition (see §15).
+    </p>
+
+    <div class="kit-grid" style="margin-top: 22px;">
+        <div class="kit-card s100">
+            <h4>S100-LK</h4>
+            <div class="kit-sub">TARGET · KEENON S100 · LIGHT DUTY</div>
+            <dl>
+                <dt>Kit height budget</dt><dd>≤ 60 mm above accessory platform</dd>
+                <dt>Kit target mass</dt><dd>~ 8 kg</dd>
+                <dt>Lift mechanism</dt><dd>cam-driven, spring-retracted, passive detent</dd>
+                <dt>Lift stroke</dt><dd>8 mm (matches § 3.4)</dd>
+                <dt>Solenoid voltage / current</dt><dd>12 V · ~ 3 A momentary (pulse)</dd>
+                <dt>Kit idle power</dt><dd>negligible (no hold current)</dd>
+                <dt>Kit peak power (during lift)</dt><dd>&lt; 50 W</dd>
+                <dt>Mount interface</dt><dd class="gap">Bolt-hole CAD pending from Keenon</dd>
+                <dt>Sensing</dt><dd>USB 720p camera + 3 × HC-SR04 ultrasonic</dd>
+                <dt>Cart gross-mass ceiling</dt><dd>100 kg (S100 payload rating)</dd>
+                <dt>Compatible reference carts</dt><dd>C1 Food (60 kg), H1 Housekeeping (80 kg)</dd>
+                <dt>Incompatible</dt><dd class="gap">L1 Linen — payload 250 kg exceeds S100</dd>
+                <dt>Subassembly reuse</dt><dd>Donor for ~85% of S300-LK parts</dd>
+            </dl>
+        </div>
+        <div class="kit-card s300">
+            <h4>S300-LK</h4>
+            <div class="kit-sub">TARGET · KEENON S300 · HEAVY DUTY</div>
+            <dl>
+                <dt>Kit height budget</dt><dd>≤ 20 mm (low profile — binding)</dd>
+                <dt>Kit target mass</dt><dd>~ 14 kg</dd>
+                <dt>Lift mechanism</dt><dd>low-profile cam, higher spring rate, passive detent</dd>
+                <dt>Lift stroke</dt><dd>8 mm external (internal stroke shorter via linkage)</dd>
+                <dt>Solenoid voltage / current</dt><dd>24 V · ~ 5 A momentary</dd>
+                <dt>Kit idle power</dt><dd>negligible (no hold current)</dd>
+                <dt>Kit peak power (during lift)</dt><dd>&lt; 100 W</dd>
+                <dt>Peak solenoid current (max)</dt><dd>&lt; 20 A at 350 kg gross</dd>
+                <dt>Mount interface</dt><dd class="gap">Bolt-hole CAD pending from Keenon</dd>
+                <dt>Sensing</dt><dd>Same USB camera + 3 × ultrasonic as S100-LK</dd>
+                <dt>Cart gross-mass ceiling</dt><dd>350 kg (Dock Standard § 3.7 cap)</dd>
+                <dt>Compatible reference carts</dt><dd>C1 Food, L1 Linen, H1 Housekeeping</dd>
+                <dt>Subassembly reuse</dt><dd>~85% of S100-LK parts (camera, ultrasonics, cam-core)</dd>
+            </dl>
+        </div>
+        <div class="kit-card t300">
+            <h4>T300-LK</h4>
+            <div class="kit-sub">TARGET · PUDU T300 · GATED</div>
+            <dl>
+                <dt>Kit height budget</dt><dd class="gap">TBD — pending Pudu base height</dd>
+                <dt>Kit target mass</dt><dd class="gap">TBD</dd>
+                <dt>Lift mechanism</dt><dd class="gap">TBD — may reuse S300-LK or use native WTIDL1 scissor</dd>
+                <dt>Lift stroke</dt><dd class="gap">8 mm target; WTIDL1 native stroke unknown</dd>
+                <dt>Solenoid voltage</dt><dd class="gap">TBD — depends on Pudu accessory power</dd>
+                <dt>Mount interface</dt><dd class="gap">Bolt-hole CAD not published by Pudu</dd>
+                <dt>Sensing</dt><dd>May reuse native T300 depth cameras + LiDAR</dd>
+                <dt>Cart gross-mass ceiling</dt><dd>300 kg (T300 payload) or lifting-mode-specific (TBD)</dd>
+                <dt>Decision gate</dt><dd class="gap">WTIDL1 spec → design from scratch vs adapt S300-LK</dd>
+                <dt>Software-stack path</dt><dd class="gap">Pudu Linux + Open Platform SDK (docs not public)</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="callout" style="margin-top: 22px;">
+        <span class="tag">Mass budget math</span>
+        <strong>Max cart payload = robot-payload − (cart tare + kit deflection allowance).</strong>
+        For S300 + S300-LK + L1 Linen: 300 kg − (50 kg L1 tare + ~0 kg kit deflection) = <strong>250 kg usable payload</strong>,
+        which matches the L1 reference-spec target. For S100 + S100-LK + C1 Food: 100 kg − (35 kg C1 tare) = <strong>65 kg usable</strong>,
+        which covers a full Torno Subito service (60 kg target) with 5 kg margin.
+    </div>
+</section>
+
+<!-- ============ §8 ELECTRICAL & CONTROL INTEGRATION ============ -->
+<section id="electrical">
+    <div class="section-head">
+        <div class="section-num">§ 8</div>
+        <h2>Electrical &amp; control integration</h2>
+    </div>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        Each robot has a different compute stack, network stack, and accessory power interface. The cart platform sits on top
+        of these — solenoid power comes from the robot's accessory rail, and the AprilTag detector runs on the robot's existing
+        onboard compute. Below is the full integration picture, per robot.
+    </p>
+
+    <h3>Onboard compute &amp; software stacks</h3>
+    <table class="matrix">
+        <thead>
+            <tr><th>Subsystem</th><th style="color: var(--keenon);">Keenon S100 + S300</th><th style="color: var(--pudu);">Pudu T300</th></tr>
+        </thead>
+        <tbody>
+            <tr><th>Compute OS</th><td>Android (on-robot screen app)</td><td>Linux (reference)</td></tr>
+            <tr><th>OEM on-robot app</th><td><strong>PEANUT APP</strong> — default PIN 0000; includes native AprilTag detection</td><td>Pudu T300 operator UI (described in operation manual)</td></tr>
+            <tr><th>OEM cloud / fleet</th><td><strong>KEENON Cloud / DynaSky</strong> — no public SDK</td><td><strong>PUDU Open Platform</strong> — referenced on product page, public docs not found</td></tr>
+            <tr><th>OEM mobile app</th><td>Keenon Robotics (iOS / Android)</td><td>Pudu mobile app (iOS / Android)</td></tr>
+            <tr><th>Public API / SDK status</th><td class="gap">None published — integration via PEANUT APP extension or vendor partnership</td><td class="gap">Open Platform referenced; docs require direct ask</td></tr>
+            <tr><th>AprilTag library (36h11)</th><td>Native in PEANUT APP — reusable for our lift detection</td><td>Not confirmed; may require install or port</td></tr>
+            <tr><th>Firmware integration path</th><td>Co-located microcontroller for lift solenoid + Android software module for camera detection</td><td>Must be determined against Pudu SDK capabilities</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 28px;">Accessory power &amp; electrical</h3>
+    <table class="matrix">
+        <thead>
+            <tr><th>Interface</th><th style="color: var(--keenon);">S100</th><th style="color: var(--keenon);">S300</th><th style="color: var(--pudu);">T300</th></tr>
+        </thead>
+        <tbody>
+            <tr><th>Main battery (pack)</th><td>DC 25.2 V lithium</td><td>DC 25.2 V lithium</td><td>30 Ah (voltage not published)</td></tr>
+            <tr><th>Accessory power rail (rumored)</th><td>12 V low-voltage via accessory connector</td><td>24 V low-voltage via accessory connector</td><td class="gap">Unknown — vendor ask</td></tr>
+            <tr><th>Accessory connector pinout</th><td class="gap">Not published — vendor ask</td><td class="gap">Not published — vendor ask</td><td class="gap">Not published — vendor ask</td></tr>
+            <tr><th>Accessory data bus</th><td class="gap">Likely USB + serial — confirm</td><td class="gap">Likely USB + serial — confirm</td><td class="gap">Unknown — vendor ask</td></tr>
+            <tr><th>Emergency stop wiring</th><td>3 × hardware e-stops on robot body (independent of kit)</td><td>3 × hardware e-stops on robot body (independent of kit)</td><td>Multiple e-stops + collision protection (ISO 3691-4)</td></tr>
+            <tr><th>Solenoid driver (lift kit)</th><td>12 V @ ~3 A pulse, MOSFET-driven</td><td>24 V @ ~5 A pulse, MOSFET-driven, 20 A peak at full load</td><td>Depends on Pudu aux rail</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 28px;">Networking &amp; connectivity</h3>
+    <table class="matrix">
+        <thead>
+            <tr><th>Requirement</th><th style="color: var(--keenon);">S100 / S300</th><th style="color: var(--pudu);">T300</th></tr>
+        </thead>
+        <tbody>
+            <tr><th>WiFi</th><td>2.4 GHz (no 5 GHz per Keenon datasheets)</td><td>Published as WiFi — band not specified on product page</td></tr>
+            <tr><th>Cellular fallback</th><td>4G (SIM slot documented in Keenon datasheet)</td><td>Not published</td></tr>
+            <tr><th>Bluetooth</th><td>Internal (used for OEM app pairing)</td><td>Internal (used for OEM app pairing)</td></tr>
+            <tr><th>Elevator integration hardware</th><td><strong>Keenon E-Box</strong> — master + slave + RFID + LoRa 850–930 MHz</td><td class="gap">Unknown — Pudu equivalent not identified. <em>Elevator integration is a vendor ask.</em></td></tr>
+            <tr><th>Fleet management port</th><td>PEANUT APP debug + Keenon Cloud (over WiFi)</td><td>Pudu Open Platform endpoint (details not public)</td></tr>
+            <tr><th>BLE asset-tag companion</th><td>Not native — via our fleet manager</td><td>Not native — via our fleet manager</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 28px;">AprilTag detection — common configuration</h3>
+    <div class="analysis">
+        <h4>AprilTag 36h11 reader spec — shared across S100-LK, S300-LK, T300-LK</h4>
+        <ul>
+            <li><strong>Tag family:</strong> 36h11 (strong error correction; matches Keenon default so PEANUT APP extension is feasible without porting)</li>
+            <li><strong>Tag size:</strong> 80 mm × 80 mm white border + black-on-white interior</li>
+            <li><strong>Mount:</strong> face-down on cart underside, 200 mm from leading edge, centered laterally</li>
+            <li><strong>Camera:</strong> USB 720p @ 30 fps min, ≥ 120° horizontal FoV</li>
+            <li><strong>Camera height:</strong> 50 mm above robot base, angled 10° downward</li>
+            <li><strong>Read distance:</strong> 0.5–1.5 m typical approach</li>
+            <li><strong>Detection rate:</strong> 10 Hz minimum; publishes relative pose (x, y, yaw) to lift controller</li>
+            <li><strong>Alignment pose published to:</strong> robot navigation stack for final approach refinement within § 3.6 tolerance (±15 mm / ±3°)</li>
+            <li><strong>Tag ID scheme:</strong> one tag ID per cart, allocated per property by Accelerate Robotics (contact before cart manufacture)</li>
+        </ul>
+    </div>
+
+    <h3 style="margin-top: 28px;">Fleet-orchestration integration path</h3>
+    <div class="analysis">
+        <h4>Per-robot orchestration — what we do while OEM SDKs remain closed</h4>
+        <ul>
+            <li><strong>Keenon (S100/S300):</strong> Phase 1 uses PEANUT APP extensions + Keenon Cloud scraping. Phase 2 attempts direct PEANUT APP integration (requires Keenon support letter). Long-term: Keenon OEM partnership for a proper SDK.</li>
+            <li><strong>Pudu (T300):</strong> Phase 3 onset uses the Open Platform endpoint via documented ask. Same escalation path if docs are withheld.</li>
+            <li><strong>Our fleet manager:</strong> BLE asset-tag positioning narrows cart location to a corridor; dispatch sends robot to corridor; robot's onboard AprilTag detector handles final approach. This keeps the fleet-layer robot-agnostic.</li>
+            <li><strong>Elevator integration:</strong> Keenon E-Box is the known working path (see <code>/Users/ericrace/Code/accelerate-elevator/</code> repo). Pudu equivalent requires vendor ask.</li>
+        </ul>
+    </div>
+</section>
+
+<!-- ============ §9 OPERATING ENVELOPE & SITE ============ -->
+<section id="site">
+    <div class="section-head">
+        <div class="section-num">§ 9</div>
+        <h2>Operating envelope &amp; site requirements</h2>
+    </div>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        A robot cannot be deployed into a site that exceeds its operating envelope. Use this for site surveys during hotel
+        deployment walk-throughs. Rows marked "Published: —" are vendor asks and must be obtained before a hard deployment commitment.
+    </p>
+
+    <table class="matrix">
+        <thead>
+            <tr><th>Environmental / operational</th><th style="color: var(--keenon);">S100</th><th style="color: var(--keenon);">S300</th><th style="color: var(--pudu);">T300</th></tr>
+        </thead>
+        <tbody>
+            <tr><th>Min corridor / passage width</th><td>900 mm</td><td class="gap">Published: —</td><td>600 mm</td></tr>
+            <tr><th>Max threshold crossing (vertical step)</th><td class="gap">Published: — <br><em style="color: var(--text-dim); font-family: Inter; font-size: 11px;">Ref: 20 mm internal estimate</em></td><td class="gap">Published: — <br><em style="color: var(--text-dim); font-family: Inter; font-size: 11px;">Ref: 20 mm internal estimate</em></td><td>20 mm (published)</td></tr>
+            <tr><th>Max groove / gap crossing</th><td class="gap">Published: —</td><td class="gap">Published: —</td><td>35 mm (published)</td></tr>
+            <tr><th>Max slope / grade</th><td class="gap">Published: — <br><em style="color: var(--text-dim); font-family: Inter; font-size: 11px;">Ref: 5° internal estimate</em></td><td class="gap">Published: — <br><em style="color: var(--text-dim); font-family: Inter; font-size: 11px;">Ref: 5° internal estimate</em></td><td class="gap">Published: —</td></tr>
+            <tr><th>Operating temp</th><td class="gap">Published: —</td><td class="gap">Published: —</td><td>0 °C – 40 °C</td></tr>
+            <tr><th>Humidity rating</th><td class="gap">Published: —</td><td class="gap">Published: —</td><td class="gap">Published: —</td></tr>
+            <tr><th>IP rating</th><td class="gap">Published: —</td><td class="gap">Published: —</td><td class="gap">Indoor only (published)</td></tr>
+            <tr><th>Floor surface</th><td>Hard + carpet OK</td><td>Hard (230 mm clearance helps rough carpet)</td><td>Indoor flat only (published)</td></tr>
+            <tr><th>Ambient lighting for vision</th><td class="gap">Vendor range not published (standard corridor OK)</td><td class="gap">Same</td><td class="gap">Same</td></tr>
+            <tr><th>WiFi 2.4 GHz coverage</th><td>Required in all service zones</td><td>Required</td><td>Required</td></tr>
+            <tr><th>WiFi roaming (corridor handoffs)</th><td>Required (hotel-grade AP with seamless roam)</td><td>Required</td><td>Required</td></tr>
+            <tr><th>Charging dock — AC electrical</th><td>110 V / 220 V single-phase</td><td>110 V / 220 V single-phase</td><td>110 V / 220 V single-phase</td></tr>
+            <tr><th>Charging dock — space</th><td>~ 1200 × 600 mm floor footprint</td><td>~ 1400 × 800 mm</td><td>~ 1200 × 600 mm (brochure diagram)</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 28px;">Pre-deployment site-readiness checklist</h3>
+    <p style="color: var(--text-dim); font-size: 13px;">Run this before committing a robot to any site. Open items → fix the site, reduce scope, or defer.</p>
+    <ul class="checklist">
+        <li><strong>Corridor width survey</strong> — measure every corridor on the robot's route. Document min passage width vs robot's required. Flag anything tighter than spec.
+            <span class="note">Tool: tape measure. Deliverable: floor plan with corridor widths annotated.</span></li>
+        <li><strong>Threshold audit</strong> — photograph every doorway and floor transition on route. Measure vertical step. Anything &gt; 20 mm is a ramp-accommodation or route-change decision.
+            <span class="note">Tool: feeler gauge / ruler + phone camera.</span></li>
+        <li><strong>Elevator route</strong> — if multi-floor, confirm E-Box (Keenon) or Pudu-equivalent installation feasibility with the building's elevator contractor. See <code>accelerate-elevator/</code>.</li>
+        <li><strong>WiFi site survey</strong> — walk the full robot route with a WiFi analyzer. Confirm 2.4 GHz signal ≥ –65 dBm at every waypoint. Flag dead zones.
+            <span class="note">Tool: any WiFi analyzer app or Ekahau.</span></li>
+        <li><strong>Network segment &amp; SSID</strong> — dedicated robot SSID (separate from guest) with VLAN isolation. Document SSID + pre-shared key for commissioning.</li>
+        <li><strong>Charging-dock placement</strong> — identify a 1.2 × 0.8 m back-of-house floor location with 110 V/220 V AC, near the main route, &lt; 20 m from primary work zone.</li>
+        <li><strong>Floor material &amp; condition</strong> — hard or hotel-grade carpet (no plush carpet &gt; 10 mm pile). Photo document any weak spots.</li>
+        <li><strong>Ambient lighting</strong> — confirm corridors are lit at night operating hours. Robot vision degrades below 50 lux. Pair with facility maintenance to raise corridor lumens if needed.</li>
+        <li><strong>Ambient temperature</strong> — confirm 0–40 °C year-round in service zones (robot will not ship if cold storage or freezer zone).</li>
+        <li><strong>Staff training plan</strong> — minimum 2 hours hands-on per shift (PEANUT APP PIN + emergency release + manual push-off). Schedule with ops lead.</li>
+        <li><strong>Cart-dock placement</strong> — identify drop-off + pickup zones in the hotel program. Ensure each has a 1 m × 1 m clear radius for the cart.</li>
+        <li><strong>Insurance / liability review</strong> — facility wants ISO 3691-4 certification on file (T300 has it; Keenon pair does not publish). Coordinate with legal.</li>
+    </ul>
+</section>
+
+<!-- ============ §10 DOCK STANDARD FULL TEXT ============ -->
+<section id="standard">
+    <div class="section-head">
+        <div class="section-num">§ 10</div>
+        <h2>Dock Standard v1 — full normative text</h2>
+    </div>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        Verbatim reproduction of <code>docs/standard/dock-standard-v1.md</code>. This is the contract all three lift kits are
+        designed against. A cart is v1-compliant if and only if it satisfies all of § 3.1 through § 3.8.
+    </p>
+
+    <div class="svg-stage" style="margin: 22px 0;">
+        <div class="title">THE DOCK ZONE · TOP VIEW · 900 × 550 mm</div>
+        <svg viewBox="0 0 900 600" style="max-width: 700px;">
+            <rect x="50" y="50" width="800" height="500" fill="none" stroke="#0055ff" stroke-width="3" stroke-dasharray="10,6" rx="8"/>
+            <rect x="125" y="150" width="650" height="300" fill="none" stroke="#e6a000" stroke-width="2" rx="4"/>
+            <rect x="110" y="135" width="30" height="30" fill="#e6a000"/>
+            <rect x="760" y="135" width="30" height="30" fill="#e6a000"/>
+            <rect x="110" y="435" width="30" height="30" fill="#e6a000"/>
+            <rect x="760" y="435" width="30" height="30" fill="#e6a000"/>
+            <g transform="translate(217, 260)">
+                <rect x="0" y="0" width="80" height="80" fill="white"/>
+                <rect x="10" y="10" width="60" height="60" fill="black"/>
+                <rect x="18" y="18" width="10" height="10" fill="white"/>
+                <rect x="38" y="18" width="10" height="10" fill="white"/>
+                <rect x="48" y="28" width="10" height="10" fill="white"/>
+                <rect x="18" y="48" width="10" height="10" fill="white"/>
+                <rect x="38" y="38" width="10" height="10" fill="white"/>
+                <rect x="38" y="58" width="10" height="10" fill="white"/>
+            </g>
+            <line x1="50" y1="580" x2="850" y2="580" stroke="#5a5d6e" stroke-width="1"/>
+            <text x="450" y="595" text-anchor="middle" fill="#5a5d6e" font-size="13" font-family="Space Grotesk">900 mm</text>
+            <line x1="15" y1="50" x2="15" y2="550" stroke="#5a5d6e" stroke-width="1"/>
+            <text x="15" y="310" text-anchor="middle" fill="#5a5d6e" font-size="13" font-family="Space Grotesk" transform="rotate(-90, 15, 310)">550 mm</text>
+            <text x="450" y="30" text-anchor="middle" fill="#0055ff" font-size="12" font-family="Space Grotesk">▲ leading edge (robot enters here)</text>
+            <text x="125" y="125" fill="#e6a000" font-size="11" font-family="Space Grotesk">lift pad (30 × 30 mm)</text>
+            <text x="600" y="310" text-anchor="middle" fill="#e6a000" font-size="12" font-family="Space Grotesk">lift pad rectangle · 750 × 400 mm</text>
+            <text x="257" y="360" text-anchor="middle" fill="white" font-size="10" font-family="Space Grotesk">AprilTag · 80 mm</text>
+        </svg>
+    </div>
+
+    <h3>§ 3.1 Dock footprint</h3>
+    <p>The cart underside must contain a clear rectangular region of <strong>900 mm (length) × 550 mm (width)</strong>, oriented with
+    the long axis parallel to the cart's normal travel direction. This region is the "dock zone."</p>
+    <p style="color: var(--text-dim); font-size: 13px;"><em>Rationale:</em> 900 × 550 mm accommodates the Keenon S300 base with margin for approach tolerance. Smaller robots enter the same zone with clearance to spare.</p>
+
+    <h3>§ 3.2 Overhead clearance</h3>
+    <p>The dock zone must have <strong>≥ 260 mm of vertical clearance</strong> measured from the floor to the lowest-hanging cart
+    component within the zone.</p>
+    <p style="color: var(--text-dim); font-size: 13px;"><em>Rationale:</em> Keenon S300 maximum base height is ~ 240 mm including top sensors. 20 mm margin prevents contact during approach.</p>
+
+    <h3>§ 3.3 Lift-pad pattern</h3>
+    <p>The cart must present <strong>four lift pads</strong> within the dock zone, arranged as the corners of a rectangle:</p>
+    <ul style="margin-left: 22px;">
+        <li><strong>Rectangle dimensions:</strong> 750 mm × 400 mm</li>
+        <li><strong>Rectangle center:</strong> coincident with the dock zone center</li>
+        <li><strong>Pad dimensions:</strong> 30 mm × 30 mm each</li>
+        <li><strong>Pad material:</strong> steel, hardened, flush with the cart underside (no protrusion)</li>
+    </ul>
+    <p>Pads must be rigidly affixed to the cart's load-bearing frame — not to finish panels, shrouds, or trim.</p>
+
+    <h3>§ 3.4 Lift travel</h3>
+    <p>When engaged, the robot lifts the cart <strong>8 mm ± 1 mm</strong> above its resting height. All four pads must support the
+    cart at equivalent height — the cart must not rock or tilt more than 1° off horizontal during lift.</p>
+    <p style="color: var(--text-dim); font-size: 13px;"><em>Rationale:</em> 8 mm clears typical castor compression (3–4 mm under load) plus safety margin, and preserves CG stability under 350 kg gross.</p>
+
+    <h3>§ 3.5 Fiducial (alignment target)</h3>
+    <p>The cart must present a <strong>single AprilTag fiducial</strong> on a face-down surface within the dock zone:</p>
+    <ul style="margin-left: 22px;">
+        <li><strong>Tag family:</strong> 36h11 (matches Keenon default)</li>
+        <li><strong>Tag size:</strong> 80 mm × 80 mm (white-bordered, black-on-white interior)</li>
+        <li><strong>Tag position:</strong> geometric center 200 mm from the leading edge, centered laterally</li>
+        <li><strong>Tag surface:</strong> matte</li>
+        <li><strong>Tag IDs:</strong> reserved by property — ask Accelerate for allocation before manufacturing</li>
+    </ul>
+
+    <h3>§ 3.6 Alignment tolerance</h3>
+    <p>At engagement, the robot and cart must be aligned within:</p>
+    <ul style="margin-left: 22px;">
+        <li><strong>Linear:</strong> ± 15 mm in both X (forward) and Y (lateral)</li>
+        <li><strong>Angular:</strong> ± 3° in yaw (rotation about vertical axis)</li>
+    </ul>
+    <p>Beyond these tolerances, the robot MUST abort the lift attempt, reposition, and re-approach.</p>
+
+    <h3>§ 3.7 Maximum cart mass (gross)</h3>
+    <p>The combined mass of cart + payload must not exceed <strong>350 kg</strong>.</p>
+    <p style="color: var(--text-dim); font-size: 13px;"><em>Rationale:</em> Covers S300's 300 kg payload rating plus ~50 kg cart tare.</p>
+
+    <h3>§ 3.8 Electrical interface</h3>
+    <p>In v1, the cart must be <strong>fully passive</strong>. No batteries, motors, wiring, or connectors within the dock zone or elsewhere on the cart (other than a stick-on BLE asset tag, which is an optional accessory).</p>
+
+    <div class="callout" style="margin-top: 18px;">
+        <span class="tag">Open items</span>
+        Dimensional validation against a physical Keenon S300 unit (§ 3.1, § 3.2) · AprilTag ID allocation scheme · physical compliance jig fabrication · v2 roadmap.
+    </div>
+
+    <p style="margin-top: 18px; color: var(--text-dim); font-size: 13px;">
+        Full markdown source: <a href="../docs/standard/dock-standard-v1.md">docs/standard/dock-standard-v1.md</a> ·
+        Interactive viewer: <a href="standard.html">pages/standard.html</a> ·
+        Self-test tool: <a href="compliance-check.html">pages/compliance-check.html</a>.
+    </p>
+</section>
+
+<!-- ============ §11 REFERENCE CART LIBRARY ============ -->
+<section id="carts">
+    <div class="section-head">
+        <div class="section-num">§ 11</div>
+        <h2>Reference cart library (C1 / L1 / H1)</h2>
+    </div>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        Three Dock-Standard-compliant cart archetypes. All share the dock-zone geometry, pad pattern, fiducial, and 260 mm
+        clearance; above the dock plane they diverge in shape, payload, and per-property trim. The industrial designer builds
+        per-property variants by swapping trim kits on a common chassis.
+    </p>
+
+    <div class="kit-grid" style="margin-top: 22px;">
+        <div class="kit-card">
+            <h4>C1 — Food Cart</h4>
+            <div class="kit-sub">IN-RESIDENCE DINING · TORNO SUBITO</div>
+            <dl>
+                <dt>Chassis footprint</dt><dd>600 × 1100 mm</dd>
+                <dt>Overall height</dt><dd>900 mm</dd>
+                <dt>Tare mass</dt><dd>~ 35 kg</dd>
+                <dt>Payload capacity</dt><dd>60 kg</dd>
+                <dt>Castors</dt><dd>4 × 75 mm precision-swivel, rubber, auto-brake rear pair</dd>
+                <dt>Service surface</dt><dd>1100 × 600 mm at 780 mm H</dd>
+                <dt>Insulated cavity</dt><dd>600 × 500 × 250 mm leather-lined</dd>
+                <dt>Trim kits</dt><dd>Moore (blackened bronze + oak) · Thesis (navy + brass) · Generic (satin black + stainless)</dd>
+                <dt>Robot compatibility</dt><dd>S100-LK ✓ · S300-LK ✓ · T300-LK (when gated)</dd>
+            </dl>
+        </div>
+        <div class="kit-card">
+            <h4>L1 — Linen Cart</h4>
+            <div class="kit-sub">HEAVY TRANSPORT · LAUNDRY + EVENTS</div>
+            <dl>
+                <dt>Chassis footprint</dt><dd>700 × 1000 mm</dd>
+                <dt>Overall height</dt><dd>1100 mm</dd>
+                <dt>Tare mass</dt><dd>~ 50 kg</dd>
+                <dt>Payload capacity</dt><dd>250 kg (100 kg headroom under § 3.7 cap)</dd>
+                <dt>Castors</dt><dd>4 × 125 mm heavy-duty, polyurethane, dual-lock auto-brake rear</dd>
+                <dt>Hamper</dt><dd>Collapsible frame, waterproof vinyl liner, ~300 L</dd>
+                <dt>Drain</dt><dd>Bottom corner grommet</dd>
+                <dt>Trim kits</dt><dd>Moore (blackened bronze + oak lid) · Thesis (navy + brass) · Generic</dd>
+                <dt>Robot compatibility</dt><dd class="gap">S100-LK ✗ (payload exceeds 100 kg) · S300-LK ✓ · T300-LK (when gated)</dd>
+            </dl>
+        </div>
+        <div class="kit-card">
+            <h4>H1 — Housekeeping Caddy</h4>
+            <div class="kit-sub">ROOM-TURNOVER SUPPLIES</div>
+            <dl>
+                <dt>Chassis footprint</dt><dd>550 × 800 mm</dd>
+                <dt>Overall height</dt><dd>950 mm</dd>
+                <dt>Tare mass</dt><dd>~ 30 kg</dd>
+                <dt>Payload capacity</dt><dd>80 kg</dd>
+                <dt>Castors</dt><dd>4 × 100 mm, rubber, diagonal-pair auto-brake</dd>
+                <dt>Shelving</dt><dd>Three 500 × 700 mm levels, 230 mm spacing</dd>
+                <dt>Trash sleeve</dt><dd>40 L removable, elastic liner</dd>
+                <dt>Trim kits</dt><dd>Moore · Thesis · Generic (back-of-house focus)</dd>
+                <dt>Robot compatibility</dt><dd>S100-LK ⚠ borderline (80 kg payload) · S300-LK ✓ · T300-LK (when gated)</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="callout" style="margin-top: 22px;">
+        <span class="tag">Phase 1 starting cart</span>
+        The C1 Food Cart in <strong>Moore trim</strong> is the Phase 1 physical prototype (design spec § 13). All cart-platform engineering
+        work starts here.
+    </div>
+
+    <p style="margin-top: 18px; color: var(--text-dim); font-size: 13px;">
+        Full per-cart docs: <a href="../docs/carts/C1-food-cart.md">C1</a> ·
+        <a href="../docs/carts/L1-linen-cart.md">L1</a> ·
+        <a href="../docs/carts/H1-housekeeping.md">H1</a>.
+        Interactive catalog: <a href="cart-catalog.html">pages/cart-catalog.html</a>.
+    </p>
+</section>
+
+<!-- ============ §12 LIFT-KIT REFERENCE DESIGNS ============ -->
+<section id="kits">
+    <div class="section-head">
+        <div class="section-num">§ 12</div>
+        <h2>Lift-kit reference designs</h2>
+    </div>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        Mechanical + sensing architecture for the three robot-side kits. S100-LK is the reference; S300-LK is a scaled
+        variant reusing ~85% of subcomponents; T300-LK is gated on Pudu CAD acquisition.
+    </p>
+
+    <h3>S100-LK — Architecture</h3>
+    <div class="analysis">
+        <h4>Three functional elements, bolt-on accessory</h4>
+        <ul>
+            <li><strong>Lift mechanism</strong> — cam-driven platform with four fixed 30 × 30 mm hardened-steel pads matching § 3.3. Spring-loaded retraction. Single 12 V solenoid trigger engages a passive mechanical detent that holds the lifted position without continuous current.</li>
+            <li><strong>Alignment camera</strong> — USB wide-angle 720p @ 30 fps, ≥ 120° HFoV, mounted 50 mm above robot base at 10° downward tilt. AprilTag 36h11 detector runs on the S100's Android compute.</li>
+            <li><strong>Proximity sensing</strong> — three HC-SR04 ultrasonic modules on front, left-side, right-side faces. Range 5–300 cm. Triggers lift abort if reading &lt; 5 cm unexpectedly during drive-under.</li>
+        </ul>
+    </div>
+
+    <h3 style="margin-top: 28px;">S100-LK — Bill of Materials (high-level)</h3>
+    <table class="bom">
+        <thead><tr><th>Item</th><th>Spec</th><th>Qty</th><th>Notes</th></tr></thead>
+        <tbody>
+            <tr><td>Hardened-steel lift pad</td><td>30 × 30 mm flat</td><td>4</td><td>Reinforced backing; match § 3.3</td></tr>
+            <tr><td>Cam-and-linkage assembly</td><td>8 mm external stroke</td><td>1</td><td>Spring-retracted, passive detent</td></tr>
+            <tr><td>Solenoid actuator</td><td>12 V DC, ~3 A pulse</td><td>1</td><td>Momentary only — detent holds load</td></tr>
+            <tr><td>Solenoid driver board</td><td>MOSFET + snubber</td><td>1</td><td>Triggered from S100 accessory connector</td></tr>
+            <tr><td>Emergency-release handle</td><td>Mechanical lever</td><td>1</td><td>Hotel-staff accessible</td></tr>
+            <tr><td>Wide-angle USB camera</td><td>720 p / 30 fps / ≥ 120° HFoV</td><td>1</td><td>Commercial webcam-class module</td></tr>
+            <tr><td>Ultrasonic rangefinder</td><td>HC-SR04 or equivalent</td><td>3</td><td>Front / left / right</td></tr>
+            <tr><td>Mounting plate</td><td>Laser-cut aluminum</td><td>1</td><td>Custom — bolt pattern TBD pending Keenon CAD</td></tr>
+            <tr><td>Frame rails</td><td>Aluminum extrusion</td><td>2</td><td>Connects mounting plate to lift cam</td></tr>
+            <tr><td>Wiring harness</td><td>22 AWG + USB</td><td>1</td><td>Robot accessory connector ⟶ solenoid + camera</td></tr>
+            <tr><td>Fasteners</td><td>M5 + M6 stainless</td><td>~ 30</td><td>Kit ↔ robot and internal assembly</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 28px;">S100-LK — Engagement workflow (9 steps)</h3>
+    <ol style="padding-left: 22px; line-height: 1.8;">
+        <li><strong>Dispatch.</strong> Robot receives a fetch-cart task with the target cart's AprilTag ID.</li>
+        <li><strong>Approach.</strong> Navigates to the corridor; BLE tag narrows to ~ 1 m.</li>
+        <li><strong>Visual acquisition.</strong> Alignment camera acquires the AprilTag; detector publishes relative X, Y, yaw.</li>
+        <li><strong>Approach refinement.</strong> Robot closes to within § 3.6 tolerance (± 15 mm / ± 3°).</li>
+        <li><strong>Drive-under.</strong> Enters dock zone at &lt; 0.2 m/s. Proximity sensors monitor for unexpected contact.</li>
+        <li><strong>Lift engage.</strong> Solenoid fires; cam rotates; pads rise 8 mm; detent captures.</li>
+        <li><strong>Transit.</strong> Proceeds to destination at normal speed; detent requires no ongoing power.</li>
+        <li><strong>Drop-off.</strong> Release solenoid fires; pads drop 8 mm; cart rests on castors.</li>
+        <li><strong>Egress.</strong> Robot backs out at low speed; cart stationary.</li>
+    </ol>
+
+    <h3 style="margin-top: 28px;">S100-LK failure modes</h3>
+    <div class="analysis">
+        <ul>
+            <li><strong>AprilTag not acquired</strong> → "cart not found", returns to dock</li>
+            <li><strong>Alignment tolerance exceeded</strong> → back off, re-approach; after 3 failures, report and return</li>
+            <li><strong>Proximity sensor trips during drive-under</strong> → immediate halt, back off, re-attempt</li>
+            <li><strong>Lift solenoid jams</strong> → manual release handle (hotel staff)</li>
+            <li><strong>Power loss mid-transit</strong> → passive detent maintains hold; manual handle if needed</li>
+        </ul>
+    </div>
+
+    <h3 style="margin-top: 28px;">S300-LK — Delta from S100-LK</h3>
+    <table class="matrix">
+        <thead><tr><th>Dimension</th><th>S100-LK</th><th>S300-LK</th></tr></thead>
+        <tbody>
+            <tr><th>Height above platform</th><td>≤ 60 mm</td><td>≤ 20 mm (low-profile cam — binding)</td></tr>
+            <tr><th>Kit mass</th><td>~ 8 kg</td><td>~ 14 kg</td></tr>
+            <tr><th>Solenoid</th><td>12 V · 3 A pulse</td><td>24 V · 5 A pulse</td></tr>
+            <tr><th>Peak current under load</th><td>&lt; 10 A</td><td>&lt; 20 A at 350 kg gross</td></tr>
+            <tr><th>Cam mechanism</th><td>Stock cam geometry</td><td>Low-profile custom — reduced internal stroke with linkage compensation</td></tr>
+            <tr><th>Frame / rails</th><td>Aluminum extrusion</td><td>Steel for heavier load paths</td></tr>
+            <tr><th>Pads</th><td>30 × 30 mm hardened steel</td><td>Same + reinforced backing (resist deflection at 350 kg)</td></tr>
+            <tr><th>Shared subcomponents</th><td colspan="2">Camera, camera mount, USB cable, ultrasonics, solenoid driver board (28V-rated) — all identical parts.</td></tr>
+            <tr><th>Unique subcomponents</th><td>N/A — donor kit</td><td>Mounting plate, frame rails, cam body, spring rate</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 28px;">T300-LK — Design stub</h3>
+    <div class="callout red">
+        <span class="tag">Design gated</span>
+        T300-LK cannot be designed until Pudu provides (a) chassis base height, (b) top-plate bolt pattern, (c) accessory power
+        spec, and (d) WTIDL1 lift-mode mechanical details. Placeholder architecture assumes it will be an S300-LK variant with
+        Pudu-specific mounting; if the T300 chassis is dimensionally different, the kit will be redesigned from scratch.
+    </div>
+
+    <p style="margin-top: 18px; color: var(--text-dim); font-size: 13px;">
+        Full per-kit docs:
+        <a href="../docs/lift-kits/S100-LK.md">S100-LK</a> ·
+        <a href="../docs/lift-kits/S300-LK.md">S300-LK</a> ·
+        <a href="../docs/lift-kits/T300-LK.md">T300-LK (stub)</a>.
+    </p>
+</section>
+
+<!-- ============ §13 PROCUREMENT & VENDOR RELATIONSHIPS ============ -->
+<section id="procurement">
+    <div class="section-head">
+        <div class="section-num">§ 13</div>
+        <h2>Procurement &amp; vendor relationships</h2>
+    </div>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        Where and how to buy each robot, typical lead times and pricing ranges from public data, and the channel we're
+        actively building with each OEM. Treat pricing as indicative — firm quotes require direct RFQ.
+    </p>
+
+    <table class="matrix">
+        <thead><tr><th>Procurement line</th><th style="color: var(--keenon);">Keenon S100</th><th style="color: var(--keenon);">Keenon S300</th><th style="color: var(--pudu);">Pudu T300</th></tr></thead>
+        <tbody>
+            <tr><th>OEM</th><td>Keenon Robotics (Shanghai)</td><td>Keenon Robotics (Shanghai)</td><td>Pudu Robotics (Shenzhen)</td></tr>
+            <tr><th>OEM model codes</th><td>S100 (single SKU)</td><td>S300 (single SKU)</td><td>WTID01 (standard) · <strong>WTIDL1 (with lift) ← our target SKU</strong></td></tr>
+            <tr><th>OEM website</th><td><a href="https://www.keenon.com/en/product/S100/index.html">keenon.com/S100</a></td><td><a href="https://www.keenon.com/en/product/S300/index.html">keenon.com/S300</a></td><td><a href="https://www.pudurobotics.com/en/products/pudut300">pudurobotics.com/T300</a></td></tr>
+            <tr><th>US distributors</th><td><a href="https://www.helpinghandrobotics.com/robot-pricing/p/s100-by-keenon-robotics-industrial-carrier-72nfk">Helping Hand Robotics</a> · direct Keenon US</td><td>Helping Hand Robotics · direct Keenon US</td><td><a href="https://www.robotlab.com/pudu-t300">RobotLAB</a> · <a href="https://ca.robotshop.com/products/pudu-t300-industrial-delivery-robot-with-lift">RobotShop CA</a></td></tr>
+            <tr><th>EU distributors</th><td><a href="https://keenrobotic.eu/en/keenon-s100/">keenrobotic.eu</a></td><td>Same family (request)</td><td><a href="https://www.generation-robots.com/">Generation Robots (FR)</a> · <a href="https://log-robot.com/">log-robot.com (DE)</a></td></tr>
+            <tr><th>Typical public price (outright)</th><td class="gap">USD 15 k – 25 k (public listings)</td><td class="gap">USD 25 k – 45 k (estimate)</td><td class="gap">USD 25 k – 40 k (distributor listings)</td></tr>
+            <tr><th>RaaS / lease option</th><td>Yes — distributors</td><td>Yes — distributors</td><td>Yes — distributors</td></tr>
+            <tr><th>Typical lead time</th><td>4–8 weeks (in distributor inventory)</td><td>6–12 weeks (lower inventory turnover)</td><td>6–12 weeks (US) · 4–8 weeks (EU)</td></tr>
+            <tr><th>OEM relationship status</th><td class="gap">Cold — buy through distributor for Phase 1</td><td class="gap">Cold — same as S100</td><td class="gap">None established — vendor ask campaign required</td></tr>
+            <tr><th>Third-party accessory policy</th><td class="gap">Not stated — <strong>explicit ask before Phase 1 hardware commit</strong></td><td class="gap">Same ask as S100</td><td class="gap">Unknown — likely requires OEM partnership</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 28px;">Known OEM contact channels</h3>
+    <div class="linklist">
+        <div>● Keenon global sales: <a href="https://www.keenon.com/en/contact.html">keenon.com/en/contact</a></div>
+        <div>● Keenon US (Helping Hand Robotics): <a href="https://www.helpinghandrobotics.com">helpinghandrobotics.com</a></div>
+        <div>● Pudu global sales: <a href="https://www.pudurobotics.com/en/contact">pudurobotics.com/en/contact</a></div>
+        <div>● Pudu US (RobotLAB): <a href="https://www.robotlab.com/pudu-t300">robotlab.com/pudu-t300</a></div>
+        <div>● Internal elevator-integration partner: see <code>accelerate-elevator/</code> repo</div>
+    </div>
+
+    <div class="callout" style="margin-top: 22px;">
+        <span class="tag">Recommended purchase path</span>
+        <strong>Phase 1:</strong> buy 1× S100 outright from the US distributor (lowest lead time + cheapest to de-risk). Open a
+        written vendor-ask ticket with Keenon at the same time (accessory CAD + policy). <strong>Phase 2:</strong> add 1× S300 once
+        S100-LK design is frozen. <strong>Phase 3:</strong> engage Pudu US (RobotLAB) for T300 WTIDL1 pilot unit + SDK access once
+        Pudu ask campaign closes.
+    </div>
+</section>
+
+<!-- ============ §14 RISK REGISTER ============ -->
+<section id="risks">
+    <div class="section-head">
+        <div class="section-num">§ 14</div>
+        <h2>Risk register</h2>
+    </div>
+    <p style="max-width: 860px; color: var(--text-dim);">
+        Known risks to the Cart Platform project with the robots described in this dossier. Mitigation ownership is listed per
+        row — an unowned mitigation is an unmitigated risk. Severity is High / Med / Low against the Phase 1 prototype milestone.
+    </p>
+
+    <table class="risks">
+        <thead>
+            <tr><th>#</th><th>Risk</th><th>Severity</th><th>Mitigation</th><th>Owner</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td><strong>Dock Standard dimensional error on real S300.</strong> 260 mm clearance may be too tight if the S300's published ~240 mm base plus top sensors exceeds.</td>
+                <td class="sev high">High</td>
+                <td>Physical dimensional validation on a real S300 before freezing Dock Standard v1. If fail, revise to 280 mm, re-issue spec.</td>
+                <td>Engineering</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><strong>Pudu T300 spec cannot be acquired.</strong> Blocks T300-LK design; delays fleet vendor-agnosticism.</td>
+                <td class="sev med">Med</td>
+                <td>Phase 1–2 proceed S100/S300 only. Escalation path: Pudu US sales → Pudu engineering partnerships → paid pilot unit + field measurement.</td>
+                <td>Eric (business)</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td><strong>Keenon OEM pushback on third-party lift kits.</strong> Could void warranty or block PEANUT APP integration.</td>
+                <td class="sev med">Med</td>
+                <td>Frame S100/S300-LK as an "accessory" per Keenon's existing accessory-platform interface, not a modification. Get Keenon written policy before Phase 1 hardware order.</td>
+                <td>Eric + Legal</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td><strong>S100-LK + L1 Linen Cart exceeds payload.</strong> L1 gross 300 kg × S100 payload 100 kg → not compatible. If users attempt, safety.</td>
+                <td class="sev low">Low</td>
+                <td>Compliance check + fleet-manager pairing logic refuses dispatch. Label L1 cart "S300/T300 only" on asset tag.</td>
+                <td>Fleet software</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td><strong>Castor auto-brake fails in edge cases.</strong> Weight-triggered damper may behave unpredictably with light loads, floor tilt, cold rubber.</td>
+                <td class="sev med">Med</td>
+                <td>Vet commercial-grade auto-brake castors (Meese, Colson, Hamilton) first; custom engineering only if commercial parts fail the 1000-cycle spec test.</td>
+                <td>Industrial designer</td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td><strong>Sensor tower of S300 intrudes above accessory platform.</strong> Would eat into the 20 mm S300-LK budget and push over § 3.2.</td>
+                <td class="sev high">High</td>
+                <td>Obtain vendor dimensional drawing of S300 sensor tower. If intrusive, route kit cam mechanism around the tower (asymmetric design).</td>
+                <td>Engineering</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td><strong>AprilTag detection fails at &gt; 1 m due to corridor lighting.</strong> Lobby/corridor luminaires vary; detection confidence drops below 50 lux.</td>
+                <td class="sev low">Low</td>
+                <td>Tag matte finish; camera f/2.4 min; software confidence threshold + retry. Site survey identifies dim corridors; facility adds lumens if needed.</td>
+                <td>Software + Site</td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td><strong>Solenoid peak current at 350 kg exceeds robot accessory-rail capacity.</strong> Could trip robot's internal fuse.</td>
+                <td class="sev med">Med</td>
+                <td>S300-LK peak spec'd &lt; 20 A for &lt; 100 ms; buffer with local capacitor on kit. Document robot accessory-rail capacity with Keenon ask.</td>
+                <td>Engineering</td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td><strong>BLE asset tag fails / loses location before robot dispatch.</strong> Robot can't find cart in corridor.</td>
+                <td class="sev low">Low</td>
+                <td>Fleet manager fallback: send robot to last-known corridor, then scan AprilTags in sequence. BLE tag battery-check in quarterly maintenance.</td>
+                <td>Fleet software</td>
+            </tr>
+            <tr>
+                <td>10</td>
+                <td><strong>Elevator integration unavailable for Pudu.</strong> Keenon has E-Box; Pudu equivalent unknown. Blocks multi-floor T300 deployment.</td>
+                <td class="sev med">Med</td>
+                <td>Vendor ask. If Pudu doesn't supply, floor-limit T300 deployment in Phase 3 or reuse Keenon E-Box as a universal integration point.</td>
+                <td>Eric (OEM)</td>
+            </tr>
+            <tr>
+                <td>11</td>
+                <td><strong>Industrial-designer / engineer handoff miscommunication on Dock Standard.</strong> If they build a cart with 255 mm clearance, all downstream carts in that family are non-compliant.</td>
+                <td class="sev med">Med</td>
+                <td>Dock Standard spec signed off by both before CAD begins. Use <a href="compliance-check.html">compliance-check.html</a> as a go/no-go gate on first prototype.</td>
+                <td>Eric</td>
+            </tr>
+            <tr>
+                <td>12</td>
+                <td><strong>Insurance / code-compliance block.</strong> Hotel legal refuses non-ISO-3691-4 robots in patient/guest zones.</td>
+                <td class="sev low">Low</td>
+                <td>T300 is ISO 3691-4 compliant — use as the premium-zone default. Deploy Keenon pair in back-of-house. Track Keenon certification status.</td>
+                <td>Legal</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- ============ §15 VENDOR ASKS ============ -->
+<section id="asks">
+    <div class="section-head">
+        <div class="section-num">§ 15</div>
+        <h2>Consolidated vendor asks</h2>
+    </div>
+    <p style="max-width: 820px;">
+        These are the materials and data we need beyond what's publicly available. Each item is tagged with which robot it blocks
+        and which downstream deliverable is gated on it.
+    </p>
+
+    <div class="two-col" style="margin-top: 20px;">
+        <div>
+            <h3 style="color: var(--keenon);">Keenon (S100 + S300)</h3>
+            <table class="specs">
+                <tbody>
+                    <tr><td class="k">Official PDF datasheets (S100, S300)</td><td class="v">Blocks: engineering handoff</td></tr>
+                    <tr><td class="k">Accessory-plate bolt-hole CAD</td><td class="v">Blocks: S100-LK + S300-LK mechanical mount</td></tr>
+                    <tr><td class="k">Accessory-connector pinout</td><td class="v">Blocks: v2 electrical integration</td></tr>
+                    <tr><td class="k">S300 max speed + slope + thresholds</td><td class="v">Blocks: S300-LK engagement timing + tip validation</td></tr>
+                    <tr><td class="k">Sensor-tower clearance above platform</td><td class="v">Blocks: §3.2 dock-zone clearance validation</td></tr>
+                    <tr><td class="k">SDK / fleet API documentation</td><td class="v">Blocks: orchestration integration path</td></tr>
+                    <tr><td class="k">IP rating / environmental specs</td><td class="v">Blocks: outdoor-covered walkway use cases</td></tr>
+                    <tr><td class="k">Third-party-accessory policy statement</td><td class="v">Blocks: lift-kit shippability without Keenon sign-off</td></tr>
+                    <tr><td class="k">Current 2025 / 2026 catalog PDF</td><td class="v">Reference</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h3 style="color: var(--pudu);">Pudu (T300)</h3>
+            <table class="specs">
+                <tbody>
+                    <tr><td class="k">WTIDL1 lift spec (stroke / speed / payload)</td><td class="v">Blocks: T300-LK design decision (reuse vs replace)</td></tr>
+                    <tr><td class="k">Top-plate bolt-hole pattern + load rating</td><td class="v">Blocks: T300-LK mechanical mount</td></tr>
+                    <tr><td class="k">Chassis base height (not overall)</td><td class="v">Blocks: §3.2 clearance validation</td></tr>
+                    <tr><td class="k">Towing-mode hitch dimensions + max trailer load</td><td class="v">Reference (backup pickup strategy)</td></tr>
+                    <tr><td class="k">Pudu Open Platform SDK / API docs</td><td class="v">Blocks: orchestration integration path</td></tr>
+                    <tr><td class="k">Elevator integration protocol (E-box?)</td><td class="v">Blocks: multi-floor use cases</td></tr>
+                    <tr><td class="k">IP rating / outdoor rating (page says indoor-only)</td><td class="v">Blocks: covered-walkway use</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="callout ok" style="margin-top: 24px;">
+        <span class="tag">Phase gating</span>
+        <strong>Phases 0–2</strong> (Keenon S100 + S300 prototype) can proceed on the published S100 spec plus a one-time Keenon engineering ask.
+        <strong>Phase 3</strong> (T300 integration) is gated on the Pudu CAD acquisition. All public-facing Pudu docs are already in this package — the remaining items require an OEM relationship.
+    </div>
+</section>
+
+<!-- ============ §16 DAY-1 KICKOFF CHECKLIST ============ -->
+<section id="kickoff">
+    <div class="section-head">
+        <div class="section-num">§ 16</div>
+        <h2>Day-1 engineering kickoff checklist</h2>
+    </div>
+    <p style="color: var(--text-dim); font-size: 13px;">Everything an engineer needs to do on Monday morning to start the Accelerate Cart Platform project. Sequenced so that CAD work and vendor correspondence can run in parallel with hardware sourcing.</p>
+
+    <h3>Read (2-3 hours)</h3>
+    <ul class="checklist">
+        <li>Open this dossier top-to-bottom — §1 through §14. Pay special attention to §10 (Dock Standard v1 normative text) and §6 (dimensional overlay).</li>
+        <li>Read <code>docs/superpowers/specs/2026-04-15-cart-platform-design.md</code> end-to-end — the canonical design doc behind the standard.</li>
+        <li>Read <code>docs/lift-kits/S100-LK.md</code> and <code>docs/lift-kits/S300-LK.md</code> for the reference lift-kit architectures.</li>
+        <li>Read <code>docs/carts/C1-food-cart.md</code>, <code>L1-linen-cart.md</code>, <code>H1-housekeeping.md</code> — the three reference cart families.</li>
+        <li>Open <code>assets/robots/pudu-t300/brochure.pdf</code>, <code>datasheet.pdf</code>, and <code>manual.pdf</code> in a PDF reader. These are the only full-vendor-PDF robots we have — extract every dimension, load, and safety note.</li>
+    </ul>
+
+    <h3>CAD — start immediately (week 1)</h3>
+    <ul class="checklist">
+        <li>Model the Dock Standard v1 keep-out volume in CAD: 900 mm × 550 mm × 260 mm rectangular envelope on cart underside. This is the authoritative reference geometry every downstream part derives from.</li>
+        <li>Model the four 750 × 400 mm lift-pad pattern as a separate part (studs, contact pad plates, anti-slip texture note).</li>
+        <li>Model the AprilTag 36h11 fiducial zone — 80 × 80 mm minimum, centered on the dock zone. Call out the ±15 mm / ±3° alignment tolerance as a GD&T note.</li>
+        <li>Build a simplified S100, S300, and T300 chassis stand-in (just the chassis below 260 mm) to dry-fit against the dock zone and verify clearance.</li>
+        <li>Push CAD to the shared Onshape / Fusion workspace and link it in <code>docs/standard/dock-standard-v1.md</code> as "reference CAD".</li>
+    </ul>
+
+    <h3>Vendor correspondence — week 1</h3>
+    <ul class="checklist">
+        <li>Draft the <strong>Keenon vendor-ask letter</strong> — see §15.1. One-page request for S100 and S300 STEP files, lift-kit attachment point drawings, and motor-controller wiring diagrams. Send to Keenon US contact.</li>
+        <li>Draft the <strong>Pudu vendor-ask letter</strong> — see §15.2. Priority: get T300 STEP file, WTIDL1 lift SKU availability, and Pudu Open Platform SDK access. Send to Pudu US partner program.</li>
+        <li>Create a vendor-communication log at <code>docs/reference/vendor-correspondence.md</code> — every email, phone call, and meeting dated and summarized.</li>
+    </ul>
+
+    <h3>Hardware sourcing — week 1-2 (parallel)</h3>
+    <ul class="checklist">
+        <li>Source three candidate <strong>heavy-duty auto-brake castors</strong> (150 kg each, ≥75 mm diameter, mechanical brake). Short list: Colson, Tente, Blickle. Order one set of each for side-by-side bench testing.</li>
+        <li>Source the AprilTag 36h11 fiducial printing stock — matte-laminated PET, UV-stable. Print 20 tags in the reference 80 mm size for all three robots.</li>
+        <li>Bench-test one 12 V / 3 A solenoid (S100-LK reference) and one 24 V / 5 A solenoid (S300-LK reference). Verify pull force, cycle life, dropout behavior.</li>
+        <li>Source aluminum extrusion stock (40 × 40 Bosch-style) for lift-kit frame prototyping.</li>
+        <li>Open <strong>purchase orders</strong> for: (a) one Keenon S100 dev unit, (b) one Pudu T300 dev unit. S300 can come later once the S300-LK design is validated.</li>
+    </ul>
+
+    <h3>Prototype — week 2-4</h3>
+    <ul class="checklist">
+        <li>Build <strong>S100-LK v0</strong> — 3D-printed cam mechanism + aluminum lift plate. Target: prove the 8 mm passive-lift geometry on the bench before cutting metal.</li>
+        <li>Write the <strong>AprilTag alignment test rig</strong> — a Python script using the <code>apriltag</code> library that reads a webcam feed and reports pose error in mm/degrees. Use this to characterize the ±15 mm / ±3° tolerance under realistic lighting.</li>
+        <li>Build <strong>C1-Generic</strong> — the first compliant food-cart chassis. Welded tube frame, four castors, reference lift-pad pattern, stick-on AprilTag. This is the first cart a robot will pick up.</li>
+    </ul>
+
+    <h3>Schedule — week 1</h3>
+    <ul class="checklist">
+        <li>Schedule a <strong>physical dimensional validation</strong> session at a Keenon demo site (S300 chassis) — we need direct measurement of the undercarriage geometry since the published 925 × 640 mm body differs from the 700 × 900 mm chassis number in our internal refs.</li>
+        <li>Schedule a <strong>Pudu T300 WTIDL1 demo request</strong> — confirm whether the Lift+Towing variant is available in the US market and on what lead time.</li>
+        <li>Schedule weekly <strong>design-review sync</strong> — 30 min, Fridays, reviews CAD diffs, vendor replies, prototype status, risk register updates.</li>
+    </ul>
+
+    <h3>Risk register — week 1</h3>
+    <ul class="checklist">
+        <li>Import the 12-row risk register from §14 into a live spreadsheet (Airtable or Notion). Assign owners, target-resolve dates, and current status to each row.</li>
+        <li>Flag R-03 (T300 CAD unavailable) as the single critical-path risk. Escalate if no response from Pudu in 10 business days.</li>
+        <li>Flag R-07 (S300 chassis geometry mismatch) — blocks S300-LK CAD finalization. Must resolve before week-4 design review.</li>
+    </ul>
+
+    <h3>Documentation — ongoing</h3>
+    <ul class="checklist">
+        <li>Every measurement, vendor reply, and design decision gets a dated entry in <code>docs/</code>. This dossier is a snapshot — <code>docs/</code> is the living source of truth.</li>
+        <li>When a new PDF or spec sheet arrives, save it to <code>assets/robots/&lt;vendor-&gt;-&lt;model&gt;/</code> and update §17 of this dossier.</li>
+        <li>When a dock-standard number changes, update <code>docs/standard/dock-standard-v1.md</code> first, then propagate to <code>pages/standard.html</code>, then to this dossier's §10.</li>
+    </ul>
+</section>
+
+<!-- ============ §17 FILE INDEX ============ -->
+<section id="files">
+    <div class="section-head">
+        <div class="section-num">§ 17</div>
+        <h2>File index</h2>
+    </div>
+    <p style="color: var(--text-dim); font-size: 13px;">Everything in this dossier is saved under the repo's <code>assets/robots/</code> folder. Paths below are relative to the repo root.</p>
+
+    <h3 style="color: var(--keenon);">Keenon S100 — <code>assets/robots/keenon-s100/</code></h3>
+    <div class="linklist">
+        <div>● <a href="../assets/robots/keenon-s100/hero.png">hero.png</a> — primary product photo</div>
+        <div>● <a href="../assets/robots/keenon-s100/photo-official-1.png">photo-official-1.png</a> … <a href="../assets/robots/keenon-s100/photo-official-4.png">-4.png</a> — official photography</div>
+        <div>● <a href="../assets/robots/keenon-s100/dimensions-spec1.png">dimensions-spec1.png</a> … <a href="../assets/robots/keenon-s100/dimensions-spec4.png">-spec4.png</a> — published spec/dimension infographics</div>
+        <div>● <a href="../assets/robots/keenon-s100/silhouette.svg">silhouette.svg</a> — stylized icon</div>
+        <div>● <a href="../assets/robots/keenon-s100/specs-published.md">specs-published.md</a> — verbatim spec capture</div>
+    </div>
+
+    <h3 style="color: var(--keenon);">Keenon S300 — <code>assets/robots/keenon-s300/</code></h3>
+    <div class="linklist">
+        <div>● <a href="../assets/robots/keenon-s300/hero.png">hero.png</a> — primary product photo</div>
+        <div>● <a href="../assets/robots/keenon-s300/photo-deployment.jpg">photo-deployment.jpg</a> — in-service photography</div>
+        <div>● <a href="../assets/robots/keenon-s300/photo-setup.jpg">photo-setup.jpg</a> — commissioning photography</div>
+        <div>● <a href="../assets/robots/keenon-s300/specs-published.md">specs-published.md</a> — verbatim spec capture</div>
+    </div>
+
+    <h3 style="color: var(--pudu);">Pudu T300 — <code>assets/robots/pudu-t300/</code></h3>
+    <div class="linklist">
+        <div>● <a href="../assets/robots/pudu-t300/hero.webp">hero.webp</a> — primary product photo</div>
+        <div>● <a href="../assets/robots/pudu-t300/dimensions.webp">dimensions.webp</a> — dimensional drawing</div>
+        <div>● <a href="../assets/robots/pudu-t300/parameters.png">parameters.png</a> — official parameters table image</div>
+        <div>● <a href="../assets/robots/pudu-t300/photo-mode-standard.webp">photo-mode-{standard,shelf,lifting,towing}.webp</a> — four operating-mode photos</div>
+        <div>● <a href="../assets/robots/pudu-t300/brochure.pdf">brochure.pdf</a> — <strong>official product brochure</strong></div>
+        <div>● <a href="../assets/robots/pudu-t300/datasheet.pdf">datasheet.pdf</a> — <strong>official technical presentation</strong></div>
+        <div>● <a href="../assets/robots/pudu-t300/manual.pdf">manual.pdf</a> — <strong>official operation guide v1.0.2 (Aug 2024)</strong></div>
+        <div>● <a href="../assets/robots/pudu-t300/specs-published.md">specs-published.md</a> — verbatim spec capture</div>
+    </div>
+</section>
+
+</main>
+
+<footer>
+    <div class="footer-inner">
+        <div>
+            <div class="tech" style="font-weight: 700; color: var(--text);">Accelerate Robotics · Cart Platform</div>
+            <div style="margin-top: 4px;">Robot Technical Dossier v1.0 · Issued 2026-04-15</div>
+        </div>
+        <div style="text-align: right;">
+            <div>Compiled from vendor public product pages. Third-party assets are cited to their sources and used for internal engineering reference.</div>
+            <div style="margin-top: 4px;">Contact: <a href="mailto:eric@accelerate-robotics.com">eric@accelerate-robotics.com</a></div>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Cart Platform — Engineering Package v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #0a0a0f;
+        --surface: #13131a;
+        --surface-2: #1c1c25;
+        --border: #26262f;
+        --border-bright: #3a3a48;
+        --text: #e8e8ef;
+        --text-dim: #7a7a88;
+        --text-faint: #50505c;
+        --accent: #00d4ff;
+        --green: #00e676;
+        --red: #ff5566;
+        --warn: #ffd166;
+        --purple: #b78bff;
+        --amber: #ffa94a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body {
+        font-family: 'Inter', system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+        font-size: 15px;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .tech { font-family: 'Space Grotesk', sans-serif; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; background: var(--surface-2); padding: 1px 6px; border-radius: 3px; color: var(--accent); }
+
+    /* ---- Top bar ---- */
+    .topbar {
+        position: sticky; top: 0; z-index: 50;
+        background: rgba(10,10,15,0.92);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 0;
+    }
+    .topbar-inner { max-width: 1200px; margin: 0 auto; padding: 0 32px; display: flex; align-items: center; gap: 24px; }
+    .topbar-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: -0.01em; }
+    .topbar-title .accent { color: var(--accent); }
+    .topbar-nav { display: flex; gap: 18px; margin-left: auto; flex-wrap: wrap; }
+    .topbar-nav a { font-size: 12px; color: var(--text-dim); letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; font-family: 'Space Grotesk', sans-serif; }
+    .topbar-nav a:hover { color: var(--accent); text-decoration: none; }
+
+    /* ---- Hero ---- */
+    .hero { border-bottom: 1px solid var(--border); padding: 56px 0 48px; background: linear-gradient(180deg, #13131a 0%, #0a0a0f 100%); }
+    .hero-inner { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+    .eyebrow { font-family: 'Space Grotesk', sans-serif; font-size: 11px; color: var(--accent); letter-spacing: 0.24em; text-transform: uppercase; font-weight: 700; }
+    h1 { font-size: 52px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin: 14px 0 0; max-width: 900px; }
+    .hero-sub { margin-top: 18px; font-size: 17px; color: var(--text-dim); max-width: 720px; line-height: 1.6; }
+    .meta-row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 28px; }
+    .meta-chip { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; }
+    .meta-chip .k { color: var(--text-dim); margin-right: 6px; }
+
+    /* ---- Layout ---- */
+    main { max-width: 1200px; margin: 0 auto; padding: 56px 32px 100px; }
+    section { margin-bottom: 68px; scroll-margin-top: 80px; }
+    .section-head { border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 28px; display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+    .section-num { font-family: 'Space Grotesk', sans-serif; font-size: 14px; color: var(--text-faint); font-weight: 600; letter-spacing: 0.1em; }
+    h2 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+    h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin: 32px 0 12px; }
+    h4 { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin: 22px 0 10px; font-family: 'Space Grotesk', sans-serif; }
+    p { margin: 10px 0; color: var(--text); }
+    p.note { color: var(--text-dim); font-size: 14px; }
+
+    /* ---- Audience pills ---- */
+    .audience-strip { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .pill { font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid; background: transparent; }
+    .pill-engineer { color: var(--accent); border-color: var(--accent); }
+    .pill-fabricator { color: var(--green); border-color: var(--green); }
+    .pill-designer { color: var(--purple); border-color: var(--purple); }
+    .pill-robot { color: var(--amber); border-color: var(--amber); }
+    .pill-all { color: var(--text-dim); border-color: var(--border-bright); }
+
+    /* ---- Tables ---- */
+    .tbl { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 14px; }
+    .tbl th, .tbl td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .tbl thead th { background: var(--surface-2); font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; border-bottom: 1px solid var(--border-bright); }
+    .tbl tbody tr:last-child td { border-bottom: none; }
+    .tbl td.k { color: var(--text-dim); width: 36%; font-weight: 500; }
+    .tbl td.v { color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    .tbl td.r { color: var(--text-dim); font-size: 13px; }
+    .tbl-compact td { padding: 8px 14px; font-size: 13px; }
+
+    /* ---- Req cards ---- */
+    .req-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 14px; }
+    .req { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 18px 20px; }
+    .req-id { font-family: 'Space Grotesk', sans-serif; font-size: 11px; color: var(--accent); letter-spacing: 0.15em; font-weight: 700; }
+    .req-title { font-size: 16px; font-weight: 600; margin-top: 2px; }
+    .req-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text); margin-top: 10px; padding: 8px 10px; background: var(--bg); border-radius: 4px; border: 1px solid var(--border); }
+    .req-rat { font-size: 13px; color: var(--text-dim); margin-top: 10px; line-height: 1.55; }
+
+    /* ---- Cart columns ---- */
+    .three-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .card-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+    .card-code { font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 800; color: var(--accent); line-height: 1; letter-spacing: -0.02em; }
+    .card-name { font-size: 16px; font-weight: 600; margin-top: 4px; }
+    .card-sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+    .card-body { padding: 18px 22px 22px; }
+    .kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; font-size: 13px; }
+    .kv div:nth-child(odd) { color: var(--text-dim); }
+    .kv div:nth-child(even) { color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .card-block { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .card-block h5 { font-family: 'Space Grotesk', sans-serif; font-size: 10px; color: var(--text-dim); letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
+    .card-block ul { list-style: none; font-size: 13px; }
+    .card-block li { padding: 3px 0; color: var(--text); }
+    .card-block li .label { color: var(--text-dim); display: inline-block; min-width: 90px; }
+
+    /* ---- Diagram ---- */
+    .diagram { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; }
+    .diagram-legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 24px; margin-top: 20px; font-size: 13px; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
+
+    /* ---- Download row ---- */
+    .downloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+    .dl { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; display: flex; gap: 14px; align-items: flex-start; }
+    .dl-icon { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: var(--bg); background: var(--accent); width: 38px; height: 38px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .dl-body { flex: 1; }
+    .dl-title { font-weight: 600; font-size: 14px; }
+    .dl-path { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); margin-top: 4px; word-break: break-all; }
+    .dl-sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+
+    /* ---- Two-col ---- */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* ---- Callout ---- */
+    .callout { border: 1px solid var(--warn); border-left: 3px solid var(--warn); background: rgba(255,209,102,0.06); padding: 14px 18px; border-radius: 6px; font-size: 14px; color: var(--text); margin: 16px 0; }
+    .callout .tag { font-family: 'Space Grotesk', sans-serif; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--warn); font-weight: 700; margin-right: 10px; }
+    .callout-ok { border-color: var(--green); border-left-color: var(--green); background: rgba(0,230,118,0.06); }
+    .callout-ok .tag { color: var(--green); }
+
+    /* ---- Footer ---- */
+    footer { border-top: 1px solid var(--border); padding: 32px; margin-top: 60px; }
+    .footer-inner { max-width: 1200px; margin: 0 auto; color: var(--text-dim); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+
+    /* ---- Print ---- */
+    @media print {
+        :root {
+            --bg: #ffffff;
+            --surface: #ffffff;
+            --surface-2: #f6f6f7;
+            --border: #d1d5db;
+            --border-bright: #9ca3af;
+            --text: #0a0a0f;
+            --text-dim: #4b5563;
+            --text-faint: #9ca3af;
+            --accent: #0369a1;
+        }
+        body { font-size: 11pt; }
+        .topbar { display: none; }
+        .hero { page-break-after: avoid; }
+        section { page-break-inside: avoid; margin-bottom: 30px; }
+        h1 { font-size: 28pt; }
+        h2 { font-size: 18pt; }
+        a { color: var(--accent); }
+        .req { page-break-inside: avoid; }
+        .card { page-break-inside: avoid; }
+        .diagram { page-break-inside: avoid; }
+    }
+    @media (max-width: 680px) {
+        h1 { font-size: 36px; }
+        .topbar-nav { display: none; }
+        main { padding: 36px 20px 80px; }
+        .hero-inner { padding: 0 20px; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<div class="topbar">
+    <div class="topbar-inner">
+        <div class="topbar-title">Accelerate <span class="accent">Cart Platform</span> · Engineering Package v1</div>
+        <nav class="topbar-nav">
+            <a href="#audience">Audience</a>
+            <a href="#standard">Standard</a>
+            <a href="#carts">Carts</a>
+            <a href="#liftkits">Lift Kits</a>
+            <a href="#robots">Host Robots</a>
+            <a href="#downloads">Downloads</a>
+        </nav>
+    </div>
+</div>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+    <div class="hero-inner">
+        <div class="eyebrow">Engineering Package · v1.0 · Draft</div>
+        <h1>One dock standard. Any compliant cart. Any compliant robot.</h1>
+        <p class="hero-sub">
+            This package consolidates the Accelerate Cart Platform v1 deliverables for handoff to industrial design,
+            mechanical engineering, fabrication, and robot OEM partners. It covers the normative mechanical interface,
+            three reference carts, three lift kits, and the host-robot dimensional envelopes they target.
+        </p>
+        <div class="meta-row">
+            <div class="meta-chip"><span class="k">VERSION</span>1.0</div>
+            <div class="meta-chip"><span class="k">STATUS</span>Draft — pending S300 validation</div>
+            <div class="meta-chip"><span class="k">ISSUED</span>2026-04-15</div>
+            <div class="meta-chip"><span class="k">OWNER</span>Accelerate Robotics</div>
+            <div class="meta-chip"><span class="k">UNITS</span>SI (mm, kg, m/s)</div>
+        </div>
+    </div>
+</header>
+
+<main>
+
+<!-- ============ AUDIENCE MAP ============ -->
+<section id="audience">
+    <div class="section-head">
+        <div class="section-num">§ A</div>
+        <h2>Who this is for</h2>
+    </div>
+    <p class="note" style="max-width: 780px;">This package is written to be read end-to-end by the integration lead, but each discipline can jump to the sections that matter most.</p>
+
+    <div class="three-col" style="margin-top: 24px;">
+        <div class="card">
+            <div class="card-head">
+                <div style="display:flex; gap: 10px; align-items: center;">
+                    <div class="pill pill-designer">Industrial Designer</div>
+                </div>
+                <div class="card-name" style="margin-top: 10px;">What changes, what stays fixed</div>
+            </div>
+            <div class="card-body" style="font-size: 13px; color: var(--text-dim); line-height: 1.65;">
+                The dock zone (§3) is an inviolable keep-out region on the underside. Everything above the dock plane is yours —
+                chassis styling, trim kits, materials, finishes. The Moore / Thesis / Service trim matrix rides on the common chassis.
+                Read: §1, §2 reference carts, §5 open items.
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-head">
+                <div style="display:flex; gap: 10px; align-items: center;">
+                    <div class="pill pill-engineer">Mechanical Engineer</div>
+                </div>
+                <div class="card-name" style="margin-top: 10px;">Dimensions, loads, tolerances</div>
+            </div>
+            <div class="card-body" style="font-size: 13px; color: var(--text-dim); line-height: 1.65;">
+                Start at §1 (Dock Standard v1) — eight normative requirements with rationale. Then §3 (Lift Kits) for the
+                robot-side mechanism details: cam actuation, 8 mm travel, passive detent. §4 gives you the host-robot envelopes
+                the kits must fit within.
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-head">
+                <div style="display:flex; gap: 10px; align-items: center;">
+                    <div class="pill pill-fabricator">Fabricator</div>
+                </div>
+                <div class="card-name" style="margin-top: 10px;">Materials, hardware, finishes</div>
+            </div>
+            <div class="card-body" style="font-size: 13px; color: var(--text-dim); line-height: 1.65;">
+                §2 cart specs call out castor size, tread, brake type, powder-coat colors, leather/veneer callouts per trim kit.
+                §1.3.3 defines the lift-pad hardware (30×30 mm hardened steel, flush mount, rigid-frame attachment).
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-head">
+                <div style="display:flex; gap: 10px; align-items: center;">
+                    <div class="pill pill-robot">Robot OEM</div>
+                </div>
+                <div class="card-name" style="margin-top: 10px;">What we need from you</div>
+            </div>
+            <div class="card-body" style="font-size: 13px; color: var(--text-dim); line-height: 1.65;">
+                We're seeking accessory-platform bolt-hole drawings, power/data connector pinouts, and a policy statement on
+                third-party mechanical accessories. See §4 for the host-robot reference data we already have, §6 for the
+                formal asks. Pudu T300 integration is gated on spec acquisition.
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ DOCK STANDARD v1 ============ -->
+<section id="standard">
+    <div class="section-head">
+        <div class="section-num">§ 1</div>
+        <h2>Dock Standard v1 — Normative Requirements</h2>
+        <div class="audience-strip" style="margin-left: auto;">
+            <div class="pill pill-engineer">Engineer</div>
+            <div class="pill pill-fabricator">Fabricator</div>
+            <div class="pill pill-robot">Robot OEM</div>
+        </div>
+    </div>
+
+    <p style="max-width: 820px;">
+        A cart is <strong>v1-compliant</strong> if and only if it satisfies all eight of the following. No partial compliance.
+        The full spec including glossary, scope, and versioning policy is at
+        <a href="../docs/standard/dock-standard-v1.md"><code>docs/standard/dock-standard-v1.md</code></a>.
+    </p>
+
+    <!-- Diagram -->
+    <div class="diagram" style="margin-top: 24px;">
+        <svg viewBox="0 0 1000 620" width="100%" style="display: block;" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M0,0 L10,5 L0,10 z" fill="#7a7a88"/>
+                </marker>
+            </defs>
+            <!-- Dock zone outline (900 x 550 mm scaled to 900 x 550 px; offset 50, 35) -->
+            <rect x="50" y="35" width="900" height="550" fill="none" stroke="#00d4ff" stroke-width="2"/>
+            <!-- Pad-pattern rectangle (750 x 400, centered) -->
+            <rect x="125" y="110" width="750" height="400" fill="none" stroke="#7a7a88" stroke-width="1" stroke-dasharray="5,5"/>
+            <!-- Four lift pads (30x30) at the corners of the 750x400 -->
+            <rect x="110" y="95" width="30" height="30" fill="#00e676"/>
+            <rect x="860" y="95" width="30" height="30" fill="#00e676"/>
+            <rect x="110" y="495" width="30" height="30" fill="#00e676"/>
+            <rect x="860" y="495" width="30" height="30" fill="#00e676"/>
+            <!-- Fiducial: 80x80, center at (x=50+900-200=750, y=35+275=310) -->
+            <rect x="710" y="270" width="80" height="80" fill="none" stroke="#ffd166" stroke-width="3"/>
+            <rect x="720" y="280" width="60" height="60" fill="#ffd166" opacity="0.25"/>
+            <!-- Leading-edge arrow + label -->
+            <line x1="950" y1="310" x2="990" y2="310" stroke="#00d4ff" stroke-width="2" marker-end="url(#arr)"/>
+            <text x="930" y="298" fill="#00d4ff" font-family="Space Grotesk" font-size="13" font-weight="700" text-anchor="end">LEADING EDGE →</text>
+            <text x="930" y="316" fill="#7a7a88" font-family="Space Grotesk" font-size="11" text-anchor="end">(robot entry)</text>
+            <!-- Dimensions - length 900 -->
+            <line x1="50" y1="600" x2="950" y2="600" stroke="#7a7a88" stroke-width="1"/>
+            <line x1="50" y1="595" x2="50" y2="605" stroke="#7a7a88" stroke-width="1"/>
+            <line x1="950" y1="595" x2="950" y2="605" stroke="#7a7a88" stroke-width="1"/>
+            <text x="500" y="615" fill="#e8e8ef" font-family="JetBrains Mono" font-size="12" text-anchor="middle">§3.1 · 900 mm dock length</text>
+            <!-- Dimensions - width 550 -->
+            <line x1="30" y1="35" x2="30" y2="585" stroke="#7a7a88" stroke-width="1"/>
+            <line x1="25" y1="35" x2="35" y2="35" stroke="#7a7a88" stroke-width="1"/>
+            <line x1="25" y1="585" x2="35" y2="585" stroke="#7a7a88" stroke-width="1"/>
+            <text x="18" y="310" fill="#e8e8ef" font-family="JetBrains Mono" font-size="12" text-anchor="middle" transform="rotate(-90 18 310)">§3.1 · 550 mm width</text>
+            <!-- Pad-pattern length 750 label -->
+            <text x="500" y="75" fill="#7a7a88" font-family="JetBrains Mono" font-size="11" text-anchor="middle">§3.3 · pad pattern 750 × 400 mm</text>
+            <!-- Fiducial offset 200 -->
+            <line x1="790" y1="380" x2="950" y2="380" stroke="#ffd166" stroke-width="1"/>
+            <line x1="790" y1="375" x2="790" y2="385" stroke="#ffd166" stroke-width="1"/>
+            <line x1="950" y1="375" x2="950" y2="385" stroke="#ffd166" stroke-width="1"/>
+            <text x="870" y="395" fill="#ffd166" font-family="JetBrains Mono" font-size="11" text-anchor="middle">§3.5 · 200 mm</text>
+            <!-- Fiducial label -->
+            <text x="750" y="260" fill="#ffd166" font-family="Space Grotesk" font-size="12" font-weight="700" text-anchor="middle">FIDUCIAL (80×80)</text>
+            <!-- Pad label -->
+            <text x="125" y="85" fill="#00e676" font-family="Space Grotesk" font-size="11" font-weight="700">LIFT PAD 30×30</text>
+        </svg>
+
+        <div class="diagram-legend">
+            <div><span class="dot" style="background: #00d4ff;"></span>Dock zone (§3.1 keep-out)</div>
+            <div><span class="dot" style="background: #00e676;"></span>Lift pads (§3.3 four corners)</div>
+            <div><span class="dot" style="background: transparent; border: 2px solid #7a7a88;"></span>Pad-pattern rectangle (750 × 400)</div>
+            <div><span class="dot" style="background: #ffd166;"></span>Fiducial (§3.5 AprilTag 36h11)</div>
+        </div>
+    </div>
+
+    <!-- 8 requirement cards -->
+    <div class="req-grid" style="margin-top: 28px;">
+        <div class="req">
+            <div class="req-id">§3.1 · DOCK FOOTPRINT</div>
+            <div class="req-title">Clear rectangle on cart underside</div>
+            <div class="req-val">900 mm (L) × 550 mm (W) — long axis ∥ travel</div>
+            <div class="req-rat">Sized to accommodate the Keenon S300 base (700×900 mm) with approach margin. Smaller robots enter with clearance to spare.</div>
+        </div>
+        <div class="req">
+            <div class="req-id">§3.2 · OVERHEAD CLEARANCE</div>
+            <div class="req-title">Floor-to-cart vertical gap within zone</div>
+            <div class="req-val">≥ 260 mm</div>
+            <div class="req-rat">S300 max height ≈ 240 mm including top sensors; 20 mm margin absorbs floor unevenness and lift-kit stack-up.</div>
+        </div>
+        <div class="req">
+            <div class="req-id">§3.3 · LIFT-PAD PATTERN</div>
+            <div class="req-title">Four steel pads on a 750×400 rectangle</div>
+            <div class="req-val">750 mm × 400 mm · pads 30 × 30 mm · hardened steel · flush</div>
+            <div class="req-rat">Four pads distribute mass evenly. Rigid-frame attachment required — not to trim, panels, or shrouds.</div>
+        </div>
+        <div class="req">
+            <div class="req-id">§3.4 · LIFT TRAVEL</div>
+            <div class="req-title">Vertical displacement on engagement</div>
+            <div class="req-val">8 mm ± 1 mm · ≤ 1° tilt off horizontal</div>
+            <div class="req-rat">Clears castor compression (3–4 mm under load) plus safety margin. Tight enough to preserve CG stability at 350 kg.</div>
+        </div>
+        <div class="req">
+            <div class="req-id">§3.5 · FIDUCIAL</div>
+            <div class="req-title">AprilTag alignment target</div>
+            <div class="req-val">36h11 family · 80 × 80 mm · matte · 200 mm from leading edge, center-lateral</div>
+            <div class="req-rat">36h11 tolerates partial occlusion. Tag IDs reserved by property — request allocation before manufacture.</div>
+        </div>
+        <div class="req">
+            <div class="req-id">§3.6 · ALIGNMENT TOLERANCE</div>
+            <div class="req-title">Accepted pose error at engagement</div>
+            <div class="req-val">Linear ± 15 mm (X, Y) · Angular ± 3° yaw</div>
+            <div class="req-rat">Achievable by Keenon-class robot in corridor conditions. Tighter → high abort rate; looser → tip-over risk.</div>
+        </div>
+        <div class="req">
+            <div class="req-id">§3.7 · MAX GROSS MASS</div>
+            <div class="req-title">Cart + payload combined</div>
+            <div class="req-val">≤ 350 kg</div>
+            <div class="req-rat">Covers S300's 300 kg payload + ~50 kg cart tare. Smaller carts self-limit (C1 = 95 kg gross max).</div>
+        </div>
+        <div class="req">
+            <div class="req-id">§3.8 · ELECTRICAL INTERFACE</div>
+            <div class="req-title">Passive cart — no power, no wiring</div>
+            <div class="req-val">Fully passive · BLE stick-on tag optional (not integral)</div>
+            <div class="req-rat">Eliminates charging dependencies and electrical failure modes. v2 reserved for inductive charging.</div>
+        </div>
+    </div>
+
+    <div class="callout" style="margin-top: 22px;">
+        <span class="tag">Validation Tool</span>
+        Automated dimensional check against all §3 requirements:
+        <a href="compliance-check.html">pages/compliance-check.html</a>. A physical compliance jig (steel frame) is a Phase 1 deliverable.
+    </div>
+</section>
+
+<!-- ============ REFERENCE CARTS ============ -->
+<section id="carts">
+    <div class="section-head">
+        <div class="section-num">§ 2</div>
+        <h2>Reference Cart Family</h2>
+        <div class="audience-strip" style="margin-left: auto;">
+            <div class="pill pill-designer">Designer</div>
+            <div class="pill pill-fabricator">Fabricator</div>
+            <div class="pill pill-engineer">Engineer</div>
+        </div>
+    </div>
+
+    <p style="max-width: 820px;">Three reference carts covering the primary hotel workflows. Each is Dock Standard v1–compliant. The trim matrix (Moore / Thesis / Service) rides on the common chassis — a cart can be re-skinned without re-certifying.</p>
+
+    <div class="three-col" style="margin-top: 24px;">
+
+        <!-- C1 -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-code">C1</div>
+                <div class="card-name">Food Cart (In-Residence Dining)</div>
+                <div class="card-sub">Torno Subito · room service</div>
+            </div>
+            <div class="card-body">
+                <h5 style="font-family: 'Space Grotesk'; font-size: 10px; color: var(--text-dim); letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; margin-bottom: 10px;">Chassis</h5>
+                <div class="kv">
+                    <div>L × W × H</div><div>600 × 1100 × 900 mm</div>
+                    <div>Tare mass</div><div>~35 kg</div>
+                    <div>Payload</div><div>60 kg</div>
+                    <div>Gross max</div><div>95 kg</div>
+                </div>
+
+                <div class="card-block">
+                    <h5>Castors</h5>
+                    <ul>
+                        <li><span class="label">Qty × Ø</span>4 × 75 mm swivel</li>
+                        <li><span class="label">Tread</span>rubber</li>
+                        <li><span class="label">Brake</span>rear pair, mechanical auto-brake</li>
+                        <li><span class="label">Engage</span>5 s after lateral motion ceases</li>
+                    </ul>
+                </div>
+
+                <div class="card-block">
+                    <h5>Top structure</h5>
+                    <ul>
+                        <li>Service surface 1100 × 600 @ 780 mm</li>
+                        <li>Insulated cavity 600 × 500 × 250 mm</li>
+                        <li>4× spring corner plate-locks</li>
+                        <li>2× glass holders (Ø 90 mm)</li>
+                    </ul>
+                </div>
+
+                <div class="card-block">
+                    <h5>Trim matrix</h5>
+                    <ul>
+                        <li><span class="label" style="color: #8a6f47;">Moore</span>Blackened bronze · quartered oak · ivory leather · travertine accent</li>
+                        <li><span class="label" style="color: #b8965a;">Thesis</span>Navy chassis · cream leather · satin brass · gold nameplate</li>
+                        <li><span class="label">Service</span>Satin black · stainless · thermoplastic lining</li>
+                    </ul>
+                </div>
+
+                <div style="margin-top: 14px;"><a href="../docs/carts/C1-food-cart.md">Full C1 spec →</a></div>
+            </div>
+        </div>
+
+        <!-- L1 -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-code">L1</div>
+                <div class="card-name">Linen Cart (Heavy Transport)</div>
+                <div class="card-sub">Floor-to-laundry · event turnover</div>
+            </div>
+            <div class="card-body">
+                <h5 style="font-family: 'Space Grotesk'; font-size: 10px; color: var(--text-dim); letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; margin-bottom: 10px;">Chassis</h5>
+                <div class="kv">
+                    <div>L × W × H</div><div>700 × 1000 × 1100 mm</div>
+                    <div>Tare mass</div><div>~50 kg</div>
+                    <div>Payload</div><div>250 kg</div>
+                    <div>Gross max</div><div>300 kg (under §3.7)</div>
+                </div>
+
+                <div class="card-block">
+                    <h5>Castors</h5>
+                    <ul>
+                        <li><span class="label">Qty × Ø</span>4 × 125 mm heavy-duty swivel</li>
+                        <li><span class="label">Tread</span>polyurethane (non-marking, quiet)</li>
+                        <li><span class="label">Brake</span>rear pair, dual-locking auto-brake</li>
+                        <li><span class="label">Rationale</span>125 mm required for 250 kg rolling resistance</li>
+                    </ul>
+                </div>
+
+                <div class="card-block">
+                    <h5>Top structure</h5>
+                    <ul>
+                        <li>Collapsible hamper frame (~300 mm stacked)</li>
+                        <li>Waterproof vinyl liner (replaceable)</li>
+                        <li>~300 L capacity expanded</li>
+                        <li>Hinged lid, soft-close latch</li>
+                        <li>Bottom-corner drain grommet</li>
+                    </ul>
+                </div>
+
+                <div class="card-block">
+                    <h5>Trim matrix</h5>
+                    <ul>
+                        <li><span class="label" style="color: #8a6f47;">Moore</span>Blackened bronze frame · quartered oak lid</li>
+                        <li><span class="label" style="color: #b8965a;">Thesis</span>Navy chassis · satin brass · cream-leather lid</li>
+                        <li><span class="label">Service</span>Galvanized frame · stainless lid</li>
+                    </ul>
+                </div>
+
+                <div class="callout" style="margin-top: 14px; padding: 10px 14px; font-size: 12px;">
+                    <span class="tag">Note</span>Hamper must not sag into §3.2 dock zone under load — chassis frame designed to prevent intrusion.
+                </div>
+
+                <div style="margin-top: 14px;"><a href="../docs/carts/L1-linen-cart.md">Full L1 spec →</a></div>
+            </div>
+        </div>
+
+        <!-- H1 -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-code">H1</div>
+                <div class="card-name">Housekeeping Caddy</div>
+                <div class="card-sub">Room turnover · supply transport</div>
+            </div>
+            <div class="card-body">
+                <h5 style="font-family: 'Space Grotesk'; font-size: 10px; color: var(--text-dim); letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; margin-bottom: 10px;">Chassis</h5>
+                <div class="kv">
+                    <div>L × W × H</div><div>550 × 800 × 950 mm</div>
+                    <div>Tare mass</div><div>~30 kg</div>
+                    <div>Payload</div><div>80 kg</div>
+                    <div>Gross max</div><div>110 kg</div>
+                </div>
+
+                <div class="card-block">
+                    <h5>Castors</h5>
+                    <ul>
+                        <li><span class="label">Qty × Ø</span>4 × 100 mm swivel</li>
+                        <li><span class="label">Tread</span>rubber</li>
+                        <li><span class="label">Brake</span>diagonal pair (FL + RR)</li>
+                        <li><span class="label">Rationale</span>diagonal prevents pivot creep on grade</li>
+                    </ul>
+                </div>
+
+                <div class="card-block">
+                    <h5>Top structure</h5>
+                    <ul>
+                        <li>3× open shelves 500 × 700 mm (230 mm gap)</li>
+                        <li>6× injection-molded supply totes</li>
+                        <li>40 L trash sleeve (elastic liner)</li>
+                        <li>Soiled-linen bag on opposite corner</li>
+                        <li>Dual front grab-bars @ 850 mm</li>
+                    </ul>
+                </div>
+
+                <div class="card-block">
+                    <h5>Trim matrix</h5>
+                    <ul>
+                        <li><span class="label" style="color: #8a6f47;">Moore</span>Blackened chassis · blackened bronze handles</li>
+                        <li><span class="label" style="color: #b8965a;">Thesis</span>Navy chassis · satin brass handles</li>
+                        <li><span class="label">Service</span>Satin black · powder-coated steel</li>
+                    </ul>
+                </div>
+
+                <div class="callout" style="margin-top: 14px; padding: 10px 14px; font-size: 12px;">
+                    <span class="tag">Note</span>Chassis is SHORTER than dock zone — robot may overhang cart fore/aft in transit. Load path is through pads, not chassis.
+                </div>
+
+                <div style="margin-top: 14px;"><a href="../docs/carts/H1-housekeeping.md">Full H1 spec →</a></div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- ============ LIFT KITS ============ -->
+<section id="liftkits">
+    <div class="section-head">
+        <div class="section-num">§ 3</div>
+        <h2>Lift Kits (Robot-Side)</h2>
+        <div class="audience-strip" style="margin-left: auto;">
+            <div class="pill pill-engineer">Engineer</div>
+            <div class="pill pill-robot">Robot OEM</div>
+        </div>
+    </div>
+
+    <p style="max-width: 820px;">Each kit bolts to its host robot's accessory platform. No drive-system, battery, or firmware modifications beyond loading lift-control and AprilTag-detection software. Cam-driven actuation with passive mechanical detent — no continuous current draw when engaged.</p>
+
+    <h3>Common architecture (all kits)</h3>
+    <div class="two-col" style="margin-top: 14px;">
+        <table class="tbl">
+            <thead><tr><th colspan="2">Mechanical (shared)</th></tr></thead>
+            <tbody>
+                <tr><td class="k">Pad positions</td><td class="v">750 × 400 mm rectangle</td></tr>
+                <tr><td class="k">Pad material</td><td class="v">Hardened steel, flat-top</td></tr>
+                <tr><td class="k">Actuation</td><td class="v">Cam-driven, spring-retracted</td></tr>
+                <tr><td class="k">Travel</td><td class="v">8 mm (§3.4)</td></tr>
+                <tr><td class="k">Hold mechanism</td><td class="v">Passive mechanical detent</td></tr>
+                <tr><td class="k">Release</td><td class="v">Reverse solenoid pulse · manual handle</td></tr>
+            </tbody>
+        </table>
+        <table class="tbl">
+            <thead><tr><th colspan="2">Sensing (shared)</th></tr></thead>
+            <tbody>
+                <tr><td class="k">Alignment camera</td><td class="v">720p @ 30 fps, ≥120° FOV</td></tr>
+                <tr><td class="k">Mount</td><td class="v">50 mm AGL, 10° downward</td></tr>
+                <tr><td class="k">Tag detection</td><td class="v">AprilTag 36h11 @ ≥ 10 Hz</td></tr>
+                <tr><td class="k">Proximity</td><td class="v">3× ultrasonic (HC-SR04 or equiv)</td></tr>
+                <tr><td class="k">Trip range</td><td class="v">abort if &lt; 5 cm unexpectedly</td></tr>
+                <tr><td class="k">Compute</td><td class="v">Host robot's onboard Android/Linux</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Per-kit deltas</h3>
+    <table class="tbl" style="margin-top: 14px;">
+        <thead>
+            <tr>
+                <th>Parameter</th>
+                <th>S100-LK</th>
+                <th>S300-LK</th>
+                <th>T300-LK</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td class="k">Host robot</td><td class="v">Keenon S100</td><td class="v">Keenon S300</td><td class="v" style="color: var(--warn);">Pudu T300 (gated)</td></tr>
+            <tr><td class="k">Solenoid</td><td class="v">12 V, ~3 A pulse</td><td class="v">24 V, ~5 A pulse</td><td class="v" style="color: var(--text-dim);">TBD (per Pudu)</td></tr>
+            <tr><td class="k">Kit height above platform</td><td class="v">≤ 60 mm</td><td class="v">≤ 20 mm (low-profile cam)</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Kit mass</td><td class="v">~8 kg</td><td class="v">~14 kg</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Lift-actuation peak power</td><td class="v">&lt; 50 W</td><td class="v">&lt; 100 W</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Pad backing</td><td class="v">Standard</td><td class="v">Reinforced (approaches 350 kg)</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Shared subcomponents with S100-LK</td><td class="v">baseline</td><td class="v">~85% (camera, sensors, cam parts)</td><td class="v" style="color: var(--text-dim);">TBD (likely S300-LK clone)</td></tr>
+            <tr><td class="k">Status</td><td class="v" style="color: var(--green);">Design reference</td><td class="v" style="color: var(--green);">Design reference</td><td class="v" style="color: var(--red);">Gated on spec</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Engagement sequence (common)</h3>
+    <table class="tbl tbl-compact" style="margin-top: 8px;">
+        <tbody>
+            <tr><td class="k">1</td><td>Dispatch — robot receives fetch-cart task with target AprilTag ID</td></tr>
+            <tr><td class="k">2</td><td>Approach — navigate to corridor (BLE tag narrows to ~1 m if deployed)</td></tr>
+            <tr><td class="k">3</td><td>Visual acquisition — alignment camera resolves tag, estimates relative pose</td></tr>
+            <tr><td class="k">4</td><td>Approach refinement — close to within §3.6 tolerance (±15 mm, ±3°)</td></tr>
+            <tr><td class="k">5</td><td>Drive-under — enter dock zone at &lt; 0.2 m/s, proximity sensors monitoring</td></tr>
+            <tr><td class="k">6</td><td>Lift engage — solenoid fires, cam rotates, pads rise 8 mm, detent captures</td></tr>
+            <tr><td class="k">7</td><td>Transit — normal speed, passive detent (no ongoing power)</td></tr>
+            <tr><td class="k">8</td><td>Drop-off — reverse solenoid, cam rotates, pads drop, cart rests on castors</td></tr>
+            <tr><td class="k">9</td><td>Egress — robot backs out at &lt; 0.2 m/s, cart stationary</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout" style="margin-top: 18px;">
+        <span class="tag">S300-LK Binding Constraints</span>
+        The S300 base is 240 mm tall. With the §3.2 minimum clearance at 260 mm, the S300-LK has only 20 mm of height budget. This drives the low-profile cam design. Also verify LiDAR/top sensors do not intrude above the platform — full dimensional validation required before kit freeze.
+    </div>
+</section>
+
+<!-- ============ HOST ROBOTS ============ -->
+<section id="robots">
+    <div class="section-head">
+        <div class="section-num">§ 4</div>
+        <h2>Host Robots — Reference Envelope</h2>
+        <div class="audience-strip" style="margin-left: auto;">
+            <div class="pill pill-engineer">Engineer</div>
+            <div class="pill pill-robot">Robot OEM</div>
+        </div>
+    </div>
+
+    <p style="max-width: 820px;">Published OEM parameters that constrain lift-kit design. These are the inputs the kits must fit within — if any figure changes at detail-drawing level, the dependent kit requires revisiting.</p>
+
+    <table class="tbl" style="margin-top: 20px;">
+        <thead>
+            <tr>
+                <th>Parameter</th>
+                <th>Keenon S100</th>
+                <th>Keenon S300</th>
+                <th>Pudu T300</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td class="k">Base footprint (L × W)</td><td class="v">~550 × 700 mm</td><td class="v">~700 × 900 mm</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Base height</td><td class="v">~200 mm</td><td class="v">~240 mm</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Tare mass</td><td class="v">~40 kg</td><td class="v">~90 kg</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Payload rating</td><td class="v">100 kg</td><td class="v">300 kg</td><td class="v" style="color: var(--text-dim);">TBD (need ≥ 300 kg)</td></tr>
+            <tr><td class="k">Max travel speed</td><td class="v">1.2 m/s</td><td class="v">1.0 m/s</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Slope limit</td><td class="v">5°</td><td class="v">5°</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Obstacle-climb limit</td><td class="v">20 mm</td><td class="v">20 mm</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Battery</td><td class="v">DC 25.2 V lithium</td><td class="v">DC 25.2 V lithium</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Network</td><td class="v">Wi-Fi 2.4 GHz / 4G</td><td class="v">Wi-Fi 2.4 GHz / 4G</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+            <tr><td class="k">Accessory mount</td><td class="v">Flat platform + bolt pattern + LV connector</td><td class="v">Flat platform + bolt pattern + LV connector</td><td class="v" style="color: var(--text-dim);">TBD</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Dock-zone fit check</h3>
+    <table class="tbl" style="margin-top: 8px;">
+        <thead>
+            <tr>
+                <th>Check</th>
+                <th>S100</th>
+                <th>S300</th>
+                <th>T300</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="k">Base fits under 900 × 550 dock zone (§3.1)?</td>
+                <td class="v" style="color: var(--green);">✓ 350 mm forward clearance</td>
+                <td class="v" style="color: var(--green);">✓ 200 mm forward clearance</td>
+                <td class="v" style="color: var(--warn);">Unknown</td>
+            </tr>
+            <tr>
+                <td class="k">Base + kit height ≤ 260 mm (§3.2)?</td>
+                <td class="v" style="color: var(--green);">✓ 200 + 60 = 260 mm (no margin)</td>
+                <td class="v" style="color: var(--warn);">Tight — 240 + 20 = 260 mm</td>
+                <td class="v" style="color: var(--warn);">Unknown</td>
+            </tr>
+            <tr>
+                <td class="k">Payload covers heaviest cart load?</td>
+                <td class="v" style="color: var(--warn);">Only ≤100 kg carts (C1, H1)</td>
+                <td class="v" style="color: var(--green);">✓ All carts incl. L1 fully loaded</td>
+                <td class="v" style="color: var(--warn);">Unknown (need ≥ 300 kg rating)</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- ============ DOWNLOADS ============ -->
+<section id="downloads">
+    <div class="section-head">
+        <div class="section-num">§ 5</div>
+        <h2>Downloads &amp; Assets</h2>
+        <div class="audience-strip" style="margin-left: auto;">
+            <div class="pill pill-all">All roles</div>
+        </div>
+    </div>
+
+    <h3>Interactive tools</h3>
+    <div class="downloads" style="margin-top: 10px;">
+        <div class="dl">
+            <div class="dl-icon">§</div>
+            <div class="dl-body">
+                <div class="dl-title">Dock Standard v1 Viewer</div>
+                <div class="dl-path">pages/standard.html</div>
+                <div class="dl-sub">SVG diagram + 8 normative requirement cards</div>
+                <div style="margin-top: 8px;"><a href="standard.html">Open →</a></div>
+            </div>
+        </div>
+        <div class="dl">
+            <div class="dl-icon">C</div>
+            <div class="dl-body">
+                <div class="dl-title">Cart Catalog</div>
+                <div class="dl-path">pages/cart-catalog.html</div>
+                <div class="dl-sub">C1 / L1 / H1 with trim-kit matrix</div>
+                <div style="margin-top: 8px;"><a href="cart-catalog.html">Open →</a></div>
+            </div>
+        </div>
+        <div class="dl">
+            <div class="dl-icon">✓</div>
+            <div class="dl-body">
+                <div class="dl-title">Compliance Check Tool</div>
+                <div class="dl-path">pages/compliance-check.html</div>
+                <div class="dl-sub">Dimensional self-test against §3 — for third-party cart submissions</div>
+                <div style="margin-top: 8px;"><a href="compliance-check.html">Open →</a></div>
+            </div>
+        </div>
+    </div>
+
+    <h3>Physical reference</h3>
+    <div class="downloads" style="margin-top: 10px;">
+        <div class="dl">
+            <div class="dl-icon">3D</div>
+            <div class="dl-body">
+                <div class="dl-title">Dock Standard v1 — Scale STL</div>
+                <div class="dl-path">hardware/dock-standard-v1.stl</div>
+                <div class="dl-sub">Watertight manifold, 900 × 550 mm full-scale · 136 triangles · slice at 25 % for 225 × 138 mm print</div>
+                <div style="margin-top: 8px;"><a href="../hardware/dock-standard-v1.stl">Download STL →</a> · <a href="../hardware/README.md">Print settings</a></div>
+            </div>
+        </div>
+        <div class="dl">
+            <div class="dl-icon">py</div>
+            <div class="dl-body">
+                <div class="dl-title">STL Regenerator (Python)</div>
+                <div class="dl-path">hardware/generate_dock_stl.py</div>
+                <div class="dl-sub">Edit dimensions at the top of the script; rerun to regenerate. Uses trimesh + manifold3d.</div>
+                <div style="margin-top: 8px;"><a href="../hardware/generate_dock_stl.py">View script →</a></div>
+            </div>
+        </div>
+    </div>
+
+    <h3>Canonical specs (Markdown)</h3>
+    <div class="downloads" style="margin-top: 10px;">
+        <div class="dl"><div class="dl-icon" style="background: var(--purple);">§</div><div class="dl-body"><div class="dl-title">Dock Standard v1</div><div class="dl-path">docs/standard/dock-standard-v1.md</div><div style="margin-top: 8px;"><a href="../docs/standard/dock-standard-v1.md">Open →</a></div></div></div>
+        <div class="dl"><div class="dl-icon" style="background: var(--green);">C1</div><div class="dl-body"><div class="dl-title">Food Cart</div><div class="dl-path">docs/carts/C1-food-cart.md</div><div style="margin-top: 8px;"><a href="../docs/carts/C1-food-cart.md">Open →</a></div></div></div>
+        <div class="dl"><div class="dl-icon" style="background: var(--green);">L1</div><div class="dl-body"><div class="dl-title">Linen Cart</div><div class="dl-path">docs/carts/L1-linen-cart.md</div><div style="margin-top: 8px;"><a href="../docs/carts/L1-linen-cart.md">Open →</a></div></div></div>
+        <div class="dl"><div class="dl-icon" style="background: var(--green);">H1</div><div class="dl-body"><div class="dl-title">Housekeeping Caddy</div><div class="dl-path">docs/carts/H1-housekeeping.md</div><div style="margin-top: 8px;"><a href="../docs/carts/H1-housekeeping.md">Open →</a></div></div></div>
+        <div class="dl"><div class="dl-icon" style="background: var(--amber); color: var(--bg);">LK</div><div class="dl-body"><div class="dl-title">S100 Lift Kit</div><div class="dl-path">docs/lift-kits/S100-LK.md</div><div style="margin-top: 8px;"><a href="../docs/lift-kits/S100-LK.md">Open →</a></div></div></div>
+        <div class="dl"><div class="dl-icon" style="background: var(--amber); color: var(--bg);">LK</div><div class="dl-body"><div class="dl-title">S300 Lift Kit</div><div class="dl-path">docs/lift-kits/S300-LK.md</div><div style="margin-top: 8px;"><a href="../docs/lift-kits/S300-LK.md">Open →</a></div></div></div>
+        <div class="dl"><div class="dl-icon" style="background: var(--red); color: var(--bg);">LK</div><div class="dl-body"><div class="dl-title">T300 Lift Kit (gated)</div><div class="dl-path">docs/lift-kits/T300-LK.md</div><div style="margin-top: 8px;"><a href="../docs/lift-kits/T300-LK.md">Open →</a></div></div></div>
+        <div class="dl"><div class="dl-icon" style="background: var(--accent);">R</div><div class="dl-body"><div class="dl-title">Keenon S100 Spec</div><div class="dl-path">docs/reference/keenon-s100-spec.md</div><div style="margin-top: 8px;"><a href="../docs/reference/keenon-s100-spec.md">Open →</a></div></div></div>
+        <div class="dl"><div class="dl-icon" style="background: var(--accent);">R</div><div class="dl-body"><div class="dl-title">Keenon S300 Spec</div><div class="dl-path">docs/reference/keenon-s300-spec.md</div><div style="margin-top: 8px;"><a href="../docs/reference/keenon-s300-spec.md">Open →</a></div></div></div>
+        <div class="dl"><div class="dl-icon" style="background: var(--red); color: var(--bg);">R</div><div class="dl-body"><div class="dl-title">Pudu T300 Spec (stub)</div><div class="dl-path">docs/reference/pudu-t300-spec.md</div><div style="margin-top: 8px;"><a href="../docs/reference/pudu-t300-spec.md">Open →</a></div></div></div>
+    </div>
+</section>
+
+<!-- ============ SCOPE + OPEN ITEMS ============ -->
+<section id="scope">
+    <div class="section-head">
+        <div class="section-num">§ 6</div>
+        <h2>Scope, Versioning &amp; Open Items</h2>
+    </div>
+
+    <div class="two-col">
+        <div>
+            <h3>In scope (v1)</h3>
+            <ul style="padding-left: 22px; color: var(--text); font-size: 14px; line-height: 1.8;">
+                <li>Cart underside geometry (dock zone)</li>
+                <li>Lift-pad pattern and load-transfer contact points</li>
+                <li>Vision fiducial for robot alignment</li>
+                <li>Cart mass limits</li>
+                <li>Clearance requirements</li>
+            </ul>
+            <h3>Out of scope (v1)</h3>
+            <ul style="padding-left: 22px; color: var(--text-dim); font-size: 14px; line-height: 1.8;">
+                <li>Cart upper structure (above the dock plane)</li>
+                <li>Cart aesthetic / finish / materials (trim-kit decisions)</li>
+                <li>Robot navigation, mapping, fleet orchestration</li>
+                <li>Electrical / inductive charging — reserved for v2</li>
+                <li>Outdoor or rough-surface use</li>
+            </ul>
+        </div>
+        <div>
+            <h3>Versioning policy</h3>
+            <p style="font-size: 14px;"><strong>v1.x</strong> — additive-only changes (rationale, informative notes, tooling). No normative parameter changes. v1-compliant carts and lift kits are forward-compatible with any v1.x revision.</p>
+            <p style="font-size: 14px;"><strong>v2</strong> — reserved for future evolution. Candidate additions: inductive charging contacts, NFC identity chip for cart-specific routing, heavier gross-mass tier.</p>
+
+            <h3>Formal asks (by audience)</h3>
+            <ul style="padding-left: 22px; font-size: 14px; line-height: 1.75;">
+                <li><span class="pill pill-robot" style="display: inline-block; margin-right: 6px;">Robot OEM</span>Keenon bolt-hole CAD (S100 + S300)</li>
+                <li><span class="pill pill-robot" style="display: inline-block; margin-right: 6px;">Robot OEM</span>Keenon accessory-connector pinout</li>
+                <li><span class="pill pill-robot" style="display: inline-block; margin-right: 6px;">Robot OEM</span>Keenon third-party-accessory policy statement</li>
+                <li><span class="pill pill-robot" style="display: inline-block; margin-right: 6px;">Robot OEM</span>Pudu T300 datasheet (gating T300-LK)</li>
+                <li><span class="pill pill-designer" style="display: inline-block; margin-right: 6px;">Designer</span>C1/L1/H1 CAD handoff</li>
+                <li><span class="pill pill-fabricator" style="display: inline-block; margin-right: 6px;">Fabricator</span>Castor-supplier validation (auto-brake 5 s behavior)</li>
+                <li><span class="pill pill-engineer" style="display: inline-block; margin-right: 6px;">Engineer</span>Dimensional validation against physical S300 unit</li>
+                <li><span class="pill pill-engineer" style="display: inline-block; margin-right: 6px;">Engineer</span>AprilTag ID allocation scheme across properties</li>
+                <li><span class="pill pill-engineer" style="display: inline-block; margin-right: 6px;">Engineer</span>Physical compliance jig fabrication</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer>
+    <div class="footer-inner">
+        <div>
+            <div class="tech" style="font-weight: 700; color: var(--text);">Accelerate Robotics · Cart Platform</div>
+            <div style="margin-top: 4px;">Engineering Package v1.0 · Issued 2026-04-15</div>
+        </div>
+        <div style="text-align: right;">
+            <div>Contact: <a href="mailto:eric@accelerate-robotics.com">eric@accelerate-robotics.com</a></div>
+            <div style="margin-top: 4px;">This document is a draft pending S300 dimensional validation.</div>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
