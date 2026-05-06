@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Print Label · Accelerate Robotics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Quiet-luxury type pairing: editorial display serif for the hero
+       lines + a quiet sans for caps + data. -->
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── Palette: cream paper, charcoal ink, brass accent ────────── */
+    :root {
+      --paper:        #faf6ee;        /* warm ivory */
+      --paper-edge:   #f1ead9;        /* faint border tone */
+      --ink:          #1c1817;        /* deep charcoal */
+      --ink-dim:      #6b6258;        /* warm gray for body data */
+      --ink-faint:    #a59b8d;
+      --brass:        #8a6d3b;        /* signature accent */
+      --brass-soft:   rgba(138,109,59,0.18);
+      --hairline:     rgba(28,24,23,0.14);
+
+      --bg-screen:    #ece7da;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-screen);
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Page wrapper (screen-only chrome) ──────────────────────── */
+    .pg { max-width: 920px; margin: 0 auto; padding: 28px 18px 80px; }
+    .pg h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.7rem; font-weight: 600; margin: 0 0 4px;
+      color: var(--ink); letter-spacing: 0.005em;
+    }
+    .pg p.sub { color: var(--ink-dim); font-size: 0.9rem; margin: 0 0 18px; }
+
+    /* Settings bar */
+    .controls {
+      background: white; border: 1px solid var(--paper-edge);
+      border-radius: 14px; padding: 18px 20px; margin-bottom: 22px;
+      box-shadow: 0 1px 2px rgba(28,24,23,0.04);
+    }
+    .controls .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    .controls .row + .row { margin-top: 14px; }
+    .ctrl-field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 200px; min-width: 0; }
+    .ctrl-field label {
+      font-size: 0.62rem; font-weight: 700; color: var(--ink-faint);
+      text-transform: uppercase; letter-spacing: 0.10em;
+    }
+    .ctrl-field input,
+    .ctrl-field select {
+      padding: 9px 12px; border: 1px solid var(--paper-edge); border-radius: 8px;
+      font: inherit; font-size: 0.92rem; background: white;
+    }
+    .ctrl-field input:focus,
+    .ctrl-field select:focus {
+      outline: 2px solid var(--brass); outline-offset: -1px;
+    }
+    .photo-block { display: flex; gap: 10px; align-items: center; }
+    .photo-block img {
+      width: 44px; height: 44px; border-radius: 50%; object-fit: cover;
+      border: 1px solid var(--paper-edge); background: var(--paper);
+    }
+    .photo-block input[type="file"] { font-size: 0.84rem; }
+    .btn {
+      padding: 10px 18px; border: 1px solid var(--paper-edge); background: white;
+      border-radius: 10px; font: inherit; font-size: 0.9rem; font-weight: 600;
+      color: var(--ink); cursor: pointer; transition: all 0.12s;
+    }
+    .btn:hover { border-color: var(--brass); color: var(--brass); }
+    .btn-primary {
+      background: var(--ink); color: white; border-color: var(--ink);
+      letter-spacing: 0.04em;
+    }
+    .btn-primary:hover { background: var(--brass); border-color: var(--brass); color: white; }
+    .err {
+      background: #fef2f2; border: 1px solid rgba(220,38,38,0.30); border-radius: 10px;
+      padding: 10px 14px; color: #991b1b; font-size: 0.9rem; margin-bottom: 14px;
+    }
+    .auto-print-hint {
+      background: var(--brass-soft); border: 1px solid var(--brass);
+      border-radius: 10px; padding: 10px 14px; color: var(--brass);
+      font-size: 0.84rem; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .auto-print-hint button {
+      margin-left: auto; background: transparent; border: 0; color: inherit; cursor: pointer;
+      font-weight: 700;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       LABEL — quiet luxury concierge card
+       ═══════════════════════════════════════════════════════════════ */
+    .label-shell {
+      --w-in: 4;
+      --h-in: 6;
+      --pad-in: 0.32;
+      width: calc(var(--w-in) * 96px);
+      height: calc(var(--h-in) * 96px);
+      background: var(--paper);
+      box-shadow: 0 18px 40px rgba(28,24,23,0.18), 0 2px 6px rgba(28,24,23,0.10);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      margin: 24px auto 0;
+      transform-origin: top center;
+    }
+    .label-shell[data-size="4x3"]   { --w-in: 4;   --h-in: 3;   --pad-in: 0.24; }
+    .label-shell[data-size="2x4"]   { --w-in: 2;   --h-in: 4;   --pad-in: 0.18; }
+    .label-shell[data-size="letter"]{ --w-in: 8.5; --h-in: 11;  --pad-in: 1.0;  }
+
+    /* The label content sits inside a thin double-rule frame — the
+       editorial hotel-stationery move that signals "premium" without
+       needing color or texture. */
+    .lbl-frame {
+      position: absolute; inset: calc(var(--pad-in) * 0.45 * 96px);
+      border: 0.5px solid var(--hairline);
+      border-radius: 2px;
+      pointer-events: none;
+    }
+    .lbl-frame::after {
+      content: ''; position: absolute; inset: 4px;
+      border: 0.5px solid var(--hairline);
+    }
+
+    .lbl-body {
+      position: absolute;
+      inset: calc(var(--pad-in) * 96px);
+      display: flex; flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ─── Top mark: small-caps brand wordmark, centered ─────────── */
+    .lbl-mark {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.62rem; font-weight: 700;
+      color: var(--brass);
+      text-transform: uppercase; letter-spacing: 0.30em;
+    }
+    .lbl-mark::before, .lbl-mark::after {
+      content: ''; flex: 1; height: 0.5px; background: var(--hairline); max-width: 60px;
+    }
+    .lbl-mark .seal {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic; font-weight: 600;
+      font-size: 1rem; letter-spacing: 0.02em;
+      color: var(--brass);
+    }
+
+    /* ─── Recipient hero (the hotel name in display serif) ──────── */
+    .lbl-recipient {
+      text-align: center; padding: 4px 0;
+    }
+    .lbl-recipient-eyebrow {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.54rem; font-weight: 700;
+      color: var(--ink-faint); text-transform: uppercase;
+      letter-spacing: 0.22em;
+      margin-bottom: 6px;
+    }
+    .lbl-recipient-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500; font-size: 1.55rem;
+      color: var(--ink); line-height: 1.05;
+      letter-spacing: 0.005em;
+      word-break: break-word;
+    }
+    .lbl-recipient-address {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.66rem; color: var(--ink-dim);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-top: 6px; line-height: 1.4;
+    }
+
+    /* ─── Sender card: photo + name + role ──────────────────────── */
+    .lbl-sender {
+      display: flex; gap: 10px; align-items: center;
+      padding: 8px 0;
+    }
+    .lbl-photo-ring {
+      width: 64px; height: 64px; border-radius: 50%;
+      padding: 2px; flex-shrink: 0;
+      background: linear-gradient(135deg, #c4a667, var(--brass) 50%, #6b5028);
+      box-shadow: 0 1px 4px rgba(28,24,23,0.18);
+    }
+    .lbl-photo {
+      width: 100%; height: 100%; border-radius: 50%;
+      object-fit: cover;
+      background: linear-gradient(135deg, #f5e9c8, #d8c08a);
+    }
+    .lbl-sender-meta { flex: 1; min-width: 0; }
+    .lbl-sender-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600; font-size: 1.15rem;
+      color: var(--ink); line-height: 1.1;
+    }
+    .lbl-sender-role {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.58rem; font-weight: 700;
+      color: var(--ink-faint); letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ─── The HERO callout — "Call me back" + huge phone ────────── */
+    .lbl-callout {
+      text-align: center;
+      padding: 6px 0 10px;
+    }
+    .lbl-callout-tag {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic; font-weight: 500;
+      font-size: 0.92rem; color: var(--brass);
+      letter-spacing: 0.01em;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .lbl-callout-tag::before, .lbl-callout-tag::after {
+      content: ''; flex: 0 0 28px; height: 0.5px; background: var(--brass);
+      opacity: 0.45;
+    }
+    .lbl-phone {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      font-size: 1.85rem;
+      color: var(--ink);
+      letter-spacing: 0.02em;
+      line-height: 1.1;
+      margin-top: 4px;
+    }
+
+    /* ─── Personal note (italic concierge handwriting feel) ─────── */
+    .lbl-note {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic; font-weight: 400;
+      color: var(--ink-dim);
+      font-size: 0.86rem; line-height: 1.4;
+      text-align: center;
+      padding: 0 6px;
+    }
+    .lbl-note::before, .lbl-note::after {
+      content: '"'; color: var(--brass); font-weight: 600;
+      font-size: 1.15em; opacity: 0.7;
+    }
+
+    /* ─── Footer: tier + brand mark ─────────────────────────────── */
+    .lbl-footer {
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 0.5px solid var(--hairline);
+      display: flex; align-items: center; gap: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.52rem; font-weight: 700;
+      color: var(--ink-faint);
+      text-transform: uppercase; letter-spacing: 0.18em;
+    }
+    .lbl-footer .stars { color: var(--brass); letter-spacing: 0.05em; }
+    .lbl-footer .tier {
+      color: var(--brass);
+    }
+    .lbl-footer .spacer { flex: 1; }
+
+    /* ── Compact-size adaptations ─────────────────────────────── */
+    .label-shell[data-size="4x3"] .lbl-recipient-name { font-size: 1.25rem; }
+    .label-shell[data-size="4x3"] .lbl-photo-ring { width: 50px; height: 50px; }
+    .label-shell[data-size="4x3"] .lbl-sender-name { font-size: 0.95rem; }
+    .label-shell[data-size="4x3"] .lbl-phone { font-size: 1.45rem; }
+    .label-shell[data-size="4x3"] .lbl-note { display: none; }
+    .label-shell[data-size="4x3"] .lbl-recipient-address { font-size: 0.58rem; }
+
+    .label-shell[data-size="2x4"] .lbl-mark { font-size: 0.50rem; letter-spacing: 0.20em; }
+    .label-shell[data-size="2x4"] .lbl-mark::before, .label-shell[data-size="2x4"] .lbl-mark::after { display: none; }
+    .label-shell[data-size="2x4"] .lbl-mark .seal { font-size: 0.78rem; }
+    .label-shell[data-size="2x4"] .lbl-recipient-name { font-size: 1.05rem; }
+    .label-shell[data-size="2x4"] .lbl-recipient-address { font-size: 0.50rem; letter-spacing: 0.04em; }
+    .label-shell[data-size="2x4"] .lbl-photo-ring { width: 44px; height: 44px; padding: 1.5px; }
+    .label-shell[data-size="2x4"] .lbl-sender-name { font-size: 0.9rem; }
+    .label-shell[data-size="2x4"] .lbl-sender-role { font-size: 0.50rem; letter-spacing: 0.12em; }
+    .label-shell[data-size="2x4"] .lbl-callout-tag { font-size: 0.74rem; }
+    .label-shell[data-size="2x4"] .lbl-phone { font-size: 1.25rem; }
+    .label-shell[data-size="2x4"] .lbl-note { display: none; }
+    .label-shell[data-size="2x4"] .lbl-footer { font-size: 0.46rem; letter-spacing: 0.10em; }
+
+    /* ── Letter (8.5 × 11) — for office printers like the Konica
+         Minolta bizhub C3350. Centers the label content on the page
+         with crop marks so the user can scissor-cut a 4×6 portion. */
+    .label-shell[data-size="letter"] {
+      background: white;
+    }
+    .label-shell[data-size="letter"] .lbl-frame { display: none; }
+    .label-shell[data-size="letter"] .lbl-body {
+      inset: 0;
+      padding: 1.5in 1in;
+    }
+    .label-shell[data-size="letter"] .lbl-recipient-name { font-size: 2.4rem; }
+    .label-shell[data-size="letter"] .lbl-recipient-address { font-size: 0.9rem; }
+    .label-shell[data-size="letter"] .lbl-photo-ring { width: 110px; height: 110px; }
+    .label-shell[data-size="letter"] .lbl-sender-name { font-size: 1.7rem; }
+    .label-shell[data-size="letter"] .lbl-sender-role { font-size: 0.78rem; }
+    .label-shell[data-size="letter"] .lbl-callout-tag { font-size: 1.2rem; }
+    .label-shell[data-size="letter"] .lbl-phone { font-size: 3rem; letter-spacing: 0.04em; }
+    .label-shell[data-size="letter"] .lbl-note { font-size: 1.1rem; padding: 12px 36px; }
+    .label-shell[data-size="letter"] .lbl-footer { font-size: 0.7rem; letter-spacing: 0.20em; }
+    /* Crop marks for hand-cutting a 4×6 section out of the letter sheet */
+    .label-shell[data-size="letter"]::before,
+    .label-shell[data-size="letter"]::after {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      border: 0.5px solid var(--ink-faint);
+    }
+    .label-shell[data-size="letter"]::before {
+      top: 1.25in; left: 1.25in;
+      border-right: 0; border-bottom: 0;
+    }
+    .label-shell[data-size="letter"]::after {
+      bottom: 1.25in; right: 1.25in;
+      border-left: 0; border-top: 0;
+    }
+
+    /* ─── Print rules — drives @page so paper size matches printer ── */
+    @media print {
+      body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .pg { padding: 0; max-width: none; }
+      .controls, .pg-header, .auto-print-hint { display: none !important; }
+      .label-shell {
+        margin: 0; box-shadow: none; border-radius: 0;
+        page-break-after: avoid;
+        width: calc(var(--w-in) * 1in);
+        height: calc(var(--h-in) * 1in);
+      }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+
+    /* @page rules — only the active size prints. The body's class is
+       toggled by the size selector so the matching rule wins. */
+    @page { size: 4in 6in; margin: 0; }
+  </style>
+</head>
+<body class="size-4x6">
+  <div class="pg">
+    <div class="pg-header">
+      <h1>Personal Concierge Label</h1>
+      <p class="sub">Quiet-luxury data card for an envelope. Pick a hotel, set your name + cell + photo (saved per-browser), and print directly to the attached printer.</p>
+      <div id="errBox"></div>
+      <div id="autoPrintHint" class="auto-print-hint" style="display:none;">
+        <span>🖨️ Print dialog will open automatically once the label loads.</span>
+        <button type="button" id="cancelAutoPrint">Cancel auto-print</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="row">
+        <div class="ctrl-field">
+          <label for="ctrlHotel">Hotel</label>
+          <select id="ctrlHotel"><option value="">— loading saved hotels —</option></select>
+        </div>
+        <div class="ctrl-field" style="flex: 0 1 220px;">
+          <label for="ctrlSize">Paper / label size</label>
+          <select id="ctrlSize">
+            <option value="letter" selected>US Letter (8.5 × 11) — office printer</option>
+            <option value="4x6">4 × 6 in (shipping label)</option>
+            <option value="4x3">4 × 3 in (compact label)</option>
+            <option value="2x4">2 × 4 in (address label)</option>
+          </select>
+        </div>
+        <div class="ctrl-field" style="flex: 0 0 auto; align-self: flex-end;">
+          <button class="btn btn-primary" id="btnPrint" type="button">🖨 Print Label</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="ctrl-field">
+          <label for="ctrlName">Your name</label>
+          <input id="ctrlName" type="text" placeholder="Eric Race" maxlength="60">
+        </div>
+        <div class="ctrl-field">
+          <label for="ctrlRole">Your role / title</label>
+          <input id="ctrlRole" type="text" placeholder="Founder · Accelerate Robotics" maxlength="80">
+        </div>
+        <div class="ctrl-field">
+          <label for="ctrlPhone">Your cell phone</label>
+          <input id="ctrlPhone" type="tel" placeholder="(305) 555-0123" maxlength="40">
+        </div>
+        <div class="ctrl-field">
+          <label>Your photo</label>
+          <div class="photo-block">
+            <img id="photoPreview" alt="Your photo" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'><rect width='44' height='44' fill='%23faf6ee'/><text x='22' y='29' font-family='Cormorant' font-style='italic' font-size='22' fill='%238a6d3b' text-anchor='middle'>·</text></svg>">
+            <input id="ctrlPhoto" type="file" accept="image/png,image/jpeg,image/webp">
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="ctrl-field" style="flex: 1 1 100%;">
+          <label for="ctrlNote">Personal note (italic, on the label)</label>
+          <input id="ctrlNote" type="text" maxlength="120" placeholder="Looking forward to discussing how we can help your team move faster.">
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Label preview / print canvas ═══ -->
+    <div class="label-shell" id="labelShell" data-size="letter">
+      <div class="lbl-frame"></div>
+      <div class="lbl-body">
+
+        <div class="lbl-mark">
+          <span class="seal">A·R</span>
+          <span>Accelerate Robotics</span>
+        </div>
+
+        <div class="lbl-recipient">
+          <div class="lbl-recipient-eyebrow">A personal note for</div>
+          <div class="lbl-recipient-name" id="lblHotelName">— pick a hotel —</div>
+          <div class="lbl-recipient-address" id="lblHotelAddress"></div>
+        </div>
+
+        <div class="lbl-sender">
+          <div class="lbl-photo-ring">
+            <img id="lblPhoto" class="lbl-photo" alt=""
+              src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'><rect width='60' height='60' fill='%23f5e9c8'/><text x='30' y='40' font-family='Cormorant Garamond' font-style='italic' font-size='30' fill='%238a6d3b' text-anchor='middle'>A·R</text></svg>">
+          </div>
+          <div class="lbl-sender-meta">
+            <div class="lbl-sender-name" id="lblName">Your Name</div>
+            <div class="lbl-sender-role" id="lblRole">Accelerate Robotics</div>
+          </div>
+        </div>
+
+        <div class="lbl-callout">
+          <div class="lbl-callout-tag">Call me back — I'm here to help</div>
+          <div class="lbl-phone" id="lblPhone">+1 555 555 0000</div>
+        </div>
+
+        <div class="lbl-note" id="lblNote" style="display:none;"></div>
+
+        <div class="lbl-footer">
+          <span class="tier" id="lblTier"></span>
+          <span class="spacer"></span>
+          <span id="lblFooterRight"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const LS_KEY = 'printLabel:v1';
+const $ = (id) => document.getElementById(id);
+
+function loadProfile() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
+}
+function saveProfile(p) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(p)); }
+  catch (e) { showError('Could not save your profile to this browser: ' + e.message); }
+}
+function showError(msg) {
+  const box = $('errBox');
+  if (!box) return;
+  box.innerHTML = msg ? `<div class="err">${msg}</div>` : '';
+}
+
+function logoUrlFor(hotel) {
+  const url = hotel?.website || '';
+  try { const u = new URL(url); return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(u.hostname)}&sz=128`; }
+  catch { return null; }
+}
+
+let HOTELS = [];
+let CURRENT_HOTEL = null;
+
+async function loadHotels() {
+  try {
+    const r = await fetch('/api/hotel-research/saved', { credentials: 'same-origin' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    HOTELS = data.hotels || [];
+    const sel = $('ctrlHotel');
+    const isUnnamed = (n) => !n || /^\(unnamed/i.test(n);
+    sel.innerHTML = '<option value="">— select a saved hotel —</option>' +
+      HOTELS.slice()
+        .sort((a, b) => {
+          const au = isUnnamed(a.name), bu = isUnnamed(b.name);
+          if (au !== bu) return au ? 1 : -1;
+          return (a.name || '').localeCompare(b.name || '');
+        })
+        .map(h => `<option value="${h.id}">${escapeHtml(h.name)}${h.submarket ? ' · ' + escapeHtml(h.submarket) : ''}</option>`)
+        .join('');
+    const params = new URLSearchParams(location.search);
+    const focus = params.get('hotel');
+    if (focus) { sel.value = focus; pickHotel(focus); }
+  } catch (err) {
+    showError('Could not load saved hotels: ' + err.message);
+  }
+}
+
+function pickHotel(id) {
+  CURRENT_HOTEL = HOTELS.find(h => String(h.id) === String(id)) || null;
+  renderLabel();
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const PACKAGE_NAME = {
+  S:  'Starter Package',
+  M:  'Integration Package',
+  L:  'Service Augmentation',
+  XL: 'Facility Automation',
+};
+
+function renderLabel() {
+  const profile = loadProfile();
+
+  $('lblName').textContent = profile.name || 'Your Name';
+  $('lblRole').textContent = profile.role || 'Accelerate Robotics';
+  // Format phone with subtle tracking — "305 · 555 · 0123"-style for the
+  // hero look without losing scannability.
+  const phone = (profile.phone || '').trim();
+  $('lblPhone').textContent = phone || '+1 555 555 0000';
+
+  if (profile.photo) {
+    $('lblPhoto').src = profile.photo;
+  }
+
+  const h = CURRENT_HOTEL;
+  if (!h) {
+    $('lblHotelName').textContent = '— pick a hotel —';
+    $('lblHotelAddress').textContent = '';
+    $('lblTier').textContent = '';
+    $('lblFooterRight').textContent = '';
+    return;
+  }
+
+  $('lblHotelName').textContent = h.name || '—';
+
+  // Address: street on top, city/state/zip on second line — but only if
+  // h.address doesn't already contain the city.
+  const cityLine = [h.city, h.state, h.zip].filter(Boolean).join(', ');
+  const addrParts = [];
+  if (h.address) addrParts.push(h.address);
+  if (cityLine && (!h.address || !h.address.toLowerCase().includes((h.city || '').toLowerCase()))) {
+    addrParts.push(cityLine);
+  }
+  $('lblHotelAddress').innerHTML = addrParts.map(escapeHtml).join('<br>');
+
+  // Footer left: package tier
+  $('lblTier').textContent = h.deal_size_tier ? PACKAGE_NAME[h.deal_size_tier] || h.deal_size_tier : '';
+  // Footer right: rooms + stars (uppercase, tracked-out)
+  const right = [];
+  if (h.rooms) right.push(`${h.rooms.toLocaleString()} keys`);
+  if (h.stars) right.push('★'.repeat(h.stars));
+  $('lblFooterRight').innerHTML = right
+    .map((s, i) => i === 1 ? `<span class="stars">${escapeHtml(s)}</span>` : escapeHtml(s))
+    .join(' · ');
+
+  // Personal note
+  const note = profile.note || '';
+  const noteEl = $('lblNote');
+  if (note) { noteEl.style.display = ''; noteEl.textContent = note; }
+  else      { noteEl.style.display = 'none'; }
+}
+
+// ── Photo upload (data URL → localStorage) ──
+$('ctrlPhoto').addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.size > 1_500_000) { showError('Photo must be under 1.5MB. Resize it first.'); return; }
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const dataUrl = ev.target.result;
+    const profile = loadProfile();
+    profile.photo = dataUrl;
+    saveProfile(profile);
+    $('photoPreview').src = dataUrl;
+    showError('');
+    renderLabel();
+  };
+  reader.readAsDataURL(file);
+});
+
+function bindInput(id, key) {
+  const el = $(id);
+  el.addEventListener('input', () => {
+    const profile = loadProfile();
+    profile[key] = el.value.trim();
+    saveProfile(profile);
+    renderLabel();
+  });
+}
+bindInput('ctrlName', 'name');
+bindInput('ctrlRole', 'role');
+bindInput('ctrlPhone', 'phone');
+bindInput('ctrlNote', 'note');
+
+$('ctrlHotel').addEventListener('change', (e) => pickHotel(e.target.value));
+
+// ─── Size selector — drives the @page rule via a runtime <style> ───
+// WHY runtime: @page can't read CSS variables, so we inject a fresh
+// rule whenever the size changes. This is what makes the print dialog
+// open at the *exact* paper size of the selected option, with no
+// browser scaling.
+const SIZE_PAGE = {
+  '4x6':    '4in 6in',
+  '4x3':    '4in 3in',
+  '2x4':    '2in 4in',
+  'letter': 'letter',
+};
+let _pageStyleEl;
+function applySize(size) {
+  const sz = SIZE_PAGE[size] ? size : 'letter';
+  $('labelShell').dataset.size = sz;
+  document.body.className = 'size-' + sz;
+  if (!_pageStyleEl) { _pageStyleEl = document.createElement('style'); document.head.appendChild(_pageStyleEl); }
+  _pageStyleEl.textContent = `@page { size: ${SIZE_PAGE[sz]}; margin: 0; }`;
+}
+$('ctrlSize').addEventListener('change', (e) => applySize(e.target.value));
+
+$('btnPrint').addEventListener('click', () => window.print());
+
+// ─── Auto-print on load ────────────────────────────────────────────
+// User asked for the page to "open directly to the printer". We fire
+// window.print() once everything is rendered (label + image + favicon).
+// A 1500ms delay keeps the user's ability to cancel and gives images
+// time to load. Triggered only when ?hotel=<id> is in the URL — landing
+// on the bare page is for setup, not print.
+function maybeAutoPrint() {
+  const params = new URLSearchParams(location.search);
+  if (!params.get('hotel')) return;
+  if (params.get('autoprint') === '0') return; // escape hatch
+  const hint = $('autoPrintHint');
+  if (hint) hint.style.display = 'flex';
+  let cancelled = false;
+  $('cancelAutoPrint')?.addEventListener('click', () => {
+    cancelled = true;
+    hint.textContent = 'Auto-print cancelled. Use the Print Label button when ready.';
+    hint.style.display = 'flex';
+  });
+  // Wait for fonts + images
+  Promise.all([
+    document.fonts ? document.fonts.ready : Promise.resolve(),
+    new Promise(r => setTimeout(r, 1500)),
+  ]).then(() => {
+    if (cancelled) return;
+    window.print();
+  });
+}
+
+// ── Boot ──
+(async () => {
+  const profile = loadProfile();
+  $('ctrlName').value = profile.name || '';
+  $('ctrlRole').value = profile.role || '';
+  $('ctrlPhone').value = profile.phone || '';
+  $('ctrlNote').value = profile.note || '';
+  if (profile.photo) $('photoPreview').src = profile.photo;
+  applySize($('ctrlSize').value);
+  await loadHotels();
+  renderLabel();
+  maybeAutoPrint();
+})();
+</script>
+</body>
+</html>
