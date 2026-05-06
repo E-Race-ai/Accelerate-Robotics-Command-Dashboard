@@ -72,7 +72,10 @@ app.use(helmet({
 }));
 
 // ── Middleware ───────────────────────────────────────────────────
-app.use(express.json());
+// Body limit bumped from default 100kb to 10mb so photo uploads
+// (base64 data URLs from phone cameras run 2-6mb) reach the print-label
+// endpoint. The route does its own per-payload validation.
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 // WHY: Trust Railway's reverse proxy so rate-limit sees real client IPs, not the proxy's
