@@ -491,11 +491,16 @@
       bottom: 1in; right: 1in; border-left: 0; border-top: 0;
     }
 
-    /* ─── Print rules — drives @page so paper size matches printer ── */
+    /* ─── Print rules — drives @page so paper size matches printer ──
+       Critical: hide *everything* on the .pg except .label-shell. The
+       luxury chrome additions (eyebrow, hero, section rules, recent
+       bar) were sneaking onto a second sheet because they weren't on
+       the explicit hide list. The blanket selector below catches any
+       new chrome we add later — only .label-shell prints. */
     @media print {
       body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .pg { padding: 0; max-width: none; }
-      .controls, .pg-header, .auto-print-hint { display: none !important; }
+      .pg > *:not(.label-shell) { display: none !important; }
       .label-shell {
         margin: 0; box-shadow: none; border-radius: 0;
         page-break-after: avoid;
@@ -868,6 +873,17 @@ function applySize(size) {
 $('ctrlSize').addEventListener('change', (e) => applySize(e.target.value));
 
 $('btnPrint').addEventListener('click', () => {
+  // Guard: don't fire the print dialog if no prospect is selected — that
+  // produces a label with the "— select prospect —" placeholder, which is
+  // exactly what kept happening because the button was eager to fire.
+  if (!CURRENT_PROSPECT) {
+    showError('Pick a prospect from the dropdown (or a recent chip) before printing.');
+    const sel = $('ctrlHotel');
+    sel?.focus();
+    sel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  showError('');
   rememberRecent(CURRENT_PROSPECT);
   window.print();
 });
