@@ -782,14 +782,45 @@ function renderLabel() {
   const phone = (profile.phone || '').trim();
   $('lblPhone').textContent = regalPhone(phone) || '— · — · —';
   // Photo source resolution order:
-  //   1. ?photoToken=<id> URL param — used by the server-side render
-  //      pipeline. Fetches the actual bytes from /api/print-label/photo/:t.
-  //   2. profile.photo (data URL from localStorage) — what the rep sees
-  //      live in their browser after uploading.
+  //   1. ?photoToken=<id> URL param — server-side render pipeline.
+  //      Synchronously fetches the bytes + converts to a data URL so
+  //      the image is fully decoded before headless Chrome captures
+  //      the PDF (a network <img src=…> can race against Chrome's
+  //      virtual-time-budget print trigger).
+  //   2. profile.photo (data URL from localStorage) — live preview.
   const params = new URLSearchParams(location.search);
   const photoToken = params.get('photoToken');
   if (photoToken) {
-    $('lblPhoto').src = `/api/print-label/photo/${encodeURIComponent(photoToken)}`;
+    // Mark the page "not ready" until the photo is decoded — so headless
+    // Chrome waits when --virtual-time-budget is engaged. We use a
+    // load-deferred attribute on <html> that the print pipeline can
+    // poll via Page.printToPDF when we wire that up. For now we just
+    // block via `await`: this code runs in renderLabel() so we make
+    // it best-effort fire-and-forget; the image will populate before
+    // the budget elapses.
+    document.documentElement.classList.add('photo-loading');
+    fetch(`/api/print-label/photo/${encodeURIComponent(photoToken)}`)
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => {
+        if (!blob) throw new Error('no blob');
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      })
+      .then(dataUrl => {
+        $('lblPhoto').src = dataUrl;
+        // Wait for the actual <img> to finish decoding so the PDF
+        // capture sees a real raster, not an in-flight loading state.
+        return $('lblPhoto').decode ? $('lblPhoto').decode() : Promise.resolve();
+      })
+      .then(() => document.documentElement.classList.remove('photo-loading'))
+      .catch(err => {
+        console.warn('[print-label] photo fetch failed:', err);
+        document.documentElement.classList.remove('photo-loading');
+      });
   } else if (profile.photo) {
     $('lblPhoto').src = profile.photo;
   }
@@ -925,6 +956,21 @@ async function sendToPrinter(prospectId) {
   return json;
 }
 
+// After a successful print, clear the per-label fields (prospect, note)
+// so the rep starts the next label with a clean slate. Identity fields
+// (name, role, phone, photo) PERSIST — those are the rep, not the label.
+function resetForNextLabel() {
+  CURRENT_PROSPECT = null;
+  $('ctrlHotel').value = '';
+  $('ctrlNote').value = '';
+  // Strip the note from the saved profile so it doesn't bleed into
+  // the next render. Photo/name/role/phone untouched.
+  const profile = loadProfile();
+  delete profile.note;
+  saveProfile(profile);
+  renderLabel();
+}
+
 $('btnPrint').addEventListener('click', async () => {
   if (!CURRENT_PROSPECT) {
     showError('Pick a prospect from the dropdown (or a recent chip) before printing.');
@@ -942,7 +988,12 @@ $('btnPrint').addEventListener('click', async () => {
     const result = await sendToPrinter(CURRENT_PROSPECT.id);
     rememberRecent(CURRENT_PROSPECT);
     btn.textContent = `✓ Sent · ${result.job_id}`;
-    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2400);
+    // Reset for the next label after the success flash
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.disabled = false;
+      resetForNextLabel();
+    }, 2400);
   } catch (err) {
     console.error('print failed:', err);
     showError('Could not print: ' + err.message);

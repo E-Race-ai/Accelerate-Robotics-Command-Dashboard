@@ -62,7 +62,7 @@ router.get('/photo/:token', (req, res) => {
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const DEFAULT_PRINTER = 'JADENS_Label';
-const RENDER_TIMEOUT_MS = 12_000;
+const RENDER_TIMEOUT_MS = 18_000;
 const PRINT_TIMEOUT_MS = 30_000;
 
 // Quote a value for safe embedding in a URL query string.
@@ -93,7 +93,12 @@ function renderToPdf(url, outPath) {
         '--headless=new', '--disable-gpu',
         '--no-pdf-header-footer', '--no-margins',
         `--print-to-pdf=${outPath}`,
-        '--virtual-time-budget=4500',
+        // Budget bumped to 9s — the photo fetch + decode pipeline needs
+        // time to complete before Chrome captures the PDF, otherwise the
+        // image renders as a placeholder block ("solid square" reported
+        // by the field).
+        '--virtual-time-budget=9000',
+        '--run-all-compositor-stages-before-draw',
         url,
       ],
       { timeout: RENDER_TIMEOUT_MS },
@@ -172,8 +177,12 @@ router.post('/send', async (req, res) => {
 
   try {
     await renderToPdf(url, tmpFile);
+    // Diagnostic: keep a copy of the most recent render so we can inspect
+    // what was actually sent to the printer (pdfimages, pdftotext, etc).
+    try { fs.copyFileSync(tmpFile, '/tmp/accelerate-label-last.pdf'); } catch {}
+    console.log('[print-label] rendered →', url);
     const jobId = await lpSend(printer, tmpFile);
-    res.json({ ok: true, job_id: jobId, printer, size });
+    res.json({ ok: true, job_id: jobId, printer, size, debug_pdf: '/tmp/accelerate-label-last.pdf' });
   } catch (err) {
     console.error('[print-label] send failed:', err.message);
     res.status(500).json({ error: err.message });
