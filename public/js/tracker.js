@@ -113,21 +113,19 @@ function addDaysIso(iso, days) {
   return d.toISOString().slice(0, 10);
 }
 
-function weekHeaders(sprintStart, sprintEnd) {
-  // WHY: Up to 6 weeks renders as week columns; longer spans switch to a single span header.
+function dayHeaders(sprintStart, sprintEnd) {
+  // WHY: One column per day so the header aligns with the per-day gridlines drawn on
+  // each row's .gantt-right background. Labels are rendered only on Mondays as a two-
+  // line { dow, date } cell; other days are null (empty cell, but still holding their
+  // column width). Long sprints (>60 days) fall back to a single span label to avoid
+  // an unreadably narrow grid.
   const totalDays = daysBetween(sprintStart, sprintEnd) + 1;
-  if (totalDays <= 42) {
-    const weeks = Math.max(1, Math.ceil(totalDays / 7));
-    return Array.from({ length: weeks }, (_, i) => {
-      const start = addDaysIso(sprintStart, i * 7);
-      // WHY: Clip the final week's end to the sprint end so headers never advertise
-      // dates beyond the sprint (e.g., a 21-day sprint would otherwise show 5/13 – 5/19).
-      const rawEnd = addDaysIso(sprintStart, i * 7 + 6);
-      const end = rawEnd > sprintEnd ? sprintEnd : rawEnd;
-      return start === end ? fmtMD(start) : `${fmtMD(start)} – ${fmtMD(end)}`;
-    });
-  }
-  return [`${fmtMD(sprintStart)} – ${fmtMD(sprintEnd)}`];
+  if (totalDays > 60) return [`${fmtMD(sprintStart)} – ${fmtMD(sprintEnd)}`];
+  return Array.from({ length: totalDays }, (_, i) => {
+    const iso = addDaysIso(sprintStart, i);
+    const dow = new Date(iso + 'T00:00:00Z').getUTCDay(); // 0=Sun … 1=Mon …
+    return dow === 1 ? { dow: 'Mon', date: fmtMD(iso) } : null;
+  });
 }
 
 // ── Gantt render ────────────────────────────────────────────
@@ -136,8 +134,22 @@ function renderGantt() {
   const s = state.currentSprint;
   if (!s) { root.innerHTML = ''; return; }
 
-  const headers = weekHeaders(s.start_date, s.end_date);
-  const headerCols = headers.map(h => `<div class="text-center whitespace-nowrap">${escapeHtml(h)}</div>`).join('');
+  const headers = dayHeaders(s.start_date, s.end_date);
+  // WHY: --day-count drives the daily gridline gradient. --monday-offset shifts a
+  // second gradient layer so each Monday column is subtly tinted (matches the labels).
+  const dayCount = daysBetween(s.start_date, s.end_date) + 1;
+  const startDow = new Date(s.start_date + 'T00:00:00Z').getUTCDay(); // 0=Sun … 1=Mon …
+  const mondayOffset = (1 - startDow + 7) % 7;
+  const headerCols = headers.map(h => {
+    if (h == null) return '<div></div>';
+    if (typeof h === 'string') {
+      return `<div class="text-center whitespace-nowrap" style="font-size:0.65rem;">${escapeHtml(h)}</div>`;
+    }
+    return `<div class="text-center" style="font-size:0.65rem; line-height:1.15;">`
+      + `<div>${escapeHtml(h.dow)}</div>`
+      + `<div>${escapeHtml(h.date)}</div>`
+      + `</div>`;
+  }).join('');
 
   // WHY: Render nested .sortable-list > .item-wrap > .gantt-row structure so SortableJS
   //      can drag each item (and its descendants) as a unit. A project wrap contains its
@@ -171,7 +183,7 @@ function renderGantt() {
   html.push(`</div>`); // projects list
 
   root.innerHTML = `
-    <div class="gantt">
+    <div class="gantt" style="--day-count:${dayCount}; --monday-offset:${mondayOffset};">
       <div class="gantt-header">
         <div>Name / Owner / Support / Status</div>
         <div style="display:grid; grid-template-columns: repeat(${headers.length}, 1fr);">${headerCols}</div>

@@ -21,12 +21,43 @@
     .gantt-header, .gantt-row { display: grid; grid-template-columns: 600px 1fr; }
     .gantt-header > div { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 10px 14px; font-size: 0.72rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
     .gantt-row > div { border-bottom: 1px solid #f3f4f6; padding: 10px 14px; position: relative; }
+    /* WHY: The right cell hosts a CSS-grid of header day-cells AND, on rows, the bars +
+       repeating-linear-gradient gridlines. Bars/gridlines span the element's full padding-
+       box, so the header day-cells must too — otherwise a 14px asymmetric horizontal
+       padding pushes Monday labels left of the Monday gridlines/tints. Strip horizontal
+       padding from the right cell only; keep vertical padding for row height. */
+    .gantt-header > div:last-child, .gantt-row > .gantt-right { padding-left: 0; padding-right: 0; }
     /* Nested wrappers are pure structure; no border/padding of their own. */
     .sortable-list { display: block; }
     .item-wrap { background: white; }
 
     .gantt-left { display: grid; grid-template-columns: 1fr 80px 60px 110px; gap: 8px; align-items: center; font-size: 0.85rem; }
-    .gantt-right { position: relative; min-height: 36px; background: repeating-linear-gradient(to right, #fafafa 0, #fafafa calc(33.333% - 1px), #e5e7eb calc(33.333% - 1px), #e5e7eb 33.333%); }
+    /* WHY: --day-count drives one vertical gridline per day; --monday-offset shifts a
+       second tint layer that shades each Monday column so the cadence is visible at a
+       glance. Defaults keep the rule valid before render. The two layers are stacked:
+       (1) Monday column tint (every 7 days, offset to land on the first Monday),
+       (2) faint daily gridlines. Solid #fafafa fills in behind both. */
+    .gantt-right {
+      position: relative;
+      min-height: 36px;
+      background:
+        repeating-linear-gradient(
+          to right,
+          rgba(0,0,0,0.07) 0,
+          rgba(0,0,0,0.07) calc(100% / var(--day-count, 1)),
+          transparent calc(100% / var(--day-count, 1)),
+          transparent calc((100% / var(--day-count, 1)) * 7)
+        ),
+        repeating-linear-gradient(
+          to right,
+          transparent 0,
+          transparent calc((100% / var(--day-count, 1)) - 1px),
+          #e5e7eb calc((100% / var(--day-count, 1)) - 1px),
+          #e5e7eb calc(100% / var(--day-count, 1))
+        );
+      background-position: calc((100% / var(--day-count, 1)) * var(--monday-offset, 0)) 0, 0 0;
+      background-color: #fafafa;
+    }
 
     .row-name { font-weight: 600; color: #111827; display: flex; align-items: center; gap: 6px; min-width: 0; }
     .row-name .caret { cursor: pointer; color: #9ca3af; user-select: none; }

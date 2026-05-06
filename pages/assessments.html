@@ -299,6 +299,27 @@ h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
   text-align: right;
 }
 
+/* Print-label action — small tappable button that appears on completed
+   assessment cards. Visually subordinate to the row so it doesn't compete
+   with the card's primary anchor click. */
+.card-print-action {
+  background: transparent;
+  border: 1px solid #FF6A3D;
+  color: #FF6A3D;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 8px;
+  transition: background 0.12s, color 0.12s;
+}
+.card-print-action:hover {
+  background: #FF6A3D;
+  color: white;
+}
+
 /* ── Empty state ── */
 .empty-state {
   text-align: center;
@@ -593,6 +614,26 @@ function buildCard(a) {
   setText(colDate, fmtDate(a.updated_at || a.last_updated));
 
   card.append(colName, colAssigned, colStatus, colZones, colPhotos, colDate);
+
+  // ── Concierge print-label action — only on completed assessments.
+  // Ben hits this after a site walk to print the leave-behind label that
+  // ships with his assessment report. Opens in a new tab so it doesn't
+  // disrupt his flow back through the assessment list. Prospect lookup
+  // happens on the print-label page; the facility_id we pass lets that
+  // page preselect the matching prospect when there is one.
+  if (a.status === 'completed' && a.facility_id) {
+    const printAction = document.createElement('button');
+    printAction.type = 'button';
+    printAction.className = 'card-print-action';
+    printAction.title = 'Print concierge leave-behind label';
+    printAction.innerHTML = '📇 Label';
+    printAction.addEventListener('click', (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      window.open(`/pages/print-label.html?facility=${encodeURIComponent(a.facility_id)}&autoprint=1`, '_blank', 'noopener');
+    });
+    card.appendChild(printAction);
+  }
+
   return card;
 }
 
