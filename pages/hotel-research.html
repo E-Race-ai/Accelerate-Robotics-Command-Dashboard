@@ -148,6 +148,7 @@
     animation: tl-shimmer 4.5s ease-in-out infinite;
     pointer-events: none;
   }
+  @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
   @keyframes tl-shimmer {
     0%, 100% { transform: translateX(-100%); }
     50% { transform: translateX(120%); }
@@ -309,9 +310,8 @@
     border: 1px solid rgba(255,255,255,0.16);
     border-radius: 10px; padding: 12px 14px;
     text-decoration: none;
-    transition: background 0.12s, transform 0.08s;
+    pointer-events: none; cursor: default;
   }
-  .rk-card:hover { background: rgba(255,255,255,0.18); transform: translateY(-1px); }
   .rk-card .rk-icon { font-size: 1.6rem; }
   .rk-card .rk-name { font-weight: 700; font-size: 0.92rem; margin-top: 4px; }
   .rk-card .rk-meta { font-size: 0.72rem; color: rgba(255,255,255,0.7); margin-top: 3px; }
@@ -2548,6 +2548,18 @@
     </div>
   </div>
 
+  <!-- Plan day modal — pick a zone or manually add hotels -->
+  <div class="modal-backdrop" id="planDayBackdrop" onclick="if(event.target===this)window._closePlanDay()">
+    <div class="modal" style="max-width:500px;" role="dialog">
+      <h2 id="planDayTitle">Plan a day</h2>
+      <p class="modal-sub" id="planDaySub">Pick a zone to auto-fill with triage-approved hotels, or add hotels manually.</p>
+      <div id="planDayBody"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-ghost" type="button" onclick="window._closePlanDay()" style="flex:1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Stop editor modal — click a stop to move/remove/add -->
   <div class="modal-backdrop" id="stopEditorBackdrop" onclick="if(event.target===this)window._closeStopEditor()">
     <div class="modal" style="max-width:480px;" role="dialog">
@@ -2568,6 +2580,7 @@
       <input type="text" id="addStopSearch" placeholder="Search by name, city, or brand..." style="width:100%;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-size:0.85rem">
       <div id="addStopResults" style="max-height:320px;overflow-y:auto"></div>
       <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-ghost" type="button" onclick="window._closeAddStop(); if(_addStopReturnIso){ window._planDay(_addStopReturnIso); _addStopReturnIso=null; }" style="flex:1">← Back</button>
         <button class="btn btn-ghost" type="button" onclick="window._closeAddStop()" style="flex:1">Cancel</button>
       </div>
     </div>
@@ -2847,6 +2860,22 @@ const BRAND_CLASS_LABELS = {
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// WHY: Seed data has random lat/lng that point to the ocean. Using the
+// street address gives Google Maps a real location to resolve. Falls back
+// to coordinates only when no address is available.
+function mapsUrl(h) {
+  const parts = [h.address, h.city, h.state, h.zip].filter(Boolean);
+  if (parts.length >= 2) {
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(parts.join(', '));
+  }
+  if (h.name) {
+    const nameParts = [h.name, h.city, h.state].filter(Boolean);
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(nameParts.join(', '));
+  }
+  if (h.lat && h.lng) return `https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}`;
+  return null;
 }
 
 function fmtUsd(n) {
@@ -3144,7 +3173,7 @@ function tspUpdateInsights(h) {
 
     <div class="tsp-section-title">🔗 Action shortcuts</div>
     <div class="tsp-actions">
-      ${fullHotel.lat && fullHotel.lng ? `<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${fullHotel.lat},${fullHotel.lng}">📍 Maps</a>` : ''}
+      ${mapsUrl(fullHotel) ? `<a target="_blank" rel="noopener" href="${mapsUrl(fullHotel)}">📍 Maps</a>` : ''}
       ${fullHotel.phone ? `<a href="tel:${escapeHtml(fullHotel.phone)}">📞 Call</a>` : ''}
       ${fullHotel.website ? `<a target="_blank" rel="noopener" href="${escapeHtml(fullHotel.website)}">🌐 Site</a>` : ''}
       <button onclick="window._openPreCallBriefing(${h.id})">📝 Briefing</button>
@@ -3167,6 +3196,10 @@ window.addEventListener('message', (event) => {
 
 function renderTriageCard() {
   const stack = document.getElementById('tgCardStack');
+  // WHY: Triage UI now lives in the /triage iframe — these DOM elements
+  // no longer exist on the parent page. Bail out silently so keyboard
+  // shortcuts (Y/M/R/N) don't crash when the iframe handles its own cards.
+  if (!stack) return;
   // Strip any previous .tg-card without removing the empty placeholder
   stack.querySelectorAll('.tg-card').forEach(el => el.remove());
   // Update progress
@@ -3216,7 +3249,7 @@ function renderTriageCard() {
       ${h.phone ? `<div><span class="label">Phone</span><div class="val">${escapeHtml(h.phone)}</div></div>` : ''}
     </div>
     <div class="tg-card-links">
-      ${h.lat && h.lng ? `<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}">📍 Maps</a>` : ''}
+      ${h.lat && h.lng ? `<a target="_blank" rel="noopener" href="${mapsUrl(h) || '#'}">📍 Maps</a>` : ''}
       <a target="_blank" rel="noopener" href="${websiteSearch}">🔎 Web search</a>
       ${h.website ? `<a target="_blank" rel="noopener" href="${escapeHtml(h.website)}">🌐 Site</a>` : ''}
       ${h.phone ? `<a href="tel:${escapeHtml(h.phone)}">📞 Call</a>` : ''}
@@ -4730,7 +4763,7 @@ function buildPopupHtml(h) {
     <div class="pop-meta">${visitBit} ${airportBit ? '· ' + airportBit : ''}</div>
     <div class="pop-actions">
       <button class="primary" onclick="window._openEditFromMap(${h.id})">Open</button>
-      ${h.lat && h.lng ? `<a target="_blank" rel="noopener" style="text-decoration:none;" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}"><button>Maps</button></a>` : ''}
+      ${h.lat && h.lng ? `<a target="_blank" rel="noopener" style="text-decoration:none;" href="${mapsUrl(h) || '#'}"><button>Maps</button></a>` : ''}
       ${h.phone ? `<a href="tel:${escapeHtml(h.phone)}" style="text-decoration:none;"><button>Call</button></a>` : ''}
     </div>
   `;
@@ -4894,7 +4927,7 @@ function renderPinRailFor(h) {
         <div class="pin-rail-bio" style="font-style:normal">${escapeHtml(h.chain_description.slice(0, 320))}${h.chain_description.length > 320 ? '…' : ''}</div>
       ` : ''}
       <div class="pin-rail-actions">
-        ${h.lat && h.lng ? `<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}">📍 Maps</a>` : '<span></span>'}
+        ${h.lat && h.lng ? `<a target="_blank" rel="noopener" href="${mapsUrl(h) || '#'}">📍 Maps</a>` : '<span></span>'}
         <a target="_blank" rel="noopener" href="${websiteSearch}">🔎 Web</a>
         ${h.website ? `<a target="_blank" rel="noopener" href="${escapeHtml(h.website)}">🌐 Site</a>` : '<span></span>'}
         ${h.phone ? `<a href="tel:${escapeHtml(h.phone)}">📞 Call</a>` : '<span></span>'}
@@ -5944,7 +5977,7 @@ function renderSearchCard(h) {
       </div>
       <div class="card-actions">
         ${saveBtn}
-        <a class="btn-icon" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" title="Open in Google Maps">
+        <a class="btn-icon" target="_blank" rel="noopener noreferrer" href="${mapsUrl(h) || '#'}" title="Open in Google Maps">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C7 2 4 6 4 10c0 6 8 12 8 12s8-6 8-12c0-4-3-8-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
         </a>
         <a class="btn-icon" target="_blank" rel="noopener noreferrer" href="${webSearchUrl(h)}" title="Web search — find pricing + reviews">
@@ -6410,7 +6443,7 @@ function renderSavedTable(rows) {
         <td>${h.last_visit_date || '—'}</td>
         <td class="actions-cell">
           <button data-action="open" data-id="${h.id}">Edit</button>
-          ${h.lat && h.lng ? `<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" title="Maps">🗺️</a>` : ''}
+          ${h.lat && h.lng ? `<a target="_blank" rel="noopener" href="${mapsUrl(h) || '#'}" title="Maps">🗺️</a>` : ''}
           ${h.phone ? `<a href="tel:${escapeHtml(h.phone)}" title="Call">📞</a>` : ''}
         </td>
       </tr>
@@ -6629,7 +6662,7 @@ function renderSavedCard(h) {
         <button class="btn-icon" type="button" onclick="window._quickLogVisit(${h.id})" title="Quick log a visit">📝</button>
         <a class="btn-icon" href="/pages/print-label.html?hotel=${h.id}" target="_blank" rel="noopener" title="Print personal label for this hotel">📇</a>
         ${graduateBtn}
-        ${h.lat && h.lng ? `<a class="btn-icon" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" title="Open in Google Maps">
+        ${h.lat && h.lng ? `<a class="btn-icon" target="_blank" rel="noopener noreferrer" href="${mapsUrl(h) || '#'}" title="Open in Google Maps">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C7 2 4 6 4 10c0 6 8 12 8 12s8-6 8-12c0-4-3-8-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
         </a>` : ''}
         ${h.phone ? `<a class="btn-icon" href="tel:${escapeHtml(h.phone)}" title="Call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>` : ''}
@@ -7152,7 +7185,7 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
           ${s.address ? `<div style="color:#94a3b8;font-size:0.72rem;margin-bottom:6px">${escapeHtml(s.address)}${s.city ? ', ' + escapeHtml(s.city) : ''}${s.state ? ' ' + escapeHtml(s.state) : ''} ${escapeHtml(s.zip || '')}</div>` : ''}
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
             ${h.website ? `<a href="${escapeHtml(h.website)}" target="_blank" rel="noopener" class="btn btn-ghost" style="font-size:0.7rem;padding:3px 8px">🌐 Website</a>` : ''}
-            ${(s.lat && s.lng) ? `<a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank" rel="noopener" class="btn btn-ghost" style="font-size:0.7rem;padding:3px 8px">📍 Maps</a>` : ''}
+            ${mapsUrl(h) ? `<a href="${mapsUrl(h)}" target="_blank" rel="noopener" class="btn btn-ghost" style="font-size:0.7rem;padding:3px 8px">📍 Maps</a>` : ''}
             <button type="button" class="btn btn-ghost" onclick="window._openStopEditor(${r.id}, ${s.stop_id}, ${s.hotel_saved_id}, '${iso}')" style="font-size:0.7rem;padding:3px 8px">↔ Move</button>
             ${canGraduate ? `<button type="button" class="btn btn-primary" onclick="window._openGraduateModal(${s.hotel_saved_id})" style="font-size:0.7rem;padding:3px 8px">🎓 Graduate</button>` : ''}
             ${isGraduated ? `<a href="/pages/pipeline-prospects.html?focus=${h.prospect_id}" class="btn btn-ghost" style="font-size:0.7rem;padding:3px 8px;text-decoration:none">📋 Prospect #${h.prospect_id}</a>` : ''}
@@ -7368,15 +7401,60 @@ window._toggleStopDone = async function(routeId, stopId, done) {
 
 // WHY: Both Ben and Celia need to curate the schedule — remove stops
 // that don't make sense for a given day without deleting the whole route.
+// Shows an undo toast so accidental removals can be reversed.
+let _undoToastTimer = null;
 window._removeStop = async function(routeId, stopId) {
-  if (!confirm('Remove this stop from the route?')) return;
+  // Find hotel info before removing so we can undo
+  const route = SCHEDULE_ROUTES.find(r => r.id === routeId);
+  const stop = route?.stops?.find(s => s.stop_id === stopId);
+  const hotelId = stop?.hotel_saved_id;
+  const hotelName = stop?.name || 'Hotel';
   try {
     const res = await fetch(`/api/hotel-research/routes/${routeId}/stops/${stopId}`, {
       method: 'DELETE', credentials: 'same-origin',
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     loadScheduleWeek();
+    // Show undo toast
+    if (hotelId) _showUndoToast(routeId, hotelId, hotelName);
   } catch (err) { alert('Remove failed: ' + err.message); }
+};
+
+function _showUndoToast(routeId, hotelId, hotelName) {
+  // Remove existing toast if any
+  const old = document.getElementById('undoToast');
+  if (old) old.remove();
+  clearTimeout(_undoToastTimer);
+
+  const toast = document.createElement('div');
+  toast.id = 'undoToast';
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:white;padding:12px 20px;border-radius:12px;font-size:0.85rem;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,0.25);animation:slideUp 0.25s ease-out';
+  toast.innerHTML = `
+    <span><strong>${escapeHtml(hotelName)}</strong> removed</span>
+    <button type="button" onclick="window._undoRemoveStop(${routeId}, ${hotelId})" style="background:#f59e0b;color:#1e293b;border:none;padding:6px 14px;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer">Undo</button>
+    <button type="button" onclick="document.getElementById('undoToast').remove()" style="background:none;border:none;color:#94a3b8;font-size:1rem;cursor:pointer;padding:0 4px">✕</button>`;
+  document.body.appendChild(toast);
+
+  // Auto-dismiss after 8 seconds
+  _undoToastTimer = setTimeout(() => {
+    const el = document.getElementById('undoToast');
+    if (el) el.remove();
+  }, 8000);
+}
+
+window._undoRemoveStop = async function(routeId, hotelId) {
+  const toast = document.getElementById('undoToast');
+  if (toast) toast.remove();
+  clearTimeout(_undoToastTimer);
+  try {
+    const res = await fetch(`/api/hotel-research/routes/${routeId}/stops`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotel_ids: [hotelId] }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    loadScheduleWeek();
+  } catch (err) { alert('Undo failed: ' + err.message); }
 };
 
 // ── Stop editor — click a stop name to move it to another day or remove ──
@@ -7495,7 +7573,7 @@ window._openDayRouteDetail = async function(routeId) {
     const h = SAVED.find(sv => sv.id === s.hotel_saved_id) || s;
     const phone = h.phone ? `<a href="tel:${escapeHtml(h.phone)}" style="color:#0369a1;text-decoration:none">${escapeHtml(h.phone)}</a>` : '<span style="color:#94a3b8">no phone</span>';
     const website = h.website ? `<a href="${escapeHtml(h.website)}" target="_blank" rel="noopener" style="color:#0369a1;text-decoration:none;font-size:0.75rem">🌐 Website</a>` : '';
-    const mapsLink = (s.lat && s.lng) ? `<a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank" rel="noopener" style="color:#0369a1;text-decoration:none;font-size:0.75rem">📍 Maps</a>` : '';
+    const mapsLink = mapsUrl(h) ? `<a href="${mapsUrl(h)}" target="_blank" rel="noopener" style="color:#0369a1;text-decoration:none;font-size:0.75rem">📍 Maps</a>` : '';
     return `
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -7571,8 +7649,12 @@ window._openDayRouteDetail = async function(routeId) {
 
   body.innerHTML = hotelCards + chargerHtml;
 
-  // Google Maps link with all stops
-  const gmUrl = 'https://www.google.com/maps/dir/' + stopsWithCoords.map(s => `${s.lat},${s.lng}`).join('/');
+  // Google Maps link with all stops — use addresses for accuracy
+  const gmUrl = 'https://www.google.com/maps/dir/' + stops.map(s => {
+    const h = SAVED.find(sv => sv.id === s.hotel_saved_id) || s;
+    const parts = [h.address, h.city, h.state, h.zip].filter(Boolean);
+    return parts.length >= 2 ? encodeURIComponent(parts.join(', ')) : `${s.lat},${s.lng}`;
+  }).join('/');
   document.getElementById('routeDetailActions').innerHTML = `
     <a href="${gmUrl}" target="_blank" rel="noopener" class="btn btn-primary" style="flex:1;text-align:center;text-decoration:none">🗺️ Open full route in Google Maps</a>
     <button class="btn btn-ghost" type="button" onclick="window._closeRouteDetail()">Close</button>`;
@@ -7587,6 +7669,9 @@ let _addStopRouteId = null;
 
 window._openAddStop = function(routeId) {
   _addStopRouteId = routeId;
+  // Track the date for the Back button — look it up from the route
+  const route = SCHEDULE_ROUTES.find(r => r.id === routeId);
+  if (route && route.scheduled_date) _addStopReturnIso = route.scheduled_date;
   document.getElementById('addStopSearch').value = '';
   _renderAddStopResults('');
   document.getElementById('addStopBackdrop').classList.add('open');
@@ -7650,15 +7735,86 @@ window._deleteRoute = async function(routeId) {
   } catch (err) { alert('Delete failed: ' + err.message); }
 };
 
-window._planDay = async function(iso) {
-  // Quick-plan: pick a submarket (prompt), default cap=8, build a route for that day
+// WHY: The old prompt()-based plan day was invisible in some browsers and
+// didn't let users manually pick hotels. This modal shows zone buttons
+// (auto-fill from triage-approved hotels) plus a manual add option.
+let _planDayIso = null;
+let _addStopReturnIso = null; // preserves the date so "Back" can reopen Plan Day
+
+window._planDay = function(iso) {
+  _planDayIso = iso;
+  const d = new Date(iso + 'T12:00:00');
+  const dateLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  document.getElementById('planDayTitle').textContent = 'Plan ' + dateLabel;
+
   const submarkets = Array.from(new Set(SAVED.map(h => h.submarket).filter(Boolean))).sort();
-  if (!submarkets.length) { alert('Save some hotels first — go to Search and run a market preset.'); return; }
-  const choice = prompt(`Which zone for ${iso}?\n\nOptions: ${submarkets.join(', ')}`);
-  if (!choice) return;
-  const matched = submarkets.find(s => s.toLowerCase() === choice.toLowerCase());
-  if (!matched) { alert(`No matching submarket. Pick one of: ${submarkets.join(', ')}`); return; }
-  await buildAutoWeek({ [iso]: { zone: matched, cap: 8 } });
+  // Count triage-approved hotels per submarket
+  const counts = {};
+  for (const h of SAVED) {
+    if (h.triage === 'yes' && h.submarket) {
+      counts[h.submarket] = (counts[h.submarket] || 0) + 1;
+    }
+  }
+
+  let zonesHtml = '';
+  if (submarkets.length > 0) {
+    const btns = submarkets.map(s => {
+      const ct = counts[s] || 0;
+      return `<button class="btn btn-ghost" type="button" onclick="window._planDayWithZone('${escapeHtml(s.replace(/'/g, "\\'"))}')" style="font-size:0.82rem;text-align:left;justify-content:flex-start;padding:8px 12px">
+        <span style="flex:1">${escapeHtml(s)}</span>
+        <span style="color:#94a3b8;font-size:0.72rem">${ct} approved</span>
+      </button>`;
+    }).join('');
+    zonesHtml = `
+      <div style="margin-bottom:16px">
+        <div style="font-weight:600;font-size:0.82rem;margin-bottom:8px;color:#64748b">Auto-fill from a zone</div>
+        <div style="display:flex;flex-direction:column;gap:4px">${btns}</div>
+      </div>`;
+  }
+
+  const manualHtml = `
+    <div>
+      <div style="font-weight:600;font-size:0.82rem;margin-bottom:8px;color:#64748b">Or add hotels manually</div>
+      <button class="btn btn-primary" type="button" onclick="window._planDayManual()" style="width:100%;font-size:0.82rem">+ Create empty day & pick hotels</button>
+    </div>`;
+
+  document.getElementById('planDayBody').innerHTML = zonesHtml + manualHtml;
+  document.getElementById('planDayBackdrop').classList.add('open');
+};
+
+window._closePlanDay = function() {
+  document.getElementById('planDayBackdrop').classList.remove('open');
+  _planDayIso = null;
+};
+
+window._planDayWithZone = async function(zone) {
+  if (!_planDayIso) return;
+  window._closePlanDay();
+  await buildAutoWeek({ [_planDayIso]: { zone, cap: 8 } });
+};
+
+window._planDayManual = async function() {
+  if (!_planDayIso) return;
+  const iso = _planDayIso;
+  _addStopReturnIso = iso;
+  window._closePlanDay();
+  // Create an empty route for this day, then open the add-stop picker
+  try {
+    const d = new Date(iso + 'T12:00:00');
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    const res = await fetch('/api/hotel-research/routes', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: dayName, scheduled_date: iso }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    await loadScheduleWeek();
+    // Open the add-stop picker for the new route
+    if (data.id) window._openAddStop(data.id);
+  } catch (err) {
+    alert('Failed to create day: ' + err.message);
+  }
 };
 
 // ── Auto-week wizard ─────────────────────────────────────────────
