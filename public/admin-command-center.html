@@ -6603,20 +6603,25 @@ document.addEventListener('click', (e) => {
 // reload.
 // ═══════════════════════════════════════════════════════════════════
 const CC_SECTIONS = [
+  // Default-expanded so widgets that need geometry to initialize (Leaflet
+  // maps, charts, the activity grid) measure themselves correctly on
+  // first paint. Reps can collapse anything they don't want; state
+  // persists in localStorage.
   { id: 'toolkitSection',         name: 'Toolkit',     defaultCollapsed: false },
   { id: 'meetingAgenda',          name: 'Agenda',      defaultCollapsed: false },
   { id: 'velocityHero',           name: 'Velocity',    defaultCollapsed: false },
   { id: 'workflowPipeline',       name: 'Pipeline',    defaultCollapsed: false },
-  { id: 'communityBoard',         name: 'Community',   defaultCollapsed: true  },
+  { id: 'communityBoard',         name: 'Community',   defaultCollapsed: false },
   { id: 'gsdSection',             name: 'GSD',         defaultCollapsed: false },
-  // Heavier widgets default collapsed — they fetch on expand if needed.
-  // The user can pin them open by expanding once; state persists.
-  { id: 'productivityCalendar',   name: 'Activity',    defaultCollapsed: true  },
-  { id: 'dealMap',                name: 'Map',         defaultCollapsed: true  },
-  { id: 'projectHub',             name: 'Team Sync',   defaultCollapsed: true  },
+  { id: 'productivityCalendar',   name: 'Activity',    defaultCollapsed: false },
+  { id: 'dealMap',                name: 'Map',         defaultCollapsed: false },
+  { id: 'projectHub',             name: 'Team Sync',   defaultCollapsed: false },
 ];
 
-const CC_STORAGE_KEY = 'cc:collapsed-sections:v1';
+// Bumped storage version to ignore any saved-collapsed state from the
+// earlier version of this list (some users had Map/Activity stuck
+// collapsed from a default we no longer recommend).
+const CC_STORAGE_KEY = 'cc:collapsed-sections:v2';
 function _ccLoadState() {
   try { return JSON.parse(localStorage.getItem(CC_STORAGE_KEY) || '{}'); } catch { return {}; }
 }
@@ -6632,11 +6637,50 @@ function _ccIsCollapsed(id) {
   return !!(cfg && cfg.defaultCollapsed);
 }
 
+// Section expand-handlers — widgets that need to (re)compute geometry on
+// expansion register here. Leaflet maps especially: they can't measure
+// themselves while inside a `display: none` container, so when a section
+// expands we run invalidateSize() on any maps inside.
+const CC_EXPAND_HANDLERS = {
+  dealMap: () => {
+    // Map deal-pipeline view. ccMap is the global Leaflet instance.
+    if (typeof ccMap !== 'undefined' && ccMap) {
+      setTimeout(() => ccMap.invalidateSize(), 60);
+    } else if (typeof renderMap === 'function') {
+      // Map wasn't initialized while hidden — boot it now.
+      setTimeout(renderMap, 60);
+    }
+    // Regional Focus also has its own maps; the existing tab-show
+    // handler invalidates them when its tab is clicked, but if the
+    // user expands the deal map section while Regional Focus is the
+    // active tab, we want to nudge those too.
+    document.querySelectorAll('.region-map-container .leaflet-container').forEach(el => {
+      const m = el._leaflet_map; // Leaflet stashes map ref here
+      if (m && typeof m.invalidateSize === 'function') {
+        setTimeout(() => m.invalidateSize(), 60);
+      }
+    });
+  },
+  productivityCalendar: () => {
+    // Re-render the calendar grid in case dimensions changed.
+    if (typeof pcalRender === 'function') setTimeout(pcalRender, 50);
+  },
+  projectHub: () => {
+    // Sprint hub timeline + assignment columns — fire any registered
+    // re-layout. Future: add a renderProjectHub() hook here.
+  },
+};
+
 function _ccSetCollapsed(id, collapsed) {
   const state = _ccLoadState();
   state[id] = !!collapsed;
   _ccSaveState(state);
   _ccApplyCollapse(id, collapsed);
+  // Fire the expand handler when transitioning to expanded. Wrapped in
+  // try so a misbehaving handler can't break the toggle.
+  if (!collapsed && CC_EXPAND_HANDLERS[id]) {
+    try { CC_EXPAND_HANDLERS[id](); } catch (e) { console.warn('[cc] expand handler failed for', id, e); }
+  }
 }
 
 function _ccApplyCollapse(id, collapsed) {
