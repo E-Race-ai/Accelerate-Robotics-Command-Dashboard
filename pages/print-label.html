@@ -10,7 +10,7 @@
          display = Instrument Serif (italic-capable hero serif)
          body    = Inter (UI sans)
          mono    = JetBrains Mono (tracked smallcaps + reference codes) -->
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Italianno&display=swap" rel="stylesheet">
   <style>
     /* ── Palette: pulled directly from brand-guidelines.html ──────
        Single source of truth — when these values change in the brand
@@ -42,54 +42,128 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ─── Page wrapper (screen-only chrome) ──────────────────────── */
-    .pg { max-width: 920px; margin: 0 auto; padding: 28px 18px 80px; }
+    /* ─── Page chrome — luxury-forward editorial ──────────────────── */
+    body { background: var(--paper); }
+    .pg { max-width: 1080px; margin: 0 auto; padding: 56px 32px 100px; }
+
+    .pg-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-dim);
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 22px;
+    }
+    .pg-eyebrow::before {
+      content: ''; width: 32px; height: 0.5px; background: var(--primary);
+    }
     .pg h1 {
       font-family: 'Instrument Serif', serif;
-      font-size: 1.7rem; font-weight: 600; margin: 0 0 4px;
-      color: var(--ink); letter-spacing: 0.005em;
+      font-weight: 400;
+      font-size: clamp(40px, 6vw, 76px);
+      line-height: 0.96;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      margin: 0 0 14px;
+      max-width: 18ch;
     }
-    .pg p.sub { color: var(--ink-dim); font-size: 0.9rem; margin: 0 0 18px; }
+    .pg h1 em { font-style: italic; color: var(--primary); }
+    .pg p.sub {
+      font-size: 17px; line-height: 1.55;
+      color: var(--ink-dim);
+      max-width: 52ch;
+      margin: 0 0 36px;
+    }
 
-    /* Settings bar */
-    .controls {
-      background: white; border: 1px solid var(--paper-2);
-      border-radius: 14px; padding: 18px 20px; margin-bottom: 22px;
-      box-shadow: 0 1px 2px rgba(28,24,23,0.04);
+    .pg-section-rule {
+      display: flex; align-items: center; gap: 14px;
+      margin: 36px 0 18px;
     }
-    .controls .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
-    .controls .row + .row { margin-top: 14px; }
-    .ctrl-field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 200px; min-width: 0; }
+    .pg-section-rule::before { content: ''; flex: 1; height: 0.5px; background: var(--hairline); }
+    .pg-section-rule .label {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-dim);
+    }
+    .pg-section-rule::after { content: ''; flex: 0 0 24px; height: 0.5px; background: var(--primary); }
+
+    /* Paper-card panels with thin double-rule frame */
+    .controls {
+      background: #fffdf7;
+      border: 0.5px solid var(--hairline);
+      padding: 28px 32px;
+      margin-bottom: 0;
+      box-shadow: 0 1px 0 var(--paper-2);
+      position: relative;
+    }
+    .controls::before {
+      content: ''; position: absolute; inset: 5px;
+      border: 0.5px solid var(--hairline);
+      pointer-events: none;
+    }
+    .controls .row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; position: relative; }
+    .controls .row + .row { margin-top: 22px; }
+
+    /* Underlined-only inputs — letterpress */
+    .ctrl-field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 200px; min-width: 0; }
     .ctrl-field label {
-      font-size: 0.62rem; font-weight: 700; color: var(--ink-faint);
-      text-transform: uppercase; letter-spacing: 0.10em;
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ink-dim); font-weight: 500;
     }
     .ctrl-field input,
     .ctrl-field select {
-      padding: 9px 12px; border: 1px solid var(--paper-2); border-radius: 8px;
-      font: inherit; font-size: 0.92rem; background: white;
+      padding: 6px 0;
+      border: 0;
+      border-bottom: 0.5px solid var(--hairline-strong);
+      background: transparent;
+      font: inherit; font-size: 1.05rem;
+      font-family: 'Instrument Serif', serif;
+      color: var(--ink);
+      border-radius: 0;
+      transition: border-color 0.18s;
     }
     .ctrl-field input:focus,
     .ctrl-field select:focus {
-      outline: 2px solid var(--primary); outline-offset: -1px;
+      outline: 0;
+      border-bottom-color: var(--primary);
     }
-    .photo-block { display: flex; gap: 10px; align-items: center; }
+    .ctrl-field input::placeholder {
+      color: var(--ink-faint);
+      font-style: italic;
+    }
+    .photo-block { display: flex; gap: 14px; align-items: center; padding-top: 4px; }
     .photo-block img {
-      width: 44px; height: 44px; border-radius: 50%; object-fit: cover;
-      border: 1px solid var(--paper-2); background: var(--paper);
+      width: 52px; height: 52px; border-radius: 50%; object-fit: cover;
+      border: 1px solid var(--primary); padding: 2px; background: var(--paper);
     }
-    .photo-block input[type="file"] { font-size: 0.84rem; }
+    .photo-block input[type="file"] {
+      font-size: 0.82rem; font-family: var(--font-body);
+      color: var(--ink-dim);
+    }
+
     .btn {
-      padding: 10px 18px; border: 1px solid var(--paper-2); background: white;
-      border-radius: 10px; font: inherit; font-size: 0.9rem; font-weight: 600;
-      color: var(--ink); cursor: pointer; transition: all 0.12s;
+      padding: 14px 26px;
+      border: 0.5px solid var(--hairline-strong);
+      background: transparent;
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.20em; text-transform: uppercase;
+      color: var(--ink);
+      cursor: pointer;
+      transition: all 0.16s;
     }
-    .btn:hover { border-color: var(--primary); color: var(--primary); }
+    .btn:hover {
+      border-color: var(--primary); color: var(--primary);
+      background: rgba(255,106,61,0.04);
+    }
     .btn-primary {
-      background: var(--ink); color: white; border-color: var(--ink);
-      letter-spacing: 0.04em;
+      background: var(--ink); color: var(--paper);
+      border-color: var(--ink);
     }
-    .btn-primary:hover { background: var(--primary); border-color: var(--primary); color: white; }
+    .btn-primary:hover {
+      background: var(--primary); color: var(--paper);
+      border-color: var(--primary);
+    }
     .err {
       background: #fef2f2; border: 1px solid rgba(220,38,38,0.30); border-radius: 10px;
       padding: 10px 14px; color: #991b1b; font-size: 0.9rem; margin-bottom: 14px;
@@ -193,40 +267,41 @@
       pointer-events: none;
     }
 
-    /* ─── Brand crest: monogram + small heraldic robot + brand name ─ */
+    /* ─── Brand crest: engraved AR monogram + refined wordmark ───────
+       Reads as hotel concierge stationery, not a tech-startup logo.
+       The monogram lives in a fine hairline circle (engraved feel),
+       the wordmark is sentence-case serif italic with restrained
+       letter-spacing — closer to a handwritten signature than a logotype. */
     .lbl-crest {
       display: flex; flex-direction: column; align-items: center;
-      gap: 4px;
+      gap: 2px;
+      padding: 4px 0 0;
     }
-    .lbl-crest-mark {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
+    .lbl-crest-monogram {
       color: var(--primary);
-      font-size: 0.78rem;
+      line-height: 0;
+      margin-bottom: 4px;
     }
-    .lbl-crest-mark .ornament { font-size: 0.84rem; line-height: 1; }
-    .lbl-crest-mark .robot {
-      /* Recolor SVG to the brand primary (#FF6A3D) — values derived
-         empirically with https://codepen.io/sosuke/pen/Pjoqqp. */
-      height: 26px; width: auto;
-      filter: brightness(0) saturate(100%)
-              invert(54%) sepia(63%) saturate(2632%) hue-rotate(343deg) brightness(101%) contrast(101%);
-      opacity: 0.95;
-    }
+    .lbl-crest-monogram svg { display: block; }
     .lbl-crest-name {
-      font-family: 'Inter', sans-serif;
-      font-size: 0.62rem; font-weight: 700;
-      letter-spacing: 0.32em; text-transform: uppercase;
+      font-family: 'Cormorant Garamond', 'Instrument Serif', 'Georgia', serif;
+      font-style: italic; font-weight: 400;
+      font-size: 1.15rem; line-height: 1;
+      letter-spacing: 0.005em;
       color: var(--ink);
     }
-    .lbl-crest-name .robotics {
-      display: block; margin-top: 1px;
-      font-weight: 500; font-size: 0.58rem;
-      letter-spacing: 0.36em; color: var(--ink-dim);
+    .lbl-crest-tagline {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.50rem; font-weight: 500;
+      letter-spacing: 0.42em; text-transform: uppercase;
+      color: var(--ink-dim);
+      margin-top: 4px;
     }
     .lbl-crest-rule {
-      width: 30px; height: 1px;
+      width: 22px; height: 0.5px;
       background: var(--primary);
-      margin-top: 3px;
+      margin-top: 8px;
+      opacity: 0.6;
     }
 
     /* ─── Eyebrow phrase: italic invitation ───────────────────────── */
@@ -284,10 +359,14 @@
     .lbl-photo-wrap {
       width: 70px; height: 70px;
       border-radius: 50%;
-      padding: 2px;
+      padding: 1.5px;
       margin: 4px 0 2px;
-      background: linear-gradient(135deg, #FF8E5C, var(--primary) 50%, var(--primary-deep));
-      box-shadow: 0 1px 4px rgba(13,27,42,0.18);
+      /* Hairline ring instead of heavy gradient — reads as a refined
+         framed portrait rather than a tech avatar. */
+      background: var(--primary);
+      box-shadow:
+        0 0 0 0.5px rgba(13,27,42,0.18),
+        0 1px 3px rgba(13,27,42,0.10);
     }
     .lbl-photo {
       width: 100%; height: 100%; border-radius: 50%;
@@ -329,18 +408,20 @@
       margin-top: 1px;
     }
 
-    /* ─── Personal note: italic concierge handwriting feel ────────── */
+    /* ─── Personal note: actual handwritten letter feel ──────────────
+       Italianno is a refined formal script — fountain-pen, not casual.
+       Reads like the founder wrote a line on the card by hand. */
     .lbl-note {
-      font-family: 'Instrument Serif', serif;
-      font-style: italic; font-weight: 400;
-      color: var(--ink-dim);
-      font-size: 0.80rem; line-height: 1.45;
-      padding: 0 4px;
+      font-family: 'Italianno', 'Snell Roundhand', cursive;
+      font-weight: 400;
+      color: var(--ink);
+      font-size: 1.45rem; line-height: 1.15;
+      padding: 6px 12px 0;
+      letter-spacing: 0.005em;
+      max-width: 32ch;
     }
-    .lbl-note::before, .lbl-note::after {
-      content: '"'; color: var(--primary); font-weight: 600;
-      font-size: 1.15em; opacity: 0.7;
-    }
+    /* No quote marks — a handwritten note doesn't need them */
+    .lbl-note::before, .lbl-note::after { content: none; }
 
     /* ─── Reference plate at the bottom — programme + No. ─────────── */
     .lbl-reference {
@@ -432,24 +513,22 @@
 <body class="size-4x6">
   <div class="pg">
     <div class="pg-header">
-      <h1>Print Concierge Label</h1>
-      <p class="sub">Standalone leave-behind generator. Pick a prospect, hit print — high-quality 4×6 thermal label out the door.</p>
+      <div class="pg-eyebrow">Concierge Stationery · No. 001</div>
+      <h1>An <em>invitation</em> the property is going to keep.</h1>
+      <p class="sub">Hand-touch leave-behind for every site visit. Pick the prospect, hit print — a high-quality 4×6 thermal card with your face, your direct line, and the property's data engraved into it.</p>
       <div id="errBox"></div>
       <div id="autoPrintHint" class="auto-print-hint" style="display:none;">
-        <span>🖨️ Print dialog will open automatically once the label loads.</span>
+        <span>🖨️ Press is warming. Print dialog will open momentarily.</span>
         <button type="button" id="cancelAutoPrint">Cancel auto-print</button>
       </div>
     </div>
 
-    <!-- ── Recent prospects: one-tap quick re-print ──────────────────
-         Last 6 prospects this rep printed for, surfaced as chips at
-         the top of the page. Click a chip = preselect the prospect +
-         fire the print dialog immediately (no second click needed).
-         Persists in localStorage under 'printLabel:recents'. -->
     <div id="recentBar" class="recent-bar" style="display:none;">
       <span class="recent-bar-label">Recent</span>
       <div class="recent-chips" id="recentChips"></div>
     </div>
+
+    <div class="pg-section-rule"><span class="label">Composition</span></div>
 
     <div class="controls">
       <div class="row">
@@ -501,18 +580,31 @@
       </div>
     </div>
 
+    <div class="pg-section-rule"><span class="label">Press Proof · 4 × 6 in · 203 dpi thermal</span></div>
+
     <!-- ═══ Label canvas — Regal hospitality concierge card ═══ -->
     <div class="label-shell" id="labelShell" data-size="letter">
       <div class="lbl-body">
 
-        <!-- Crest: ornament + heraldic robot + ornament + brand wordmark -->
+        <!-- Crest: engraved-monogram in a fine circle, refined wordmark below.
+             Reads as a hotel concierge stamp rather than a tech logo lockup —
+             the move is restraint: one mark, ample air around it, hairline
+             rules, sentence-case serif, no ornaments competing for attention. -->
         <div class="lbl-crest">
-          <div class="lbl-crest-mark">
-            <span class="ornament">❦</span>
-            <img class="robot" src="/assets/robots/keenon-w3.svg" alt="">
-            <span class="ornament">❦</span>
+          <div class="lbl-crest-monogram" aria-hidden="true">
+            <svg viewBox="0 0 80 80" width="56" height="56">
+              <!-- Fine outer ring — feels engraved, not printed -->
+              <circle cx="40" cy="40" r="37.5" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.55"/>
+              <circle cx="40" cy="40" r="34"   fill="none" stroke="currentColor" stroke-width="0.4" opacity="0.35"/>
+              <!-- AR monogram — interlocked, drawn as a single calligraphic gesture -->
+              <text x="40" y="52" text-anchor="middle"
+                    font-family="Cormorant Garamond, Instrument Serif, Georgia, serif"
+                    font-style="italic" font-weight="500" font-size="32"
+                    fill="currentColor" letter-spacing="-2">AR</text>
+            </svg>
           </div>
-          <div class="lbl-crest-name">Accelerate<span class="robotics">Robotics</span></div>
+          <div class="lbl-crest-name">Accelerate</div>
+          <div class="lbl-crest-tagline">Robotics</div>
           <div class="lbl-crest-rule"></div>
         </div>
 
