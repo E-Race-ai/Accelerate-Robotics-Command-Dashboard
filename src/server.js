@@ -125,9 +125,20 @@ for (const page of PROTECTED_PUBLIC_PAGES) {
 app.use(express.static(path.join(__dirname, '..', 'public')));
 // WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
 // WHY: requireAuthPage ensures these toolkit pages are only accessible to logged-in users
-// WHY: no-cache ensures dev changes are always picked up — browser still validates with the server
+// WHY: no-store on .html so the browser never serves a cached page —
+// dev changes (and prod deploys) are immediately picked up. Other static
+// assets keep no-cache (revalidate on each request) since they rarely
+// change during a session and revalidation is fast.
 app.use('/pages', requireAuthPage, express.static(path.join(__dirname, '..', 'pages'), {
-  setHeaders: (res) => { res.setHeader('Cache-Control', 'no-cache'); }
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
 }));
 
 // WHY: Serve only .json files from data/ — the directory also contains the SQLite
