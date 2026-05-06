@@ -1249,10 +1249,17 @@
       font-size: 11px; color: #94a3b8; font-weight: 600;
       margin-left: auto;
     }
-    /* Hide the section body when its bar is collapsed. We toggle the
-       bar's class and use the adjacent-sibling combinator so we don't
-       have to wrap each section. */
-    .cc-section-body.is-collapsed { display: none; }
+    /* The section body wrapper is layout-transparent — `display: contents`
+       means its box vanishes and its children become layout-children of
+       the section element. Critical: without this, sections that use
+       flex/grid (like .wf-pipeline) broke because their children landed
+       inside an extra block-level wrapper. With contents, the wf-step
+       items remain direct flex children of #workflowPipeline.
+
+       When collapsed we can't just hide the body box (it has none under
+       contents), so we hide each child individually instead. */
+    .cc-section-body { display: contents; }
+    .cc-section-body.is-collapsed > * { display: none !important; }
 
     /* ═══ Right-rail minimap ═══
        Fixed-position vertical list of section names, with the active
