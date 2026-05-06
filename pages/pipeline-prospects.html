@@ -39,6 +39,46 @@
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
   .modal { background: white; border-radius: 20px; padding: 32px; width: 90%; max-width: 480px; box-shadow: 0 24px 48px rgba(0,0,0,0.15); }
 
+  /* "Just graduated" highlight — pulses on the focused prospect for ~8s
+     after a graduate handoff so reps land on their new prospect with
+     zero scrolling. */
+  .focus-highlight {
+    box-shadow: 0 0 0 3px #16a34a, 0 8px 24px rgba(22,163,74,0.30) !important;
+    animation: focusPulse 1.4s ease-in-out 3;
+    position: relative;
+  }
+  .focus-highlight::after {
+    content: '✓ Just graduated';
+    position: absolute; top: -12px; left: 14px;
+    background: #16a34a; color: white;
+    font-size: 0.66rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 3px 10px; border-radius: 999px;
+    box-shadow: 0 4px 8px rgba(22,163,74,0.30);
+  }
+  @keyframes focusPulse {
+    0%, 100% { box-shadow: 0 0 0 3px #16a34a, 0 8px 24px rgba(22,163,74,0.30); }
+    50%      { box-shadow: 0 0 0 6px rgba(22,163,74,0.40), 0 12px 30px rgba(22,163,74,0.40); }
+  }
+  .focus-banner {
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+    color: white; padding: 10px 16px; border-radius: 10px;
+    margin: 0 0 14px; display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 0.9rem;
+    box-shadow: 0 6px 16px rgba(22,163,74,0.25);
+    animation: focusBannerIn 0.36s ease-out;
+  }
+  .focus-banner button {
+    margin-left: auto; background: rgba(255,255,255,0.18); border: 0;
+    color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+    font-size: 0.78rem;
+  }
+  .focus-banner button:hover { background: rgba(255,255,255,0.28); }
+  @keyframes focusBannerIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -369,6 +409,39 @@ async function loadData() {
   renderAll();
   renderMarketChips();
   renderStagingArea();
+  // Honor ?focus=<id> from the graduate-to-prospect handoff so the rep
+  // lands on the right card without scrolling.
+  applyFocusFromUrl();
+}
+
+function applyFocusFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const focusId = Number(params.get('focus'));
+  if (!focusId) return;
+  const prospect = PROSPECTS.find(p => p.id === focusId);
+  if (!prospect) return;
+  // Banner above the cards explaining the handoff
+  const banner = document.createElement('div');
+  banner.className = 'focus-banner';
+  banner.innerHTML = `
+    <span>✓ <strong>${esc(prospect.name)}</strong> graduated to your prospect pipeline.</span>
+    <button type="button" id="focusBannerClose">Dismiss</button>
+  `;
+  const cardView = document.getElementById('cardView');
+  if (cardView && cardView.parentNode) {
+    cardView.parentNode.insertBefore(banner, cardView);
+    banner.querySelector('#focusBannerClose').addEventListener('click', () => banner.remove());
+  }
+  // Find the card or table row + scroll + highlight
+  setTimeout(() => {
+    const target = document.querySelector(`[onclick="openDealModal(${focusId})"]`)?.closest('.brand-deal-card, tr');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('focus-highlight');
+      // Strip the highlight after the pulse animation finishes (1.4s × 3 = 4.2s, plus padding)
+      setTimeout(() => target.classList.remove('focus-highlight'), 8000);
+    }
+  }, 250);
 }
 
 function buildClusterLabels() {
@@ -412,6 +485,17 @@ function openAddMarketForm() {
   const form = document.getElementById('addMarketForm');
   form.classList.remove('hidden');
 
+  // WHY: Reset form fields each open so a previous abandoned entry doesn't leak in.
+  // Especially the AI Research checkbox — without this, reopening with a stale-checked
+  // box leaves the count selector hidden (onchange only fires on user-driven changes).
+  document.getElementById('mktName').value = '';
+  document.getElementById('mktNotes').value = '';
+  document.getElementById('mktClusterNew').value = '';
+  document.getElementById('mktClusterNew').classList.add('hidden');
+  const researchCb = document.getElementById('mktResearch');
+  researchCb.checked = false;
+  document.getElementById('mktResearchCount').classList.add('hidden');
+
   // Populate cluster dropdown
   const sel = document.getElementById('mktCluster');
   const clusters = [...new Set(MARKETS.map(m => m.cluster).filter(Boolean))];
@@ -426,7 +510,7 @@ function openAddMarketForm() {
 
   // WHY: Use onchange instead of addEventListener to prevent stacking
   // when the form is opened/closed repeatedly
-  document.getElementById('mktResearch').onchange = e => {
+  researchCb.onchange = e => {
     document.getElementById('mktResearchCount').classList.toggle('hidden', !e.target.checked);
   };
   sel.onchange = () => {
