@@ -6,22 +6,31 @@
   <title>Print Label · Accelerate Robotics</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Quiet-luxury type pairing: editorial display serif for the hero
-       lines + a quiet sans for caps + data. -->
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Brand-aligned typography pairing per /pages/brand/brand-guidelines.html:
+         display = Instrument Serif (italic-capable hero serif)
+         body    = Inter (UI sans)
+         mono    = JetBrains Mono (tracked smallcaps + reference codes) -->
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    /* ── Palette: cream paper, charcoal ink, brass accent ────────── */
+    /* ── Palette: pulled directly from brand-guidelines.html ──────
+       Single source of truth — when these values change in the brand
+       doc, this file should be updated to match. */
     :root {
-      --paper:        #faf6ee;        /* warm ivory */
-      --paper-edge:   #f1ead9;        /* faint border tone */
-      --ink:          #1c1817;        /* deep charcoal */
-      --ink-dim:      #6b6258;        /* warm gray for body data */
-      --ink-faint:    #a59b8d;
-      --brass:        #8a6d3b;        /* signature accent */
-      --brass-soft:   rgba(138,109,59,0.18);
-      --hairline:     rgba(28,24,23,0.14);
+      --paper:        #F6F4EE;
+      --paper-2:      #ECE8DB;
+      --ink:          #0E1420;
+      --ink-dim:      #3A4352;
+      --ink-faint:    #8a92a0;
+      --primary:      #FF6A3D;        /* brand primary — coral/orange */
+      --primary-deep: #d8512a;
+      --hairline:     rgba(14,20,32,0.16);
+      --hairline-strong: rgba(14,20,32,0.30);
 
-      --bg-screen:    #ece7da;
+      --font-display: 'Instrument Serif', 'Georgia', serif;
+      --font-body:    'Inter', -apple-system, sans-serif;
+      --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+      --bg-screen:    #E8E2D0;
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
@@ -36,7 +45,7 @@
     /* ─── Page wrapper (screen-only chrome) ──────────────────────── */
     .pg { max-width: 920px; margin: 0 auto; padding: 28px 18px 80px; }
     .pg h1 {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: 'Instrument Serif', serif;
       font-size: 1.7rem; font-weight: 600; margin: 0 0 4px;
       color: var(--ink); letter-spacing: 0.005em;
     }
@@ -44,7 +53,7 @@
 
     /* Settings bar */
     .controls {
-      background: white; border: 1px solid var(--paper-edge);
+      background: white; border: 1px solid var(--paper-2);
       border-radius: 14px; padding: 18px 20px; margin-bottom: 22px;
       box-shadow: 0 1px 2px rgba(28,24,23,0.04);
     }
@@ -57,37 +66,37 @@
     }
     .ctrl-field input,
     .ctrl-field select {
-      padding: 9px 12px; border: 1px solid var(--paper-edge); border-radius: 8px;
+      padding: 9px 12px; border: 1px solid var(--paper-2); border-radius: 8px;
       font: inherit; font-size: 0.92rem; background: white;
     }
     .ctrl-field input:focus,
     .ctrl-field select:focus {
-      outline: 2px solid var(--brass); outline-offset: -1px;
+      outline: 2px solid var(--primary); outline-offset: -1px;
     }
     .photo-block { display: flex; gap: 10px; align-items: center; }
     .photo-block img {
       width: 44px; height: 44px; border-radius: 50%; object-fit: cover;
-      border: 1px solid var(--paper-edge); background: var(--paper);
+      border: 1px solid var(--paper-2); background: var(--paper);
     }
     .photo-block input[type="file"] { font-size: 0.84rem; }
     .btn {
-      padding: 10px 18px; border: 1px solid var(--paper-edge); background: white;
+      padding: 10px 18px; border: 1px solid var(--paper-2); background: white;
       border-radius: 10px; font: inherit; font-size: 0.9rem; font-weight: 600;
       color: var(--ink); cursor: pointer; transition: all 0.12s;
     }
-    .btn:hover { border-color: var(--brass); color: var(--brass); }
+    .btn:hover { border-color: var(--primary); color: var(--primary); }
     .btn-primary {
       background: var(--ink); color: white; border-color: var(--ink);
       letter-spacing: 0.04em;
     }
-    .btn-primary:hover { background: var(--brass); border-color: var(--brass); color: white; }
+    .btn-primary:hover { background: var(--primary); border-color: var(--primary); color: white; }
     .err {
       background: #fef2f2; border: 1px solid rgba(220,38,38,0.30); border-radius: 10px;
       padding: 10px 14px; color: #991b1b; font-size: 0.9rem; margin-bottom: 14px;
     }
     .auto-print-hint {
-      background: var(--brass-soft); border: 1px solid var(--brass);
-      border-radius: 10px; padding: 10px 14px; color: var(--brass);
+      background: rgba(255,106,61,0.16); border: 1px solid var(--primary);
+      border-radius: 10px; padding: 10px 14px; color: var(--primary);
       font-size: 0.84rem; margin-bottom: 14px;
       display: flex; align-items: center; gap: 10px;
     }
@@ -99,76 +108,101 @@
     /* ═══════════════════════════════════════════════════════════════
        LABEL — quiet luxury concierge card
        ═══════════════════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════════════════
+       LABEL — Regal hospitality
+       Cream stationery · midnight navy ink · primary orange accent ·
+       Instrument Serif display · ornamental fleurons · centered
+       symmetry. Reads as a hotel concierge invitation card from a
+       Aman / Belmond / Ritz-Carlton / Bel-Air aesthetic universe.
+       ═══════════════════════════════════════════════════════════════ */
     .label-shell {
       --w-in: 4;
       --h-in: 6;
-      --pad-in: 0.32;
+      --pad-in: 0.30;
       width: calc(var(--w-in) * 96px);
       height: calc(var(--h-in) * 96px);
       background: var(--paper);
-      box-shadow: 0 18px 40px rgba(28,24,23,0.18), 0 2px 6px rgba(28,24,23,0.10);
-      border-radius: 4px;
+      box-shadow: 0 18px 40px rgba(13,27,42,0.18), 0 2px 6px rgba(13,27,42,0.10);
       overflow: hidden;
       position: relative;
       margin: 24px auto 0;
       transform-origin: top center;
+      font-family: 'Instrument Serif', 'Georgia', serif;
+      color: var(--ink);
     }
     .label-shell[data-size="4x3"]   { --w-in: 4;   --h-in: 3;   --pad-in: 0.24; }
     .label-shell[data-size="2x4"]   { --w-in: 2;   --h-in: 4;   --pad-in: 0.18; }
-    .label-shell[data-size="letter"]{ --w-in: 8.5; --h-in: 11;  --pad-in: 1.0;  }
+    .label-shell[data-size="letter"]{ --w-in: 8.5; --h-in: 11;  --pad-in: 0.7;  }
 
-    /* The label content sits inside a thin double-rule frame — the
-       editorial hotel-stationery move that signals "premium" without
-       needing color or texture. */
-    .lbl-frame {
-      position: absolute; inset: calc(var(--pad-in) * 0.45 * 96px);
-      border: 0.5px solid var(--hairline);
-      border-radius: 2px;
-      pointer-events: none;
-    }
-    .lbl-frame::after {
-      content: ''; position: absolute; inset: 4px;
-      border: 0.5px solid var(--hairline);
-    }
-
+    /* Hairline primary-orange double-border — the editorial hotel-stationery move.
+       Inner stroke draws via ::before, outer stroke via the body's own
+       border. Both in primary orange so the label reads "engraved card". */
     .lbl-body {
       position: absolute;
       inset: calc(var(--pad-in) * 96px);
       display: flex; flex-direction: column;
-      gap: 10px;
+      align-items: center;
+      text-align: center;
+      gap: 8px;
+      border: 0.5px solid var(--primary);
+      padding: 14px 16px 12px;
+    }
+    .lbl-body::before {
+      content: '';
+      position: absolute; inset: 4px;
+      border: 0.5px solid var(--primary);
+      pointer-events: none;
     }
 
-    /* ─── Top mark: small-caps brand wordmark, centered ─────────── */
-    .lbl-mark {
-      display: flex; align-items: center; justify-content: center; gap: 10px;
+    /* ─── Brand crest: monogram + small heraldic robot + brand name ─ */
+    .lbl-crest {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 4px;
+    }
+    .lbl-crest-mark {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      color: var(--primary);
+      font-size: 0.78rem;
+    }
+    .lbl-crest-mark .ornament { font-size: 0.84rem; line-height: 1; }
+    .lbl-crest-mark .robot {
+      /* Recolor SVG to the brand primary (#FF6A3D) — values derived
+         empirically with https://codepen.io/sosuke/pen/Pjoqqp. */
+      height: 26px; width: auto;
+      filter: brightness(0) saturate(100%)
+              invert(54%) sepia(63%) saturate(2632%) hue-rotate(343deg) brightness(101%) contrast(101%);
+      opacity: 0.95;
+    }
+    .lbl-crest-name {
       font-family: 'Inter', sans-serif;
       font-size: 0.62rem; font-weight: 700;
-      color: var(--brass);
-      text-transform: uppercase; letter-spacing: 0.30em;
+      letter-spacing: 0.32em; text-transform: uppercase;
+      color: var(--ink);
     }
-    .lbl-mark::before, .lbl-mark::after {
-      content: ''; flex: 1; height: 0.5px; background: var(--hairline); max-width: 60px;
+    .lbl-crest-name .robotics {
+      display: block; margin-top: 1px;
+      font-weight: 500; font-size: 0.58rem;
+      letter-spacing: 0.36em; color: var(--ink-dim);
     }
-    .lbl-mark .seal {
-      font-family: 'Cormorant Garamond', serif;
-      font-style: italic; font-weight: 600;
-      font-size: 1rem; letter-spacing: 0.02em;
-      color: var(--brass);
+    .lbl-crest-rule {
+      width: 30px; height: 1px;
+      background: var(--primary);
+      margin-top: 3px;
     }
 
-    /* ─── Recipient hero (the hotel name in display serif) ──────── */
-    .lbl-recipient {
-      text-align: center; padding: 4px 0;
+    /* ─── Eyebrow phrase: italic invitation ───────────────────────── */
+    .lbl-eyebrow {
+      font-style: italic; font-weight: 400;
+      font-size: 0.78rem; color: var(--ink-dim);
+      margin-top: 4px;
     }
-    .lbl-recipient-eyebrow {
-      font-family: 'Inter', sans-serif;
-      font-size: 0.54rem; font-weight: 700;
-      color: var(--ink-faint); text-transform: uppercase;
-      letter-spacing: 0.22em;
-      margin-bottom: 6px;
+
+    /* ─── Recipient (hotel name) — hero of the card ───────────────── */
+    .lbl-recipient {
+      padding: 4px 0;
     }
     .lbl-recipient-name {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: 'Instrument Serif', serif;
       font-weight: 500; font-size: 1.55rem;
       color: var(--ink); line-height: 1.05;
       letter-spacing: 0.005em;
@@ -176,154 +210,165 @@
     }
     .lbl-recipient-address {
       font-family: 'Inter', sans-serif;
-      font-size: 0.66rem; color: var(--ink-dim);
-      letter-spacing: 0.06em; text-transform: uppercase;
-      margin-top: 6px; line-height: 1.4;
+      font-size: 0.58rem; font-weight: 500;
+      color: var(--ink-dim);
+      letter-spacing: 0.18em; text-transform: uppercase;
+      margin-top: 5px; line-height: 1.5;
+    }
+    .lbl-recipient-stats {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic; font-weight: 400;
+      font-size: 0.74rem; color: var(--ink-dim);
+      margin-top: 5px;
+    }
+    .lbl-recipient-stats .stars { color: var(--primary); letter-spacing: 0.06em; }
+
+    /* ─── Ornamental rule with fleuron ───────────────────────────── */
+    .lbl-fleuron {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      color: var(--primary);
+      font-size: 0.70rem;
+      width: 100%;
+    }
+    .lbl-fleuron::before, .lbl-fleuron::after {
+      content: ''; flex: 1; height: 0.5px; background: var(--primary);
+      max-width: 70px; opacity: 0.55;
     }
 
-    /* ─── Sender card: photo + name + role ──────────────────────── */
-    .lbl-sender {
-      display: flex; gap: 10px; align-items: center;
-      padding: 8px 0;
+    /* ─── Sender card: photo + name + role + direct line ──────────── */
+    .lbl-sender-eyebrow {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.50rem; font-weight: 600;
+      color: var(--ink-dim);
+      letter-spacing: 0.32em; text-transform: uppercase;
     }
-    .lbl-photo-ring {
-      width: 64px; height: 64px; border-radius: 50%;
-      padding: 2px; flex-shrink: 0;
-      background: linear-gradient(135deg, #c4a667, var(--brass) 50%, #6b5028);
-      box-shadow: 0 1px 4px rgba(28,24,23,0.18);
+    .lbl-photo-wrap {
+      width: 70px; height: 70px;
+      border-radius: 50%;
+      padding: 2px;
+      margin: 4px 0 2px;
+      background: linear-gradient(135deg, #FF8E5C, var(--primary) 50%, var(--primary-deep));
+      box-shadow: 0 1px 4px rgba(13,27,42,0.18);
     }
     .lbl-photo {
       width: 100%; height: 100%; border-radius: 50%;
       object-fit: cover;
-      background: linear-gradient(135deg, #f5e9c8, #d8c08a);
+      background: linear-gradient(135deg, #FFD3BD, #FFB48C);
     }
-    .lbl-sender-meta { flex: 1; min-width: 0; }
     .lbl-sender-name {
-      font-family: 'Cormorant Garamond', serif;
-      font-weight: 600; font-size: 1.15rem;
+      font-family: 'Instrument Serif', serif;
+      font-weight: 600; font-size: 1.05rem;
       color: var(--ink); line-height: 1.1;
     }
     .lbl-sender-role {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic; font-weight: 400;
+      font-size: 0.74rem; color: var(--ink-dim);
+      margin-top: -1px;
+      display: inline-flex; gap: 6px; align-items: center;
+    }
+    .lbl-sender-role::before, .lbl-sender-role::after {
+      content: '—'; color: var(--primary); font-style: normal;
+    }
+    .lbl-phone-block {
+      margin-top: 3px;
+      font-family: 'Instrument Serif', serif;
+    }
+    .lbl-phone-eyebrow {
       font-family: 'Inter', sans-serif;
-      font-size: 0.58rem; font-weight: 700;
-      color: var(--ink-faint); letter-spacing: 0.16em;
-      text-transform: uppercase;
-      margin-top: 4px;
-    }
-
-    /* ─── The HERO callout — "Call me back" + huge phone ────────── */
-    .lbl-callout {
-      text-align: center;
-      padding: 6px 0 10px;
-    }
-    .lbl-callout-tag {
-      font-family: 'Cormorant Garamond', serif;
-      font-style: italic; font-weight: 500;
-      font-size: 0.92rem; color: var(--brass);
-      letter-spacing: 0.01em;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
-    .lbl-callout-tag::before, .lbl-callout-tag::after {
-      content: ''; flex: 0 0 28px; height: 0.5px; background: var(--brass);
-      opacity: 0.45;
+      font-size: 0.46rem; font-weight: 600;
+      color: var(--ink-dim);
+      letter-spacing: 0.32em; text-transform: uppercase;
     }
     .lbl-phone {
-      font-family: 'Cormorant Garamond', serif;
-      font-weight: 500;
-      font-size: 1.85rem;
+      font-family: 'Instrument Serif', serif;
+      font-weight: 500; font-size: 1.30rem;
       color: var(--ink);
-      letter-spacing: 0.02em;
-      line-height: 1.1;
-      margin-top: 4px;
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.05;
+      margin-top: 1px;
     }
 
-    /* ─── Personal note (italic concierge handwriting feel) ─────── */
+    /* ─── Personal note: italic concierge handwriting feel ────────── */
     .lbl-note {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: 'Instrument Serif', serif;
       font-style: italic; font-weight: 400;
       color: var(--ink-dim);
-      font-size: 0.86rem; line-height: 1.4;
-      text-align: center;
-      padding: 0 6px;
+      font-size: 0.80rem; line-height: 1.45;
+      padding: 0 4px;
     }
     .lbl-note::before, .lbl-note::after {
-      content: '"'; color: var(--brass); font-weight: 600;
+      content: '"'; color: var(--primary); font-weight: 600;
       font-size: 1.15em; opacity: 0.7;
     }
 
-    /* ─── Footer: tier + brand mark ─────────────────────────────── */
-    .lbl-footer {
+    /* ─── Reference plate at the bottom — programme + No. ─────────── */
+    .lbl-reference {
       margin-top: auto;
-      padding-top: 8px;
-      border-top: 0.5px solid var(--hairline);
-      display: flex; align-items: center; gap: 8px;
       font-family: 'Inter', sans-serif;
-      font-size: 0.52rem; font-weight: 700;
-      color: var(--ink-faint);
-      text-transform: uppercase; letter-spacing: 0.18em;
+      font-size: 0.46rem; font-weight: 600;
+      color: var(--ink-dim);
+      letter-spacing: 0.32em; text-transform: uppercase;
+      line-height: 1.5;
+      padding-top: 6px;
     }
-    .lbl-footer .stars { color: var(--brass); letter-spacing: 0.05em; }
-    .lbl-footer .tier {
-      color: var(--brass);
-    }
-    .lbl-footer .spacer { flex: 1; }
+    .lbl-reference .programme { color: var(--primary-deep); }
+    .lbl-reference .no { font-family: 'Instrument Serif', serif;
+                         font-style: italic; font-weight: 500;
+                         font-size: 0.72rem; letter-spacing: 0.05em;
+                         color: var(--ink); text-transform: none;
+                         margin-top: 2px; }
 
     /* ── Compact-size adaptations ─────────────────────────────── */
-    .label-shell[data-size="4x3"] .lbl-recipient-name { font-size: 1.25rem; }
-    .label-shell[data-size="4x3"] .lbl-photo-ring { width: 50px; height: 50px; }
-    .label-shell[data-size="4x3"] .lbl-sender-name { font-size: 0.95rem; }
-    .label-shell[data-size="4x3"] .lbl-phone { font-size: 1.45rem; }
+    .label-shell[data-size="4x3"] .lbl-recipient-name { font-size: 1.20rem; }
+    .label-shell[data-size="4x3"] .lbl-photo-wrap { width: 50px; height: 50px; }
+    .label-shell[data-size="4x3"] .lbl-sender-name { font-size: 0.92rem; }
+    .label-shell[data-size="4x3"] .lbl-phone { font-size: 1.05rem; }
     .label-shell[data-size="4x3"] .lbl-note { display: none; }
-    .label-shell[data-size="4x3"] .lbl-recipient-address { font-size: 0.58rem; }
 
-    .label-shell[data-size="2x4"] .lbl-mark { font-size: 0.50rem; letter-spacing: 0.20em; }
-    .label-shell[data-size="2x4"] .lbl-mark::before, .label-shell[data-size="2x4"] .lbl-mark::after { display: none; }
-    .label-shell[data-size="2x4"] .lbl-mark .seal { font-size: 0.78rem; }
-    .label-shell[data-size="2x4"] .lbl-recipient-name { font-size: 1.05rem; }
-    .label-shell[data-size="2x4"] .lbl-recipient-address { font-size: 0.50rem; letter-spacing: 0.04em; }
-    .label-shell[data-size="2x4"] .lbl-photo-ring { width: 44px; height: 44px; padding: 1.5px; }
-    .label-shell[data-size="2x4"] .lbl-sender-name { font-size: 0.9rem; }
-    .label-shell[data-size="2x4"] .lbl-sender-role { font-size: 0.50rem; letter-spacing: 0.12em; }
-    .label-shell[data-size="2x4"] .lbl-callout-tag { font-size: 0.74rem; }
-    .label-shell[data-size="2x4"] .lbl-phone { font-size: 1.25rem; }
+    .label-shell[data-size="2x4"] .lbl-crest-mark .robot { height: 16px; }
+    .label-shell[data-size="2x4"] .lbl-crest-name { font-size: 0.50rem; letter-spacing: 0.22em; }
+    .label-shell[data-size="2x4"] .lbl-crest-name .robotics { font-size: 0.46rem; letter-spacing: 0.26em; }
+    .label-shell[data-size="2x4"] .lbl-recipient-name { font-size: 0.90rem; }
+    .label-shell[data-size="2x4"] .lbl-recipient-address { font-size: 0.46rem; letter-spacing: 0.10em; }
+    .label-shell[data-size="2x4"] .lbl-recipient-stats { font-size: 0.58rem; }
+    .label-shell[data-size="2x4"] .lbl-photo-wrap { width: 42px; height: 42px; padding: 1.5px; }
+    .label-shell[data-size="2x4"] .lbl-sender-name { font-size: 0.78rem; }
+    .label-shell[data-size="2x4"] .lbl-phone { font-size: 0.92rem; }
     .label-shell[data-size="2x4"] .lbl-note { display: none; }
-    .label-shell[data-size="2x4"] .lbl-footer { font-size: 0.46rem; letter-spacing: 0.10em; }
+    .label-shell[data-size="2x4"] .lbl-reference { font-size: 0.40rem; letter-spacing: 0.22em; }
+    .label-shell[data-size="2x4"] .lbl-reference .no { font-size: 0.58rem; }
 
-    /* ── Letter (8.5 × 11) — for office printers like the Konica
-         Minolta bizhub C3350. Centers the label content on the page
-         with crop marks so the user can scissor-cut a 4×6 portion. */
-    .label-shell[data-size="letter"] {
-      background: white;
-    }
-    .label-shell[data-size="letter"] .lbl-frame { display: none; }
-    .label-shell[data-size="letter"] .lbl-body {
-      inset: 0;
-      padding: 1.5in 1in;
-    }
-    .label-shell[data-size="letter"] .lbl-recipient-name { font-size: 2.4rem; }
-    .label-shell[data-size="letter"] .lbl-recipient-address { font-size: 0.9rem; }
-    .label-shell[data-size="letter"] .lbl-photo-ring { width: 110px; height: 110px; }
-    .label-shell[data-size="letter"] .lbl-sender-name { font-size: 1.7rem; }
-    .label-shell[data-size="letter"] .lbl-sender-role { font-size: 0.78rem; }
-    .label-shell[data-size="letter"] .lbl-callout-tag { font-size: 1.2rem; }
-    .label-shell[data-size="letter"] .lbl-phone { font-size: 3rem; letter-spacing: 0.04em; }
-    .label-shell[data-size="letter"] .lbl-note { font-size: 1.1rem; padding: 12px 36px; }
-    .label-shell[data-size="letter"] .lbl-footer { font-size: 0.7rem; letter-spacing: 0.20em; }
-    /* Crop marks for hand-cutting a 4×6 section out of the letter sheet */
+    /* ── Letter (8.5 × 11) — scaled-up for office printer + crop marks ── */
+    .label-shell[data-size="letter"] .lbl-body { inset: 0; padding: 1.0in 1.0in 0.9in; }
+    .label-shell[data-size="letter"] .lbl-crest-mark .robot { height: 64px; }
+    .label-shell[data-size="letter"] .lbl-crest-name { font-size: 1.1rem; letter-spacing: 0.40em; }
+    .label-shell[data-size="letter"] .lbl-crest-name .robotics { font-size: 1rem; letter-spacing: 0.45em; }
+    .label-shell[data-size="letter"] .lbl-eyebrow { font-size: 1.4rem; }
+    .label-shell[data-size="letter"] .lbl-recipient-name { font-size: 3.4rem; }
+    .label-shell[data-size="letter"] .lbl-recipient-address { font-size: 0.9rem; letter-spacing: 0.22em; }
+    .label-shell[data-size="letter"] .lbl-recipient-stats { font-size: 1.2rem; }
+    .label-shell[data-size="letter"] .lbl-fleuron { font-size: 1.2rem; }
+    .label-shell[data-size="letter"] .lbl-sender-eyebrow { font-size: 0.78rem; letter-spacing: 0.40em; }
+    .label-shell[data-size="letter"] .lbl-photo-wrap { width: 130px; height: 130px; }
+    .label-shell[data-size="letter"] .lbl-sender-name { font-size: 2rem; }
+    .label-shell[data-size="letter"] .lbl-sender-role { font-size: 1.2rem; }
+    .label-shell[data-size="letter"] .lbl-phone-eyebrow { font-size: 0.74rem; letter-spacing: 0.40em; }
+    .label-shell[data-size="letter"] .lbl-phone { font-size: 2.4rem; }
+    .label-shell[data-size="letter"] .lbl-note { font-size: 1.3rem; padding: 8px 24px; }
+    .label-shell[data-size="letter"] .lbl-reference { font-size: 0.78rem; letter-spacing: 0.40em; padding-top: 12px; }
+    .label-shell[data-size="letter"] .lbl-reference .no { font-size: 1.4rem; }
     .label-shell[data-size="letter"]::before,
     .label-shell[data-size="letter"]::after {
-      content: '';
-      position: absolute;
-      width: 16px; height: 16px;
-      border: 0.5px solid var(--ink-faint);
+      content: ''; position: absolute;
+      width: 16px; height: 16px; border: 0.5px solid var(--ink-faint);
     }
     .label-shell[data-size="letter"]::before {
-      top: 1.25in; left: 1.25in;
-      border-right: 0; border-bottom: 0;
+      top: 1in; left: 1in; border-right: 0; border-bottom: 0;
     }
     .label-shell[data-size="letter"]::after {
-      bottom: 1.25in; right: 1.25in;
-      border-left: 0; border-top: 0;
+      bottom: 1in; right: 1in; border-left: 0; border-top: 0;
     }
 
     /* ─── Print rules — drives @page so paper size matches printer ── */
@@ -407,44 +452,51 @@
       </div>
     </div>
 
-    <!-- ═══ Label preview / print canvas ═══ -->
+    <!-- ═══ Label canvas — Regal hospitality concierge card ═══ -->
     <div class="label-shell" id="labelShell" data-size="letter">
-      <div class="lbl-frame"></div>
       <div class="lbl-body">
 
-        <div class="lbl-mark">
-          <span class="seal">A·R</span>
-          <span>Accelerate Robotics</span>
+        <!-- Crest: ornament + heraldic robot + ornament + brand wordmark -->
+        <div class="lbl-crest">
+          <div class="lbl-crest-mark">
+            <span class="ornament">❦</span>
+            <img class="robot" src="/assets/robots/keenon-w3.svg" alt="">
+            <span class="ornament">❦</span>
+          </div>
+          <div class="lbl-crest-name">Accelerate<span class="robotics">Robotics</span></div>
+          <div class="lbl-crest-rule"></div>
         </div>
+
+        <div class="lbl-eyebrow">A personal invitation for</div>
 
         <div class="lbl-recipient">
-          <div class="lbl-recipient-eyebrow">A personal note for</div>
-          <div class="lbl-recipient-name" id="lblHotelName">— pick a hotel —</div>
+          <div class="lbl-recipient-name" id="lblHotelName">— select hotel —</div>
           <div class="lbl-recipient-address" id="lblHotelAddress"></div>
+          <div class="lbl-recipient-stats" id="lblHotelStats"></div>
         </div>
 
-        <div class="lbl-sender">
-          <div class="lbl-photo-ring">
-            <img id="lblPhoto" class="lbl-photo" alt=""
-              src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'><rect width='60' height='60' fill='%23f5e9c8'/><text x='30' y='40' font-family='Cormorant Garamond' font-style='italic' font-size='30' fill='%238a6d3b' text-anchor='middle'>A·R</text></svg>">
-          </div>
-          <div class="lbl-sender-meta">
-            <div class="lbl-sender-name" id="lblName">Your Name</div>
-            <div class="lbl-sender-role" id="lblRole">Accelerate Robotics</div>
-          </div>
+        <div class="lbl-fleuron">❦</div>
+
+        <div class="lbl-sender-eyebrow">Personally delivered by</div>
+
+        <div class="lbl-photo-wrap">
+          <img id="lblPhoto" class="lbl-photo" alt=""
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><rect width='70' height='70' fill='%23FFD3BD'/><text x='35' y='46' font-family='Instrument Serif' font-style='italic' font-size='34' fill='%23FF6A3D' text-anchor='middle'>AR</text></svg>">
         </div>
 
-        <div class="lbl-callout">
-          <div class="lbl-callout-tag">Call me back — I'm here to help</div>
-          <div class="lbl-phone" id="lblPhone">+1 555 555 0000</div>
+        <div class="lbl-sender-name" id="lblName">Your Name</div>
+        <div class="lbl-sender-role" id="lblRole">Founder</div>
+
+        <div class="lbl-phone-block">
+          <div class="lbl-phone-eyebrow">Direct line</div>
+          <div class="lbl-phone" id="lblPhone">555 · 555 · 0000</div>
         </div>
 
         <div class="lbl-note" id="lblNote" style="display:none;"></div>
 
-        <div class="lbl-footer">
-          <span class="tier" id="lblTier"></span>
-          <span class="spacer"></span>
-          <span id="lblFooterRight"></span>
+        <div class="lbl-reference">
+          <div class="programme" id="lblProgramme">Hospitality Programme</div>
+          <div class="no" id="lblRefNo">No. AR-0000</div>
         </div>
       </div>
     </div>
@@ -473,36 +525,60 @@ function logoUrlFor(hotel) {
   catch { return null; }
 }
 
-let HOTELS = [];
-let CURRENT_HOTEL = null;
+// Data source: prospects (the deal-pipeline table) — Ben drops this label
+// after a site assessment, so the recipient is always a prospect by then.
+// Hotels-research saved rows are no longer used here; the field map is:
+//   prospect.name        ← hotel name (display)
+//   prospect.brand       ← e.g. "MARRIOTT" / "CURIO COLLECTION / HILTON"
+//   prospect.address     ← full street + city
+//   prospect.market_name ← submarket label
+//   prospect.keys        ← room count
+//   prospect.stars       ← 1–5
+//   prospect.signal      ← short value-prop sentence (= concierge note)
+//   prospect.brand_class ← luxury / soft / chain / independent (for tier)
+//   prospect.monogram    ← 1–2 letter brand mark
+//   prospect.mono_color  ← hex assigned to the prospect
+let PROSPECTS = [];
+let CURRENT_PROSPECT = null;
 
-async function loadHotels() {
+async function loadProspects() {
   try {
-    const r = await fetch('/api/hotel-research/saved', { credentials: 'same-origin' });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
-    HOTELS = data.hotels || [];
+    // Pull both staged + confirmed; reps may want to print for either.
+    const [staged, confirmed] = await Promise.all([
+      fetch('/api/prospects?status=staged', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : []),
+      fetch('/api/prospects?status=confirmed', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : []),
+    ]);
+    PROSPECTS = [].concat(
+      Array.isArray(staged) ? staged : (staged.prospects || []),
+      Array.isArray(confirmed) ? confirmed : (confirmed.prospects || []),
+    ).filter(p => p && p.id);
+
     const sel = $('ctrlHotel');
-    const isUnnamed = (n) => !n || /^\(unnamed/i.test(n);
-    sel.innerHTML = '<option value="">— select a saved hotel —</option>' +
-      HOTELS.slice()
-        .sort((a, b) => {
-          const au = isUnnamed(a.name), bu = isUnnamed(b.name);
-          if (au !== bu) return au ? 1 : -1;
-          return (a.name || '').localeCompare(b.name || '');
-        })
-        .map(h => `<option value="${h.id}">${escapeHtml(h.name)}${h.submarket ? ' · ' + escapeHtml(h.submarket) : ''}</option>`)
+    sel.innerHTML = '<option value="">— select a prospect —</option>' +
+      PROSPECTS.slice()
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        .map(p => `<option value="${p.id}">${escapeHtml(p.name)}${p.market_name ? ' · ' + escapeHtml(p.market_name) : ''}</option>`)
         .join('');
+
+    // URL params: prefer ?prospect=<id> (new), fall back to ?hotel=<id>
+    // (back-compat with the old hotel-research linkage), or ?facility=<id>
+    // (used by the assessments page → print label flow). For facility we
+    // look up the matching prospect by facility_id.
     const params = new URLSearchParams(location.search);
-    const focus = params.get('hotel');
-    if (focus) { sel.value = focus; pickHotel(focus); }
+    let focus = params.get('prospect') || params.get('hotel');
+    if (!focus && params.get('facility')) {
+      const fid = params.get('facility');
+      const match = PROSPECTS.find(p => String(p.facility_id) === String(fid));
+      if (match) focus = String(match.id);
+    }
+    if (focus) { sel.value = focus; pickProspect(focus); }
   } catch (err) {
-    showError('Could not load saved hotels: ' + err.message);
+    showError('Could not load prospects: ' + err.message);
   }
 }
 
-function pickHotel(id) {
-  CURRENT_HOTEL = HOTELS.find(h => String(h.id) === String(id)) || null;
+function pickProspect(id) {
+  CURRENT_PROSPECT = PROSPECTS.find(p => String(p.id) === String(id)) || null;
   renderLabel();
 }
 
@@ -512,58 +588,83 @@ function escapeHtml(s) {
 }
 
 const PACKAGE_NAME = {
-  S:  'Starter Package',
-  M:  'Integration Package',
-  L:  'Service Augmentation',
-  XL: 'Facility Automation',
+  S:  'Starter Programme',
+  M:  'Integration Programme',
+  L:  'Service Augmentation Programme',
+  XL: 'Facility Automation Programme',
 };
+
+// Format phone in regal "555 · 555 · 0000" style with thin-space middle dots.
+function regalPhone(p) {
+  if (!p) return '— · — · —';
+  const digits = p.replace(/\D/g, '');
+  if (digits.length === 10) return `${digits.slice(0,3)} · ${digits.slice(3,6)} · ${digits.slice(6)}`;
+  if (digits.length === 11) return `${digits[0]} · ${digits.slice(1,4)} · ${digits.slice(4,7)} · ${digits.slice(7)}`;
+  return p;
+}
+
+// Reference number for the bottom plate — discreet but unique per prospect.
+// Class code maps to brand_class values stored on prospects (luxury/soft/
+// chain/independent). When a programme tier is set on the prospect, that
+// wins; otherwise we fall back to the brand-class letter.
+const BRAND_CLASS_LETTER = { luxury: 'L', soft: 'S', chain: 'C', independent: 'I' };
+function buildReference(p) {
+  if (!p) return 'No. AR-0000';
+  const code = BRAND_CLASS_LETTER[p.brand_class] || 'P';
+  const id = String(p.id || 0).padStart(4, '0');
+  return `No. AR-${code}-${id}`;
+}
 
 function renderLabel() {
   const profile = loadProfile();
 
   $('lblName').textContent = profile.name || 'Your Name';
-  $('lblRole').textContent = profile.role || 'Accelerate Robotics';
-  // Format phone with subtle tracking — "305 · 555 · 0123"-style for the
-  // hero look without losing scannability.
+  $('lblRole').textContent = profile.role || 'Founder';
   const phone = (profile.phone || '').trim();
-  $('lblPhone').textContent = phone || '+1 555 555 0000';
+  $('lblPhone').textContent = regalPhone(phone) || '— · — · —';
+  if (profile.photo) $('lblPhoto').src = profile.photo;
 
-  if (profile.photo) {
-    $('lblPhoto').src = profile.photo;
-  }
+  const p = CURRENT_PROSPECT;
+  $('lblRefNo').textContent = buildReference(p);
+  $('lblProgramme').textContent = p?.brand_class === 'luxury'
+    ? 'Luxury Hospitality Programme'
+    : 'Hospitality Programme';
 
-  const h = CURRENT_HOTEL;
-  if (!h) {
-    $('lblHotelName').textContent = '— pick a hotel —';
+  if (!p) {
+    $('lblHotelName').textContent = '— select prospect —';
     $('lblHotelAddress').textContent = '';
-    $('lblTier').textContent = '';
-    $('lblFooterRight').textContent = '';
+    $('lblHotelStats').innerHTML = '';
     return;
   }
 
-  $('lblHotelName').textContent = h.name || '—';
+  // Hotel name in sentence case (regal, not industrial caps)
+  $('lblHotelName').textContent = p.name || '—';
 
-  // Address: street on top, city/state/zip on second line — but only if
-  // h.address doesn't already contain the city.
-  const cityLine = [h.city, h.state, h.zip].filter(Boolean).join(', ');
+  // Address — prospects often store address as a single complete string
+  // ("3555 S Ocean Dr, Hollywood FL"). We don't have separate city/state
+  // columns, so just split on the comma for the line break.
   const addrParts = [];
-  if (h.address) addrParts.push(h.address);
-  if (cityLine && (!h.address || !h.address.toLowerCase().includes((h.city || '').toLowerCase()))) {
-    addrParts.push(cityLine);
+  if (p.address) {
+    const split = p.address.split(',');
+    if (split.length >= 2) {
+      addrParts.push(split[0].trim());
+      addrParts.push(split.slice(1).join(',').trim());
+    } else {
+      addrParts.push(p.address);
+    }
   }
-  $('lblHotelAddress').innerHTML = addrParts.map(escapeHtml).join('<br>');
+  if (p.market_name && !addrParts.some(a => a.toLowerCase().includes(p.market_name.toLowerCase()))) {
+    addrParts.push(p.market_name);
+  }
+  $('lblHotelAddress').innerHTML = addrParts.map(s => escapeHtml(s)).join('<br>');
 
-  // Footer left: package tier
-  $('lblTier').textContent = h.deal_size_tier ? PACKAGE_NAME[h.deal_size_tier] || h.deal_size_tier : '';
-  // Footer right: rooms + stars (uppercase, tracked-out)
-  const right = [];
-  if (h.rooms) right.push(`${h.rooms.toLocaleString()} keys`);
-  if (h.stars) right.push('★'.repeat(h.stars));
-  $('lblFooterRight').innerHTML = right
-    .map((s, i) => i === 1 ? `<span class="stars">${escapeHtml(s)}</span>` : escapeHtml(s))
-    .join(' · ');
+  // Stats — keys + stars + (if floors known) floor count
+  const stats = [];
+  if (p.keys)   stats.push(`${Number(p.keys).toLocaleString()} keys`);
+  if (p.stars)  stats.push(`<span class="stars">${'★'.repeat(p.stars)}</span>`);
+  if (p.floors) stats.push(`${p.floors} floors`);
+  $('lblHotelStats').innerHTML = stats.join(' &nbsp;·&nbsp; ');
 
-  // Personal note
   const note = profile.note || '';
   const noteEl = $('lblNote');
   if (note) { noteEl.style.display = ''; noteEl.textContent = note; }
@@ -602,7 +703,7 @@ bindInput('ctrlRole', 'role');
 bindInput('ctrlPhone', 'phone');
 bindInput('ctrlNote', 'note');
 
-$('ctrlHotel').addEventListener('change', (e) => pickHotel(e.target.value));
+$('ctrlHotel').addEventListener('change', (e) => pickProspect(e.target.value));
 
 // ─── Size selector — drives the @page rule via a runtime <style> ───
 // WHY runtime: @page can't read CSS variables, so we inject a fresh
@@ -635,7 +736,8 @@ $('btnPrint').addEventListener('click', () => window.print());
 // on the bare page is for setup, not print.
 function maybeAutoPrint() {
   const params = new URLSearchParams(location.search);
-  if (!params.get('hotel')) return;
+  // Trigger when any of the recipient params are present.
+  if (!params.get('hotel') && !params.get('prospect') && !params.get('facility')) return;
   if (params.get('autoprint') === '0') return; // escape hatch
   const hint = $('autoPrintHint');
   if (hint) hint.style.display = 'flex';
@@ -663,8 +765,16 @@ function maybeAutoPrint() {
   $('ctrlPhone').value = profile.phone || '';
   $('ctrlNote').value = profile.note || '';
   if (profile.photo) $('photoPreview').src = profile.photo;
+  // Allow ?size=4x6 URL override so headless renderers (Chrome --print-to-pdf,
+  // server-side prints) can specify the right page size without needing to
+  // click the dropdown.
+  const params = new URLSearchParams(location.search);
+  const sizeOverride = params.get('size');
+  if (sizeOverride && SIZE_PAGE[sizeOverride]) {
+    $('ctrlSize').value = sizeOverride;
+  }
   applySize($('ctrlSize').value);
-  await loadHotels();
+  await loadProspects();
   renderLabel();
   maybeAutoPrint();
 })();

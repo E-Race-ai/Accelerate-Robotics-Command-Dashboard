@@ -52,6 +52,7 @@ const MODULE_FILES = {
   team_glossary:      ['pages/team-glossary.html', 'docs/00-overview/glossary.md'],
   whatsapp_hub:       ['pages/whatsapp-hub.html', 'src/routes/whatsapp.js'],
   hotel_research:     ['pages/hotel-research.html', 'src/routes/hotel-research.js'],
+  print_label:        ['pages/print-label.html'],
 };
 
 // Fallback assignments when `git log` turns up nothing real (external URLs
