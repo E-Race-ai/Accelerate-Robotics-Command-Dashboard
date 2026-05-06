@@ -653,7 +653,20 @@ const LS_KEY = 'printLabel:v1';
 const $ = (id) => document.getElementById(id);
 
 function loadProfile() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
+  let stored = {};
+  try { stored = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch {}
+  // URL params override localStorage — used by the server-side
+  // /api/print-label/send route, which spawns a fresh headless Chrome
+  // (empty localStorage) and bakes the rep's profile into the URL so
+  // the rendered PDF carries their name + role + phone + note. Without
+  // this, the server-side render falls back to "Your Name" placeholders.
+  const params = new URLSearchParams(location.search);
+  const overrides = {};
+  for (const k of ['name', 'role', 'phone', 'note']) {
+    const v = params.get(k);
+    if (v) overrides[k] = v;
+  }
+  return { ...stored, ...overrides };
 }
 function saveProfile(p) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(p)); }
@@ -1022,27 +1035,8 @@ function maybeAutoPrint() {
   if (sizeOverride && SIZE_PAGE[sizeOverride]) {
     $('ctrlSize').value = sizeOverride;
   }
-  // Profile fields piggyback on the URL too. WHY: the server-render path
-  // can't read the user's localStorage, so the API forwards profile
-  // values as query params and the page applies them transiently for
-  // this render only (we don't write them back to localStorage from URL).
-  const profileFromUrl = {};
-  ['name', 'role', 'phone', 'note'].forEach(k => {
-    const v = params.get(k);
-    if (v) profileFromUrl[k] = v;
-  });
-  if (Object.keys(profileFromUrl).length > 0) {
-    // Merge into displayed values without polluting saved profile.
-    const merged = { ...loadProfile(), ...profileFromUrl };
-    $('lblName').textContent = merged.name || 'Your Name';
-    $('lblRole').textContent = merged.role || 'Founder';
-    if (merged.phone) $('lblPhone').textContent = regalPhone(merged.phone);
-    if (merged.note) {
-      const noteEl = $('lblNote');
-      noteEl.style.display = '';
-      noteEl.textContent = merged.note;
-    }
-  }
+  // (Profile-from-URL handling is in loadProfile() now — applied on
+  //  every render, no separate boot-time override needed.)
   applySize($('ctrlSize').value);
   await loadProspects();
   renderLabel();
