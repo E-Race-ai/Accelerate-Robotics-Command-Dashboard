@@ -67,6 +67,10 @@ app.use(helmet({
       // handlers (onclick, onchange, etc.) even when script-src allows 'unsafe-inline'.
       // Our admin pages use onclick handlers extensively — allow them.
       scriptSrcAttr: ["'unsafe-inline'"],
+      // WHY: Helmet auto-adds `upgrade-insecure-requests`. Safari (unlike Chrome)
+      // doesn't exempt localhost, so it rewrites http://localhost subresource
+      // requests to https:// and they fail with TLS errors. Disable in dev only.
+      ...(process.env.NODE_ENV === 'development' ? { upgradeInsecureRequests: null } : {}),
     },
   },
 }));
