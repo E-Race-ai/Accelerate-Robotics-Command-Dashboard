@@ -963,6 +963,9 @@ router.patch('/routes/:id', requireAuth, async (req, res) => {
   }
   if (b.zone !== undefined)  { fields.push('zone = ?');  args.push(b.zone ? String(b.zone).slice(0, 100) : null); }
   if (b.notes !== undefined) { fields.push('notes = ?'); args.push(b.notes ? String(b.notes).slice(0, 4000) : null); }
+  // WHY: Support clearing the anchor hotel when plans change (undo)
+  if (b.anchor_hotel_id !== undefined) { fields.push('anchor_hotel_id = ?'); args.push(b.anchor_hotel_id); }
+  if (b.assessment_status !== undefined) { fields.push('assessment_status = ?'); args.push(b.assessment_status); }
   if (fields.length === 0) return res.status(400).json({ error: 'nothing to update' });
   fields.push("updated_at = datetime('now')");
   args.push(id);
