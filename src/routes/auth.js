@@ -1,11 +1,9 @@
 const express = require('express');
-const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const db = require('../db/database');
 const { requireAuth, JWT_SECRET } = require('../middleware/auth');
-const { getAllPermissions } = require('../services/permissions');
 const { sendPasswordResetEmail } = require('../services/email');
 
 const router = express.Router();
@@ -69,8 +67,6 @@ router.post('/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-router.get('/me', requireAuth, (req, res) => {
-  res.json({ email: req.admin.email, role: req.admin.role });
 router.get('/me', requireAuth, async (req, res) => {
   // WHY: Frontend uses permission map to show/hide toolkit cards + gate UI actions.
   try {
