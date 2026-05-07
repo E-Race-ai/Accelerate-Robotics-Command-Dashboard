@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B10 Patient Position Monitor · Sensor Lab · Accelerate Robotics</title>
+<style>
+  :root {
+    --accent: #db2777;
+    --accent-soft: #fdf2f8;
+    --bg: #fafafa;
+    --card: #ffffff;
+    --line: #e4e4e7;
+    --text-1: #18181b;
+    --text-2: #52525b;
+    --text-3: #a1a1aa;
+    --code-bg: #0f172a;
+    --code-text: #e2e8f0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-1);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  header {
+    background: linear-gradient(135deg, #fdf2f8, #fff);
+    border-bottom: 1px solid var(--line);
+    padding: 28px 32px 22px;
+  }
+  header .crumb {
+    font-size: 12px;
+    color: var(--text-3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  header .crumb a { color: var(--accent); text-decoration: none; }
+  header h1 {
+    margin: 0 0 6px;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+  }
+  header .lede { color: var(--text-2); margin: 0; max-width: 640px; }
+
+  main { max-width: 920px; margin: 0 auto; padding: 28px 32px 64px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin: 0 0 16px;
+  }
+  .card h2 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    letter-spacing: 0.02em;
+  }
+  .card p { margin: 0 0 12px; color: var(--text-2); }
+  .card p:last-child { margin-bottom: 0; }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font: 13px/1.55 "SF Mono", Menlo, Consolas, monospace;
+    overflow-x: auto;
+    margin: 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4px 0 0;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th { color: var(--text-3); font-weight: 500; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+  td:first-child { font-family: "SF Mono", Menlo, monospace; font-size: 13px; white-space: nowrap; color: var(--accent); }
+
+  .pill {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 99px;
+    padding: 2px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  ul { margin: 0; padding-left: 18px; color: var(--text-2); }
+  li { margin: 3px 0; }
+
+  .axis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .axis-grid .ax {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #fafafa;
+  }
+  .axis-grid .ax b { display: block; font-family: "SF Mono", monospace; color: var(--accent); margin-bottom: 2px; }
+  .axis-grid .ax span { color: var(--text-2); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="crumb"><a href="../index.html">← Sensor Lab</a></div>
+  <h1>B10 Patient Position Monitor <span class="pill">application</span></h1>
+  <p class="lede">Working Python BLE scanner + live web dashboard for the Minew B10. Captures sternum-mounted accelerometer data and infers patient body position (Supine, Prone, Lateral, Upright). Origin: <b>LTC Monitor</b> R&amp;D project.</p>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>What it does</h2>
+    <p>Runs a tight (1 s) macOS CoreBluetooth scan loop, parses the B10's proprietary 14-byte accel/gyro advertisement frame, classifies orientation against gravity, and accumulates time-in-position totals per day. Dashboard auto-opens at <code>http://localhost:8765</code>.</p>
+    <ul>
+      <li>Real-time tilt, roll, head elevation</li>
+      <li>Live patient-figure visualization (rotates with the wearer)</li>
+      <li>Daily &amp; weekly position-distribution charts</li>
+      <li>Frame history table (last 200 frames)</li>
+      <li>Daily JSON persistence for offline analysis</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Setup</h2>
+    <pre>python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt</pre>
+    <p style="margin-top:12px">macOS will prompt for Bluetooth permission on first run.</p>
+  </div>
+
+  <div class="card">
+    <h2>Run the dashboard</h2>
+    <pre>python b10_web.py</pre>
+    <p style="margin-top:12px">Browser opens automatically at <code>http://localhost:8765</code>. Position-time data accumulates per day under <code>data/position_YYYY-MM-DD.json</code>.</p>
+  </div>
+
+  <div class="card">
+    <h2>Files</h2>
+    <table>
+      <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><a href="b10_web.py">b10_web.py</a></td><td>Main app — BLE scanner + threaded HTTP dashboard.</td></tr>
+        <tr><td><a href="b10_live.py">b10_live.py</a></td><td>Terminal live view (no HTTP).</td></tr>
+        <tr><td><a href="scan_b10.py">scan_b10.py</a></td><td>One-shot BLE scanner — iBeacon, Eddystone, and accel frames.</td></tr>
+        <tr><td><a href="parse_b10.py">parse_b10.py</a></td><td>Standalone decoder for the 0xA1 0x15 frame.</td></tr>
+        <tr><td><a href="find_b10.py">find_b10.py</a></td><td>Walks the B10 through every advertised mode.</td></tr>
+        <tr><td><a href="connect_candidates.py">connect_candidates.py</a></td><td>GATT-connected reads (alternative to passive scan).</td></tr>
+        <tr><td><a href="gatt_connect.py">gatt_connect.py</a></td><td>GATT connection helper.</td></tr>
+        <tr><td><a href="gatt_sensor.py">gatt_sensor.py</a></td><td>GATT notifications path.</td></tr>
+        <tr><td><a href="requirements.txt">requirements.txt</a></td><td>Python dependencies (<code>bleak</code>).</td></tr>
+        <tr><td><a href="README.md">README.md</a></td><td>Long-form documentation.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Position model</h2>
+    <p>Sensor mounts on the sternum, Y axis pointing toward the head. The dashboard classifies orientation against the gravity vector.</p>
+    <div class="axis-grid">
+      <div class="ax"><b>Y = −1g</b><span>Standing / Upright</span></div>
+      <div class="ax"><b>Z = +1g</b><span>Supine (on back)</span></div>
+      <div class="ax"><b>Z = −1g</b><span>Prone (face down)</span></div>
+      <div class="ax"><b>X = +1g</b><span>Left Lateral</span></div>
+      <div class="ax"><b>X = −1g</b><span>Right Lateral</span></div>
+    </div>
+    <p style="margin-top:12px">Thresholds: 20° tilt = "tilted", 25° = full lateral turn, 45° = primary supine/prone/upright. Tunable in <code>orientation_from_accel()</code> in <code>b10_web.py</code>.</p>
+  </div>
+
+  <div class="card">
+    <h2>Reference hardware</h2>
+    <table>
+      <tbody>
+        <tr><td>Sensor</td><td>Minew B10 (IP66, 60-day battery, 3-axis accel + 3-axis gyro)</td></tr>
+        <tr><td>Radio</td><td>BLE 5.0 — Eddystone + iBeacon + proprietary accel frame</td></tr>
+        <tr><td>Frame</td><td>14 bytes, big-endian: <code>A1 15</code> [ax ay az gx gy gz]</td></tr>
+        <tr><td>Scale</td><td>Accelerometer counts ÷ 256 = g</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+</body>
+</html>

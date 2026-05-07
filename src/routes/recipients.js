@@ -1,11 +1,8 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
-
-// All routes require admin auth
-router.use(requireAuth);
 
 // ── List recipients ─────────────────────────────────────────────
 router.get('/', async (req, res) => {
@@ -26,11 +23,12 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const inserted = await db.one(
-      'INSERT INTO notification_recipients (email, name) VALUES ($1, $2) RETURNING id',
-      [email, name || null],
+    const result = await db.run(
+      'INSERT INTO notification_recipients (email, name) VALUES (?, ?)',
+      [email, name || null]
     );
-    res.status(201).json({ id: inserted.id, email, name, active: 1 });
+
+    res.status(201).json({ id: result.lastInsertRowid, email, name, active: 1 });
   } catch (err) {
     // WHY: Postgres unique-violation SQLSTATE is 23505 (distinct from SQLite's text message)
     if (err.code === '23505') {
@@ -63,10 +61,7 @@ router.patch('/:id', async (req, res) => {
   }
 
   values.push(req.params.id);
-  const result = await db.run(
-    `UPDATE notification_recipients SET ${sets.join(', ')} WHERE id = $${n}`,
-    values,
-  );
+  const result = await db.run(`UPDATE notification_recipients SET ${fields.join(', ')} WHERE id = ?`, values);
 
   if (result.changes === 0) {
     return res.status(404).json({ error: 'Recipient not found' });
@@ -76,10 +71,7 @@ router.patch('/:id', async (req, res) => {
 
 // ── Delete recipient ────────────────────────────────────────────
 router.delete('/:id', async (req, res) => {
-  const result = await db.run(
-    'DELETE FROM notification_recipients WHERE id = $1',
-    [req.params.id],
-  );
+  const result = await db.run('DELETE FROM notification_recipients WHERE id = ?', [req.params.id]);
   if (result.changes === 0) {
     return res.status(404).json({ error: 'Recipient not found' });
   }

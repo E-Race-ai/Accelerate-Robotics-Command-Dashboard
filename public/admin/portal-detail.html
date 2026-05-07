@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Detail — Accelerate Robotics</title>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.5; color: #1A1A1A; background: #F5F7FA; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+.brand-bar { background: linear-gradient(135deg, #0A1628 0%, #1F4E79 100%); color: #fff; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+.brand-bar .logo-name { font-weight: 700; font-size: 16px; }
+.brand-bar .logo-tag { font-size: 11px; color: rgba(255,255,255,0.7); }
+.brand-bar .top-actions { display: flex; gap: 16px; font-size: 13px; }
+.brand-bar .top-actions a { color: rgba(255,255,255,0.85); text-decoration: none; }
+.nav-bar { background: #fff; border-bottom: 1px solid #E5E7EB; padding: 0 28px; display: flex; gap: 4px; overflow-x: auto; }
+.nav-bar a { padding: 12px 16px; text-decoration: none; color: #6B7280; font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent; white-space: nowrap; }
+.nav-bar a.active { color: #1F4E79; border-bottom-color: #1F4E79; }
+.page { max-width: 1400px; margin: 0 auto; padding: 24px 28px 80px; }
+.page-header { margin-bottom: 24px; }
+.page-header h1 { margin: 0 0 6px; font-size: 28px; font-weight: 700; color: #0A1628; letter-spacing: -0.02em; }
+.page-header .sub { color: #6B7280; font-size: 14px; }
+.page-header .header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; }
+.kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.kpi { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px 18px; }
+.kpi .v { font-size: 24px; font-weight: 700; color: #0A1628; line-height: 1.1; }
+.kpi .k { font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+.kpi .delta { font-size: 11px; color: #6B7280; margin-top: 4px; }
+.tabs { display: flex; border-bottom: 1px solid #E5E7EB; margin-bottom: 20px; overflow-x: auto; }
+.tabs button { background: none; border: none; padding: 12px 18px; font-size: 13px; font-weight: 500; color: #6B7280; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; font-family: inherit; }
+.tabs button.active { color: #1F4E79; border-bottom-color: #1F4E79; }
+.tabs button .badge { display: inline-block; background: #E5E7EB; color: #4B5563; border-radius: 999px; padding: 1px 7px; font-size: 10px; margin-left: 6px; }
+.btn { background: #fff; border: 1px solid #D1D5DB; border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; color: #374151; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+.btn:hover { background: #F9FAFB; }
+.btn-primary { background: #1F4E79; border-color: #1F4E79; color: #fff; }
+.btn-primary:hover { background: #163A5C; }
+.btn-danger { color: #B91C1C; border-color: #FCA5A5; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: #F3F4F6; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.tbl { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; }
+.tbl th { background: #F9FAFB; text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #6B7280; border-bottom: 1px solid #E5E7EB; }
+.tbl td { padding: 12px 14px; border-bottom: 1px solid #F3F4F6; font-size: 13px; }
+.tbl tr:last-child td { border-bottom: none; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.pill.active { background: #D1FAE5; color: #065F46; }
+.pill.draft { background: #FEF3C7; color: #92400E; }
+.pill.archived { background: #E5E7EB; color: #4B5563; }
+.pill.invited { background: #DBEAFE; color: #1E40AF; }
+.pill.internal { background: #EDE9FE; color: #5B21B6; }
+.pill.external { background: #DBEAFE; color: #1E40AF; }
+.pill.removed { background: #FEE2E2; color: #991B1B; }
+.muted { color: #6B7280; }
+.empty { text-align: center; padding: 60px 20px; color: #6B7280; }
+.empty .ic { font-size: 32px; margin-bottom: 8px; }
+.file-list { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; }
+.file-row { display: grid; grid-template-columns: 32px 1fr auto auto auto; gap: 14px; padding: 12px 16px; border-bottom: 1px solid #F3F4F6; align-items: center; }
+.file-row:last-child { border-bottom: none; }
+.file-row:hover { background: #F9FAFB; }
+.file-row .ic { font-size: 20px; }
+.file-row .info .name { font-weight: 500; font-size: 14px; color: #0A1628; }
+.file-row .info .name .pin { color: #D97706; font-size: 11px; margin-left: 6px; }
+.file-row .info .meta { font-size: 11px; color: #6B7280; margin-top: 2px; }
+.file-row .info .desc { font-size: 12px; color: #4B5563; margin-top: 4px; }
+.file-row .pubsource { display: inline-block; background: #EDE9FE; color: #5B21B6; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: #E5E7EB; }
+.ti { position: relative; padding-bottom: 14px; }
+.ti::before { content: ''; position: absolute; left: -22px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: #1F4E79; border: 2px solid #fff; }
+.ti.upload::before { background: #059669; }
+.ti.view::before { background: #6B7280; }
+.ti.comment::before { background: #D97706; }
+.ti .text { font-size: 13px; }
+.ti .when { font-size: 11px; color: #9CA3AF; margin-top: 2px; }
+.settings-section { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; padding: 20px 22px; margin-bottom: 16px; }
+.settings-section h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: #0A1628; }
+.settings-section .sub { color: #6B7280; font-size: 12px; margin-bottom: 14px; }
+.toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid #F3F4F6; }
+.toggle-row:first-child { border-top: none; }
+.toggle-row .label { font-size: 13px; font-weight: 500; }
+.toggle-row .desc { font-size: 12px; color: #6B7280; margin-top: 2px; }
+.toggle { position: relative; display: inline-block; width: 36px; height: 20px; }
+.toggle input { display: none; }
+.toggle .slider { position: absolute; inset: 0; background: #D1D5DB; border-radius: 999px; cursor: pointer; transition: 0.2s; }
+.toggle .slider::before { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: 0.2s; }
+.toggle input:checked + .slider { background: #1F4E79; }
+.toggle input:checked + .slider::before { transform: translateX(16px); }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+.field input, .field textarea, .field select { width: 100%; border: 1px solid #D1D5DB; border-radius: 6px; padding: 8px 12px; font-size: 14px; font-family: inherit; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(10, 22, 40, 0.5); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+.modal-backdrop.open { display: flex; }
+.modal { background: #fff; border-radius: 10px; max-width: 520px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+.modal h3 { margin: 0; padding: 18px 22px; border-bottom: 1px solid #E5E7EB; font-size: 17px; font-weight: 600; color: #0A1628; }
+.modal .body { padding: 20px 22px; }
+.modal .footer { padding: 14px 22px; border-top: 1px solid #E5E7EB; display: flex; justify-content: flex-end; gap: 8px; background: #F9FAFB; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: #1F4E79; color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); z-index: 200; }
+.toast.error { background: #B91C1C; }
+.flex { display: flex; }
+.gap-8 { gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="brand-bar">
+  <div>
+    <div class="logo-name">Accelerate Robotics</div>
+    <div class="logo-tag">One Brain. Many Bots.</div>
+  </div>
+  <div class="top-actions">
+    <a href="/">View Site</a>
+    <a href="/admin/logout">Sign Out</a>
+  </div>
+</div>
+
+<div class="nav-bar">
+  <a href="/admin">Command Center</a>
+  <a href="/admin/deals">Deals</a>
+  <a href="/pages/pipeline-prospects.html">Prospects</a>
+  <a href="/pages/assessments.html">Assessments</a>
+  <a href="/pages/robot-catalog.html">Catalog</a>
+  <a href="/pages/fleet-designer.html">Fleet</a>
+  <a href="/admin/portals.html" class="active">Portals</a>
+</div>
+
+<div class="page" id="page"><div class="empty"><div class="ic">⏳</div><div>Loading…</div></div></div>
+
+<!-- Modals -->
+<div class="modal-backdrop" id="invite-modal"><div class="modal">
+  <h3>Invite Participant</h3>
+  <div class="body">
+    <div class="field"><label>Email *</label><input type="email" id="iv-email" placeholder="name@customer.com"></div>
+    <div class="field"><label>Role</label><select id="iv-role">
+      <option value="external">External (customer)</option>
+      <option value="internal">Internal (Accelerate team)</option>
+    </select></div>
+    <div class="field" style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:6px;padding:10px 12px;font-size:12px;color:#075985;">
+      A magic-link email is sent to external participants. They click the link, no password needed.
+    </div>
+  </div>
+  <div class="footer">
+    <button class="btn" id="iv-cancel">Cancel</button>
+    <button class="btn btn-primary" id="iv-send">Send Invite</button>
+  </div>
+</div></div>
+
+<div class="modal-backdrop" id="folder-modal"><div class="modal">
+  <h3>New Folder</h3>
+  <div class="body">
+    <div class="field"><label>Folder name *</label><input type="text" id="fd-name" placeholder="e.g., Proposals"></div>
+  </div>
+  <div class="footer">
+    <button class="btn" id="fd-cancel">Cancel</button>
+    <button class="btn btn-primary" id="fd-create">Create</button>
+  </div>
+</div></div>
+
+<script>
+'use strict';
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const portalId = new URLSearchParams(location.search).get('id');
+let activeTab = 'content';
+let portalState = null;
+
+function escape(s) { return (s||'').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtBytes(b) { if (!b) return '—'; if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(1) + ' KB'; if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB'; return (b/1073741824).toFixed(2) + ' GB'; }
+function ago(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso.replace(' ', 'T') + (iso.endsWith('Z') ? '' : 'Z'));
+  const diff = Date.now() - d.getTime();
+  const m = Math.floor(diff/60000), h = Math.floor(diff/3600000), days = Math.floor(diff/86400000);
+  if (days > 30) return Math.floor(days/30) + 'mo ago';
+  if (days > 0) return days + 'd ago';
+  if (h > 0) return h + 'h ago';
+  if (m > 0) return m + 'm ago';
+  return 'just now';
+}
+function fileIcon(mime) {
+  if (!mime) return '📄'; if (mime.startsWith('image/')) return '🖼';
+  if (mime.startsWith('video/')) return '🎬'; if (mime.includes('pdf')) return '📕';
+  if (mime.includes('sheet') || mime.includes('excel')) return '📊';
+  if (mime.includes('word') || mime.includes('document')) return '📝';
+  return '📄';
+}
+function eventLabel(t) { return ({'portal.created':'created the portal','portal.viewed':'visited the portal','participant.invited':'invited a participant','participant.accepted':'joined the portal','participant.signed_in':'signed in','content.uploaded':'uploaded','content.viewed':'viewed','content.downloaded':'downloaded','content.deleted':'deleted','comment.posted':'commented on','comment.replied':'replied on','folder.created':'created folder','portal.activated':'activated the portal'}[t] || t); }
+function toast(msg, isError = false) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (isError ? ' error' : '');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+async function api(path, opts = {}) {
+  const isForm = opts.body instanceof FormData;
+  const res = await fetch(path, {
+    credentials: 'include',
+    headers: isForm ? (opts.headers || {}) : { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    ...opts,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let msg; try { msg = JSON.parse(text).error; } catch (_) { msg = text; }
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+async function loadAll() {
+  if (!portalId) {
+    $('#page').innerHTML = `<div class="empty"><div class="ic">⚠️</div><div>No portal ID in URL</div></div>`;
+    return;
+  }
+  try {
+    const [portalRes, partsRes, contentRes, engRes, actRes] = await Promise.all([
+      api(`/api/portals/${portalId}`),
+      api(`/api/portals/${portalId}/participants`),
+      api(`/api/portals/${portalId}/content`),
+      api(`/api/portals/${portalId}/engagement`),
+      api(`/api/portals/${portalId}/activity`),
+    ]);
+    portalState = {
+      portal: portalRes.portal,
+      summary: portalRes.summary,
+      participants: partsRes.participants,
+      content: contentRes.content,
+      engagement: engRes,
+      activity: actRes.events,
+    };
+    render();
+  } catch (err) {
+    if (err.message.toLowerCase().includes('auth')) {
+      window.location.href = '/admin-login';
+      return;
+    }
+    $('#page').innerHTML = `<div class="empty"><div class="ic">⚠️</div><div>${escape(err.message)}</div></div>`;
+  }
+}
+
+function render() {
+  const { portal, summary, participants, content } = portalState;
+  const comments = (portalState.engagement.by_content || []).reduce((s, c) => s + 0, 0);
+  const totalComments = summary.total_comments || 0;
+  const fileCount = content.filter(c => c.kind !== 'folder').length;
+
+  $('#page').innerHTML = `
+    <div class="page-header">
+      <div style="margin-bottom:8px;"><a href="/admin/portals.html" style="color:#6B7280;text-decoration:none;font-size:12px;">← All portals</a></div>
+      <div class="header-flex">
+        <div>
+          <h1>${escape(portal.customer_name)} <span class="pill ${portal.status}" style="vertical-align:middle;margin-left:8px;font-size:11px;">${portal.status}</span></h1>
+          <div class="sub">${escape(portal.name)} · <span style="font-family:monospace;">acceleraterobotics.ai/portal/${escape(portal.slug)}</span></div>
+          ${portal.deal_id ? `<div class="sub" style="font-size:11px;margin-top:4px;">🔗 Linked to deal: <a href="/admin/deals?id=${encodeURIComponent(portal.deal_id)}" style="color:#1F4E79;">${escape(portal.deal_id)}</a></div>` : `<div class="sub" style="font-size:11px;margin-top:4px;">Standalone portal</div>`}
+        </div>
+        <div class="flex gap-8">
+          <a class="btn" href="/portal/${encodeURIComponent(portal.slug)}/" target="_blank">↗ Open public view</a>
+          <button class="btn btn-primary" onclick="openInviteModal()">+ Invite participant</button>
+        </div>
+      </div>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi"><div class="v">${summary.active_participants}/${summary.total_participants}</div><div class="k">Active customers</div>${summary.pending_invites?`<div class="delta">${summary.pending_invites} pending</div>`:''}</div>
+      <div class="kpi"><div class="v">${summary.total_visits}</div><div class="k">Total visits</div><div class="delta">${summary.visits_7d} in last 7d</div></div>
+      <div class="kpi"><div class="v">${fileCount}</div><div class="k">Files</div></div>
+      <div class="kpi"><div class="v">${totalComments}</div><div class="k">Comments</div></div>
+      <div class="kpi"><div class="v">${summary.days_since_external !== null ? summary.days_since_external + 'd' : '—'}</div><div class="k">Since last visit</div></div>
+    </div>
+    <div class="tabs">
+      ${['content','participants','activity','engagement','settings'].map(t => `<button class="${activeTab===t?'active':''}" onclick="setTab('${t}')">${t.charAt(0).toUpperCase()+t.slice(1)}${t==='content'?` <span class="badge">${content.length}</span>`:''}${t==='participants'?` <span class="badge">${participants.length}</span>`:''}</button>`).join('')}
+    </div>
+    <div id="tab-body"></div>
+  `;
+  renderTab();
+}
+
+function setTab(t) { activeTab = t; renderTab(); $$('.tabs button').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().startsWith(t))); }
+
+function renderTab() {
+  const body = $('#tab-body');
+  if (!body) return;
+  if (activeTab === 'content') body.innerHTML = renderContent();
+  else if (activeTab === 'participants') body.innerHTML = renderParticipants();
+  else if (activeTab === 'activity') body.innerHTML = renderActivity();
+  else if (activeTab === 'engagement') body.innerHTML = renderEngagement();
+  else if (activeTab === 'settings') body.innerHTML = renderSettings();
+}
+
+function renderContent() {
+  const { content } = portalState;
+  const folders = content.filter(c => c.kind === 'folder');
+  const root = content.filter(c => !c.parent_folder_id).sort((a,b) => (b.is_pinned-a.is_pinned) || a.sort_order-b.sort_order);
+  let html = `
+    <div class="toolbar">
+      <div class="muted" style="font-size:11px;">Customers see this in their portal. Pin important items to show them first.</div>
+      <div class="flex gap-8">
+        <button class="btn" onclick="openFolderModal()">+ Folder</button>
+        <label class="btn btn-primary" style="cursor:pointer;">+ Add Content<input type="file" id="upload-input" style="display:none;" onchange="uploadFile(event)"></label>
+      </div>
+    </div>
+    <div class="file-list">${root.length === 0 ? `<div class="empty"><div class="ic">📁</div><div>No content yet</div></div>` : root.map(c => fileRow(c)).join('')}</div>
+  `;
+  folders.forEach(f => {
+    const inside = content.filter(c => c.parent_folder_id === f.id);
+    if (!inside.length) return;
+    html += `<div style="margin-top:22px;"><div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px;">📁 ${escape(f.title)}</div><div class="file-list">${inside.sort((a,b)=>b.is_pinned-a.is_pinned).map(c=>fileRow(c)).join('')}</div></div>`;
+  });
+  return html;
+}
+
+function fileRow(c) {
+  if (c.kind === 'folder') {
+    const inside = portalState.content.filter(x => x.parent_folder_id === c.id).length;
+    return `<div class="file-row"><div class="ic">📁</div><div class="info"><div class="name">${escape(c.title)}</div><div class="meta">${inside} item${inside!==1?'s':''}</div></div><div></div><div></div><div class="flex gap-8"><button class="btn btn-sm btn-ghost btn-danger" onclick="deleteItem('${c.id}')">×</button></div></div>`;
+  }
+  return `<div class="file-row"><div class="ic">${fileIcon(c.file_type)}</div><div class="info"><div class="name">${escape(c.title)} ${c.is_pinned?'<span class="pin">📌 pinned</span>':''}</div><div class="meta">${fmtBytes(c.file_size_bytes)} · uploaded by ${escape(c.uploaded_by_email)} · ${ago(c.created_at)}</div>${c.description?`<div class="desc">${escape(c.description)}</div>`:''}</div><div>${c.source_tool?`<span class="pubsource">${escape(c.source_tool.replace('_',' '))}</span>`:''}</div><div class="muted" style="font-size:11px;">${c.kind === 'published_snapshot' ? '🔗 published' : '📎 uploaded'}</div><div class="flex gap-8"><button class="btn btn-sm btn-ghost" onclick="togglePin('${c.id}')" title="${c.is_pinned?'Unpin':'Pin'}">${c.is_pinned?'📌':'📍'}</button><button class="btn btn-sm btn-ghost btn-danger" onclick="deleteItem('${c.id}')">×</button></div></div>`;
+}
+
+function renderParticipants() {
+  const { participants } = portalState;
+  return `<div class="toolbar"><div class="muted" style="font-size:11px;">Internal users use Command Center auth. External users authenticate via magic link.</div><div><button class="btn btn-primary" onclick="openInviteModal()">+ Invite participant</button></div></div>
+  <table class="tbl"><thead><tr><th>Name / email</th><th>Role</th><th>Status</th><th>Invited</th><th>Last seen</th><th></th></tr></thead><tbody>
+    ${participants.map(p => `<tr><td><div style="font-weight:600;">${escape(p.full_name||p.email.split('@')[0])}</div><div class="muted">${escape(p.email)}</div></td><td><span class="pill ${p.role}">${p.role}</span></td><td><span class="pill ${p.status}">${p.status}</span></td><td class="muted">${ago(p.invited_at)}</td><td class="muted">${ago(p.last_seen_at)}</td><td class="flex gap-8">${p.role === 'external' ? `<button class="btn btn-sm btn-ghost" onclick="resendInvite('${p.id}')">Resend</button>` : ''}<button class="btn btn-sm btn-ghost btn-danger" onclick="removeParticipant('${p.id}')">Remove</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderActivity() {
+  const events = portalState.activity || [];
+  if (events.length === 0) return `<div class="empty"><div class="ic">📊</div><div>No activity yet</div></div>`;
+  return `<div class="settings-section"><div class="timeline">${events.map(e => {
+    const cls = e.event_type.startsWith('content.upload') ? 'upload' : e.event_type.startsWith('content.view') ? 'view' : e.event_type.startsWith('comment') ? 'comment' : '';
+    let target = '';
+    if (e.target_id) {
+      const it = portalState.content.find(c => c.id === e.target_id);
+      if (it) target = ` <strong>${escape(it.title)}</strong>`;
+    }
+    return `<div class="ti ${cls}"><div class="text"><strong>${escape(e.participant_email||'system')}</strong> ${eventLabel(e.event_type)}${target}</div><div class="when">${ago(e.occurred_at)}</div></div>`;
+  }).join('')}</div></div>`;
+}
+
+function renderEngagement() {
+  const { by_participant, by_content } = portalState.engagement;
+  return `<div style="display:grid;gap:22px;">
+    <div><h3 style="margin:0 0 10px;font-size:14px;font-weight:600;">By participant</h3>
+    <table class="tbl"><thead><tr><th>Customer</th><th>Visits</th><th>Files viewed</th><th>Downloads</th><th>Comments</th><th>Last seen</th></tr></thead><tbody>
+      ${by_participant.length === 0 ? `<tr><td colspan="6" class="muted" style="text-align:center;padding:20px;">No external participants yet</td></tr>` : by_participant.map(p => `<tr><td><div style="font-weight:600;">${escape(p.full_name||p.email)}</div><div class="muted">${escape(p.email)}</div></td><td>${p.visits}</td><td>${p.views}</td><td>${p.downloads}</td><td>${p.comments}</td><td class="muted">${ago(p.last_seen_at)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div><h3 style="margin:0 0 10px;font-size:14px;font-weight:600;">By content</h3>
+    <table class="tbl"><thead><tr><th>File</th><th>Source</th><th>Views</th><th>Unique viewers</th><th>Downloads</th></tr></thead><tbody>
+      ${by_content.length === 0 ? `<tr><td colspan="5" class="muted" style="text-align:center;padding:20px;">No content yet</td></tr>` : by_content.map(c => `<tr><td>${fileIcon(c.file_type)} ${escape(c.title)}</td><td class="muted">${c.source_tool ? `<span class="pubsource">${escape(c.source_tool.replace('_',' '))}</span>` : 'uploaded'}</td><td><strong>${c.views}</strong></td><td>${c.unique_viewers}</td><td>${c.downloads}</td></tr>`).join('')}
+    </tbody></table></div>
+  </div>`;
+}
+
+function renderSettings() {
+  const p = portalState.portal;
+  return `<div style="display:grid;gap:16px;max-width:760px;">
+    <div class="settings-section"><h4>Portal status</h4><div class="sub">Activate to allow external participants. Archive to disable while preserving data.</div>
+      <div class="flex gap-8">
+        ${p.status !== 'active' ? `<button class="btn btn-primary" onclick="setStatus('active')">Activate portal</button>` : ''}
+        ${p.status === 'active' ? `<button class="btn" onclick="setStatus('draft')">Set to draft</button>` : ''}
+        <button class="btn btn-danger" onclick="archivePortal()">Archive portal</button>
+      </div>
+    </div>
+    <div class="settings-section"><h4>Branding</h4><div class="sub">How the portal looks to your customer.</div>
+      <div class="field"><label>Customer-facing name</label><input type="text" id="s-name" value="${escape(p.customer_name)}"></div>
+      <div class="field-row">
+        <div class="field"><label>Primary color</label><input type="color" id="s-primary" value="${escape(p.theme.primary_color)}"></div>
+        <div class="field"><label>Accent color</label><input type="color" id="s-accent" value="${escape(p.theme.accent_color)}"></div>
+      </div>
+      <div class="field"><label>Customer logo</label><input type="file" id="s-logo" accept="image/*" onchange="uploadLogo(event)"><div style="font-size:11px;color:#6B7280;margin-top:4px;">PNG/JPG/SVG. Max 5 MB.</div>${p.customer_logo_path ? `<div style="margin-top:8px;"><img src="/portal-asset/${encodeURIComponent(p.customer_logo_path.replace(/^logos\//,''))}.logo" style="max-height:48px;background:#fff;padding:4px 8px;border-radius:4px;border:1px solid #E5E7EB;" alt="logo"></div>` : ''}</div>
+      <div class="field"><label>Welcome message</label><textarea id="s-welcome" rows="4">${escape(p.welcome_message)}</textarea></div>
+      <button class="btn btn-primary" onclick="saveBranding()">Save branding</button>
+    </div>
+    <div class="settings-section"><h4>External participant permissions</h4><div class="sub">What customers can do.</div>
+      ${toggleRow('Allow downloads', 'External participants can download files', 'allow_external_downloads', p.allow_external_downloads)}
+      ${toggleRow('Allow uploads', 'External participants can add their own files', 'allow_external_uploads', p.allow_external_uploads)}
+      ${toggleRow('Allow invites', 'External participants can invite their colleagues', 'allow_external_invites', p.allow_external_invites)}
+    </div>
+    <div class="settings-section"><h4>Portal info</h4>
+      <table class="tbl" style="border:none;"><tr><td style="font-weight:600;width:180px;">Portal ID</td><td class="muted" style="font-family:monospace;">${escape(p.id)}</td></tr><tr><td style="font-weight:600;">URL slug</td><td style="font-family:monospace;">/portal/${escape(p.slug)}</td></tr><tr><td style="font-weight:600;">Created</td><td>${ago(p.created_at)}</td></tr><tr><td style="font-weight:600;">Owner</td><td>${escape(p.owner_user_id)}</td></tr></table>
+    </div>
+  </div>`;
+}
+
+function toggleRow(label, desc, field, checked) {
+  return `<div class="toggle-row"><div><div class="label">${label}</div><div class="desc">${desc}</div></div><label class="toggle"><input type="checkbox" ${checked?'checked':''} onchange="updateToggle('${field}', this.checked)"><span class="slider"></span></label></div>`;
+}
+
+// --- Actions ---
+async function updateToggle(field, value) {
+  try { const r = await api(`/api/portals/${portalId}`, { method: 'PATCH', body: JSON.stringify({ [field]: value ? 1 : 0 }) }); portalState.portal = r.portal; toast('Updated'); }
+  catch (err) { toast(err.message, true); }
+}
+async function saveBranding() {
+  try {
+    const r = await api(`/api/portals/${portalId}`, { method: 'PATCH', body: JSON.stringify({
+      customer_name: $('#s-name').value.trim(),
+      theme_primary_color: $('#s-primary').value,
+      theme_accent_color: $('#s-accent').value,
+      welcome_message: $('#s-welcome').value,
+    })});
+    portalState.portal = r.portal;
+    toast('Saved'); render();
+  } catch (err) { toast(err.message, true); }
+}
+async function uploadLogo(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append('logo', file);
+  try { const r = await api(`/api/portals/${portalId}/logo`, { method: 'POST', body: fd }); portalState.portal = r.portal; toast('Logo uploaded'); render(); }
+  catch (err) { toast(err.message, true); }
+}
+async function setStatus(status) {
+  try { const r = await api(`/api/portals/${portalId}`, { method: 'PATCH', body: JSON.stringify({ status })}); portalState.portal = r.portal; toast('Updated'); render(); }
+  catch (err) { toast(err.message, true); }
+}
+async function archivePortal() {
+  if (!confirm('Archive this portal? External participants lose access. Data is preserved.')) return;
+  try { await api(`/api/portals/${portalId}/archive`, { method: 'POST' }); window.location.href = '/admin/portals.html'; }
+  catch (err) { toast(err.message, true); }
+}
+async function deleteItem(id) {
+  if (!confirm('Delete this item? Cannot be undone.')) return;
+  try { await api(`/api/portals/${portalId}/content/${id}`, { method: 'DELETE' }); loadAll(); }
+  catch (err) { toast(err.message, true); }
+}
+async function togglePin(id) {
+  try { await api(`/api/portals/${portalId}/content/${id}/pin`, { method: 'POST' }); loadAll(); }
+  catch (err) { toast(err.message, true); }
+}
+async function removeParticipant(id) {
+  if (!confirm('Remove this participant? They lose access.')) return;
+  try { await api(`/api/portals/${portalId}/participants/${id}`, { method: 'DELETE' }); loadAll(); }
+  catch (err) { toast(err.message, true); }
+}
+async function resendInvite(id) {
+  try { await api(`/api/portals/${portalId}/participants/${id}/resend-invite`, { method: 'POST' }); toast('Invite resent'); }
+  catch (err) { toast(err.message, true); }
+}
+async function uploadFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append('file', file); fd.append('title', file.name);
+  try { await api(`/api/portals/${portalId}/content`, { method: 'POST', body: fd }); toast('Uploaded'); loadAll(); }
+  catch (err) { toast(err.message, true); }
+  finally { e.target.value = ''; }
+}
+
+// Modals
+function openInviteModal() { $('#invite-modal').classList.add('open'); $('#iv-email').focus(); }
+$('#iv-cancel').addEventListener('click', () => { $('#invite-modal').classList.remove('open'); $('#iv-email').value = ''; });
+$('#iv-send').addEventListener('click', async () => {
+  const email = $('#iv-email').value.trim(); const role = $('#iv-role').value;
+  if (!email || !email.includes('@')) { toast('Valid email required', true); return; }
+  try { await api(`/api/portals/${portalId}/participants`, { method: 'POST', body: JSON.stringify({ email, role })}); toast('Invite sent'); $('#iv-cancel').click(); loadAll(); }
+  catch (err) { toast(err.message, true); }
+});
+
+function openFolderModal() { $('#folder-modal').classList.add('open'); $('#fd-name').focus(); }
+$('#fd-cancel').addEventListener('click', () => { $('#folder-modal').classList.remove('open'); $('#fd-name').value = ''; });
+$('#fd-create').addEventListener('click', async () => {
+  const title = $('#fd-name').value.trim();
+  if (!title) return;
+  try { await api(`/api/portals/${portalId}/folders`, { method: 'POST', body: JSON.stringify({ title })}); $('#fd-cancel').click(); loadAll(); }
+  catch (err) { toast(err.message, true); }
+});
+
+loadAll();
+</script>
+
+</body>
+</html>

@@ -10,7 +10,7 @@ const crypto = require('crypto');
  */
 async function generateDealId(db) {
   const row = await db.one(
-    "SELECT id FROM deals WHERE id LIKE 'OPP-%' ORDER BY CAST(SUBSTRING(id FROM 5) AS INTEGER) DESC LIMIT 1"
+    "SELECT id FROM deals WHERE id LIKE 'OPP-%' ORDER BY CAST(SUBSTR(id, 5) AS INTEGER) DESC LIMIT 1",
   );
 
   if (!row) return 'OPP-001';

@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 const { notifyNewInquiry } = require('../services/email');
 
 const router = express.Router();
@@ -24,13 +24,10 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const inserted = await db.one(
-      `INSERT INTO inquiries (name, email, company, phone, message)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id`,
-      [name, email, company || null, phone || null, message],
-    );
-    const inquiryId = inserted.id;
+    const result = await db.run(`
+      INSERT INTO inquiries (name, email, company, phone, message)
+      VALUES (?, ?, ?, ?, ?)
+    `, [name, email, company || null, phone || null, message]);
 
     // Fire-and-forget email notification — don't block the response
     notifyNewInquiry({ name, email, company, phone, message }).catch(() => {});
@@ -39,17 +36,15 @@ router.post('/', async (req, res) => {
     try {
       const { generateDealId, generateId } = require('../services/id-generator');
       const dealId = await generateDealId(db);
-      await db.run(
-        `INSERT INTO deals (id, name, stage, source, notes)
-         VALUES ($1, $2, 'lead', 'inbound', $3)`,
-        [dealId, `Inquiry: ${company || name}`, `Auto-created from inquiry #${inquiryId}. Contact: ${name} <${email}>`],
-      );
+      await db.run(`
+        INSERT INTO deals (id, name, stage, source, notes)
+        VALUES (?, ?, 'lead', 'inbound', ?)
+      `, [dealId, `Inquiry: ${company || name}`, `Auto-created from inquiry #${result.lastInsertRowid}. Contact: ${name} <${email}>`]);
 
-      await db.run(
-        `INSERT INTO activities (id, deal_id, actor, action, detail)
-         VALUES ($1, $2, 'system', 'deal_created', $3)`,
-        [generateId(), dealId, JSON.stringify({ source: 'inquiry', inquiry_id: inquiryId, name, email, company })],
-      );
+      await db.run(`
+        INSERT INTO activities (id, deal_id, actor, action, detail)
+        VALUES (?, ?, 'system', 'deal_created', ?)
+      `, [generateId(), dealId, JSON.stringify({ source: 'inquiry', inquiry_id: result.lastInsertRowid, name, email, company })]);
     } catch (dealErr) {
       // WHY: Don't fail the inquiry submission if deal creation fails
       console.error('[inquiries] Auto-deal creation failed:', dealErr.message);
@@ -81,7 +76,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 // ── ADMIN: Get single inquiry ───────────────────────────────────
 router.get('/:id', requireAuth, async (req, res) => {
-  const row = await db.one('SELECT * FROM inquiries WHERE id = $1', [req.params.id]);
+  const row = await db.one('SELECT * FROM inquiries WHERE id = ?', [req.params.id]);
   if (!row) return res.status(404).json({ error: 'Inquiry not found' });
   res.json(row);
 });
@@ -95,10 +90,9 @@ router.patch('/:id', requireAuth, async (req, res) => {
     return res.status(400).json({ error: `Status must be one of: ${VALID_STATUSES.join(', ')}` });
   }
 
-  const result = await db.run(
-    `UPDATE inquiries SET status = $1, reviewed_at = NOW() WHERE id = $2`,
-    [status, req.params.id],
-  );
+  const result = await db.run(`
+    UPDATE inquiries SET status = ?, reviewed_at = datetime('now') WHERE id = ?
+  `, [status, req.params.id]);
 
   if (result.changes === 0) {
     return res.status(404).json({ error: 'Inquiry not found' });

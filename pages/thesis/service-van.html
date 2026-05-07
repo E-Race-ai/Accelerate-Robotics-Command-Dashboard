@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Robotics Service Van — Field Ops Vehicle</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --gold: #b8965a;
+        --gold-light: #d4b07a;
+        --navy: #0d2137;
+        --charcoal: #1a1a2e;
+        --cream: #f8f5ef;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; }
+
+    .card {
+        background: white;
+        border: 1px solid #e8e3d9;
+        border-radius: 1.25rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    .card:hover {
+        box-shadow: 0 12px 40px rgba(184, 150, 90, 0.15);
+        transform: translateY(-2px);
+        border-color: var(--gold);
+    }
+
+    .rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 1rem;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+    .rank-1 { background: linear-gradient(135deg, #d4b07a, #b8965a); color: white; }
+    .rank-2 { background: linear-gradient(135deg, #cbd5e1, #94a3b8); color: white; }
+    .rank-3 { background: linear-gradient(135deg, #d4a574, #b98a5a); color: white; }
+
+    .stat-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.7rem;
+        background: #f5f0e6;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #6b5c3e;
+        white-space: nowrap;
+    }
+    .stat-pill.green { background: #dcfce7; color: #166534; }
+    .stat-pill.red { background: #fee2e2; color: #991b1b; }
+    .stat-pill.blue { background: #dbeafe; color: #1e40af; }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    .status-recommended { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #166534; border: 1px solid #86efac; }
+    .status-strong { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af; border: 1px solid #93c5fd; }
+    .status-contingency { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 1px solid #fcd34d; }
+    .status-excluded { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .data-table th { background: var(--navy); color: #fff; font-weight: 700; text-align: left; padding: 0.6rem 0.75rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .data-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    .data-table tr:nth-child(even) td { background: #f9fafb; }
+    .data-table td.num { text-align: right; font-family: 'Space Grotesk', monospace; font-weight: 600; }
+    .data-table td.label { font-weight: 600; color: var(--navy); }
+    .data-table tr.total td { background: #ecfdf5 !important; font-weight: 700; border-top: 2px solid var(--navy); }
+
+    .zone-label {
+        position: absolute;
+        background: var(--gold);
+        color: white;
+        font-size: 0.6rem;
+        font-weight: 700;
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .card { break-inside: avoid; }
+        .page-break { page-break-before: always; }
+    }
+
+    .section-divider {
+        border: none;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #d4b07a, transparent);
+        margin: 3rem 0;
+    }
+</style>
+</head>
+<body class="bg-white text-gray-900">
+
+<!-- HEADER -->
+<header class="bg-gradient-to-br from-[#0d2137] via-[#1a2d44] to-[#0d2137] text-white px-8 py-12 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%221%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+
+    <div class="max-w-6xl mx-auto relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-14 h-14 rounded-xl border-2 border-[#b8965a] flex items-center justify-center">
+                        <svg class="w-8 h-8 text-[#b8965a]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 17h8m-8 0a3 3 0 01-3-3V7a2 2 0 012-2h9a2 2 0 012 2v1m-4 9V7m4 10a3 3 0 003-3V9l-3-3m0 0h-3m3 0v8m-8 0h.01M16 17h.01"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">
+                            Field <span class="text-[#b8965a]">Service Van</span>
+                        </h1>
+                        <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Rolling Workshop · Deployment Platform · Customer Success Vehicle</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-400 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    </div>
+                    <span class="text-xs font-bold text-gray-400 tracking-tight">Accelerate Robotics</span>
+                </div>
+                <div class="text-[10px] text-gray-500 text-right">
+                    Operations Asset<br>
+                    April 13, 2026
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">$42K</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Turnkey Budget</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">4 Zones</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Interior Layout</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">200Ah</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Off-Grid Power</div>
+            </div>
+            <div class="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-[#b8965a] tech-font">30d</div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Timeline to Launch</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- MISSION -->
+<section class="max-w-6xl mx-auto px-8 py-10">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-4">Mission</h2>
+    <p class="text-gray-700 text-sm leading-relaxed mb-6">A rolling robot workshop and deployment platform that lets the local Director of Operations drive from site to site and <strong class="text-[#0d2137]">deploy, repair, launch, and represent</strong> Accelerate Robotics as a polished, visible presence at every customer property. The physical manifestation of white-glove service — show up equipped, solve problems on-site, never ship a broken robot back to a depot.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="card p-4">
+            <div class="w-10 h-10 rounded-lg bg-[#b8965a]/10 flex items-center justify-center mb-2">
+                <svg class="w-5 h-5 text-[#b8965a]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <h3 class="font-bold text-[#0d2137] text-sm mb-1">Deploy</h3>
+            <p class="text-xs text-gray-600">Transport robots (30-120 kg) to new customer sites with integrated ramp + tie-downs</p>
+        </div>
+        <div class="card p-4">
+            <div class="w-10 h-10 rounded-lg bg-[#b8965a]/10 flex items-center justify-center mb-2">
+                <svg class="w-5 h-5 text-[#b8965a]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <h3 class="font-bold text-[#0d2137] text-sm mb-1">Repair</h3>
+            <p class="text-xs text-gray-600">Full workshop — diagnostic bench, oscilloscope, soldering, spare parts, OTA updates</p>
+        </div>
+        <div class="card p-4">
+            <div class="w-10 h-10 rounded-lg bg-[#b8965a]/10 flex items-center justify-center mb-2">
+                <svg class="w-5 h-5 text-[#b8965a]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <h3 class="font-bold text-[#0d2137] text-sm mb-1">Launch</h3>
+            <p class="text-xs text-gray-600">New program kickoffs, change orders, SLA reviews, staff training on-site</p>
+        </div>
+        <div class="card p-4">
+            <div class="w-10 h-10 rounded-lg bg-[#b8965a]/10 flex items-center justify-center mb-2">
+                <svg class="w-5 h-5 text-[#b8965a]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+            </div>
+            <h3 class="font-bold text-[#0d2137] text-sm mb-1">Represent</h3>
+            <p class="text-xs text-gray-600">Branded rolling billboard — Thesis co-branded decals when at customer sites</p>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- VAN CANDIDATES -->
+<section class="max-w-6xl mx-auto px-8 py-6">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-2">Miami Market — Top Candidates</h2>
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-6">Craigslist + CarGurus search · April 2026 · Real listings with verified URLs</p>
+
+    <!-- Top 3 as cards -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        <!-- #1 -->
+        <div class="card border-2 border-[#b8965a]">
+            <div class="bg-gradient-to-r from-[#b8965a] to-[#d4b07a] text-white p-4">
+                <div class="flex items-center justify-between">
+                    <span class="rank-badge" style="background:white; color:#b8965a;">1</span>
+                    <span class="status-badge status-recommended">Recommended</span>
+                </div>
+                <h3 class="headline text-lg font-bold mt-3">2020 RAM ProMaster 3500</h3>
+                <p class="text-xs opacity-90 tracking-wider uppercase mt-1">159" High Roof Extended</p>
+            </div>
+            <div class="p-5">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Mileage</div>
+                        <div class="text-lg font-bold text-[#0d2137] tech-font">66,852</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Asking Price</div>
+                        <div class="text-lg font-bold text-[#166534] tech-font">$21,999</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Location</div>
+                        <div class="text-sm font-semibold text-[#0d2137]">West Park, FL</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Fuel</div>
+                        <div class="text-sm font-semibold text-[#0d2137]">Gas V6</div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-1 mb-3">
+                    <span class="stat-pill green">Lowest miles in class</span>
+                    <span class="stat-pill green">FWD = low load floor</span>
+                    <span class="stat-pill blue">Best TCO</span>
+                </div>
+                <p class="text-xs text-gray-600 leading-relaxed">Lowest-mile high-roof 3500 on the market. FWD layout means ~21" load height vs. 28" on Sprinter/Transit — significantly easier robot ramp loading. Gas V6 is cheapest Miami maintenance with no DEF/DPF risk.</p>
+            </div>
+        </div>
+
+        <!-- #2 -->
+        <div class="card">
+            <div class="bg-gradient-to-r from-slate-700 to-slate-500 text-white p-4">
+                <div class="flex items-center justify-between">
+                    <span class="rank-badge" style="background:white; color:#334155;">2</span>
+                    <span class="status-badge status-strong">Brand Play</span>
+                </div>
+                <h3 class="headline text-lg font-bold mt-3">2020 Mercedes Sprinter 2500</h3>
+                <p class="text-xs opacity-90 tracking-wider uppercase mt-1">170" High Roof</p>
+            </div>
+            <div class="p-5">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Mileage</div>
+                        <div class="text-lg font-bold text-[#0d2137] tech-font">85,932</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Asking Price</div>
+                        <div class="text-lg font-bold text-[#166534] tech-font">$27,995</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Location</div>
+                        <div class="text-sm font-semibold text-[#0d2137]">Hollywood, FL</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Fuel</div>
+                        <div class="text-sm font-semibold text-[#0d2137]">Diesel</div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-1 mb-3">
+                    <span class="stat-pill blue">Luxury brand signal</span>
+                    <span class="stat-pill green">Best resale</span>
+                    <span class="stat-pill">Diesel longevity</span>
+                </div>
+                <p class="text-xs text-gray-600 leading-relaxed">Best spec-to-price Sprinter available. Diesel longevity (400K+ with maintenance). Holds resale value. Best brand signal at Hilton/Curio customer sites — reads as luxury-service vendor.</p>
+            </div>
+        </div>
+
+        <!-- #3 -->
+        <div class="card">
+            <div class="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-4">
+                <div class="flex items-center justify-between">
+                    <span class="rank-badge" style="background:white; color:#1e40af;">3</span>
+                    <span class="status-badge status-contingency">Reliability Play</span>
+                </div>
+                <h3 class="headline text-lg font-bold mt-3">2020 Ford Transit 350 HD</h3>
+                <p class="text-xs opacity-90 tracking-wider uppercase mt-1">Extended High Roof</p>
+            </div>
+            <div class="p-5">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Mileage</div>
+                        <div class="text-lg font-bold text-[#0d2137] tech-font">91,287</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Asking Price</div>
+                        <div class="text-lg font-bold text-[#166534] tech-font">$28,900</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Location</div>
+                        <div class="text-sm font-semibold text-[#0d2137]">Hialeah, FL</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider">Fuel</div>
+                        <div class="text-sm font-semibold text-[#0d2137]">Gas V6</div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-1 mb-3">
+                    <span class="stat-pill green">Highest payload</span>
+                    <span class="stat-pill blue">Best FL dealer network</span>
+                    <span class="stat-pill">Boring-reliable</span>
+                </div>
+                <p class="text-xs text-gray-600 leading-relaxed">350HD payload rating handles two S300-class robots + full tool chest + spares without going over GVWR. Best Ford service density in South Florida — the operational reliability play.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Runner-up table -->
+    <h3 class="text-lg font-bold text-[#0d2137] mb-3">Additional Qualified Candidates</h3>
+    <div class="overflow-x-auto rounded-xl border border-gray-200 mb-6">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Year / Make / Model</th>
+                    <th>Configuration</th>
+                    <th class="text-right">Miles</th>
+                    <th class="text-right">Price</th>
+                    <th>Location</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label">2021 Mercedes Sprinter 2500</td>
+                    <td>170" High Roof · Diesel</td>
+                    <td class="num">73,491</td>
+                    <td class="num">$28,990</td>
+                    <td>Pompano Beach</td>
+                </tr>
+                <tr>
+                    <td class="label">2021 RAM ProMaster 3500</td>
+                    <td>159" High Roof Extended</td>
+                    <td class="num">101,481</td>
+                    <td class="num">$18,995</td>
+                    <td>Hollywood</td>
+                </tr>
+                <tr>
+                    <td class="label">2020 RAM ProMaster 3500</td>
+                    <td>159" High Roof Extended</td>
+                    <td class="num">89,320</td>
+                    <td class="num">$18,999</td>
+                    <td>West Park</td>
+                </tr>
+                <tr>
+                    <td class="label">2021 Ford Transit 250</td>
+                    <td>High Roof Standard WB</td>
+                    <td class="num">81,280</td>
+                    <td class="num">$24,900</td>
+                    <td>Hialeah</td>
+                </tr>
+                <tr>
+                    <td class="label">2020 Ford Transit 250</td>
+                    <td>Extended High Roof</td>
+                    <td class="num">86,210</td>
+                    <td class="num">$23,995</td>
+                    <td>Miami</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Excluded warning -->
+    <div class="bg-red-50 border-l-4 border-red-500 p-5 rounded-r-xl mb-6">
+        <h4 class="font-bold text-red-900 mb-2 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            Miami Market Red Flags — Do Not Pursue
+        </h4>
+        <ul class="text-xs text-red-800 space-y-1 list-disc list-inside">
+            <li><strong>"Finance-bait" listings</strong> — Hollywood dealers post $10-14K headline prices on 2019+ vans; it's actually "$2K down" advertised payment, not sale price</li>
+            <li><strong>2023 Ford Transit 350 @ $19,999 (Miami, "Roberto")</strong> — implausibly cheap, almost certainly salvage/rebuilt title</li>
+            <li><strong>2008 Dodge Sprinter @ $23,500</strong> — pre-emissions era, overpriced</li>
+            <li><strong>2016 Sprinter @ $12,900 (272K mi)</strong> — mileage disqualifies</li>
+        </ul>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- INTERIOR LAYOUT -->
+<section class="max-w-6xl mx-auto px-8 py-6 page-break">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-2">Interior Layout</h2>
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-6">4-zone functional layout · rear-to-front</p>
+
+    <!-- ASCII-style floor plan -->
+    <div class="bg-[#f8f5ef] border-2 border-[#e8e3d9] rounded-xl p-6 mb-8">
+        <div class="text-center mb-3">
+            <span class="text-[10px] tracking-widest text-gray-500 uppercase">Floor Plan — 170" Wheelbase High Roof Cargo Van</span>
+        </div>
+        <div class="grid grid-cols-4 gap-2">
+            <!-- Zone 1: Robot Bay -->
+            <div class="relative bg-gradient-to-br from-[#b8965a]/20 to-[#d4b07a]/20 border-2 border-[#b8965a] rounded-lg p-4 min-h-[180px] flex flex-col justify-between">
+                <div>
+                    <span class="text-[9px] font-bold text-[#b8965a] uppercase tracking-wider">Zone 1 · Rear</span>
+                    <h3 class="font-bold text-[#0d2137] text-sm mt-1">Robot Bay</h3>
+                </div>
+                <ul class="text-[10px] text-gray-700 space-y-0.5">
+                    <li>• Folding aluminum ramp (2,500 lb)</li>
+                    <li>• E-track floor + walls</li>
+                    <li>• Non-slip rubber mat</li>
+                    <li>• Heavy wheel chocks</li>
+                    <li>• Soft cam-buckle straps</li>
+                    <li>• LED overhead work lights</li>
+                </ul>
+            </div>
+
+            <!-- Zone 2: Workbench -->
+            <div class="relative bg-blue-50 border-2 border-blue-300 rounded-lg p-4 min-h-[180px] flex flex-col justify-between">
+                <div>
+                    <span class="text-[9px] font-bold text-blue-700 uppercase tracking-wider">Zone 2 · Middle</span>
+                    <h3 class="font-bold text-[#0d2137] text-sm mt-1">Workbench</h3>
+                </div>
+                <ul class="text-[10px] text-gray-700 space-y-0.5">
+                    <li>• Fold-down 24"×48" bench</li>
+                    <li>• 4" swivel vise</li>
+                    <li>• ESD-safe mat + ground</li>
+                    <li>• Articulating task light</li>
+                    <li>• Laptop dock (diagnostic)</li>
+                    <li>• 12V air compressor</li>
+                </ul>
+            </div>
+
+            <!-- Zone 3: Tools/Parts -->
+            <div class="relative bg-purple-50 border-2 border-purple-300 rounded-lg p-4 min-h-[180px] flex flex-col justify-between">
+                <div>
+                    <span class="text-[9px] font-bold text-purple-700 uppercase tracking-wider">Zone 3 · Curb Side</span>
+                    <h3 class="font-bold text-[#0d2137] text-sm mt-1">Tools + Parts</h3>
+                </div>
+                <ul class="text-[10px] text-gray-700 space-y-0.5">
+                    <li>• Spare batteries (all models)</li>
+                    <li>• LiDAR modules</li>
+                    <li>• Wheel assemblies</li>
+                    <li>• Tool chest (Packout/Snap-on)</li>
+                    <li>• Fluke 115 + oscilloscope</li>
+                    <li>• Solder station, heat gun</li>
+                    <li>• Consumables + fasteners</li>
+                </ul>
+            </div>
+
+            <!-- Zone 4: Office -->
+            <div class="relative bg-green-50 border-2 border-green-300 rounded-lg p-4 min-h-[180px] flex flex-col justify-between">
+                <div>
+                    <span class="text-[9px] font-bold text-green-700 uppercase tracking-wider">Zone 4 · Front</span>
+                    <h3 class="font-bold text-[#0d2137] text-sm mt-1">Office / Drive</h3>
+                </div>
+                <ul class="text-[10px] text-gray-700 space-y-0.5">
+                    <li>• Swivel captain's chair</li>
+                    <li>• Fold-down laptop tray</li>
+                    <li>• 12V/USB-C hub</li>
+                    <li>• LTE/5G mobile hotspot</li>
+                    <li>• Go-bag with site checklists</li>
+                    <li>• Customer swag kit</li>
+                </ul>
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <span class="text-[10px] text-gray-500">← REAR DOORS (180° barn) · FRONT (cab) →</span>
+        </div>
+    </div>
+</section>
+
+<!-- POWER + CLIMATE -->
+<section class="max-w-6xl mx-auto px-8 py-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Power -->
+        <div class="card p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-yellow-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-[#0d2137]">Power System</h3>
+            </div>
+            <p class="text-xs text-gray-600 mb-4">Field repairs need real power — oscilloscope, soldering iron, laptop, and overnight robot charging all running simultaneously.</p>
+            <table class="w-full text-xs">
+                <tr class="border-b border-gray-200"><td class="py-1.5 font-semibold">House bank</td><td class="text-gray-600">2x 100Ah LiFePO4 (200Ah)</td></tr>
+                <tr class="border-b border-gray-200"><td class="py-1.5 font-semibold">DC-DC charger</td><td class="text-gray-600">Victron Orion-Tr 30A</td></tr>
+                <tr class="border-b border-gray-200"><td class="py-1.5 font-semibold">Solar</td><td class="text-gray-600">200W roof + Victron MPPT</td></tr>
+                <tr class="border-b border-gray-200"><td class="py-1.5 font-semibold">Inverter</td><td class="text-gray-600">Victron MultiPlus 2000VA</td></tr>
+                <tr class="border-b border-gray-200"><td class="py-1.5 font-semibold">Shore power</td><td class="text-gray-600">30A RV-style inlet</td></tr>
+                <tr><td class="py-1.5 font-semibold">Alt path</td><td class="text-gray-600">Goal Zero Yeti 3000X ($3,500)</td></tr>
+            </table>
+        </div>
+
+        <!-- Climate -->
+        <div class="card p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-[#0d2137]">Climate Control</h3>
+            </div>
+            <p class="text-xs text-gray-600 mb-4"><strong class="text-red-700">Miami heat is the enemy of robot batteries and your soldering hand.</strong> An uninsulated cargo van hits 120°F in 30 minutes. Lithium degrades fast above 120°F.</p>
+            <table class="w-full text-xs">
+                <tr class="border-b border-gray-200"><td class="py-1.5 font-semibold">Roof A/C</td><td class="text-gray-600">Dometic Penguin II 13.5K BTU</td></tr>
+                <tr class="border-b border-gray-200"><td class="py-1.5 font-semibold">Exhaust fan</td><td class="text-gray-600">Maxxair Maxxfan Deluxe</td></tr>
+                <tr class="border-b border-gray-200"><td class="py-1.5 font-semibold">Insulation</td><td class="text-gray-600">Thinsulate + reflective</td></tr>
+                <tr><td class="py-1.5 font-semibold">Window tint</td><td class="text-gray-600">Legal limit, all rear</td></tr>
+            </table>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- BUDGET -->
+<section class="max-w-6xl mx-auto px-8 py-6">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-2">Total Investment</h2>
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-6">Turnkey budget based on recommended ProMaster path</p>
+
+    <div class="overflow-hidden rounded-xl border border-gray-200">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Line Item</th>
+                    <th>Notes</th>
+                    <th class="text-right">Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label">2020 RAM ProMaster 3500</td>
+                    <td class="text-gray-600 text-xs">West Park, FL · 66,852 mi · high-roof extended</td>
+                    <td class="num">$21,999</td>
+                </tr>
+                <tr>
+                    <td class="label">FL title + tax + tag</td>
+                    <td class="text-gray-600 text-xs">6% state + 1% Miami-Dade surtax + fees</td>
+                    <td class="num">~$1,800</td>
+                </tr>
+                <tr>
+                    <td class="label">Pre-purchase inspection</td>
+                    <td class="text-gray-600 text-xs">European Diesel Shop (Medley) or Andy's Auto (Doral)</td>
+                    <td class="num">$200</td>
+                </tr>
+                <tr>
+                    <td class="label">Ranger Design cargo upfit</td>
+                    <td class="text-gray-600 text-xs">Pre-engineered shelving, partition, ladder rack</td>
+                    <td class="num">$4,500</td>
+                </tr>
+                <tr>
+                    <td class="label">Goal Zero Yeti 3000X + 200W solar</td>
+                    <td class="text-gray-600 text-xs">Off-grid power (skips custom electrical install)</td>
+                    <td class="num">$3,500</td>
+                </tr>
+                <tr>
+                    <td class="label">Tools + spare parts starter kit</td>
+                    <td class="text-gray-600 text-xs">Oscilloscope, Fluke, Packout chest, LiDAR spares, batteries</td>
+                    <td class="num">$4,000</td>
+                </tr>
+                <tr>
+                    <td class="label">Wrap + branding</td>
+                    <td class="text-gray-600 text-xs">Full vinyl wrap, magnetic Thesis co-brand panels, QR decals</td>
+                    <td class="num">$4,500</td>
+                </tr>
+                <tr>
+                    <td class="label">Misc build</td>
+                    <td class="text-gray-600 text-xs">Aluminum ramp, tie-downs, ESD mat, lighting, hotspot</td>
+                    <td class="num">$1,500</td>
+                </tr>
+                <tr class="total">
+                    <td>Total Turnkey</td>
+                    <td>ProMaster path · ready for deployment</td>
+                    <td class="num">$42,000</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p class="text-xs text-gray-500 mt-3 italic">Sprinter path adds ~$6,500 for equivalent buildout — justifiable if the luxury brand signal at Hilton/Curio properties is strategically important.</p>
+</section>
+
+<hr class="section-divider">
+
+<!-- ACTION PLAN -->
+<section class="max-w-6xl mx-auto px-8 py-6 page-break">
+    <h2 class="text-2xl headline font-bold text-[#0d2137] mb-2">Action Plan — Next 30 Days</h2>
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-6">From purchase to first Thesis deployment</p>
+
+    <div class="relative">
+        <div class="absolute left-8 top-4 bottom-4 w-0.5 bg-[#e8e3d9]"></div>
+
+        <!-- Week 1 -->
+        <div class="flex gap-6 mb-6 relative">
+            <div class="flex-shrink-0 w-16 h-16 rounded-full bg-gradient-to-br from-[#b8965a] to-[#d4b07a] flex items-center justify-center text-white font-bold text-sm tech-font shadow-lg relative z-10">
+                WEEK<br>1
+            </div>
+            <div class="flex-1 card p-5">
+                <h3 class="font-bold text-[#0d2137] mb-2">Verify & Inspect</h3>
+                <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• Call West Park dealer on ProMaster — confirm available, request VIN</li>
+                    <li>• Pull Carfax + NMVTIS (flood check — critical in South Florida)</li>
+                    <li>• Demand dash mileage photo before visiting</li>
+                    <li>• Book PPI at European Diesel Shop or Andy's Auto</li>
+                    <li>• Call Hollywood dealer on Sprinter backup candidate</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Week 2 -->
+        <div class="flex gap-6 mb-6 relative">
+            <div class="flex-shrink-0 w-16 h-16 rounded-full bg-gradient-to-br from-[#b8965a] to-[#d4b07a] flex items-center justify-center text-white font-bold text-sm tech-font shadow-lg relative z-10">
+                WEEK<br>2
+            </div>
+            <div class="flex-1 card p-5">
+                <h3 class="font-bold text-[#0d2137] mb-2">Purchase</h3>
+                <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• PPI results reviewed — pass or walk away</li>
+                    <li>• Test drive both top candidates</li>
+                    <li>• Negotiate — ProMasters depreciate fast, aim $20-21K out the door</li>
+                    <li>• Purchase + title transfer (commercial auto insurance activated)</li>
+                    <li>• Schedule wrap design kickoff (2-week lead time starts now)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Week 3 -->
+        <div class="flex gap-6 mb-6 relative">
+            <div class="flex-shrink-0 w-16 h-16 rounded-full bg-gradient-to-br from-[#b8965a] to-[#d4b07a] flex items-center justify-center text-white font-bold text-sm tech-font shadow-lg relative z-10">
+                WEEK<br>3
+            </div>
+            <div class="flex-1 card p-5">
+                <h3 class="font-bold text-[#0d2137] mb-2">Build-Out</h3>
+                <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• Order Ranger Design cargo package (shelving, partition, ladder rack)</li>
+                    <li>• Order Goal Zero Yeti 3000X + 200W solar panel</li>
+                    <li>• Order tools + spare parts starter kit (Packout, Fluke, LiDAR spares, batteries)</li>
+                    <li>• Install cargo package (DIY weekend or local installer)</li>
+                    <li>• Wrap design approved, production begins</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Week 4 -->
+        <div class="flex gap-6 relative">
+            <div class="flex-shrink-0 w-16 h-16 rounded-full bg-gradient-to-br from-[#166534] to-[#22c55e] flex items-center justify-center text-white font-bold text-sm tech-font shadow-lg relative z-10">
+                WEEK<br>4
+            </div>
+            <div class="flex-1 card p-5 border-2 border-green-300">
+                <h3 class="font-bold text-[#0d2137] mb-2">Launch</h3>
+                <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• Apply wrap + magnetic Thesis co-brand panels</li>
+                    <li>• Full load-out — tools, parts, robots, consumables</li>
+                    <li>• Stage overnight shake-down drive to Thesis (test GPS, tie-downs)</li>
+                    <li>• <strong class="text-[#166534]">Ready for Thesis Hotel Phase 1 kickoff</strong></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- DECISION SUMMARY -->
+<section class="max-w-6xl mx-auto px-8 py-6">
+    <div class="bg-gradient-to-br from-[#0d2137] to-[#1a2d44] text-white rounded-2xl p-8 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-40 h-40 bg-[#b8965a] opacity-10 rounded-full -mr-20 -mt-20"></div>
+        <div class="relative">
+            <div class="text-xs font-semibold text-[#b8965a] uppercase tracking-widest mb-3">The Call</div>
+            <h2 class="headline text-3xl font-bold mb-4">Buy the ProMaster. Build it fast.</h2>
+            <p class="text-gray-300 text-sm leading-relaxed mb-5">The 2020 RAM ProMaster 3500 at $21,999 / 66,852 mi / West Park, FL is the right first service van for Accelerate Robotics. Lowest load floor, lowest miles, cheapest Miami maintenance, $6K headroom for a better build-out. Miami service-van market has real flood/title risk — PPI is non-negotiable. Sprinter stays on the table as a brand-signal upgrade when a second van is needed for expansion.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Pick</div>
+                    <div class="text-sm font-semibold">2020 RAM ProMaster 3500 High Roof</div>
+                </div>
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Price</div>
+                    <div class="text-sm font-semibold">$21,999 · $42K turnkey total</div>
+                </div>
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Timeline</div>
+                    <div class="text-sm font-semibold">30 days from PPI to deployment</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="bg-[#0d2137] text-white py-8 mt-12">
+    <div class="max-w-6xl mx-auto px-8">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <div class="text-xs text-gray-400">Accelerate Robotics · Operations Asset</div>
+                <div class="text-[10px] text-gray-500 mt-1">Field Service Van — Vehicle Selection + Build-Out Plan · April 13, 2026</div>
+            </div>
+            <div class="text-[10px] text-gray-500">
+                Source: <code>docs/operations/service-van-buildout.md</code>
+            </div>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
