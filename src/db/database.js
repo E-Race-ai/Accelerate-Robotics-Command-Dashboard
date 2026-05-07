@@ -137,15 +137,7 @@ async function initSchema() {
       notes TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
-      closed_at TEXT,
-      -- WHY: 'dormant' is a soft-pause flag that keeps the deal in its current
-      -- stage but signals "we're not actively pushing this right now." Different
-      -- from 'lost' (which is terminal). Default 0 so existing rows are active.
-      is_dormant INTEGER NOT NULL DEFAULT 0,
-      -- WHY: ISO-8601 timestamp of the next scheduled meeting / follow-up. Powers
-      -- the per-card scheduler chip and a future "today's meetings" digest.
-      next_meeting_at TEXT,
-      next_meeting_note TEXT
+      closed_at TEXT
     )`,
     `CREATE TABLE IF NOT EXISTS contacts (
       id TEXT PRIMARY KEY,
@@ -627,120 +619,6 @@ async function initSchema() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_glossary_user_points ON glossary_user_progress(total_points DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_glossary_activities_user ON glossary_activities(user_email, created_at DESC)`,
-
-    // ── Customer Portals (deal rooms) ───────────────────────────────
-    // WHY: Branded customer-facing spaces that replace ShowPad Shared Spaces.
-    // Internal admins curate content; external customers authenticate via
-    // magic link and view/comment/upload. All portal_* tables share an
-    // explicit portal_id FK so tenant isolation can be enforced at the
-    // query layer regardless of URL-supplied slug.
-    `CREATE TABLE IF NOT EXISTS portal_spaces (
-      id                          TEXT PRIMARY KEY,
-      slug                        TEXT NOT NULL UNIQUE,
-      name                        TEXT NOT NULL,
-      customer_name               TEXT NOT NULL,
-      customer_logo_path          TEXT,
-      status                      TEXT NOT NULL DEFAULT 'draft',
-      deal_id                     TEXT,
-      allow_external_uploads      INTEGER NOT NULL DEFAULT 1,
-      allow_external_downloads    INTEGER NOT NULL DEFAULT 1,
-      allow_external_invites      INTEGER NOT NULL DEFAULT 0,
-      welcome_message             TEXT NOT NULL DEFAULT '',
-      theme_primary_color         TEXT NOT NULL DEFAULT '#1F4E79',
-      theme_accent_color          TEXT NOT NULL DEFAULT '#2E86C1',
-      owner_user_id               TEXT NOT NULL,
-      created_at                  TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at                  TEXT NOT NULL DEFAULT (datetime('now')),
-      archived_at                 TEXT
-    )`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_slug    ON portal_spaces(slug)`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_status  ON portal_spaces(status)`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_owner   ON portal_spaces(owner_user_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_deal    ON portal_spaces(deal_id)`,
-
-    // External participants authenticate via magic link; internal admins
-    // appear here too so the team-tab listing reflects the full roster.
-    `CREATE TABLE IF NOT EXISTS portal_participants (
-      id              TEXT PRIMARY KEY,
-      portal_id       TEXT NOT NULL REFERENCES portal_spaces(id) ON DELETE CASCADE,
-      email           TEXT NOT NULL,
-      full_name       TEXT,
-      role            TEXT NOT NULL,
-      status          TEXT NOT NULL DEFAULT 'invited',
-      invited_at      TEXT NOT NULL DEFAULT (datetime('now')),
-      invited_by      TEXT NOT NULL,
-      last_seen_at    TEXT,
-      UNIQUE (portal_id, email)
-    )`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_participants_portal ON portal_participants(portal_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_participants_email  ON portal_participants(email)`,
-
-    // Folders have kind='folder' and no file_path; files have kind='file'
-    // or 'published_snapshot'. parent_folder_id is self-referential for
-    // 1-level-deep folder hierarchy in v1.
-    `CREATE TABLE IF NOT EXISTS portal_content (
-      id                   TEXT PRIMARY KEY,
-      portal_id            TEXT NOT NULL REFERENCES portal_spaces(id) ON DELETE CASCADE,
-      parent_folder_id     TEXT REFERENCES portal_content(id) ON DELETE CASCADE,
-      kind                 TEXT NOT NULL,
-      title                TEXT NOT NULL,
-      description          TEXT NOT NULL DEFAULT '',
-      file_path            TEXT,
-      file_type            TEXT,
-      file_size_bytes      INTEGER,
-      source_tool          TEXT,
-      source_record_id     TEXT,
-      uploaded_by_email    TEXT NOT NULL,
-      sort_order           INTEGER NOT NULL DEFAULT 0,
-      is_pinned            INTEGER NOT NULL DEFAULT 0,
-      created_at           TEXT NOT NULL DEFAULT (datetime('now'))
-    )`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_content_portal ON portal_content(portal_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_content_parent ON portal_content(parent_folder_id)`,
-
-    `CREATE TABLE IF NOT EXISTS portal_comments (
-      id                   TEXT PRIMARY KEY,
-      portal_id            TEXT NOT NULL REFERENCES portal_spaces(id) ON DELETE CASCADE,
-      content_item_id      TEXT NOT NULL REFERENCES portal_content(id) ON DELETE CASCADE,
-      parent_comment_id    TEXT REFERENCES portal_comments(id) ON DELETE CASCADE,
-      author_email         TEXT NOT NULL,
-      body                 TEXT NOT NULL,
-      created_at           TEXT NOT NULL DEFAULT (datetime('now'))
-    )`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_comments_portal  ON portal_comments(portal_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_comments_content ON portal_comments(content_item_id)`,
-
-    // Append-only event log. Drives the engagement dashboard and digest emails.
-    // event_type values are constants in src/services/portals/db.js EVENT_TYPES.
-    `CREATE TABLE IF NOT EXISTS portal_activity (
-      id                   TEXT PRIMARY KEY,
-      portal_id            TEXT NOT NULL REFERENCES portal_spaces(id) ON DELETE CASCADE,
-      participant_email    TEXT,
-      event_type           TEXT NOT NULL,
-      target_type          TEXT,
-      target_id            TEXT,
-      metadata_json        TEXT NOT NULL DEFAULT '{}',
-      ip_address           TEXT,
-      user_agent           TEXT,
-      occurred_at          TEXT NOT NULL DEFAULT (datetime('now'))
-    )`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_activity_portal      ON portal_activity(portal_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_activity_occurred    ON portal_activity(occurred_at)`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_activity_participant ON portal_activity(portal_id, participant_email)`,
-
-    // Single-use, time-limited tokens for external auth.
-    // token_hash is sha256 of the raw token; raw token only exists in the email link.
-    `CREATE TABLE IF NOT EXISTS portal_magic_tokens (
-      id              TEXT PRIMARY KEY,
-      participant_id  TEXT NOT NULL REFERENCES portal_participants(id) ON DELETE CASCADE,
-      token_hash      TEXT NOT NULL UNIQUE,
-      expires_at      TEXT NOT NULL,
-      consumed_at     TEXT,
-      created_ip      TEXT,
-      created_at      TEXT NOT NULL DEFAULT (datetime('now'))
-    )`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_magic_tokens_hash ON portal_magic_tokens(token_hash)`,
-    `CREATE INDEX IF NOT EXISTS idx_portal_magic_tokens_participant ON portal_magic_tokens(participant_id)`,
   ];
 
   for (const sql of statements) {
@@ -825,13 +703,6 @@ async function initSchema() {
   // sweep find tickets with no activity in N days.
   await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN archived_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN updated_at TEXT");
-  // WHY: Soft-pause flag for deals — distinct from 'lost'. Lets sales park a
-  // deal that's not progressing without losing it from the pipeline view.
-  await additiveAlterIfMissing("ALTER TABLE deals ADD COLUMN is_dormant INTEGER NOT NULL DEFAULT 0");
-  // WHY: Next meeting / follow-up scheduler. Surfaced on the kanban card and
-  // queryable for "today's meetings" digests.
-  await additiveAlterIfMissing("ALTER TABLE deals ADD COLUMN next_meeting_at TEXT");
-  await additiveAlterIfMissing("ALTER TABLE deals ADD COLUMN next_meeting_note TEXT");
 
   // WHY: Hotel Research preset markets (Miami-Dade submarkets, etc.) tag each saved
   // hotel with which submarket it came from so the rep can filter "show me only Brickell."
@@ -1003,40 +874,6 @@ async function initSchema() {
 
 // ── Seeds ───────────────────────────────────────────────────────
 async function seedAdmin() {
-  const email = process.env.ADMIN_EMAIL;
-  const password = process.env.ADMIN_PASSWORD;
-  if (!email || !password) return;
-
-<<<<<<< feat/postgres-migration
-  const existing = await one('SELECT id FROM admin_users WHERE email = $1', [email]);
-=======
-  const existing = await one('SELECT id FROM admin_users WHERE email = ?', [email]);
->>>>>>> main
-  if (existing) return;
-
-  const BCRYPT_ROUNDS = 12;
-  const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
-  await run('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)', [email, hash]);
-  console.log(`[db] Seeded admin user: ${email}`);
-
-  const recipientExists = await one('SELECT id FROM notification_recipients WHERE email = ?', [email]);
-  if (!recipientExists) {
-    await run('INSERT INTO notification_recipients (email, name, active) VALUES (?, ?, 1)', [email, 'Admin']);
-    console.log(`[db] Added admin as notification recipient`);
-  }
-}
-
-async function bootstrapAdminRoles() {
-  const raw = process.env.BOOTSTRAP_ADMIN_EMAILS;
-  if (!raw) return;
-  const emails = raw.split(',').map(e => e.trim()).filter(Boolean);
-  for (const email of emails) {
-    const result = await run(
-      "UPDATE admin_users SET role = 'admin' WHERE email = ? AND (role IS NULL OR role != 'admin')",
-      [email],
-    );
-    if (result.changes > 0) console.log(`[db] Promoted ${email} to admin role`);
-  }
   // WHY: Seed all configured admin accounts on boot. ADMIN_EMAIL is the primary;
   // ADMIN2_EMAIL is an optional second super admin (e.g. a co-founder or ops lead).
   const admins = [
@@ -1080,55 +917,6 @@ async function seedRolePermissions() {
   const existing = await one('SELECT COUNT(*) as c FROM role_permissions');
   if (existing && Number(existing.c) > 0) return;
 
-// ── Bootstrap admin role for trusted emails ─────────────────────
-// WHY: Promotes listed emails to role='admin' on every boot. Covers users created
-// via invite flow or legacy seeds that didn't set role. Env var is comma-separated.
-// Idempotent: only UPDATEs rows that don't already have role='admin'.
-function bootstrapAdminRoles() {
-  const raw = process.env.BOOTSTRAP_ADMIN_EMAILS;
-  if (!raw) return;
-  const emails = raw.split(',').map(e => e.trim()).filter(Boolean);
-  for (const email of emails) {
-    const result = await run(
-      "UPDATE admin_users SET role = 'admin' WHERE email = $1 AND (role IS NULL OR role != 'admin')",
-      [email],
-    );
-    if (result.changes > 0) console.log(`[db] Promoted ${email} to admin role`);
-  }
-}
-
-// ── Seed role permissions ───────────────────────────────────────
-// WHY: Pre-populate default permissions so every role has a known baseline.
-// Admins can customize later; this avoids a blank permissions table on first boot.
-// Also backfills new modules into existing databases that were seeded before the module list grew.
-function seedRolePermissions() {
-  const { ALL_MODULES } = require('../services/permissions');
-  const defaults = {
-    // WHY: admin gets full edit on everything; module_owner/viewer get view on toolkit pages, none on settings
-    admin: Object.fromEntries(ALL_MODULES.map(m => [m, 'edit'])),
-    module_owner: Object.fromEntries(ALL_MODULES.map(m => [m, m === 'settings' ? 'none' : 'view'])),
-    viewer: Object.fromEntries(ALL_MODULES.map(m => [m, m === 'settings' ? 'none' : 'view'])),
-  };
-  // WHY: Use INSERT OR IGNORE so new modules get seeded without overwriting admin-customized values
-  const insert = db.prepare('INSERT OR IGNORE INTO role_permissions (role, module, permission) VALUES (?, ?, ?)');
-  const seed = db.transaction(() => {
-    for (const [role, perms] of Object.entries(defaults)) {
-      for (const mod of ALL_MODULES) { insert.run(role, mod, perms[mod]); }
-    }
-  });
-  seed();
-}
-
-seedRolePermissions();
-
-// ── Seed deals ──────────────────────────────────────────────────
-// WHY: Pre-populate with existing hotel pipeline. Idempotent — skips if deals exist.
-try {
-  const { seedDeals } = require('./seed-deals');
-  seedDeals(db);
-} catch (e) {
-  // WHY: seed-deals may not exist yet during early development
-  if (!e.message.includes('Cannot find module')) throw e;
   const modules = require('../services/permissions').ALL_MODULES;
   // Defaults per design spec: admin edits everything; viewer sees everything read-only; module_owner gets per-assignment overrides.
   const matrix = {

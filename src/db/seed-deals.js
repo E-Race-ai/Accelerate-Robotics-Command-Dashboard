@@ -4,15 +4,6 @@ const { generateId } = require('../services/id-generator');
  * Seeds the database with existing hotel deals if they don't already exist.
  * Idempotent — safe to run on every boot.
  *
-<<<<<<< feat/postgres-migration
- * Accepts the db helper object ({ one, all, run }) passed in from database.js
- * to avoid a circular require at module load time.
- */
-async function seedDeals(db) {
-  const existing = await db.one('SELECT COUNT(*)::int AS c FROM deals');
-  if (existing && existing.c > 0) {
-    console.log(`[seed] ${existing.c} deals already exist, skipping seed`);
-=======
  * db is the { client, one, all, run, transaction } helper bag from database.js.
  */
 async function seedDeals(db) {
@@ -20,7 +11,6 @@ async function seedDeals(db) {
   const c = Number(existing?.c ?? 0);
   if (c > 0) {
     console.log(`[seed] ${c} deals already exist, skipping seed`);
->>>>>>> main
     return;
   }
 
@@ -72,18 +62,6 @@ async function seedDeals(db) {
     },
   ];
 
-<<<<<<< feat/postgres-migration
-  const client = await db.pool.connect();
-  try {
-    await client.query('BEGIN');
-    for (const d of deals) {
-      const fid = generateId();
-      const f = d.facility;
-      await client.query(
-        `INSERT INTO facilities (id, name, type, address, city, state, country, floors, rooms_or_units,
-          elevator_count, elevator_brand, elevator_type, surfaces, operator, brand, gm_name)
-         VALUES ($1, $2, $3, $4, $5, $6, 'United States', $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-=======
   await db.transaction(async (tx) => {
     for (const d of deals) {
       const fid = generateId();
@@ -92,7 +70,6 @@ async function seedDeals(db) {
         `INSERT INTO facilities (id, name, type, address, city, state, country, floors, rooms_or_units,
           elevator_count, elevator_brand, elevator_type, surfaces, operator, brand, gm_name)
          VALUES (?, ?, ?, ?, ?, ?, 'United States', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
->>>>>>> main
         [
           fid, f.name, f.type, f.address || null, f.city || null, f.state || null,
           f.floors || null, f.rooms_or_units || null, f.elevator_count || null,
@@ -101,15 +78,6 @@ async function seedDeals(db) {
           f.operator || null, f.brand || null, f.gm_name || null,
         ],
       );
-<<<<<<< feat/postgres-migration
-      await client.query(
-        'INSERT INTO deals (id, name, facility_id, stage, source, owner) VALUES ($1, $2, $3, $4, $5, $6)',
-        [d.id, d.name, fid, d.stage, d.source, d.owner],
-      );
-      await client.query(
-        `INSERT INTO activities (id, deal_id, actor, action, detail)
-         VALUES ($1, $2, 'system', 'deal_created', '{"source":"seed"}')`,
-=======
       await tx.run(
         'INSERT INTO deals (id, name, facility_id, stage, source, owner) VALUES (?, ?, ?, ?, ?, ?)',
         [d.id, d.name, fid, d.stage, d.source, d.owner],
@@ -117,17 +85,10 @@ async function seedDeals(db) {
       await tx.run(
         `INSERT INTO activities (id, deal_id, actor, action, detail)
          VALUES (?, ?, 'system', 'deal_created', '{"source":"seed"}')`,
->>>>>>> main
         [generateId(), d.id],
       );
     }
-    await client.query('COMMIT');
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
+  });
 
   console.log(`[seed] Created ${deals.length} deals with facilities`);
 }
