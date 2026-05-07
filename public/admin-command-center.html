@@ -1172,6 +1172,8 @@
     .atc-card-btn.primary:hover { background: #003ecc; border-color: #003ecc; }
     .atc-card-btn.success { background: #16a34a; color: white; border-color: #16a34a; }
     .atc-card-btn.success:hover { background: #108037; border-color: #108037; }
+    .atc-card-btn.danger { background: transparent; color: #94a3b8; border-color: transparent; font-size: 11px; padding: 3px 6px; margin-left: auto; }
+    .atc-card-btn.danger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
     /* ── Dashboard quick-nav (sticky jump strip) ─────────────── */
     .dashboard-quicknav {
       position: sticky;
@@ -4248,7 +4250,11 @@ function _atcDashCardHtml(req) {
         ${claimedBy ? `<span>· 🤝 <strong>${escapeHtml(claimedBy)}</strong></span>` : ''}
         ${req.due_date ? `<span class="atc-card-due ${overdue ? 'overdue' : ''}">· ⏱ ${escapeHtml(req.due_date)}</span>` : ''}
       </div>
-      ${actionHtml ? `<div class="atc-card-actions">${actionHtml}</div>` : ''}
+      ${actionHtml ? `<div class="atc-card-actions">${actionHtml}
+        <button class="atc-card-btn danger" data-action="delete" data-id="${req.id}" data-source="${isFeedback ? 'feedback' : 'collab'}" title="Delete">✕</button>
+      </div>` : `<div class="atc-card-actions">
+        <button class="atc-card-btn danger" data-action="delete" data-id="${req.id}" data-source="${isFeedback ? 'feedback' : 'collab'}" title="Delete">✕</button>
+      </div>`}
     </article>
   `;
 }
@@ -4296,7 +4302,18 @@ function _wireATCDashBoard() {
     if (!item) return;
     btn.disabled = true;
     try {
-      await _atcPatch(item, btn.dataset.action === 'claim' ? { claim: true } : { laneStatus: btn.dataset.value });
+      // WHY: Delete action uses the source attribute to hit the right API
+      if (btn.dataset.action === 'delete') {
+        if (!confirm('Permanently delete this item?')) { btn.disabled = false; return; }
+        const source = btn.dataset.source || 'collab';
+        const endpoint = source === 'feedback'
+          ? `/api/feedback/${encodeURIComponent(id)}`
+          : `/api/collab/${encodeURIComponent(id)}`;
+        const r = await fetch(endpoint, { method: 'DELETE' });
+        if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
+      } else {
+        await _atcPatch(item, btn.dataset.action === 'claim' ? { claim: true } : { laneStatus: btn.dataset.value });
+      }
       await loadCommunityBoard();
       renderActivityFeed();
     } catch (err) {
