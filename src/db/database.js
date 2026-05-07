@@ -977,7 +977,11 @@ async function seedAdmin() {
   const password = process.env.ADMIN_PASSWORD;
   if (!email || !password) return;
 
+<<<<<<< feat/postgres-migration
+  const existing = await one('SELECT id FROM admin_users WHERE email = $1', [email]);
+=======
   const existing = await one('SELECT id FROM admin_users WHERE email = ?', [email]);
+>>>>>>> main
   if (existing) return;
 
   const BCRYPT_ROUNDS = 12;
@@ -1054,13 +1058,14 @@ function bootstrapAdminRoles() {
   const raw = process.env.BOOTSTRAP_ADMIN_EMAILS;
   if (!raw) return;
   const emails = raw.split(',').map(e => e.trim()).filter(Boolean);
-  const stmt = db.prepare("UPDATE admin_users SET role = 'admin' WHERE email = ? AND (role IS NULL OR role != 'admin')");
   for (const email of emails) {
-    const result = stmt.run(email);
+    const result = await run(
+      "UPDATE admin_users SET role = 'admin' WHERE email = $1 AND (role IS NULL OR role != 'admin')",
+      [email],
+    );
     if (result.changes > 0) console.log(`[db] Promoted ${email} to admin role`);
   }
 }
-bootstrapAdminRoles();
 
 // ── Seed role permissions ───────────────────────────────────────
 // WHY: Pre-populate default permissions so every role has a known baseline.

@@ -30,7 +30,8 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({ id: result.lastInsertRowid, email, name, active: 1 });
   } catch (err) {
-    if (err.message.includes('UNIQUE constraint')) {
+    // WHY: Postgres unique-violation SQLSTATE is 23505 (distinct from SQLite's text message)
+    if (err.code === '23505') {
       return res.status(409).json({ error: 'Recipient already exists' });
     }
     console.error('[recipients] Insert error:', err.message);
@@ -41,20 +42,21 @@ router.post('/', async (req, res) => {
 // ── Update recipient ────────────────────────────────────────────
 router.patch('/:id', async (req, res) => {
   const { email, name, active } = req.body;
-  const fields = [];
+  const sets = [];
   const values = [];
+  let n = 1;
 
   if (email !== undefined) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Invalid email address' });
     }
-    fields.push('email = ?');
+    sets.push(`email = $${n++}`);
     values.push(email);
   }
-  if (name !== undefined) { fields.push('name = ?'); values.push(name); }
-  if (active !== undefined) { fields.push('active = ?'); values.push(active ? 1 : 0); }
+  if (name !== undefined) { sets.push(`name = $${n++}`); values.push(name); }
+  if (active !== undefined) { sets.push(`active = $${n++}`); values.push(active ? 1 : 0); }
 
-  if (fields.length === 0) {
+  if (sets.length === 0) {
     return res.status(400).json({ error: 'No fields to update' });
   }
 

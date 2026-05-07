@@ -50,7 +50,7 @@ router.post('/', async (req, res) => {
       console.error('[inquiries] Auto-deal creation failed:', dealErr.message);
     }
 
-    res.status(201).json({ id: result.lastInsertRowid, message: 'Inquiry submitted successfully' });
+    res.status(201).json({ id: inquiryId, message: 'Inquiry submitted successfully' });
   } catch (err) {
     console.error('[inquiries] Insert error:', err.message);
     res.status(500).json({ error: 'Failed to submit inquiry' });
@@ -64,7 +64,7 @@ router.get('/', requireAuth, async (req, res) => {
   const params = [];
 
   if (status) {
-    sql += ' WHERE status = ?';
+    sql += ' WHERE status = $1';
     params.push(status);
   }
 
