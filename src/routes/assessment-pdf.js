@@ -108,22 +108,24 @@ function drawTableRow(doc, x, y, label, value, colWidth, rowHeight, isAlternate)
  * Generate and stream a PDF report for an assessment.
  * WHY: Mounted separately with mergeParams so :id comes from the parent router.
  */
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const { id } = req.params;
 
   // ── Load data ──────────────────────────────────────────────
-  const assessment = db.prepare('SELECT * FROM assessments WHERE id = ?').get(id);
+  const assessment = await db.one('SELECT * FROM assessments WHERE id = ?', [id]);
   if (!assessment) {
     return res.status(404).json({ error: 'Assessment not found' });
   }
 
-  const zones = db.prepare(
-    'SELECT * FROM assessment_zones WHERE assessment_id = ? ORDER BY sort_order'
-  ).all(id);
+  const zones = await db.all(
+    'SELECT * FROM assessment_zones WHERE assessment_id = ? ORDER BY sort_order',
+    [id]
+  );
 
-  const stakeholders = db.prepare(
-    'SELECT * FROM assessment_stakeholders WHERE assessment_id = ? ORDER BY sort_order'
-  ).all(id);
+  const stakeholders = await db.all(
+    'SELECT * FROM assessment_stakeholders WHERE assessment_id = ? ORDER BY sort_order',
+    [id]
+  );
 
   // ── Setup PDF ──────────────────────────────────────────────
   // WHY: bufferPages: true lets us go back and add page numbers/footers
