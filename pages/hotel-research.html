@@ -7189,6 +7189,7 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
              <a target="_blank" rel="noopener" href="${anchorBookSearch}" style="background:rgba(255,255,255,0.15);color:white;padding:3px 8px;border-radius:6px;font-size:0.7rem;text-decoration:none;font-weight:600">🛏 Book stay</a>
              ${anchorHotel.website ? `<a target="_blank" rel="noopener" href="${escapeHtml(anchorHotel.website)}" style="background:rgba(255,255,255,0.15);color:white;padding:3px 8px;border-radius:6px;font-size:0.7rem;text-decoration:none;font-weight:600">🌐 Site</a>` : ''}
              <button type="button" onclick="window._openAssessmentForm(${r.id})" style="background:#fbbf24;color:#1e293b;border:0;padding:3px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer">📝 Assessment</button>
+             <button type="button" onclick="window._clearAnchor(${r.id})" style="background:rgba(255,255,255,0.15);color:#fca5a5;border:0;padding:3px 8px;border-radius:6px;font-size:0.7rem;font-weight:600;cursor:pointer">↩ Undo</button>
            </div>
          </div>`
       : stops.length ? `<div class="schedule-day-anchor" style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;padding:8px 10px;margin:8px 0">
@@ -7261,6 +7262,20 @@ window._pickAnchor = async function(routeId, hotelId) {
     if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
   } catch (err) {
     alert('Could not set anchor: ' + err.message);
+  }
+};
+
+// ── Clear anchor — undo an overnight anchor selection
+window._clearAnchor = async function(routeId) {
+  try {
+    await fetch(`/api/hotel-research/routes/${routeId}`, {
+      method: 'PATCH', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anchor_hotel_id: null, assessment_status: null }),
+    });
+    if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
+  } catch (err) {
+    alert('Could not clear anchor: ' + err.message);
   }
 };
 
