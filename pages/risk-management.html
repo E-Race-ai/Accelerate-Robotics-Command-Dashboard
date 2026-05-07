@@ -487,6 +487,287 @@
       color: var(--ink-3); border: 0.5px solid var(--hairline);
     }
 
+    /* ─── Today's 3 — curated CEO focus ──────────────────────────── */
+    .todays-three {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      margin: 0 0 28px;
+      background: var(--ink);
+      color: var(--paper);
+      position: relative;
+      overflow: hidden;
+    }
+    .todays-three::before {
+      content: 'Today · CEO focus';
+      position: absolute; top: 14px; right: 18px;
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(246,244,238,0.45);
+      pointer-events: none;
+    }
+    .todays-three::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: 0;
+      height: 2px; background: var(--primary);
+    }
+    .todays-three .t3-cell {
+      padding: 32px 28px 26px;
+      border-right: 0.5px solid rgba(246,244,238,0.10);
+      cursor: pointer;
+      transition: background 0.16s;
+      position: relative;
+    }
+    .todays-three .t3-cell:last-child { border-right: 0; }
+    .todays-three .t3-cell:hover { background: rgba(255,106,61,0.08); }
+    .todays-three .t3-rank {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+    .todays-three .t3-title {
+      font-family: var(--font-display);
+      font-weight: 400; font-size: 26px; line-height: 1.1;
+      letter-spacing: -0.012em;
+      margin-bottom: 12px;
+    }
+    .todays-three .t3-title em { font-style: italic; color: var(--primary); }
+    .todays-three .t3-meta {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(246,244,238,0.55);
+      margin-bottom: 14px;
+    }
+    .todays-three .t3-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+      padding: 4px 10px;
+      background: rgba(255,106,61,0.18);
+      color: var(--primary);
+      text-transform: uppercase;
+    }
+    .todays-three .t3-empty {
+      grid-column: 1 / -1;
+      padding: 40px;
+      font-family: var(--font-display); font-style: italic; font-size: 22px;
+      color: rgba(246,244,238,0.55); text-align: center;
+    }
+    @media (max-width: 880px) { .todays-three { grid-template-columns: 1fr; } .todays-three .t3-cell { border-right: 0; border-bottom: 0.5px solid rgba(246,244,238,0.10); } }
+
+    /* ─── Mitigation effectiveness — horizontal bar viz ──────────── */
+    .mitigation-frame {
+      background: white;
+      border: 0.5px solid var(--line);
+      padding: 28px 32px;
+      position: relative;
+      margin-bottom: 18px;
+    }
+    .mitigation-frame::before {
+      content: ''; position: absolute; inset: 5px;
+      border: 0.5px solid var(--line);
+      pointer-events: none;
+    }
+    .mit-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 18px; margin-bottom: 22px;
+    }
+    .mit-eyebrow {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3);
+    }
+    .mit-head h2 {
+      font-family: var(--font-display);
+      font-weight: 400; font-size: 30px; letter-spacing: -0.014em;
+      margin: 6px 0 0; line-height: 1;
+    }
+    .mit-head h2 em { font-style: italic; color: var(--primary); }
+    .mit-toggle {
+      display: inline-flex; gap: 0;
+      border: 0.5px solid var(--hairline);
+      flex-shrink: 0;
+    }
+    .mit-toggle button {
+      padding: 8px 14px;
+      background: transparent; border: 0;
+      font-family: var(--font-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-2); cursor: pointer;
+      border-right: 0.5px solid var(--hairline);
+    }
+    .mit-toggle button:last-child { border-right: 0; }
+    .mit-toggle button:hover { color: var(--primary); }
+    .mit-toggle button.active { background: var(--ink); color: var(--paper); }
+
+    .mit-bars { display: flex; flex-direction: column; gap: 10px; }
+    .mit-row {
+      display: grid;
+      grid-template-columns: 280px 1fr 90px;
+      gap: 18px;
+      align-items: center;
+      padding: 8px 0;
+      cursor: pointer;
+      border-bottom: 0.5px solid rgba(14,20,32,0.05);
+    }
+    .mit-row:last-child { border-bottom: 0; }
+    .mit-row:hover .mit-title { color: var(--primary); }
+    .mit-title {
+      font-family: var(--font-display);
+      font-size: 17px; font-weight: 500; line-height: 1.2;
+      transition: color 0.12s;
+    }
+    .mit-title .cat-mini {
+      font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ink-3);
+      display: block; margin-top: 2px;
+    }
+    .mit-bar-wrap {
+      display: flex; align-items: center; gap: 4px;
+      height: 20px; position: relative;
+    }
+    /* Inherent bar (gray, longer) sits behind residual (colored, shorter) */
+    .mit-bar {
+      height: 100%;
+      position: relative;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 8px;
+      font-family: var(--font-mono);
+      font-size: 10px; font-weight: 600;
+      color: var(--ink-2);
+    }
+    .mit-bar.inherent {
+      background: var(--ink-faint);
+      opacity: 0.32;
+    }
+    .mit-bar.residual {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      color: var(--paper);
+    }
+    .mit-bar.residual[data-band="critical"] { background: var(--band-crit-ink); }
+    .mit-bar.residual[data-band="high"]     { background: var(--band-high-ink); }
+    .mit-bar.residual[data-band="moderate"] { background: var(--band-mod-ink); }
+    .mit-bar.residual[data-band="low"]      { background: var(--band-low-ink); }
+    .mit-delta {
+      font-family: var(--font-mono);
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--success);
+      text-align: right;
+    }
+    .mit-delta[data-delta="0"] { color: var(--ink-3); }
+    @media (max-width: 880px) { .mit-row { grid-template-columns: 1fr; gap: 6px; } .mit-row .mit-delta { text-align: left; } }
+
+    /* ─── Owner accountability board ─────────────────────────────── */
+    .owner-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .owner-card {
+      background: white;
+      border: 0.5px solid var(--line);
+      padding: 18px 20px;
+      position: relative;
+    }
+    .owner-card::before {
+      content: ''; position: absolute; left: 0; top: 14px; bottom: 14px;
+      width: 2px; background: var(--primary);
+    }
+    .owner-card .owner-name {
+      font-family: var(--font-display);
+      font-weight: 500; font-size: 22px; letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+    .owner-card .owner-stats {
+      display: flex; gap: 16px;
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--ink-3); margin-bottom: 14px;
+    }
+    .owner-card .owner-stats strong {
+      font-family: var(--font-display);
+      font-size: 18px; font-weight: 500;
+      color: var(--ink); margin-right: 4px;
+      letter-spacing: -0.005em;
+    }
+    .owner-card .owner-risks {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .owner-card .owner-risk {
+      display: grid; grid-template-columns: 1fr auto auto;
+      gap: 10px; align-items: center;
+      font-size: 13px; padding: 6px 0;
+      border-top: 0.5px solid rgba(14,20,32,0.06);
+      cursor: pointer;
+    }
+    .owner-card .owner-risk:hover { color: var(--primary); }
+    .owner-card .owner-risk .or-title {
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-family: var(--font-display); font-size: 15px; font-weight: 500;
+    }
+    .owner-card .owner-risk .or-score {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 2px 7px;
+    }
+    .owner-card .owner-risk .or-score[data-band="critical"] { background: var(--band-critical); color: var(--band-crit-ink); }
+    .owner-card .owner-risk .or-score[data-band="high"]     { background: var(--band-high);     color: var(--band-high-ink); }
+    .owner-card .owner-risk .or-score[data-band="moderate"] { background: var(--band-moderate); color: var(--band-mod-ink); }
+    .owner-card .owner-risk .or-score[data-band="low"]      { background: var(--band-low);      color: var(--band-low-ink); }
+    .owner-card .owner-risk .or-trend {
+      font-family: var(--font-mono); font-size: 14px; width: 14px; text-align: center;
+    }
+
+    /* ─── Sparkline (SVG inline in register rows) ────────────────── */
+    .spark { display: inline-block; vertical-align: middle; width: 80px; height: 22px; }
+    .spark path { fill: none; stroke: var(--primary); stroke-width: 1.4; }
+    .spark .baseline { stroke: var(--ink-faint); stroke-width: 0.5; opacity: 0.4; }
+
+    /* ─── Inline edit affordances in drawer ──────────────────────── */
+    .drawer-edit {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+      margin-top: 12px;
+    }
+    .drawer-edit label {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ink-3); font-weight: 500;
+      display: block; margin-bottom: 4px;
+    }
+    .drawer-edit select,
+    .drawer-edit input,
+    .drawer-edit textarea {
+      width: 100%;
+      padding: 6px 0;
+      border: 0;
+      border-bottom: 0.5px solid var(--hairline);
+      background: transparent;
+      font: inherit;
+      font-family: 'Instrument Serif', serif; font-size: 16px;
+      color: var(--ink); border-radius: 0;
+    }
+    .drawer-edit select:focus,
+    .drawer-edit input:focus,
+    .drawer-edit textarea:focus {
+      outline: 0; border-bottom-color: var(--primary);
+    }
+    .drawer-edit textarea {
+      font-family: var(--font-body); font-size: 14px;
+      resize: vertical; min-height: 80px;
+      line-height: 1.5;
+    }
+    .drawer-edit .full { grid-column: 1 / -1; }
+    .drawer-edit-status {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.14em; color: var(--success);
+      margin-top: 8px; opacity: 0;
+      transition: opacity 0.16s;
+    }
+    .drawer-edit-status.visible { opacity: 1; }
+
     /* ── Detail drawer ──────────────────────────────────────────── */
     .drawer-backdrop {
       position: fixed; inset: 0; background: rgba(14,20,32,0.40);
@@ -581,6 +862,26 @@
     <!-- Stat strip -->
     <div class="stat-strip" id="statStrip"></div>
 
+    <!-- ═══ Today's 3 — auto-curated CEO focus ═══ -->
+    <div class="todays-three" id="todaysThree"></div>
+
+    <!-- ═══ Mitigation effectiveness — inherent → residual per risk ═══ -->
+    <div class="sec-rule"><span class="label">Mitigation effectiveness</span></div>
+    <div class="mitigation-frame">
+      <div class="mit-head">
+        <div>
+          <span class="mit-eyebrow">Inherent → residual · controls in place</span>
+          <h2>What our <em>controls</em> are containing.</h2>
+        </div>
+        <div class="mit-toggle" role="tablist">
+          <button class="active" data-sort="delta" type="button">Δ saved</button>
+          <button data-sort="residual" type="button">Residual</button>
+          <button data-sort="inherent" type="button">Inherent</button>
+        </div>
+      </div>
+      <div class="mit-bars" id="mitBars"></div>
+    </div>
+
     <!-- Heat map + top risks + alerts -->
     <div class="row-2col">
       <div class="heatmap-frame">
@@ -615,6 +916,10 @@
         </div>
       </div>
     </div>
+
+    <!-- ═══ Owner accountability — who carries what ═══ -->
+    <div class="sec-rule"><span class="label">Owner accountability</span></div>
+    <div class="owner-grid" id="ownerGrid"></div>
 
     <!-- Data feeds (live wires) -->
     <div class="sec-rule"><span class="label">Live data feeds</span></div>
@@ -667,18 +972,166 @@ const TREND_GLYPH = { rising: '↑', stable: '→', falling: '↓' };
 let DASHBOARD = null;
 let FILTER = { category: 'all', status: 'open', q: '' };
 
+let MIT_SORT = 'delta';
+
 async function loadDashboard() {
   const res = await fetch('/api/risk-management/dashboard', { credentials: 'same-origin' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   DASHBOARD = await res.json();
   $('lastRefresh').textContent = new Date(DASHBOARD.generated_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   renderStats();
+  renderTodaysThree();
+  renderMitigationBars();
   renderHeatmap();
   renderTopRisks();
   renderAlerts();
+  renderOwnerBoard();
   renderFeeds();
   renderToolbar();
   renderRegister();
+}
+
+// ─── Today's 3 — auto-curated CEO focus list ───────────────────────
+// Picks the 3 most-pressing risks RIGHT NOW based on a composite of:
+//   • is_overdue      ← review window has lapsed
+//   • residual.band   ← critical > high > moderate > low
+//   • trend === rising ← actively escalating
+// Algorithm: each risk gets a priority score (priority = bandWeight +
+// overdueBonus + trendBonus). Top 3 by priority score win the spots.
+function renderTodaysThree() {
+  const el = $('todaysThree');
+  const BAND_WEIGHT = { critical: 30, high: 18, moderate: 8, low: 2 };
+  const ranked = [...DASHBOARD.risks].map(r => ({
+    risk: r,
+    priority:
+      (BAND_WEIGHT[r.residual.band] || 0) +
+      (r.is_overdue ? 12 : 0) +
+      (r.trend === 'rising' ? 8 : 0) +
+      (r.trend === 'falling' ? -3 : 0),
+  })).sort((a, b) => b.priority - a.priority).slice(0, 3);
+  if (ranked.length === 0) {
+    el.innerHTML = '<div class="t3-empty">No risks above the focus threshold today.</div>';
+    return;
+  }
+  // Pick a one-line "why this is here" for each cell — the highest-
+  // weight reason wins so the rep sees the most actionable framing.
+  const reason = (r) => {
+    if (r.residual.band === 'critical') return 'Critical band · daily watch';
+    if (r.is_overdue)                   return 'Overdue review · last touch lapsed';
+    if (r.trend === 'rising' && r.residual.score >= 10) return 'Escalating · trend rising';
+    if (r.residual.band === 'high')     return 'High band · weekly review';
+    return `${CATEGORY_LABEL[r.category]} · score ${r.residual.score}`;
+  };
+  el.innerHTML = ranked.map((p, i) => `
+    <div class="t3-cell" data-id="${p.risk.id}">
+      <div class="t3-rank">${['First', 'Second', 'Third'][i]} on the list</div>
+      <div class="t3-title">${escapeHtml(p.risk.title)}</div>
+      <div class="t3-meta">${escapeHtml(reason(p.risk))}</div>
+      <span class="t3-pill">Score ${p.risk.residual.score} · ${TREND_GLYPH[p.risk.trend]} ${p.risk.trend}</span>
+    </div>
+  `).join('');
+  el.querySelectorAll('.t3-cell').forEach(c => c.addEventListener('click', () => openRisk(Number(c.dataset.id))));
+}
+
+// ─── Mitigation effectiveness bars ─────────────────────────────────
+// Horizontal "what controls saved us" viz. For each risk we draw the
+// inherent score as a faint gray bar (the worst case) with the
+// residual score as a bold colored bar layered on top. The gap is
+// the value the mitigations produce. Sort toggles change the focus:
+//   • delta     — biggest mitigation wins first (default — celebrates work)
+//   • residual  — biggest current exposure first (where to focus next)
+//   • inherent  — biggest underlying threat first (where to add more controls)
+function renderMitigationBars() {
+  const el = $('mitBars');
+  const sorted = [...DASHBOARD.risks].sort((a, b) => {
+    if (MIT_SORT === 'residual') return b.residual.score - a.residual.score;
+    if (MIT_SORT === 'inherent') return b.inherent.score - a.inherent.score;
+    return b.delta - a.delta;
+  });
+  // Find the max so all bars share a scale (out of 25)
+  const MAX = 25;
+  el.innerHTML = sorted.map(r => {
+    const inherentPct = (r.inherent.score / MAX) * 100;
+    const residualPct = (r.residual.score / MAX) * 100;
+    return `
+      <div class="mit-row" data-id="${r.id}">
+        <div class="mit-title">${escapeHtml(r.title)}<span class="cat-mini">${escapeHtml(CATEGORY_LABEL[r.category] || r.category)} · ${escapeHtml(r.owner || 'unassigned')}</span></div>
+        <div class="mit-bar-wrap">
+          <div class="mit-bar inherent" style="width:${inherentPct}%;">${r.inherent.score}</div>
+          <div class="mit-bar residual" data-band="${r.residual.band}" style="width:${residualPct}%;">${r.residual.score}</div>
+        </div>
+        <div class="mit-delta" data-delta="${r.delta}">${r.delta > 0 ? '−' + r.delta : '0'}</div>
+      </div>
+    `;
+  }).join('');
+  el.querySelectorAll('.mit-row').forEach(row => row.addEventListener('click', () => openRisk(Number(row.dataset.id))));
+}
+// Wire the sort toggle once
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.mit-toggle button[data-sort]');
+  if (!btn) return;
+  document.querySelectorAll('.mit-toggle button').forEach(b => b.classList.toggle('active', b === btn));
+  MIT_SORT = btn.dataset.sort;
+  renderMitigationBars();
+});
+
+// ─── Owner accountability — group risks by who owns them ──────────
+function renderOwnerBoard() {
+  const el = $('ownerGrid');
+  const byOwner = {};
+  for (const r of DASHBOARD.risks) {
+    const owner = r.owner || '— Unassigned —';
+    if (!byOwner[owner]) byOwner[owner] = [];
+    byOwner[owner].push(r);
+  }
+  const groups = Object.entries(byOwner)
+    .map(([name, risks]) => ({
+      name,
+      risks: risks.sort((a, b) => b.residual.score - a.residual.score),
+      total_exposure: risks.reduce((s, r) => s + r.residual.score, 0),
+      max: Math.max(...risks.map(r => r.residual.score)),
+    }))
+    .sort((a, b) => b.total_exposure - a.total_exposure);
+  el.innerHTML = groups.map(g => `
+    <div class="owner-card">
+      <div class="owner-name">${escapeHtml(g.name)}</div>
+      <div class="owner-stats">
+        <span><strong>${g.risks.length}</strong> risks</span>
+        <span><strong>${g.total_exposure}</strong> total</span>
+        <span><strong>${g.max}</strong> max</span>
+      </div>
+      <div class="owner-risks">
+        ${g.risks.slice(0, 5).map(r => `
+          <div class="owner-risk" data-id="${r.id}">
+            <span class="or-title">${escapeHtml(r.title)}</span>
+            <span class="or-score" data-band="${r.residual.band}">${r.residual.score}</span>
+            <span class="or-trend" style="color:${r.trend==='rising'?'var(--danger)':r.trend==='falling'?'var(--success)':'var(--ink-faint)'};">${TREND_GLYPH[r.trend]}</span>
+          </div>
+        `).join('')}
+        ${g.risks.length > 5 ? `<div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.10em;color:var(--ink-3);padding:6px 0;">+${g.risks.length - 5} more</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+  el.querySelectorAll('.owner-risk').forEach(r => r.addEventListener('click', () => openRisk(Number(r.dataset.id))));
+}
+
+// ─── Sparkline SVG generator (for register rows) ──────────────────
+function sparkline(history, opts = {}) {
+  const w = opts.w || 80, h = opts.h || 22, pad = 2;
+  if (!history || history.length === 0) return `<svg class="spark" viewBox="0 0 ${w} ${h}"><line class="baseline" x1="0" y1="${h-pad}" x2="${w}" y2="${h-pad}"/></svg>`;
+  // Sort oldest → newest
+  const points = [...history].reverse();
+  const min = 1, max = 25;
+  const step = points.length > 1 ? (w - pad * 2) / (points.length - 1) : 0;
+  const path = points.map((p, i) => {
+    const x = pad + i * step;
+    const y = h - pad - ((p.residual_score - min) / (max - min)) * (h - pad * 2);
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}">
+    <line class="baseline" x1="0" y1="${h-pad}" x2="${w}" y2="${h-pad}"/>
+    <path d="${path}"/>
+  </svg>`;
 }
 
 function renderStats() {
@@ -850,7 +1303,10 @@ function renderRegister() {
         <span class="score-pill" data-band="${r.residual.band}">${r.residual.score}</span>
         ${r.delta > 0 ? `<span class="delta-good"> −${r.delta}</span>` : ''}
       </td>
-      <td><span class="trend" data-t="${r.trend}" style="font-family:var(--font-mono);font-size:14px;color:${r.trend==='rising'?'var(--danger)':r.trend==='falling'?'var(--success)':'var(--ink-faint)'};">${TREND_GLYPH[r.trend]}</span></td>
+      <td>
+        <span class="trend" data-t="${r.trend}" style="font-family:var(--font-mono);font-size:14px;color:${r.trend==='rising'?'var(--danger)':r.trend==='falling'?'var(--success)':'var(--ink-faint)'};">${TREND_GLYPH[r.trend]}</span>
+        ${sparkline([{ residual_score: r.residual.score }])}
+      </td>
       <td style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;color:${r.is_overdue ? 'var(--danger)' : 'var(--ink-3)'};">${escapeHtml(r.next_review_due || '—')}</td>
     </tr>
   `).join('');
@@ -881,9 +1337,58 @@ async function openRisk(id) {
       <p>Every ${r.review_cadence_days} days. Last reviewed ${r.last_reviewed_at ? new Date(r.last_reviewed_at).toLocaleDateString() : '—'}. Next due ${r.next_review_due || '—'}${r.is_overdue ? ' (overdue)' : ''}.</p>
     </div>
     ${history && history.length > 1 ? `<div class="drawer-section"><h4>Score history</h4><p style="font-family:var(--font-mono);font-size:12px;">${history.map(h => `${h.changed_at.slice(0,10)} · ${h.residual_score}`).join(' · ')}</p></div>` : ''}
+
+    <!-- Inline edit form — every field PATCHes back to the API on input -->
+    <div class="drawer-section" id="editPanel" hidden>
+      <h4>Edit</h4>
+      <div class="drawer-edit" id="editForm">
+        <div>
+          <label>Residual likelihood (1-5)</label>
+          <select data-field="residual_likelihood">${[1,2,3,4,5].map(n => `<option value="${n}" ${n===r.residual.likelihood?'selected':''}>${n}</option>`).join('')}</select>
+        </div>
+        <div>
+          <label>Residual impact (1-5)</label>
+          <select data-field="residual_impact">${[1,2,3,4,5].map(n => `<option value="${n}" ${n===r.residual.impact?'selected':''}>${n}</option>`).join('')}</select>
+        </div>
+        <div>
+          <label>Inherent likelihood</label>
+          <select data-field="inherent_likelihood">${[1,2,3,4,5].map(n => `<option value="${n}" ${n===r.inherent.likelihood?'selected':''}>${n}</option>`).join('')}</select>
+        </div>
+        <div>
+          <label>Inherent impact</label>
+          <select data-field="inherent_impact">${[1,2,3,4,5].map(n => `<option value="${n}" ${n===r.inherent.impact?'selected':''}>${n}</option>`).join('')}</select>
+        </div>
+        <div>
+          <label>Status</label>
+          <select data-field="status">${['open','mitigating','monitored','closed'].map(s => `<option value="${s}" ${s===r.status?'selected':''}>${s}</option>`).join('')}</select>
+        </div>
+        <div>
+          <label>Trend</label>
+          <select data-field="trend">${['rising','stable','falling'].map(s => `<option value="${s}" ${s===r.trend?'selected':''}>${s}</option>`).join('')}</select>
+        </div>
+        <div>
+          <label>Owner</label>
+          <input type="text" data-field="owner" value="${escapeHtml(r.owner || '')}">
+        </div>
+        <div>
+          <label>Review cadence (days)</label>
+          <input type="number" min="1" max="365" data-field="review_cadence_days" value="${r.review_cadence_days}">
+        </div>
+        <div class="full">
+          <label>Mitigation in place</label>
+          <textarea data-field="mitigation">${escapeHtml(r.mitigation || '')}</textarea>
+        </div>
+        <div class="full">
+          <label>Description</label>
+          <textarea data-field="description">${escapeHtml(r.description || '')}</textarea>
+        </div>
+      </div>
+      <div class="drawer-edit-status" id="editStatus">✓ Saved</div>
+    </div>
+
     <div class="drawer-actions">
       <button class="btn-primary btn" id="btnReview">Mark reviewed</button>
-      <button class="btn" id="btnEdit">Edit</button>
+      <button class="btn" id="btnEditToggle">Edit</button>
       <button class="btn" id="btnClose">Close drawer</button>
     </div>
   `;
@@ -894,7 +1399,54 @@ async function openRisk(id) {
     closeDrawer();
     loadDashboard();
   });
-  $('btnEdit').addEventListener('click', () => alert('Inline edit coming next iteration. For now, edit the risk-register-seeds.js + reseed.'));
+  $('btnEditToggle').addEventListener('click', () => {
+    const panel = $('editPanel');
+    panel.hidden = !panel.hidden;
+  });
+
+  // Wire inline-edit fields — every change PATCHes the field, debounced
+  // for text inputs so we don't spam the API on every keystroke.
+  const editForm = $('editForm');
+  const status = $('editStatus');
+  let saveTimer = null;
+  const flashSaved = () => {
+    status.classList.add('visible');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => status.classList.remove('visible'), 1400);
+  };
+  const patchField = async (field, value) => {
+    const body = { [field]: value };
+    // Coerce numbers
+    if (['residual_likelihood','residual_impact','inherent_likelihood','inherent_impact','review_cadence_days'].includes(field)) {
+      body[field] = Number(value);
+    }
+    try {
+      const res = await fetch(`/api/risk-management/risks/${id}`, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      flashSaved();
+      // Refresh the dashboard so heat map / mitigation bars / register reflect the change
+      loadDashboard();
+    } catch (err) {
+      status.textContent = '✗ ' + err.message;
+      status.classList.add('visible');
+      status.style.color = 'var(--danger)';
+    }
+  };
+  editForm.querySelectorAll('select[data-field]').forEach(el => {
+    el.addEventListener('change', () => patchField(el.dataset.field, el.value));
+  });
+  editForm.querySelectorAll('input[data-field], textarea[data-field]').forEach(el => {
+    let timer = null;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => patchField(el.dataset.field, el.value), 700);
+    });
+  });
 }
 
 function openCellList(key, risks) {
