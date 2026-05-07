@@ -67,6 +67,8 @@ router.post('/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/me', requireAuth, (req, res) => {
+  res.json({ email: req.admin.email, role: req.admin.role });
 router.get('/me', requireAuth, async (req, res) => {
   // WHY: Frontend uses permission map to show/hide toolkit cards + gate UI actions.
   try {
