@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Tracker — Accelerate Robotics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/brand.css">
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+    /* ── Gantt grid ────────────────────────────────────────── */
+    /* WHY: Each .gantt-row is its own 2-column grid (not display:contents) so SortableJS
+       can grab real block elements. Header + every row share the same column widths so
+       they still align visually. */
+    .gantt { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: white; }
+    /* WHY: Left pane widened so long project/task names fit on one line.
+       Name column gets ~320px of text space after the handle/caret/other columns. */
+    .gantt-header, .gantt-row { display: grid; grid-template-columns: 600px 1fr; }
+    .gantt-header > div { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 10px 14px; font-size: 0.72rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
+    .gantt-row > div { border-bottom: 1px solid #f3f4f6; padding: 10px 14px; position: relative; }
+    /* WHY: The right cell hosts a CSS-grid of header day-cells AND, on rows, the bars +
+       repeating-linear-gradient gridlines. Bars/gridlines span the element's full padding-
+       box, so the header day-cells must too — otherwise a 14px asymmetric horizontal
+       padding pushes Monday labels left of the Monday gridlines/tints. Strip horizontal
+       padding from the right cell only; keep vertical padding for row height. */
+    .gantt-header > div:last-child, .gantt-row > .gantt-right { padding-left: 0; padding-right: 0; }
+    /* Nested wrappers are pure structure; no border/padding of their own. */
+    .sortable-list { display: block; }
+    .item-wrap { background: white; }
+
+    .gantt-left { display: grid; grid-template-columns: 1fr 80px 60px 110px; gap: 8px; align-items: center; font-size: 0.85rem; }
+    /* WHY: --day-count drives one vertical gridline per day; --monday-offset shifts a
+       second tint layer that shades each Monday column so the cadence is visible at a
+       glance. Defaults keep the rule valid before render. The two layers are stacked:
+       (1) Monday column tint (every 7 days, offset to land on the first Monday),
+       (2) faint daily gridlines. Solid #fafafa fills in behind both. */
+    .gantt-right {
+      position: relative;
+      min-height: 36px;
+      background:
+        repeating-linear-gradient(
+          to right,
+          rgba(0,0,0,0.07) 0,
+          rgba(0,0,0,0.07) calc(100% / var(--day-count, 1)),
+          transparent calc(100% / var(--day-count, 1)),
+          transparent calc((100% / var(--day-count, 1)) * 7)
+        ),
+        repeating-linear-gradient(
+          to right,
+          transparent 0,
+          transparent calc((100% / var(--day-count, 1)) - 1px),
+          #e5e7eb calc((100% / var(--day-count, 1)) - 1px),
+          #e5e7eb calc(100% / var(--day-count, 1))
+        );
+      background-position: calc((100% / var(--day-count, 1)) * var(--monday-offset, 0)) 0, 0 0;
+      background-color: #fafafa;
+    }
+
+    .row-name { font-weight: 600; color: #111827; display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .row-name .caret { cursor: pointer; color: #9ca3af; user-select: none; }
+    .row-name.level-1 { padding-left: 18px; font-weight: 500; }
+    .row-name.level-2 { padding-left: 36px; font-weight: 400; color: #4b5563; }
+    /* WHY: Flex: 1 + overflow ellipsis forces single-line display even if a name
+       is longer than the column can fit; min-width:0 on the parent lets this shrink. */
+    .row-name-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Drag handle ──────────────────────────────────────── */
+    .drag-handle { cursor: grab; color: #d1d5db; user-select: none; font-size: 13px; line-height: 1; letter-spacing: -2px; padding: 0 2px; }
+    .drag-handle:hover { color: #6b7280; }
+    .drag-handle:active { cursor: grabbing; }
+    /* SortableJS sets .sortable-ghost on the placeholder during drag. */
+    .sortable-ghost { opacity: 0.35; }
+    .sortable-chosen { background: #f9fafb; }
+
+    .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; cursor: pointer; }
+    .pill-not_started { background: #f3f4f6; color: #4b5563; }
+    .pill-in_progress { background: #dbeafe; color: #1e40af; }
+    .pill-blocked     { background: #fee2e2; color: #991b1b; }
+    .pill-complete    { background: #dcfce7; color: #166534; }
+
+    .verify-dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block; margin-right: 4px; }
+
+    .bar { position: absolute; top: 10px; bottom: 10px; border-radius: 4px; }
+
+    .milestone { position: absolute; top: 50%; width: 12px; height: 12px; transform: translate(-50%, -50%) rotate(45deg); }
+    .milestone.gonogo { background: #A32D2D; }
+    .milestone.gonogo-line { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed #A32D2D; }
+
+    /* ── Side panel drawer ─────────────────────────────────── */
+    .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 440px; background: white; box-shadow: -4px 0 12px rgba(0,0,0,0.08); transform: translateX(100%); transition: transform 0.2s ease; z-index: 50; overflow-y: auto; }
+    .drawer.open { transform: translateX(0); }
+    .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0); pointer-events: none; transition: background 0.2s; z-index: 40; }
+    .drawer-backdrop.open { background: rgba(0,0,0,0.2); pointer-events: auto; }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; z-index: 60; }
+    .modal-backdrop.open { display: flex; align-items: center; justify-content: center; }
+    .modal { background: white; border-radius: 12px; padding: 24px; max-width: 560px; width: 100%; max-height: 80vh; overflow-y: auto; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <nav class="text-xs text-slate-500 mb-4">
+      <a href="/admin" class="hover:text-slate-800">Command Center</a>
+      <span class="mx-2">›</span>
+      <span class="text-slate-800 font-medium">Project Tracker</span>
+    </nav>
+
+    <header class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 headline">Project Tracker</h1>
+        <p class="text-sm text-slate-500 mt-1">Sprint-based workstream planner</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <select id="sprint-selector" class="border border-slate-300 rounded-md px-3 py-2 text-sm"></select>
+        <button id="btn-new-sprint" class="bg-slate-900 text-white text-sm font-semibold px-4 py-2 rounded-md hover:bg-slate-800">+ New Sprint</button>
+        <button id="btn-manage-people" class="border border-slate-300 text-slate-700 text-sm font-semibold px-4 py-2 rounded-md hover:bg-slate-100">Manage People</button>
+      </div>
+    </header>
+
+    <section id="sprint-context" class="bg-white rounded-lg border border-slate-200 p-4 mb-6 flex items-center justify-between">
+      <div>
+        <div id="sprint-name" class="text-lg font-semibold text-slate-900">Loading…</div>
+        <div id="sprint-dates" class="text-xs text-slate-500"></div>
+      </div>
+      <div id="sprint-summary" class="text-xs text-slate-600"></div>
+    </section>
+
+    <section id="gantt-root"></section>
+
+    <div class="mt-4">
+      <button id="btn-add-project" class="text-sm text-slate-600 hover:text-slate-900 font-medium">+ Add Project</button>
+    </div>
+  </main>
+
+  <!-- Drawer -->
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+  <aside class="drawer" id="drawer">
+    <div class="p-6">
+      <h2 class="text-lg font-semibold mb-4" id="drawer-title">Item</h2>
+      <form id="drawer-form" class="space-y-4"></form>
+    </div>
+  </aside>
+
+  <!-- Manage People modal -->
+  <div class="modal-backdrop" id="people-modal-backdrop">
+    <div class="modal">
+      <h2 class="text-lg font-semibold mb-4 headline">Manage People</h2>
+      <div id="people-list" class="space-y-2 mb-4"></div>
+      <form id="person-add-form" class="flex gap-2 mb-4">
+        <input id="person-initials" placeholder="Initials" maxlength="20" class="border border-slate-300 rounded px-3 py-1 text-sm flex-none w-24" required>
+        <input id="person-fullname" placeholder="Full name (optional)" class="border border-slate-300 rounded px-3 py-1 text-sm flex-1">
+        <button type="submit" class="bg-slate-900 text-white text-sm px-4 py-1 rounded">Add</button>
+      </form>
+      <div class="text-right">
+        <button id="people-modal-close" class="text-sm text-slate-500">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-auth.js"></script>
+  <!-- WHY: SortableJS provides the drag-to-reorder behaviour. ~20KB, no deps. -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script type="module" src="/js/tracker.js"></script>
+</body>
+</html>

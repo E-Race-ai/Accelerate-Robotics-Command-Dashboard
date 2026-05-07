@@ -11,6 +11,7 @@ Step-by-step procedures for things that happen rarely but urgently. Written so a
 | [`rotate-secrets.md`](rotate-secrets.md) | JWT secret, admin password, Resend API key rotation |
 | [`backup-database.md`](backup-database.md) | Scheduled and ad-hoc SQLite backups |
 | [`incident-response.md`](incident-response.md) | Site down, data loss, security incident |
+| [`creative-labs-tunnel.md`](creative-labs-tunnel.md) | Robot Command / Beam Bot tile shows the fallback panel |
 
 ## Writing a new runbook
 
