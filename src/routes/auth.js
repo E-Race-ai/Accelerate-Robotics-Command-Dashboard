@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const db = require('../db/database');
 const { requireAuth, JWT_SECRET } = require('../middleware/auth');
@@ -11,6 +12,7 @@ const router = express.Router();
 
 const TOKEN_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours — long enough to avoid mid-session logouts
 const TOKEN_MAX_AGE_S = TOKEN_MAX_AGE_MS / 1000;
+const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour — short window since user is already onboarded
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -19,9 +21,17 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
-  const user = db.prepare('SELECT * FROM admin_users WHERE email = ?').get(email);
+  const user = await db.one('SELECT * FROM admin_users WHERE email = ?', [email]);
   if (!user) {
     return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  // WHY: Invited users haven't set a password yet; disabled users are soft-deleted.
+  if (user.status === 'invited') {
+    return res.status(401).json({ error: 'Accept your invite email before logging in' });
+  }
+  if (user.status === 'disabled') {
+    return res.status(401).json({ error: 'Account disabled — contact your admin' });
   }
 
   const match = await bcrypt.compare(password, user.password_hash);
@@ -29,8 +39,8 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  // WHY: Track last login for user management dashboard — shows stale accounts
-  db.prepare('UPDATE admin_users SET last_login_at = datetime(?) WHERE id = ?').run(new Date().toISOString(), user.id);
+  // WHY: Track last login for the Users admin UI (and future inactivity pruning)
+  await db.run('UPDATE admin_users SET last_login_at = datetime(\'now\') WHERE id = ?', [user.id]);
 
   const token = jwt.sign(
     { id: user.id, email: user.email, role: user.role || 'admin' },
@@ -49,157 +59,187 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  // WHY: clearCookie must pass the same flags used when setting the cookie.
+  // Without matching httpOnly/secure/sameSite, Chrome (with strict SameSite) silently ignores the clear.
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
   res.json({ ok: true });
 });
 
 router.get('/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT id, email, name, role FROM admin_users WHERE id = ?').get(req.admin.id);
-  const permissions = getAllPermissions(db, req.admin);
-  res.json({ id: req.admin.id, email: user?.email || req.admin.email, name: user?.name || '', role: req.admin.role, permissions });
+  res.json({ email: req.admin.email, role: req.admin.role });
+router.get('/me', requireAuth, async (req, res) => {
+  // WHY: Frontend uses permission map to show/hide toolkit cards + gate UI actions.
+  try {
+    const { getAllPermissions } = require('../services/permissions');
+    const permissions = await getAllPermissions(db, req.admin);
+    res.json({ email: req.admin.email, role: req.admin.role, permissions });
+  } catch {
+    // Fail open on read: return basic identity if permission service errors
+    res.json({ email: req.admin.email, role: req.admin.role, permissions: {} });
+  }
 });
 
-// ── Self-service profile update ───────────────────────────────
-// WHY: Any authenticated user can update their own name/password without needing settings:edit
-router.patch('/me', requireAuth, async (req, res) => {
-  const { name, password, current_password } = req.body;
-  const updates = [];
-  const params = [];
-
-  if (name !== undefined) {
-    updates.push('name = ?');
-    params.push(name);
+// ── Validate invite token (public — HTML pre-fills accept form) ──
+router.get('/validate-invite', async (req, res) => {
+  const token = req.query.token;
+  if (!token) return res.status(400).json({ error: 'token query param required' });
+  const row = await db.one(
+    'SELECT email, name, role, invite_expires_at FROM admin_users WHERE invite_token = ? AND status = \'invited\'',
+    [token],
+  );
+  if (!row) return res.status(404).json({ error: 'Invalid or expired invite' });
+  if (new Date(row.invite_expires_at) < new Date()) {
+    return res.status(410).json({ error: 'Invite has expired. Ask your admin to re-invite.' });
   }
-
-  if (password !== undefined) {
-    if (!current_password) {
-      return res.status(400).json({ error: 'Current password is required to set a new password' });
-    }
-    if (password.length < 8) {
-      return res.status(400).json({ error: 'New password must be at least 8 characters' });
-    }
-    const user = db.prepare('SELECT password_hash FROM admin_users WHERE id = ?').get(req.admin.id);
-    const match = await bcrypt.compare(current_password, user.password_hash);
-    if (!match) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
-    }
-    const hash = await bcrypt.hash(password, 12);
-    updates.push('password_hash = ?');
-    params.push(hash);
-  }
-
-  if (updates.length === 0) {
-    return res.status(400).json({ error: 'No fields to update' });
-  }
-
-  params.push(req.admin.id);
-  db.prepare(`UPDATE admin_users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
-  const updated = db.prepare('SELECT id, email, name, role FROM admin_users WHERE id = ?').get(req.admin.id);
-  res.json({ id: updated.id, email: updated.email, name: updated.name, role: updated.role });
+  res.json({ email: row.email, name: row.name, role: row.role });
 });
 
-// ── Invite validation & acceptance ─────────────────────────────
-
-router.get('/validate-invite', (req, res) => {
-  const { token } = req.query;
-  if (!token) return res.status(400).json({ error: 'Token is required' });
-
-  const user = db.prepare(
-    'SELECT id, email, name, role, invite_expires_at FROM admin_users WHERE invite_token = ?'
-  ).get(token);
-  if (!user) return res.status(404).json({ error: 'Invalid or expired invite link' });
-  if (new Date(user.invite_expires_at) < new Date()) {
-    return res.status(410).json({ error: 'This invite has expired. Contact your admin for a new one.' });
-  }
-
-  res.json({ email: user.email, name: user.name, role: user.role });
-});
-
+// ── Accept invite — set password + name, activate account (public) ──
 router.post('/accept-invite', async (req, res) => {
-  const { token, password } = req.body;
-  if (!token || !password) return res.status(400).json({ error: 'Token and password are required' });
-  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
-
-  const user = db.prepare('SELECT * FROM admin_users WHERE invite_token = ?').get(token);
-  if (!user) return res.status(404).json({ error: 'Invalid or expired invite link' });
-  if (new Date(user.invite_expires_at) < new Date()) {
-    return res.status(410).json({ error: 'This invite has expired.' });
+  const { token, password, name } = req.body || {};
+  if (!token) return res.status(400).json({ error: 'token required' });
+  if (!password || password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
-  const hash = await bcrypt.hash(password, 12);
-  db.prepare(
-    "UPDATE admin_users SET password_hash = ?, status = 'active', invite_token = NULL, invite_expires_at = NULL WHERE id = ?"
-  ).run(hash, user.id);
+  const row = await db.one(
+    'SELECT id, email, role, invite_expires_at FROM admin_users WHERE invite_token = ? AND status = \'invited\'',
+    [token],
+  );
+  if (!row) return res.status(404).json({ error: 'Invalid or expired invite' });
+  if (new Date(row.invite_expires_at) < new Date()) {
+    return res.status(410).json({ error: 'Invite has expired. Ask your admin to re-invite.' });
+  }
 
-  const jwtToken = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
-  res.cookie('token', jwtToken, {
+  const BCRYPT_ROUNDS = 12;
+  const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  await db.run(
+    `UPDATE admin_users
+     SET password_hash = ?, name = COALESCE(?, name), status = 'active',
+         invite_token = NULL, invite_expires_at = NULL, last_login_at = datetime('now')
+     WHERE id = ?`,
+    [hash, name || null, row.id],
+  );
+
+  // Auto-login: sign JWT so the user lands in the dashboard without a second
+  // login step. Renamed from `token` to avoid colliding with the invite token
+  // destructured at the top of the handler.
+  const sessionToken = jwt.sign(
+    { id: row.id, email: row.email, role: row.role || 'viewer' },
+    JWT_SECRET,
+    { expiresIn: '24h' },
+  );
+  res.cookie('token', sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     maxAge: TOKEN_MAX_AGE_MS,
   });
-  res.json({ email: user.email, role: user.role });
+  res.json({ email: row.email, role: row.role });
 });
 
-// ── Forgot / Reset password ────────────────────────────────────
-
+// ── Forgot password — public, issues reset token + emails link ──
+// WHY: Always returns 200 regardless of whether the email exists, so an
+// attacker can't enumerate valid accounts by watching the response. Actual
+// token generation + email send only happens for active users.
 router.post('/forgot-password', async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email is required' });
+  const { email } = req.body || {};
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    console.log('[auth] forgot-password: rejected — missing/invalid email format');
+    // Still 200 so a bad-format email can't be distinguished from a missing one
+    return res.json({ ok: true });
+  }
 
-  const user = db.prepare('SELECT id, email, name, status FROM admin_users WHERE email = ?').get(email);
-  // WHY: Always return success to prevent email enumeration attacks
-  if (!user || user.status !== 'active') return res.json({ ok: true });
+  try {
+    const user = await db.one(
+      'SELECT id, email, name, status FROM admin_users WHERE email = ?',
+      [email],
+    );
+    // WHY: Per-branch logging (without leaking the email) so Render logs make
+    // it obvious why no email went out. Previously every outcome looked like a
+    // silent 200, which made diagnosing prod issues impossible.
+    if (!user) {
+      console.log('[auth] forgot-password: no matching account for submitted email');
+    } else if (user.status !== 'active') {
+      console.log(`[auth] forgot-password: account status=${user.status} — reset not allowed`);
+    } else {
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + RESET_TTL_MS).toISOString();
 
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour — short window limits exposure
-  db.prepare('UPDATE admin_users SET invite_token = ?, invite_expires_at = ? WHERE id = ?').run(token, expiresAt, user.id);
+      await db.run(
+        'UPDATE admin_users SET reset_token = ?, reset_expires_at = ? WHERE id = ?',
+        [token, expiresAt, user.id],
+      );
 
-  sendPasswordResetEmail({ to: user.email, name: user.name, token });
+      const origin = `${req.protocol}://${req.get('host')}`;
+      const resetUrl = `${origin}/reset-password?token=${token}`;
+      console.log(`[auth] forgot-password: token issued for user id=${user.id}, dispatching email`);
+      sendPasswordResetEmail({ to: user.email, name: user.name, resetUrl })
+        .catch((err) => console.error('[auth] password reset email failed:', err.message));
+    }
+  } catch (err) {
+    // Don't surface the failure to the caller — email-not-found and DB-error
+    // both look identical, so a real user just retries or contacts an admin.
+    console.error('[auth] forgot-password error:', err);
+  }
+
   res.json({ ok: true });
 });
 
-router.get('/validate-reset', (req, res) => {
-  const { token } = req.query;
-  if (!token) return res.status(400).json({ error: 'Token is required' });
-
-  const user = db.prepare(
-    'SELECT id, email, invite_expires_at FROM admin_users WHERE invite_token = ? AND status = ?'
-  ).get(token, 'active');
-  if (!user) return res.status(404).json({ error: 'Invalid or expired reset link' });
-  if (new Date(user.invite_expires_at) < new Date()) {
-    return res.status(410).json({ error: 'This reset link has expired.' });
+// ── Validate reset token — public, backs the reset-password page ──
+router.get('/validate-reset', async (req, res) => {
+  const token = req.query.token;
+  if (!token) return res.status(400).json({ error: 'token query param required' });
+  const row = await db.one(
+    "SELECT email, name, reset_expires_at FROM admin_users WHERE reset_token = ? AND status = 'active'",
+    [token],
+  );
+  if (!row) return res.status(404).json({ error: 'Invalid or already-used reset link' });
+  if (new Date(row.reset_expires_at) < new Date()) {
+    return res.status(410).json({ error: 'This reset link has expired. Request a new one.' });
   }
-
-  res.json({ email: user.email });
+  res.json({ email: row.email, name: row.name });
 });
 
+// ── Reset password — public, single-use token ──────────────────
+// Does NOT auto-login. Cleaner security story: successful reset clears the
+// token and the user logs in normally with the new password.
 router.post('/reset-password', async (req, res) => {
-  const { token, password } = req.body;
-  if (!token || !password) return res.status(400).json({ error: 'Token and password are required' });
-  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
-
-  const user = db.prepare(
-    'SELECT * FROM admin_users WHERE invite_token = ? AND status = ?'
-  ).get(token, 'active');
-  if (!user) return res.status(404).json({ error: 'Invalid or expired reset link' });
-  if (new Date(user.invite_expires_at) < new Date()) {
-    return res.status(410).json({ error: 'This reset link has expired.' });
+  const { token, password } = req.body || {};
+  if (!token) return res.status(400).json({ error: 'token required' });
+  if (!password || password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
-  const hash = await bcrypt.hash(password, 12);
-  db.prepare(
-    'UPDATE admin_users SET password_hash = ?, invite_token = NULL, invite_expires_at = NULL WHERE id = ?'
-  ).run(hash, user.id);
+  const row = await db.one(
+    "SELECT id, reset_expires_at FROM admin_users WHERE reset_token = ? AND status = 'active'",
+    [token],
+  );
+  if (!row) return res.status(404).json({ error: 'Invalid or already-used reset link' });
+  if (new Date(row.reset_expires_at) < new Date()) {
+    return res.status(410).json({ error: 'This reset link has expired. Request a new one.' });
+  }
 
-  const jwtToken = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
-  res.cookie('token', jwtToken, {
+  const BCRYPT_ROUNDS = 12;
+  const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  await db.run(
+    `UPDATE admin_users
+     SET password_hash = ?, reset_token = NULL, reset_expires_at = NULL
+     WHERE id = ?`,
+    [hash, row.id],
+  );
+  // Invalidate any existing session so other devices need to re-login with
+  // the new password — a user who just reset probably wants that.
+  res.clearCookie('token', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: TOKEN_MAX_AGE_MS,
   });
-  res.json({ email: user.email, role: user.role });
+  res.json({ ok: true });
 });
 
 module.exports = router;

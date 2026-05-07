@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cart Compliance Check — Accelerate Dock Standard v1</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #0a0a0f;
+        --surface: #13131a;
+        --surface-2: #1c1c25;
+        --border: #26262f;
+        --text: #e8e8ef;
+        --text-dim: #7a7a88;
+        --accent: #00d4ff;
+        --green: #00e676;
+        --red: #ff5566;
+        --warn: #ffd166;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; }
+    .tech { font-family: 'Space Grotesk', sans-serif; }
+    input, select { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 14px; width: 100%; font-family: 'Space Grotesk', sans-serif; }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    label { display: block; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 6px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
+    button { background: var(--accent); color: var(--bg); border: none; border-radius: 6px; padding: 14px 28px; font-size: 14px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em; cursor: pointer; }
+    button:hover { background: #00b8e0; }
+    .result-pass { color: var(--green); }
+    .result-fail { color: var(--red); }
+    .violation { padding: 8px 12px; background: rgba(255,85,102,0.1); border-left: 3px solid var(--red); margin-bottom: 6px; border-radius: 3px; font-size: 13px; color: var(--text); }
+    #test-status { position: fixed; bottom: 14px; right: 14px; padding: 8px 12px; border-radius: 6px; font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
+    .test-ok { background: rgba(0, 230, 118, 0.15); color: var(--green); border: 1px solid var(--green); }
+    .test-fail { background: rgba(255, 85, 102, 0.15); color: var(--red); border: 1px solid var(--red); }
+</style>
+</head>
+<body>
+
+<header style="background: linear-gradient(180deg, #13131a 0%, #0a0a0f 100%); border-bottom: 1px solid var(--border); padding: 40px 0;">
+    <div style="max-width: 900px; margin: 0 auto; padding: 0 32px;">
+        <div class="tech" style="font-size: 11px; color: var(--accent); letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; margin-bottom: 10px;">Compliance Checker</div>
+        <h1 style="font-size: 36px; font-weight: 800; letter-spacing: -0.02em;">Dock Standard v1</h1>
+        <p style="margin-top: 10px; color: var(--text-dim); font-size: 14px; max-width: 640px;">
+            Enter your cart's parameters. The tool reports pass or fail against each of the eight normative requirements. See <a href="standard.html" style="color: var(--accent);">the full spec</a> for details.
+        </p>
+    </div>
+</header>
+
+<main style="max-width: 900px; margin: 40px auto 100px; padding: 0 32px;">
+
+    <!-- Form -->
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px;">
+        <h2 class="tech" style="font-size: 11px; color: var(--accent); letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; margin-bottom: 20px;">Cart Parameters</h2>
+        <form id="compliance-form">
+            <div class="form-grid">
+                <div>
+                    <label>§3.1 Dock length (mm)</label>
+                    <input type="number" id="dockLength" value="900" step="1">
+                </div>
+                <div>
+                    <label>§3.1 Dock width (mm)</label>
+                    <input type="number" id="dockWidth" value="550" step="1">
+                </div>
+                <div>
+                    <label>§3.2 Overhead clearance (mm)</label>
+                    <input type="number" id="clearance" value="260" step="1">
+                </div>
+                <div>
+                    <label>§3.3 Pad size (mm, sq)</label>
+                    <input type="number" id="padSize" value="30" step="1">
+                </div>
+                <div>
+                    <label>§3.3 Pad-rectangle length (mm)</label>
+                    <input type="number" id="padLength" value="750" step="1">
+                </div>
+                <div>
+                    <label>§3.3 Pad-rectangle width (mm)</label>
+                    <input type="number" id="padWidth" value="400" step="1">
+                </div>
+                <div>
+                    <label>§3.4 Lift travel (mm)</label>
+                    <input type="number" id="liftTravel" value="8" step="1">
+                </div>
+                <div>
+                    <label>§3.5 Fiducial size (mm, sq)</label>
+                    <input type="number" id="fiducialSize" value="80" step="1">
+                </div>
+                <div>
+                    <label>§3.5 Fiducial offset from leading edge (mm)</label>
+                    <input type="number" id="fiducialOffset" value="200" step="1">
+                </div>
+                <div>
+                    <label>§3.7 Max gross mass (kg)</label>
+                    <input type="number" id="grossMassMax" value="350" step="1">
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <label>§3.8 Electrical interface</label>
+                    <select id="electrical">
+                        <option value="passive">Passive (compliant with v1)</option>
+                        <option value="active">Active (not compliant with v1)</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" style="margin-top: 24px;">Check Compliance</button>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div id="results" style="margin-top: 24px;"></div>
+</main>
+
+<div id="test-status"></div>
+
+<script>
+// ============== The checker ==============
+function checkCompliance(cart) {
+    const violations = [];
+    // §3.1 Dock footprint ≥ 900 × 550 mm
+    if (cart.dockLength < 900 || cart.dockWidth < 550) violations.push('§3.1');
+    // §3.2 Overhead clearance ≥ 260 mm
+    if (cart.clearance < 260) violations.push('§3.2');
+    // §3.3 Lift-pad pattern = 750 × 400 mm, pads = 30 × 30 mm
+    if (cart.padPattern.length !== 750 || cart.padPattern.width !== 400) violations.push('§3.3');
+    if (cart.padSize !== 30) violations.push('§3.3');
+    // §3.4 Lift travel = 8 ± 1 mm
+    if (cart.liftTravel < 7 || cart.liftTravel > 9) violations.push('§3.4');
+    // §3.5 Fiducial = 80 mm, offset 200 mm from leading edge
+    if (cart.fiducialSize !== 80) violations.push('§3.5');
+    if (cart.fiducialOffset !== 200) violations.push('§3.5');
+    // §3.7 Gross mass ≤ 350 kg
+    if (cart.grossMassMax > 350) violations.push('§3.7');
+    // §3.8 Electrical must be 'passive'
+    if (cart.electrical !== 'passive') violations.push('§3.8');
+    const unique = [...new Set(violations)];
+    return { compliant: unique.length === 0, violations: unique };
+}
+
+// ============== Form wiring ==============
+document.getElementById('compliance-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const cart = {
+        dockLength: +document.getElementById('dockLength').value,
+        dockWidth: +document.getElementById('dockWidth').value,
+        clearance: +document.getElementById('clearance').value,
+        padSize: +document.getElementById('padSize').value,
+        padPattern: {
+            length: +document.getElementById('padLength').value,
+            width: +document.getElementById('padWidth').value,
+        },
+        liftTravel: +document.getElementById('liftTravel').value,
+        fiducialSize: +document.getElementById('fiducialSize').value,
+        fiducialOffset: +document.getElementById('fiducialOffset').value,
+        grossMassMax: +document.getElementById('grossMassMax').value,
+        electrical: document.getElementById('electrical').value,
+    };
+    const result = checkCompliance(cart);
+    const panel = document.getElementById('results');
+    if (result.compliant) {
+        panel.innerHTML = '<div style="background: var(--surface); border: 1px solid var(--green); border-radius: 12px; padding: 28px;"><h2 class="result-pass" style="font-size: 28px; font-weight: 800;">&#10003; v1-compliant</h2><p style="color: var(--text-dim); margin-top: 6px;">All eight normative requirements satisfied.</p></div>';
+    } else {
+        const items = result.violations.map(v => `<div class="violation">${v} — see <a href="standard.html#${v.replace(/[^0-9]/g,'')}" style="color: var(--accent);">spec</a></div>`).join('');
+        panel.innerHTML = `<div style="background: var(--surface); border: 1px solid var(--red); border-radius: 12px; padding: 28px;"><h2 class="result-fail" style="font-size: 28px; font-weight: 800;">&#10005; Not compliant</h2><p style="color: var(--text-dim); margin: 6px 0 18px;">Violations:</p>${items}</div>`;
+    }
+});
+
+// ============== Inline test harness ==============
+const tests = [];
+function test(name, fn) { tests.push({ name, fn }); }
+function assertEqual(actual, expected, msg) {
+    const a = JSON.stringify(actual), e = JSON.stringify(expected);
+    if (a !== e) throw new Error(`${msg || ''} expected ${e}, got ${a}`);
+}
+
+test('fully compliant cart passes', () => {
+    const r = checkCompliance({ dockLength: 900, dockWidth: 550, clearance: 260, padPattern: { length: 750, width: 400 }, padSize: 30, liftTravel: 8, fiducialSize: 80, fiducialOffset: 200, grossMassMax: 350, electrical: 'passive' });
+    assertEqual(r.compliant, true);
+    assertEqual(r.violations, []);
+});
+test('undersized dock fails §3.1', () => {
+    const r = checkCompliance({ dockLength: 800, dockWidth: 550, clearance: 260, padPattern: { length: 750, width: 400 }, padSize: 30, liftTravel: 8, fiducialSize: 80, fiducialOffset: 200, grossMassMax: 350, electrical: 'passive' });
+    assertEqual(r.compliant, false);
+    assertEqual(r.violations.includes('§3.1'), true);
+});
+test('insufficient clearance fails §3.2', () => {
+    const r = checkCompliance({ dockLength: 900, dockWidth: 550, clearance: 250, padPattern: { length: 750, width: 400 }, padSize: 30, liftTravel: 8, fiducialSize: 80, fiducialOffset: 200, grossMassMax: 350, electrical: 'passive' });
+    assertEqual(r.compliant, false);
+    assertEqual(r.violations.includes('§3.2'), true);
+});
+test('active electrical fails §3.8', () => {
+    const r = checkCompliance({ dockLength: 900, dockWidth: 550, clearance: 260, padPattern: { length: 750, width: 400 }, padSize: 30, liftTravel: 8, fiducialSize: 80, fiducialOffset: 200, grossMassMax: 350, electrical: 'active' });
+    assertEqual(r.compliant, false);
+    assertEqual(r.violations.includes('§3.8'), true);
+});
+test('multiple failures are all reported', () => {
+    const r = checkCompliance({ dockLength: 800, dockWidth: 500, clearance: 250, padPattern: { length: 700, width: 400 }, padSize: 30, liftTravel: 8, fiducialSize: 80, fiducialOffset: 200, grossMassMax: 400, electrical: 'active' });
+    assertEqual(r.compliant, false);
+    assertEqual(r.violations.includes('§3.1'), true);
+    assertEqual(r.violations.includes('§3.2'), true);
+    assertEqual(r.violations.includes('§3.3'), true);
+    assertEqual(r.violations.includes('§3.7'), true);
+    assertEqual(r.violations.includes('§3.8'), true);
+});
+
+window.addEventListener('load', () => {
+    let passed = 0, failed = 0;
+    for (const t of tests) { try { t.fn(); passed++; } catch (e) { failed++; console.error(t.name, e); } }
+    const s = document.getElementById('test-status');
+    if (failed === 0) {
+        s.innerHTML = `&check; ${passed}/${tests.length} tests pass`;
+        s.className = 'test-ok';
+    } else {
+        s.innerHTML = `&cross; ${failed}/${tests.length} tests FAILED`;
+        s.className = 'test-fail';
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Moore — Operations Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'Manier';
+            src: url('https://cdn.prod.website-files.com/660f1eb43100ae113ae3fc2b/660f1eb43100ae113ae3fc5f_Manier-Light.otf') format('opentype');
+            font-weight: 300; font-style: normal; font-display: swap;
+        }
+        :root {
+            --cream: #fbefe2; --charcoal: #302e2f; --accent: #b07d56;
+            --green: #5a8a6e; --red: #c45c5c; --amber: #c49a3c;
+            --muted: #999283; --border: rgba(48,46,47,0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Source Sans 3', system-ui, sans-serif;
+            background: var(--cream); color: var(--charcoal);
+            min-height: 100vh; display: flex;
+        }
+        h1,h2,h3 { font-family: 'Manier', 'Playfair Display', serif; font-weight: 300; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px; background: var(--charcoal); display: flex; flex-direction: column;
+            position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+        }
+        .sidebar-brand {
+            padding: 28px 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: center;
+        }
+        .sidebar-brand .name { font-family: 'Manier', serif; font-size: 22px; color: var(--cream); font-weight: 300; }
+        .sidebar-brand .sub {
+            font-size: 9px; color: rgba(251,239,226,0.4); font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.16em; margin-top: 4px;
+        }
+        .sidebar-data { flex: 1; overflow-y: auto; padding: 16px 14px; }
+        .data-group { margin-bottom: 18px; }
+        .data-group-label {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.14em; color: rgba(251,239,226,0.3);
+            padding: 0 10px; margin-bottom: 8px;
+        }
+        .data-card {
+            padding: 10px 12px; border-radius: 8px; margin-bottom: 4px;
+            background: rgba(255,255,255,0.04); cursor: pointer;
+            transition: background 0.15s;
+        }
+        .data-card:hover { background: rgba(176,125,86,0.15); }
+        .data-card .dc-label {
+            font-size: 10px; color: rgba(251,239,226,0.5); font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .data-card .dc-value {
+            font-family: 'JetBrains Mono', monospace; font-size: 16px;
+            font-weight: 700; color: var(--cream); margin-top: 2px;
+        }
+        .data-card .dc-sub { font-size: 10px; color: rgba(251,239,226,0.35); margin-top: 1px; }
+        .data-card .dc-value.green { color: #8bc2a1; }
+        .data-card .dc-value.red { color: #f08080; }
+        .data-card .dc-value.amber { color: #e8c06a; }
+        .sidebar-footer {
+            padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.08);
+            font-size: 9px; color: rgba(251,239,226,0.25); text-align: center;
+            letter-spacing: 0.05em;
+        }
+
+        /* Main chat area */
+        .main { flex: 1; margin-left: 280px; display: flex; flex-direction: column; height: 100vh; }
+        .topbar {
+            padding: 14px 32px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            background: #fff; flex-shrink: 0;
+        }
+        .topbar h1 { font-size: 20px; }
+        .topbar .date {
+            font-family: 'JetBrains Mono', monospace; font-size: 12px;
+            color: var(--accent); font-weight: 600;
+        }
+        .topbar .status {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11px; color: var(--green); font-weight: 600;
+        }
+        .topbar .status::before {
+            content: ''; width: 7px; height: 7px; border-radius: 50%;
+            background: var(--green); box-shadow: 0 0 6px var(--green);
+        }
+
+        /* Chat area */
+        .chat-area {
+            flex: 1; overflow-y: auto; padding: 28px 32px;
+            display: flex; flex-direction: column; gap: 20px;
+        }
+        .msg { max-width: 720px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .msg.ai { align-self: flex-start; }
+        .msg.user { align-self: flex-end; }
+        .msg-header {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.1em; margin-bottom: 6px;
+        }
+        .msg.ai .msg-header { color: var(--accent); }
+        .msg.user .msg-header { color: var(--muted); text-align: right; }
+        .msg-body {
+            padding: 16px 20px; border-radius: 14px; font-size: 14px;
+            line-height: 1.6; position: relative;
+        }
+        .msg.ai .msg-body {
+            background: #fff; border: 1px solid var(--border);
+            border-top-left-radius: 4px;
+        }
+        .msg.user .msg-body {
+            background: var(--charcoal); color: var(--cream);
+            border-top-right-radius: 4px;
+        }
+
+        /* Data widgets inside AI messages */
+        .widget { margin: 14px 0 6px; }
+        .widget-kpi {
+            display: flex; gap: 12px; flex-wrap: wrap;
+        }
+        .wk {
+            background: var(--cream); border-radius: 10px; padding: 12px 16px;
+            min-width: 110px; flex: 1;
+        }
+        .wk .wk-label {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--muted); margin-bottom: 4px;
+        }
+        .wk .wk-value {
+            font-family: 'JetBrains Mono', monospace; font-size: 20px;
+            font-weight: 700; color: var(--charcoal);
+        }
+        .wk .wk-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+        .wk .wk-value.green { color: var(--green); }
+        .wk .wk-value.red { color: var(--red); }
+        .wk .wk-value.amber { color: var(--amber); }
+
+        .widget-table {
+            width: 100%; border-collapse: collapse; margin-top: 8px;
+            font-size: 12px;
+        }
+        .widget-table th {
+            text-align: left; padding: 6px 10px; font-size: 9px;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--muted); border-bottom: 1px solid var(--border);
+        }
+        .widget-table th.right { text-align: right; }
+        .widget-table td {
+            padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .widget-table td.mono {
+            font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 12px;
+        }
+        .widget-table td.right { text-align: right; }
+        .widget-table .flag { color: var(--red); font-weight: 700; }
+        .widget-table .ok { color: var(--green); }
+
+        .widget-bar {
+            display: flex; align-items: center; gap: 8px; margin: 4px 0;
+        }
+        .widget-bar .wb-label { font-size: 11px; width: 80px; color: var(--muted); font-weight: 600; }
+        .widget-bar .wb-track {
+            flex: 1; height: 8px; background: rgba(0,0,0,0.06); border-radius: 4px; overflow: hidden;
+        }
+        .widget-bar .wb-fill { height: 100%; border-radius: 4px; }
+        .widget-bar .wb-val {
+            font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            font-weight: 600; width: 60px; text-align: right;
+        }
+
+        .widget-alert {
+            background: rgba(196,92,92,0.08); border: 1px solid rgba(196,92,92,0.2);
+            border-radius: 8px; padding: 10px 14px; margin: 8px 0;
+            font-size: 12px; color: var(--red); font-weight: 600;
+        }
+        .widget-alert.amber {
+            background: rgba(196,154,60,0.08); border-color: rgba(196,154,60,0.2);
+            color: var(--amber);
+        }
+
+        /* Input bar */
+        .input-bar {
+            padding: 16px 32px 20px; background: #fff;
+            border-top: 1px solid var(--border); flex-shrink: 0;
+        }
+        .input-wrap {
+            display: flex; gap: 10px; max-width: 720px;
+        }
+        .input-field {
+            flex: 1; padding: 14px 20px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--cream);
+            font-family: 'Source Sans 3', sans-serif; font-size: 14px;
+            color: var(--charcoal); outline: none; transition: border-color 0.2s;
+        }
+        .input-field:focus { border-color: var(--accent); }
+        .input-field::placeholder { color: var(--muted); }
+        .send-btn {
+            padding: 14px 24px; border-radius: 12px; border: none;
+            background: var(--charcoal); color: var(--cream);
+            font-family: 'Source Sans 3', sans-serif; font-size: 13px;
+            font-weight: 700; cursor: pointer; transition: background 0.2s;
+            text-transform: uppercase; letter-spacing: 0.08em;
+        }
+        .send-btn:hover { background: var(--accent); }
+
+        /* Quick prompts */
+        .quick-prompts {
+            display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap;
+        }
+        .qp {
+            padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+            background: #fff; font-size: 11px; font-weight: 600;
+            color: var(--muted); cursor: pointer; transition: all 0.15s;
+        }
+        .qp:hover { border-color: var(--accent); color: var(--accent); background: rgba(176,125,86,0.05); }
+
+        /* Typing indicator */
+        .typing { display: flex; gap: 4px; padding: 10px 16px; }
+        .typing span {
+            width: 6px; height: 6px; border-radius: 50%; background: var(--muted);
+            animation: typingBounce 1.2s ease-in-out infinite;
+        }
+        .typing span:nth-child(2) { animation-delay: 0.15s; }
+        .typing span:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes typingBounce {
+            0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-4px); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR — Live POS Data Feed ═══ -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <div class="name">The Moore</div>
+        <div class="sub">Operations Intelligence</div>
+    </div>
+    <div class="sidebar-data">
+        <div class="data-group">
+            <div class="data-group-label">Today's Snapshot</div>
+            <div class="data-card" onclick="askAbout('revenue breakdown')">
+                <div class="dc-label">Net Sales</div>
+                <div class="dc-value">$20,506</div>
+                <div class="dc-sub">&#9650; 12.4% vs last Tuesday</div>
+            </div>
+            <div class="data-card" onclick="askAbout('total revenue')">
+                <div class="dc-label">Total Revenue</div>
+                <div class="dc-value green">$27,911</div>
+                <div class="dc-sub">incl. service charges &amp; tax</div>
+            </div>
+            <div class="data-card" onclick="askAbout('guest count and covers')">
+                <div class="dc-label">Guest Count</div>
+                <div class="dc-value">285</div>
+                <div class="dc-sub">150 checks &middot; $136.70 avg</div>
+            </div>
+        </div>
+        <div class="data-group">
+            <div class="data-group-label">Alerts</div>
+            <div class="data-card" onclick="askAbout('cash variance')">
+                <div class="dc-label">Cash Position</div>
+                <div class="dc-value red">-$3,273</div>
+                <div class="dc-sub">&#9888; Negative — investigate</div>
+            </div>
+            <div class="data-card" onclick="askAbout('over short variance')">
+                <div class="dc-label">Over/Short</div>
+                <div class="dc-value amber">$4,161</div>
+                <div class="dc-sub">Tolerance: &lt;$25</div>
+            </div>
+            <div class="data-card" onclick="askAbout('cancels and voids')">
+                <div class="dc-label">Cancels</div>
+                <div class="dc-value red">$3,092</div>
+                <div class="dc-sub">23 items &middot; $133 avg</div>
+            </div>
+            <div class="data-card" onclick="askAbout('outstanding checks')">
+                <div class="dc-label">Outstanding Checks</div>
+                <div class="dc-value amber">14 / $818</div>
+                <div class="dc-sub">Unclosed from today</div>
+            </div>
+        </div>
+        <div class="data-group">
+            <div class="data-group-label">Revenue Centers</div>
+            <div class="data-card" onclick="askAbout('revenue center performance')">
+                <div class="dc-label">Torno Subito</div>
+                <div class="dc-value">$8,412</div>
+                <div class="dc-sub">41% of net sales</div>
+            </div>
+            <div class="data-card" onclick="askAbout('roof bar revenue')">
+                <div class="dc-label">Roof Bar</div>
+                <div class="dc-value">$4,826</div>
+                <div class="dc-sub">23.5% of net sales</div>
+            </div>
+            <div class="data-card" onclick="askAbout('bar performance')">
+                <div class="dc-label">TS Bar</div>
+                <div class="dc-value">$3,190</div>
+                <div class="dc-sub">15.6% of net sales</div>
+            </div>
+        </div>
+        <div class="data-group">
+            <div class="data-group-label">Beverage</div>
+            <div class="data-card" onclick="askAbout('beverage sales breakdown')">
+                <div class="dc-label">Wine Sales</div>
+                <div class="dc-value">$3,177</div>
+                <div class="dc-sub">15.5% of net sales</div>
+            </div>
+            <div class="data-card" onclick="askAbout('liquor sales and pour cost')">
+                <div class="dc-label">Liquor &amp; Cocktails</div>
+                <div class="dc-value">$2,144</div>
+                <div class="dc-sub">10.5% of net sales</div>
+            </div>
+        </div>
+    </div>
+    <div class="sidebar-footer">
+        Oracle MICROS Simphony &middot; Last sync 2m ago
+    </div>
+</div>
+
+<!-- ═══ MAIN CHAT ═══ -->
+<div class="main">
+    <div class="topbar">
+        <div>
+            <h1>Operations Intelligence</h1>
+            <div class="date">Tuesday, March 18, 2026 &middot; Close of Day</div>
+        </div>
+        <div class="status">Oracle MICROS Connected</div>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+        <!-- Welcome message -->
+        <div class="msg ai">
+            <div class="msg-header">Moore Operations AI</div>
+            <div class="msg-body">
+                Good evening. I've ingested today's Oracle MICROS POS data for The Moore. Here's your close-of-day summary:
+
+                <div class="widget widget-kpi">
+                    <div class="wk">
+                        <div class="wk-label">Net Sales</div>
+                        <div class="wk-value">$20,506</div>
+                        <div class="wk-sub">&#9650; 12.4% vs last Tue</div>
+                    </div>
+                    <div class="wk">
+                        <div class="wk-label">Guests</div>
+                        <div class="wk-value">285</div>
+                        <div class="wk-sub">150 checks opened</div>
+                    </div>
+                    <div class="wk">
+                        <div class="wk-label">Avg Check</div>
+                        <div class="wk-value amber">$136.70</div>
+                        <div class="wk-sub">$71.95 per guest</div>
+                    </div>
+                    <div class="wk">
+                        <div class="wk-label">Table Turns</div>
+                        <div class="wk-value">105</div>
+                        <div class="wk-sub">81 min avg dine</div>
+                    </div>
+                </div>
+
+                <div class="widget-alert">&#9888; 3 critical items require your attention — cash position is negative (-$3,273), over/short variance is $4,161, and $3,092 in cancels today. Tap any sidebar metric or ask me to drill in.</div>
+
+                What would you like to investigate?
+            </div>
+        </div>
+    </div>
+
+    <div class="input-bar">
+        <div class="input-wrap">
+            <input type="text" class="input-field" id="userInput" placeholder="Ask about today's POS data..." onkeydown="if(event.key==='Enter')sendMessage()">
+            <button class="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+        <div class="quick-prompts">
+            <span class="qp" onclick="askAbout('What caused the cash variance?')">Cash variance</span>
+            <span class="qp" onclick="askAbout('Break down revenue by center')">Revenue by center</span>
+            <span class="qp" onclick="askAbout('Show me the cancel report')">Cancel report</span>
+            <span class="qp" onclick="askAbout('How did beverage perform today?')">Beverage analysis</span>
+            <span class="qp" onclick="askAbout('Show outstanding checks')">Outstanding checks</span>
+            <span class="qp" onclick="askAbout('Compare daypart performance')">Daypart breakdown</span>
+            <span class="qp" onclick="askAbout('Any comps I should know about?')">Comps audit</span>
+            <span class="qp" onclick="askAbout('Labor cost analysis')">Labor analysis</span>
+        </div>
+    </div>
+</div>
+
+<script>
+/* WHY: Simulated POS data from the Moore MICROS dashboard — all values match the real dashboard */
+const POS = {
+    date: 'Tuesday, March 18, 2026',
+    netSales: 20506,
+    totalRevenue: 27911,
+    guests: 285,
+    checks: 150,
+    avgCheck: 136.70,
+    avgPerGuest: 71.95,
+    tableTurns: 105,
+    avgPerTurn: 195.29,
+    avgDineTime: 81,
+    dayparts: {
+        dinner: { sales: 10312, pct: 50.3 },
+        lunch: { sales: 9875, pct: 48.2 },
+        breakfast: { sales: 319, pct: 1.6 }
+    },
+    revenueCenters: [
+        { name: 'Torno Subito', sales: 8412, pct: 41.0 },
+        { name: 'Roof Bar', sales: 4826, pct: 23.5 },
+        { name: 'TS Bar', sales: 3190, pct: 15.6 },
+        { name: 'Torno Private', sales: 1942, pct: 9.5 },
+        { name: 'E1 Bar', sales: 1018, pct: 5.0 },
+        { name: 'E3 Bar', sales: 668, pct: 3.3 },
+        { name: 'Torno Bar', sales: 450, pct: 2.2 },
+        { name: 'E2 Bar', sales: 0, pct: 0.0 }
+    ],
+    categories: {
+        food: 13249, wine: 3177, liquor: 2144, beverage: 1790, beer: 87, tobacco: 59
+    },
+    hourly: {
+        '11a': 48, '12p': 2105, '1p': 2840, '2p': 1210, '3p': 380,
+        '4p': 290, '5p': 1650, '6p': 3410, '7p': 3820, '8p': 2680,
+        '9p': 1340, '10p': 510, '11p': 223
+    },
+    alerts: {
+        cashPosition: -3273,
+        overShort: 4161,
+        cancels: { total: 3092, count: 23, avg: 133.19 },
+        serviceChargeGap: 688,
+        outstandingChecks: { count: 14, total: 818.36 },
+        negativeWindows: [
+            { time: '4:45 PM', amount: -109 },
+            { time: '10:45 PM', amount: -31 },
+            { time: '11:00 PM', amount: -17 }
+        ]
+    },
+    topItems: [
+        { name: 'Tortellini in Brodo', qty: 42, sales: 1890 },
+        { name: 'Tagliatelle al Ragù', qty: 38, sales: 1710 },
+        { name: 'Bistecca Fiorentina', qty: 12, sales: 1440 },
+        { name: 'Cotoletta alla Milanese', qty: 28, sales: 1260 },
+        { name: 'GL Dauvissat Chablis', qty: 8, sales: 800 },
+        { name: 'Negroni', qty: 34, sales: 612 },
+        { name: 'Tiramisu', qty: 31, sales: 496 },
+        { name: 'Burrata', qty: 27, sales: 486 }
+    ],
+    comps: [
+        { item: 'GL Termes Tempranillo', amount: 22, pct: 100, auth: 'None' },
+        { item: 'Bulleit BB', amount: 16, pct: 100, auth: 'None' },
+        { item: 'GL Dauvissat Chablis', amount: 50, pct: 50, auth: 'Manager' },
+        { item: 'Amuse-bouche', amount: '~$360-600', pct: 100, auth: 'Kitchen', note: '119 servings — cost not tracked' }
+    ],
+    beverage: {
+        wine: { qty: 87, gross: 3320, net: 3177 },
+        liquor: { qty: 112, gross: 2280, net: 2144 },
+        beer: { qty: 12, gross: 94, net: 87 },
+        nonAlc: { qty: 145, gross: 1850, net: 1790 }
+    },
+    payments: {
+        visa: 12400, amex: 8200, mastercard: 3100, cash: 879.78,
+        memberCharge: 2800, serviceCharge: 5565.38, tips: 4876.90
+    }
+};
+
+/* WHY: Pre-built responses keyed to common manager queries — keeps the demo snappy */
+const RESPONSES = {
+    'cash variance': `
+        <strong>Cash Position Analysis</strong><br><br>
+        Today's cash position is critically negative at <strong style="color:var(--red)">-$3,273</strong>. Here's the breakdown:
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Cash Received</div><div class="wk-value red">$879.78</div></div>
+            <div class="wk"><div class="wk-label">Cash Paid Out</div><div class="wk-value">$4,153.10</div></div>
+            <div class="wk"><div class="wk-label">Deficit</div><div class="wk-value red">-$3,273</div></div>
+        </div>
+        <div class="widget-alert">The register ran a $3,273 deficit. Cash had to be pulled from a bank or safe to cover payouts. This is likely linked to the $4,160.70 tips paid not reconciling against cash due.</div>
+        Additionally, the <strong>over/short variance is $4,161</strong> — far outside the $25 tolerance. This appears linked to tips paid ($4,160.70) not reconciling against cash due (-$4,160.70).<br><br>
+        <strong>Recommendation:</strong> Cross-reference tonight's tip payout receipts against the MICROS tips report. Verify if tips were paid from drawer cash before deposits were pulled.
+    `,
+    'revenue breakdown': `
+        <strong>Revenue Breakdown — Today</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Net Sales</div><div class="wk-value">$20,506</div><div class="wk-sub">&#9650; 12.4% vs last Tue</div></div>
+            <div class="wk"><div class="wk-label">Total Revenue</div><div class="wk-value green">$27,911</div><div class="wk-sub">incl. svc + tax</div></div>
+            <div class="wk"><div class="wk-label">Service Charges</div><div class="wk-value">$5,565</div></div>
+        </div>
+        <div class="widget">
+            <table class="widget-table">
+                <tr><th>Revenue Center</th><th class="right">Net Sales</th><th class="right">Share</th></tr>
+                <tr><td>Torno Subito</td><td class="mono right">$8,412</td><td class="right">41.0%</td></tr>
+                <tr><td>Roof Bar</td><td class="mono right">$4,826</td><td class="right">23.5%</td></tr>
+                <tr><td>TS Bar</td><td class="mono right">$3,190</td><td class="right">15.6%</td></tr>
+                <tr><td>Torno Private</td><td class="mono right">$1,942</td><td class="right">9.5%</td></tr>
+                <tr><td>E1 Bar</td><td class="mono right">$1,018</td><td class="right">5.0%</td></tr>
+                <tr><td>E3 Bar</td><td class="mono right">$668</td><td class="right">3.3%</td></tr>
+                <tr><td>Torno Bar</td><td class="mono right">$450</td><td class="right">2.2%</td></tr>
+                <tr><td style="color:var(--red)">E2 Bar</td><td class="mono right flag">$0</td><td class="right flag">0.0%</td></tr>
+            </table>
+        </div>
+        <div class="widget-alert amber">&#9888; E2 Bar generated $0 revenue. If operational, investigate staffing. If closed, remove from active reporting to avoid noise.</div>
+    `,
+    'cancel report': `
+        <strong>Cancel &amp; Void Report</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Total Cancels</div><div class="wk-value red">$3,092</div></div>
+            <div class="wk"><div class="wk-label">Cancel Count</div><div class="wk-value">23</div></div>
+            <div class="wk"><div class="wk-label">Avg per Cancel</div><div class="wk-value amber">$133.19</div></div>
+        </div>
+        <div class="widget-alert">Cancel average is $133.19 — these are not single-item cancels. At 15.1% of net sales, this is well above the 5% industry benchmark.</div>
+        Additionally, three 15-minute windows showed <strong>net-negative sales</strong>:
+        <div class="widget">
+            <table class="widget-table">
+                <tr><th>Time Window</th><th class="right">Net Sales</th><th class="right">Status</th></tr>
+                <tr><td>4:45 PM</td><td class="mono right flag">-$109</td><td class="right flag">Negative</td></tr>
+                <tr><td>10:45 PM</td><td class="mono right flag">-$31</td><td class="right flag">Negative</td></tr>
+                <tr><td>11:00 PM</td><td class="mono right flag">-$17</td><td class="right flag">Negative</td></tr>
+            </table>
+        </div>
+        <strong>Recommendation:</strong> Pull the void/cancel detail report and cross-reference server IDs. $133 average cancels suggest full-check cancels or re-fires, not single-item mistakes.
+    `,
+    'beverage': `
+        <strong>Beverage Performance — Today</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Wine</div><div class="wk-value">$3,177</div><div class="wk-sub">87 pours</div></div>
+            <div class="wk"><div class="wk-label">Liquor</div><div class="wk-value">$2,144</div><div class="wk-sub">112 pours</div></div>
+            <div class="wk"><div class="wk-label">Beer</div><div class="wk-value">$87</div><div class="wk-sub">12 pours</div></div>
+            <div class="wk"><div class="wk-label">Non-Alc</div><div class="wk-value">$1,790</div><div class="wk-sub">145 orders</div></div>
+        </div>
+        <div class="widget">
+            <div class="widget-bar"><span class="wb-label">Food</span><div class="wb-track"><div class="wb-fill" style="width:64.6%;background:var(--accent)"></div></div><span class="wb-val">$13,249</span></div>
+            <div class="widget-bar"><span class="wb-label">Wine</span><div class="wb-track"><div class="wb-fill" style="width:15.5%;background:var(--red)"></div></div><span class="wb-val">$3,177</span></div>
+            <div class="widget-bar"><span class="wb-label">Liquor</span><div class="wb-track"><div class="wb-fill" style="width:10.5%;background:var(--amber)"></div></div><span class="wb-val">$2,144</span></div>
+            <div class="widget-bar"><span class="wb-label">Beverage</span><div class="wb-track"><div class="wb-fill" style="width:8.7%;background:var(--green)"></div></div><span class="wb-val">$1,790</span></div>
+            <div class="widget-bar"><span class="wb-label">Beer</span><div class="wb-track"><div class="wb-fill" style="width:0.4%;background:#6b8f9e"></div></div><span class="wb-val">$87</span></div>
+            <div class="widget-bar"><span class="wb-label">Tobacco</span><div class="wb-track"><div class="wb-fill" style="width:0.3%;background:#9e8b7a"></div></div><span class="wb-val">$59</span></div>
+        </div>
+        <br>Beverage represents <strong>35.4% of net sales</strong> ($7,198 of $20,506). Wine leads at 15.5% — strong for a Tuesday. Liquor-to-beer ratio is 25:1, confirming the cocktail-forward positioning.<br><br>
+        <div class="widget-alert amber">&#9888; COGS and pour cost are not configured in MICROS. Without these, there is zero visibility into actual beverage profitability. I recommend connecting the bottle tracker for real-time pour cost analysis.</div>
+    `,
+    'outstanding checks': `
+        <strong>Outstanding Checks</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Open Checks</div><div class="wk-value amber">14</div></div>
+            <div class="wk"><div class="wk-label">Total Value</div><div class="wk-value amber">$818.36</div></div>
+            <div class="wk"><div class="wk-label">Avg per Check</div><div class="wk-value">$58.45</div></div>
+        </div>
+        14 checks remain unclosed totaling $818.36. These may be linked to:<br>
+        &bull; Member house accounts pending sign-off<br>
+        &bull; Event charges awaiting TripleSeat reconciliation<br>
+        &bull; Server-held checks from late service<br><br>
+        <strong>Recommendation:</strong> Confirm which checks are legitimate holds (member accounts, event billing) vs. server error. Close all non-hold checks before tomorrow's open. The $688 service charge discrepancy may also tie to these open checks.
+    `,
+    'daypart': `
+        <strong>Daypart Performance</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Dinner</div><div class="wk-value">$10,312</div><div class="wk-sub">50.3% of sales</div></div>
+            <div class="wk"><div class="wk-label">Lunch</div><div class="wk-value">$9,875</div><div class="wk-sub">48.2% of sales</div></div>
+            <div class="wk"><div class="wk-label">Breakfast</div><div class="wk-value">$319</div><div class="wk-sub">1.6% of sales</div></div>
+        </div>
+        <div class="widget">
+            <div class="widget-bar"><span class="wb-label">Dinner</span><div class="wb-track"><div class="wb-fill" style="width:50.3%;background:var(--accent)"></div></div><span class="wb-val">$10,312</span></div>
+            <div class="widget-bar"><span class="wb-label">Lunch</span><div class="wb-track"><div class="wb-fill" style="width:48.2%;background:var(--green)"></div></div><span class="wb-val">$9,875</span></div>
+            <div class="widget-bar"><span class="wb-label">Breakfast</span><div class="wb-track"><div class="wb-fill" style="width:1.6%;background:var(--muted)"></div></div><span class="wb-val">$319</span></div>
+        </div>
+        <br>Lunch-to-dinner ratio is unusually balanced (48/50 split). Typical fine dining skews 30/70. This suggests strong midday member traffic — a positive signal for the members' club model.<br><br>
+        Peak hourly revenue was <strong>7 PM at $3,820</strong>. The 5 PM–9 PM window captured 69% of dinner sales. Late service (10 PM+) produced only $733 — worth evaluating whether late staffing levels are right-sized.
+    `,
+    'comps': `
+        <strong>Comp &amp; Discount Audit</strong>
+        <div class="widget">
+            <table class="widget-table">
+                <tr><th>Item</th><th class="right">Amount</th><th class="right">Comp %</th><th class="right">Auth</th></tr>
+                <tr><td>GL Termes Tempranillo</td><td class="mono right">$22</td><td class="right">100%</td><td class="right flag">None</td></tr>
+                <tr><td>Bulleit BB</td><td class="mono right">$16</td><td class="right">100%</td><td class="right flag">None</td></tr>
+                <tr><td>GL Dauvissat Chablis</td><td class="mono right">$50</td><td class="right">50%</td><td class="right ok">Manager</td></tr>
+                <tr><td>Amuse-bouche (119x)</td><td class="mono right">~$480</td><td class="right">100%</td><td class="right">Kitchen</td></tr>
+            </table>
+        </div>
+        <div class="widget-alert">&#9888; Two items ($38 total) were 100% comped with NO manager authorization. This is a policy violation — all comps over $10 require manager approval in MICROS.</div>
+        <div class="widget-alert amber">&#9888; 119 amuse-bouche servings at estimated $3-5 cost each = $360-$600 in untracked food cost. This is standard for fine dining but should be captured as a controllable expense.</div>
+        <strong>Total comp exposure:</strong> $88 in direct comps + $360-$600 in untracked amuse-bouche cost.
+    `,
+    'labor': `
+        <strong>Labor Cost Analysis</strong>
+        <div class="widget-alert amber">&#9888; COGS and Labor Cost are not currently configured in the Oracle MICROS POS. Both report as 0.0%. Without these inputs, there is zero visibility into actual profitability.</div>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Net Sales</div><div class="wk-value">$20,506</div></div>
+            <div class="wk"><div class="wk-label">Labor Cost</div><div class="wk-value red">Not Set</div><div class="wk-sub">0.0% in POS</div></div>
+            <div class="wk"><div class="wk-label">COGS</div><div class="wk-value red">Not Set</div><div class="wk-sub">0.0% in POS</div></div>
+        </div>
+        The $20.5K net sales day could be highly profitable or barely breaking even — <strong>there is no way to know</strong> without labor and COGS configured.<br><br>
+        <strong>What the platform fixes:</strong><br>
+        &bull; Pulls labor hours from your scheduling system (7shifts, HotSchedules, or manual)<br>
+        &bull; Maps actual labor cost against MICROS revenue in real time<br>
+        &bull; Sets target ratios (≤34% labor, ≤26% COGS, ≤19% bev cost) with automated alerts<br>
+        &bull; Tracks fleet labor displacement as a discrete savings line item<br><br>
+        This is the single highest-impact configuration change you can make. Want me to generate a setup recommendation?
+    `,
+    'total revenue': `
+        <strong>Total Revenue Analysis</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Net Sales</div><div class="wk-value">$20,506</div></div>
+            <div class="wk"><div class="wk-label">Service Charges</div><div class="wk-value">$5,565</div></div>
+            <div class="wk"><div class="wk-label">Tax</div><div class="wk-value">$1,840</div></div>
+            <div class="wk"><div class="wk-label">Total</div><div class="wk-value green">$27,911</div></div>
+        </div>
+        Net-to-total ratio is 73.5%, meaning 26.5% of every dollar collected is service charge and tax. Service charges alone represent $5,565 — but there's a discrepancy.<br><br>
+        <div class="widget-alert amber">Financial Control reports $5,565.38 in service charges but the Tips report shows only $4,876.90. The missing $688.48 may be allocated to the 14 outstanding checks, event billing via TripleSeat, or a posting error.</div>
+    `,
+    'guest count': `
+        <strong>Guest &amp; Cover Analysis</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Total Guests</div><div class="wk-value">285</div></div>
+            <div class="wk"><div class="wk-label">Checks Opened</div><div class="wk-value">150</div></div>
+            <div class="wk"><div class="wk-label">Avg Check</div><div class="wk-value amber">$136.70</div></div>
+            <div class="wk"><div class="wk-label">Per Guest</div><div class="wk-value">$71.95</div></div>
+        </div>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Top Check</div><div class="wk-value" style="color:var(--accent)">$1,847</div></div>
+            <div class="wk"><div class="wk-label">Top 5 Avg</div><div class="wk-value">$1,206</div></div>
+            <div class="wk"><div class="wk-label">Bottom 10%</div><div class="wk-value amber">$28.50</div></div>
+            <div class="wk"><div class="wk-label">Median Check</div><div class="wk-value">$112.00</div></div>
+        </div>
+        Highest check today: <strong>$1,847</strong> (Torno Pvt, party of 6, 2 bottles wine + tasting menu). Top 5 checks averaged $1,206 — all in Torno or Torno Private.<br><br>
+        Average party size is <strong>1.9 guests per check</strong>. For a members' club, this is typical — solo diners and couples dominate weekday traffic.<br><br>
+        <strong>Table turns:</strong> 105 turns across the day at $195.29 per turn. Average dine time of 81 minutes is within the fine-dining expected range (75-90 min).<br><br>
+        At 285 guests and $71.95 per guest, the per-guest spend is healthy but could increase with beverage attachment. Current beverage attachment rate is 35.4% of net sales — a robot-delivered cocktail menu could capture incremental orders from members who don't want to flag down service.
+    `,
+    'revenue center': `
+        <strong>Revenue Center Performance</strong>
+        <div class="widget">
+            <div class="widget-bar"><span class="wb-label">Torno</span><div class="wb-track"><div class="wb-fill" style="width:41%;background:var(--accent)"></div></div><span class="wb-val">$8,412</span></div>
+            <div class="widget-bar"><span class="wb-label">Roof Bar</span><div class="wb-track"><div class="wb-fill" style="width:23.5%;background:var(--green)"></div></div><span class="wb-val">$4,826</span></div>
+            <div class="widget-bar"><span class="wb-label">TS Bar</span><div class="wb-track"><div class="wb-fill" style="width:15.6%;background:var(--amber)"></div></div><span class="wb-val">$3,190</span></div>
+            <div class="widget-bar"><span class="wb-label">Torno Pvt</span><div class="wb-track"><div class="wb-fill" style="width:9.5%;background:#8b6b5a"></div></div><span class="wb-val">$1,942</span></div>
+            <div class="widget-bar"><span class="wb-label">E1 Bar</span><div class="wb-track"><div class="wb-fill" style="width:5%;background:#6b8f9e"></div></div><span class="wb-val">$1,018</span></div>
+            <div class="widget-bar"><span class="wb-label">E3 Bar</span><div class="wb-track"><div class="wb-fill" style="width:3.3%;background:#a07070"></div></div><span class="wb-val">$668</span></div>
+            <div class="widget-bar"><span class="wb-label">Torno Bar</span><div class="wb-track"><div class="wb-fill" style="width:2.2%;background:#7a8b60"></div></div><span class="wb-val">$450</span></div>
+            <div class="widget-bar"><span class="wb-label">E2 Bar</span><div class="wb-track"><div class="wb-fill" style="width:0%;background:var(--red)"></div></div><span class="wb-val flag">$0</span></div>
+        </div>
+        <div class="widget-alert amber">E2 Bar posted $0 today. If this center was staffed and operational, that's a problem. If it was intentionally closed, it should be deactivated in MICROS to reduce noise in reporting.</div>
+        Torno Subito drives 41% of net sales — the restaurant is the revenue engine. Roof Bar at 23.5% shows strong terrace traffic for a Tuesday.
+    `,
+    'roof bar': `
+        <strong>Roof Bar — Performance Detail</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Net Sales</div><div class="wk-value">$4,826</div></div>
+            <div class="wk"><div class="wk-label">Share</div><div class="wk-value">23.5%</div></div>
+            <div class="wk"><div class="wk-label">vs Torno</div><div class="wk-value">57%</div><div class="wk-sub">of Torno's volume</div></div>
+        </div>
+        The Roof Bar is The Moore's second-highest revenue center at $4,826 — strong for a Tuesday. This is the terrace + bar service on the 4th floor.<br><br>
+        <strong>Fleet opportunity:</strong> With robot delivery, members on the terrace can order food from Torno's kitchen without leaving their seat. Currently, terrace food orders require a server round-trip to the kitchen (Fl 1 → Fl 4). A W3 delivery bot handles this in 4 minutes, freeing the bartender to focus on drinks and increasing Torno's reach to the rooftop.
+    `,
+    'over short': `
+        <strong>Over/Short Variance</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Variance</div><div class="wk-value red">$4,161</div></div>
+            <div class="wk"><div class="wk-label">Tolerance</div><div class="wk-value green">&lt;$25</div></div>
+            <div class="wk"><div class="wk-label">Overage</div><div class="wk-value red">166x</div><div class="wk-sub">over tolerance</div></div>
+        </div>
+        <div class="widget-alert">$4,161 over/short on a $28K revenue day represents 14.9% of total revenue. This is 166x the $25 tolerance threshold and the single biggest red flag in today's data.</div>
+        This appears directly linked to tips paid ($4,160.70) not reconciling against cash due (-$4,160.70). The amounts match almost exactly — suggesting a systemic posting issue rather than theft.<br><br>
+        <strong>Root cause hypothesis:</strong> Tip payouts were pulled from drawer cash before the deposit, creating both the negative cash position and the over/short. The fix is procedural — tip payouts must post after end-of-day deposit pull, not before.
+    `,
+    'liquor': `
+        <strong>Liquor Sales &amp; Pour Cost</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">Liquor Sales</div><div class="wk-value">$2,144</div></div>
+            <div class="wk"><div class="wk-label">Pours</div><div class="wk-value">112</div></div>
+            <div class="wk"><div class="wk-label">Avg Pour</div><div class="wk-value">$19.14</div></div>
+        </div>
+        <div class="widget-alert amber">Pour cost is NOT configured in MICROS. Without it, you're blind to shrinkage, over-pours, and actual margin on every cocktail.</div>
+        At $19.14 average pour revenue, the cocktail program is priced well for the market. Top movers today:<br><br>
+        &bull; <strong>Negroni</strong> — 34 pours ($612)<br>
+        &bull; <strong>Old Fashioned</strong> — estimated 20+ pours<br>
+        &bull; <strong>Bulleit BB</strong> — flagged for 100% comp (no authorization)<br><br>
+        <strong>Integration note:</strong> Connecting the Bottle Tracker app gives real-time pour cost by brand. At 112 pours/day, even a 5% over-pour rate is ~$100/day in lost margin — $36K/year.
+    `,
+    'bar performance': `
+        <strong>Bar Performance — TS Bar</strong>
+        <div class="widget widget-kpi">
+            <div class="wk"><div class="wk-label">TS Bar Sales</div><div class="wk-value">$3,190</div></div>
+            <div class="wk"><div class="wk-label">Share</div><div class="wk-value">15.6%</div></div>
+        </div>
+        The TS Bar (Torno Subito's dedicated bar) is the third-highest revenue center. Combined with Roof Bar ($4,826) and other bars, total bar revenue is <strong>$10,152</strong> — representing 49.5% of net sales.<br><br>
+        Bars are essentially half of The Moore's revenue. This makes beverage program optimization the single biggest margin lever available.
+    `
+};
+
+function matchResponse(text) {
+    const t = text.toLowerCase();
+    /* WHY: Order matters — more specific patterns first, broad catch-alls last */
+
+    // Cash & payments
+    if (t.includes('cash') && (t.includes('variance') || t.includes('position') || t.includes('deficit') || t.includes('short'))) return RESPONSES['cash variance'];
+    if (t.includes('over') && t.includes('short')) return RESPONSES['over short'];
+
+    // Revenue queries
+    if (t.includes('revenue') && t.includes('center')) return RESPONSES['revenue center'];
+    if (t.includes('total revenue')) return RESPONSES['total revenue'];
+
+    // Cancel / void
+    if (t.includes('cancel') || t.includes('void')) return RESPONSES['cancel report'];
+
+    // Beverage / bar
+    if (t.includes('liquor') || t.includes('pour cost') || t.includes('cocktail') || t.includes('spirit')) return RESPONSES['liquor'];
+    if (t.includes('roof') && t.includes('bar')) return RESPONSES['roof bar'];
+    if (t.includes('bar') && (t.includes('performance') || t.includes('sales') || t.includes('revenue'))) return RESPONSES['bar performance'];
+    if (t.includes('beverage') || t.includes('drink') || t.includes('wine') || t.includes('beer')) return RESPONSES['beverage'];
+
+    // Checks
+    if (t.includes('outstanding') || t.includes('open check') || t.includes('unclosed')) return RESPONSES['outstanding checks'];
+    if (t.includes('check') && (t.includes('top') || t.includes('high') || t.includes('big') || t.includes('large') || t.includes('average') || t.includes('avg'))) return RESPONSES['guest count'];
+
+    // Dayparts
+    if (t.includes('daypart') || t.includes('day part') || t.includes('lunch') || t.includes('dinner') || t.includes('brunch') || t.includes('breakfast')) return RESPONSES['daypart'];
+
+    // Comps / discounts
+    if (t.includes('comp') || t.includes('discount') || t.includes('comped') || t.includes('promo')) return RESPONSES['comps'];
+
+    // Labor / cost
+    if (t.includes('labor') || t.includes('cogs') || t.includes('staffing') || t.includes('payroll') || t.includes('employee')) return RESPONSES['labor'];
+
+    // Guest / covers / check size
+    if (t.includes('guest') || t.includes('cover') || t.includes('check size') || t.includes('per person') || t.includes('dine') || t.includes('seat')) return RESPONSES['guest count'];
+
+    // Sales / revenue broad catches
+    if (t.includes('top') && (t.includes('sell') || t.includes('item') || t.includes('menu') || t.includes('product'))) return RESPONSES['revenue breakdown'];
+    if (t.includes('sale') || t.includes('net') || t.includes('gross') || t.includes('revenue') || t.includes('income')) return RESPONSES['revenue breakdown'];
+
+    // How much / totals
+    if (t.includes('how much') || t.includes('total') || t.includes('today') || t.includes('summary') || t.includes('overview') || t.includes('report')) return RESPONSES['revenue breakdown'];
+
+    // Alert / issue / problem
+    if (t.includes('alert') || t.includes('issue') || t.includes('problem') || t.includes('flag') || t.includes('concern') || t.includes('wrong')) return RESPONSES['cash variance'];
+
+    // Torno / restaurant specific
+    if (t.includes('torno') || t.includes('subito')) return RESPONSES['revenue center'];
+
+    // Bar alone
+    if (t.includes('bar')) return RESPONSES['bar performance'];
+
+    // Catch-all: try to give something useful rather than the help menu
+    /* WHY: fuzzy fallback — score each response by keyword overlap so almost any
+       question returns real data instead of the generic "try asking about..." */
+    const scores = {};
+    const keywords = {
+        'cash variance': ['cash','money','paid','payment','register','drawer','deposit','shortage','missing'],
+        'revenue breakdown': ['revenue','sales','sold','made','earned','amount','number','profit','performance','results','doing'],
+        'cancel report': ['cancel','void','refund','return','removed','deleted','waste'],
+        'beverage': ['beverage','drink','wine','beer','alcohol','bottle','glass'],
+        'outstanding checks': ['check','tab','open','table','close','outstanding','waiting','pending'],
+        'daypart': ['time','hour','morning','afternoon','evening','night','period','shift','when','peak','busy','slow'],
+        'comps': ['comp','free','discount','promo','give away','complimentary','manager'],
+        'labor': ['labor','staff','employee','cost','expense','overhead','wage','hour','schedule'],
+        'guest count': ['guest','customer','people','person','cover','diner','visitor','head','count','many','check','average','avg','high','top','big','large','most','best','max'],
+        'roof bar': ['roof','rooftop','terrace','upstairs','outdoor','patio'],
+        'bar performance': ['bar','cocktail','bartend','mixed','liquor','spirit','pour']
+    };
+    let bestKey = null, bestScore = 0;
+    for (const [key, words] of Object.entries(keywords)) {
+        const score = words.filter(w => t.includes(w)).length;
+        if (score > bestScore) { bestScore = score; bestKey = key; }
+    }
+    if (bestKey && bestScore > 0) return RESPONSES[bestKey];
+
+    // True fallback — nothing matched at all
+    return `Good question. Let me pull the most relevant data I have.<br><br>` + RESPONSES['revenue breakdown'];
+}
+
+function addMessage(text, type) {
+    const area = document.getElementById('chatArea');
+    const msg = document.createElement('div');
+    msg.className = 'msg ' + type;
+    const header = type === 'ai' ? 'Moore Operations AI' : 'You';
+    msg.innerHTML = `<div class="msg-header">${header}</div><div class="msg-body">${text}</div>`;
+    area.appendChild(msg);
+    area.scrollTop = area.scrollHeight;
+}
+
+function addTyping() {
+    const area = document.getElementById('chatArea');
+    const msg = document.createElement('div');
+    msg.className = 'msg ai';
+    msg.id = 'typing';
+    msg.innerHTML = `<div class="msg-header">Moore Operations AI</div><div class="msg-body"><div class="typing"><span></span><span></span><span></span></div></div>`;
+    area.appendChild(msg);
+    area.scrollTop = area.scrollHeight;
+}
+
+function removeTyping() {
+    const el = document.getElementById('typing');
+    if (el) el.remove();
+}
+
+function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addMessage(text, 'user');
+    addTyping();
+    /* WHY: 800ms delay simulates AI processing — feels natural without being slow */
+    setTimeout(() => {
+        removeTyping();
+        addMessage(matchResponse(text), 'ai');
+    }, 800);
+}
+
+function askAbout(topic) {
+    document.getElementById('userInput').value = topic;
+    sendMessage();
+}
+</script>
+</body>
+</html>

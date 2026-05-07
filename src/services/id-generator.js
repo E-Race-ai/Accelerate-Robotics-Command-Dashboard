@@ -8,10 +8,10 @@ const crypto = require('crypto');
  * used in existing deal docs (OPP-001 = Thesis Hotel, OPP-002 = Moore Miami, etc.)
  * Zero-padded to 3 digits so lexicographic and numeric sort agree up to OPP-999.
  */
-function generateDealId(db) {
-  const row = db.prepare(
-    "SELECT id FROM deals WHERE id LIKE 'OPP-%' ORDER BY CAST(SUBSTR(id, 5) AS INTEGER) DESC LIMIT 1"
-  ).get();
+async function generateDealId(db) {
+  const row = await db.one(
+    "SELECT id FROM deals WHERE id LIKE 'OPP-%' ORDER BY CAST(SUBSTR(id, 5) AS INTEGER) DESC LIMIT 1",
+  );
 
   if (!row) return 'OPP-001';
 

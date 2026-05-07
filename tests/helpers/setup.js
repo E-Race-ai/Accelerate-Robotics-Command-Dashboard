@@ -23,13 +23,15 @@ function createTestDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
-      role TEXT DEFAULT 'admin',
+      role TEXT DEFAULT 'admin' CHECK(role IN ('super_admin', 'admin', 'module_owner', 'viewer', 'sales', 'ops')),
       name TEXT DEFAULT '',
-      invited_by INTEGER REFERENCES admin_users(id),
+      invited_by INTEGER,
       invite_token TEXT,
       invite_expires_at TEXT,
       status TEXT DEFAULT 'active',
       last_login_at TEXT,
+      reset_token TEXT,
+      reset_expires_at TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -270,6 +272,69 @@ function createTestDb() {
     CREATE INDEX IF NOT EXISTS idx_assessment_stakeholders_assessment ON assessment_stakeholders(assessment_id);
     CREATE INDEX IF NOT EXISTS idx_assessment_photos_assessment ON assessment_photos(assessment_id);
     CREATE INDEX IF NOT EXISTS idx_assessment_photos_zone ON assessment_photos(zone_id);
+
+    CREATE TABLE IF NOT EXISTS role_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      role TEXT NOT NULL,
+      module TEXT NOT NULL,
+      permission TEXT NOT NULL DEFAULT 'none' CHECK(permission IN ('edit', 'view', 'none')),
+      UNIQUE(role, module)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+      module TEXT NOT NULL,
+      permission TEXT NOT NULL CHECK(permission IN ('edit', 'view', 'none')),
+      UNIQUE(user_id, module)
+    );
+
+    -- ── Project tracker ───────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS tracker_sprints (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tracker_people (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      initials TEXT NOT NULL,
+      full_name TEXT,
+      notes TEXT,
+      active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tracker_items (
+      id TEXT PRIMARY KEY,
+      sprint_id TEXT NOT NULL REFERENCES tracker_sprints(id) ON DELETE CASCADE,
+      parent_id TEXT REFERENCES tracker_items(id) ON DELETE CASCADE,
+      level TEXT NOT NULL CHECK(level IN ('project', 'task', 'subtask')),
+      name TEXT NOT NULL,
+      description TEXT,
+      owner_id INTEGER REFERENCES tracker_people(id),
+      color TEXT,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'not_started'
+        CHECK(status IN ('not_started', 'in_progress', 'blocked', 'complete')),
+      needs_verification INTEGER NOT NULL DEFAULT 0 CHECK(needs_verification IN (0, 1)),
+      verification_note TEXT,
+      is_milestone INTEGER NOT NULL DEFAULT 0 CHECK(is_milestone IN (0, 1)),
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tracker_item_support (
+      item_id TEXT NOT NULL REFERENCES tracker_items(id) ON DELETE CASCADE,
+      person_id INTEGER NOT NULL REFERENCES tracker_people(id) ON DELETE CASCADE,
+      PRIMARY KEY (item_id, person_id)
+    );
   `);
 
   return {
@@ -287,4 +352,38 @@ function makeAuthToken(overrides = {}) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
 }
 
-module.exports = { createTestDb, makeAuthToken, JWT_SECRET };
+/**
+ * Wraps a better-sqlite3 instance in the async { one, all, run, transaction } API that
+ * production code in src/ now expects (libsql-style). Lets us keep in-memory SQLite
+ * for tests while the app talks to Turso in prod.
+ */
+function wrapAsLibsqlHelper(db) {
+  return {
+    one: async (sql, args = []) => db.prepare(sql).get(...args) || null,
+    all: async (sql, args = []) => db.prepare(sql).all(...args),
+    run: async (sql, args = []) => {
+      const r = db.prepare(sql).run(...args);
+      return { changes: r.changes, lastInsertRowid: Number(r.lastInsertRowid ?? 0) };
+    },
+    transaction: async (fn) => {
+      const txFn = db.transaction((innerFn) => innerFn());
+      let result;
+      txFn(() => {
+        // WHY: the libsql-style tx passed to fn must expose the same async helpers.
+        // better-sqlite3's transaction runs sync — we await at the boundary.
+        const tx = {
+          one: (sql, args = []) => Promise.resolve(db.prepare(sql).get(...args) || null),
+          all: (sql, args = []) => Promise.resolve(db.prepare(sql).all(...args)),
+          run: (sql, args = []) => {
+            const r = db.prepare(sql).run(...args);
+            return Promise.resolve({ changes: r.changes, lastInsertRowid: Number(r.lastInsertRowid ?? 0) });
+          },
+        };
+        result = fn(tx);
+      });
+      return result;
+    },
+  };
+}
+
+module.exports = { createTestDb, makeAuthToken, JWT_SECRET, wrapAsLibsqlHelper };

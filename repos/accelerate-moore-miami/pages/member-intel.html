@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moore Miami — Member Intelligence</title>
+<style>
+/* WHY: Moore brand palette — cream/charcoal/terracotta matches existing Moore pages */
+:root {
+    --bg: #faf5ef;
+    --bg2: #f3ece3;
+    --card: #fff;
+    --text: #302e2f;
+    --muted: #8a8280;
+    --accent: #b07d56;
+    --accent2: #8a6f47;
+    --green: #2d8a4e;
+    --red: #c0392b;
+    --amber: #d4850a;
+    --blue: #2e6da4;
+    --border: rgba(48,46,47,0.1);
+    --shadow: 0 2px 12px rgba(48,46,47,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Georgia', 'Times New Roman', serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* Layout */
+.app { display: flex; height: 100vh; }
+.sidebar { width: 320px; background: var(--text); color: var(--bg); display: flex; flex-direction: column; flex-shrink: 0; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Sidebar */
+.sb-header { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.sb-header h1 { font-size: 1.1rem; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+.sb-header p { font-size: 0.75rem; color: rgba(255,255,255,0.5); letter-spacing: 1px; }
+.sb-search { padding: 12px 20px; }
+.sb-search input { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: #fff; font-size: 0.85rem; font-family: inherit; outline: none; }
+.sb-search input::placeholder { color: rgba(255,255,255,0.35); }
+.sb-search input:focus { border-color: var(--accent); }
+.sb-filters { padding: 0 20px 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.sb-filters button { padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.6); font-size: 0.7rem; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.sb-filters button.active, .sb-filters button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.member-list { flex: 1; overflow-y: auto; padding: 8px 12px; }
+.member-list::-webkit-scrollbar { width: 4px; }
+.member-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+.ml-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; cursor: pointer; transition: background 0.2s; margin-bottom: 2px; }
+.ml-item:hover, .ml-item.active { background: rgba(255,255,255,0.08); }
+.ml-item .avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+.ml-item .info { flex: 1; min-width: 0; }
+.ml-item .info .name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ml-item .info .role { font-size: 0.7rem; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ml-item .spend { font-size: 0.75rem; color: var(--accent); font-weight: 600; text-align: right; white-space: nowrap; }
+
+.sb-stats { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+.sb-stats .row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.sb-stats .label { font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; }
+.sb-stats .val { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+
+/* Top bar */
+.topbar { display: flex; align-items: center; padding: 16px 28px; border-bottom: 1px solid var(--border); background: var(--card); gap: 12px; }
+.topbar .tabs { display: flex; gap: 4px; }
+.topbar .tab { padding: 8px 18px; border-radius: 8px; border: none; background: transparent; font-family: inherit; font-size: 0.8rem; cursor: pointer; color: var(--muted); font-weight: 500; transition: all 0.2s; }
+.topbar .tab.active { background: var(--text); color: #fff; }
+.topbar .tab:hover:not(.active) { background: var(--bg2); }
+.topbar .spacer { flex: 1; }
+.topbar .compare-btn { padding: 8px 18px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-family: inherit; font-size: 0.8rem; cursor: pointer; font-weight: 500; transition: all 0.2s; }
+.topbar .compare-btn:hover { background: var(--accent); color: #fff; }
+.topbar .compare-btn.on { background: var(--accent); color: #fff; }
+
+/* Content area */
+.content { flex: 1; overflow-y: auto; padding: 28px; }
+.content::-webkit-scrollbar { width: 6px; }
+.content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+
+/* Profile view */
+.profile { max-width: 900px; }
+.profile-header { display: flex; gap: 24px; margin-bottom: 28px; align-items: flex-start; }
+.profile-header .avatar-lg { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.8rem; flex-shrink: 0; }
+.profile-header .details { flex: 1; }
+.profile-header .details h2 { font-size: 1.5rem; margin-bottom: 4px; }
+.profile-header .details .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; }
+.profile-header .details .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.profile-header .details .tag { padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; background: var(--bg2); color: var(--muted); }
+.profile-header .details .tag.tier { background: var(--accent); color: #fff; }
+
+.profile-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.kpi { background: var(--card); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); text-align: center; }
+.kpi .kv { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+.kpi .kl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.pcard { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
+.pcard h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 14px; }
+.pcard .prow { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.pcard .prow:last-child { border-bottom: none; }
+.pcard .prow .pl { color: var(--muted); }
+.pcard .prow .pv { font-weight: 600; }
+.pcard .pill-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.pcard .pill { padding: 4px 12px; border-radius: 14px; font-size: 0.75rem; background: var(--bg2); color: var(--text); }
+.pcard .pill.match { background: rgba(176,125,86,0.15); color: var(--accent2); }
+
+/* Compare view */
+.compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.compare-card { background: var(--card); border-radius: 14px; padding: 24px; box-shadow: var(--shadow); }
+.compare-card .cc-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.compare-card .cc-header .avatar-sm { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0; }
+.compare-card .cc-header h3 { font-size: 1rem; }
+.compare-card .cc-header p { font-size: 0.75rem; color: var(--muted); }
+.compare-card .cc-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+.compare-card .cc-row:last-child { border-bottom: none; }
+.compare-card .cc-row .cl { color: var(--muted); }
+.compare-card .cc-row .cv { font-weight: 600; }
+.compare-card .cc-row .cv.high { color: var(--green); }
+.compare-card .cc-row .cv.low { color: var(--red); }
+
+/* Chat view */
+.chat-wrap { display: flex; flex-direction: column; height: 100%; }
+.chat-area { flex: 1; overflow-y: auto; padding: 28px; }
+.chat-area::-webkit-scrollbar { width: 6px; }
+.chat-area::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+.msg { margin-bottom: 20px; }
+.msg.user { text-align: right; }
+.msg-header { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 6px; }
+.msg-body { display: inline-block; max-width: 85%; padding: 14px 18px; border-radius: 14px; font-size: 0.88rem; line-height: 1.6; text-align: left; }
+.msg.user .msg-body { background: var(--text); color: #fff; border-bottom-right-radius: 4px; }
+.msg.ai .msg-body { background: var(--card); box-shadow: var(--shadow); border-bottom-left-radius: 4px; }
+.msg.ai .msg-body strong { color: var(--accent2); }
+
+.chat-input { padding: 16px 28px; border-top: 1px solid var(--border); background: var(--card); display: flex; gap: 12px; }
+.chat-input input { flex: 1; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--border); font-size: 0.9rem; font-family: inherit; outline: none; background: var(--bg); }
+.chat-input input:focus { border-color: var(--accent); }
+.chat-input button { padding: 12px 24px; border-radius: 12px; border: none; background: var(--text); color: #fff; font-family: inherit; font-size: 0.85rem; cursor: pointer; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+.chat-input button:hover { background: var(--accent2); }
+
+.quick-prompts { padding: 0 28px 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+.quick-prompts button { padding: 6px 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 0.75rem; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.quick-prompts button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Analytics view */
+.analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; }
+.analytics-grid .pcard.full { grid-column: 1 / -1; }
+.ana-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.ana-bar .ab-label { width: 110px; font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ana-bar .ab-track { flex: 1; height: 22px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
+.ana-bar .ab-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.5s; }
+.ana-bar .ab-val { font-size: 0.8rem; font-weight: 600; width: 60px; text-align: right; }
+
+.widget-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.widget-table th { text-align: left; padding: 8px 6px; border-bottom: 2px solid var(--border); color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+.widget-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); }
+.widget-table tr:last-child td { border-bottom: none; }
+
+.typing span { display: inline-block; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; margin: 0 2px; animation: bounce 1.2s infinite; }
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,80%,100% { transform: translateY(0); } 40% { transform: translateY(-8px); } }
+
+/* Checkbox for compare */
+.ml-item .compare-check { width: 18px; height: 18px; border-radius: 4px; border: 2px solid rgba(255,255,255,0.2); display: none; cursor: pointer; appearance: none; -webkit-appearance: none; flex-shrink: 0; }
+.ml-item .compare-check:checked { background: var(--accent); border-color: var(--accent); }
+.ml-item .compare-check:checked::after { content: '\2713'; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; height: 100%; }
+body.compare-mode .ml-item .compare-check { display: block; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="sb-header">
+        <h1>Member Intelligence</h1>
+        <p>The Moore &middot; VIP Database</p>
+    </div>
+    <div class="sb-search">
+        <input type="text" id="searchInput" placeholder="Search members, companies, interests..." oninput="filterMembers()">
+    </div>
+    <div class="sb-filters" id="filterBar">
+        <button class="active" onclick="setFilter('all',this)">All</button>
+        <button onclick="setFilter('founders',this)">Founders</button>
+        <button onclick="setFilter('finance',this)">Finance</button>
+        <button onclick="setFilter('tech',this)">Tech</button>
+        <button onclick="setFilter('married',this)">Married</button>
+        <button onclick="setFilter('single',this)">Single</button>
+        <button onclick="setFilter('top-spend',this)">Top Spend</button>
+    </div>
+    <div class="member-list" id="memberList"></div>
+    <div class="sb-stats">
+        <div class="row"><span class="label">Total Members</span><span class="val">10</span></div>
+        <div class="row"><span class="label">Total YTD Spend</span><span class="val">$287,450</span></div>
+        <div class="row"><span class="label">Avg Monthly</span><span class="val">$7,186</span></div>
+    </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+    <div class="topbar">
+        <div class="tabs">
+            <button class="tab active" onclick="switchView('profile',this)">Profile</button>
+            <button class="tab" onclick="switchView('analytics',this)">Analytics</button>
+            <button class="tab" onclick="switchView('chat',this)">Ask AI</button>
+        </div>
+        <div class="spacer"></div>
+        <button class="compare-btn" onclick="toggleCompare()" id="compareBtn">Compare</button>
+    </div>
+
+    <!-- Profile View -->
+    <div class="content" id="profileView">
+        <div class="profile" id="profileContent"></div>
+    </div>
+
+    <!-- Analytics View -->
+    <div class="content" id="analyticsView" style="display:none"></div>
+
+    <!-- Chat View -->
+    <div class="chat-wrap" id="chatView" style="display:none">
+        <div class="chat-area" id="chatArea"></div>
+        <div class="quick-prompts" id="quickPrompts">
+            <button onclick="askChat('Who are the top spenders?')">Top spenders</button>
+            <button onclick="askChat('Compare all founders')">Compare founders</button>
+            <button onclick="askChat('Who is interested in AI?')">AI interest</button>
+            <button onclick="askChat('Which members share the most interests?')">Overlap analysis</button>
+            <button onclick="askChat('Who has kids?')">Members with kids</button>
+            <button onclick="askChat('Show me the finance members')">Finance sector</button>
+            <button onclick="askChat('Who are the newest members?')">Newest members</button>
+            <button onclick="askChat('Beverage preferences')">Beverage prefs</button>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="Ask anything about members..." onkeydown="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()">Send</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+/* ================================================================
+   MEMBER DATABASE
+   WHY: Mock data enriched from real Freestyle Friday survey responses.
+   Each member has real survey data + synthetic Moore-specific spend/visit data
+   to demonstrate the intelligence platform's capabilities.
+   ================================================================ */
+const MEMBERS = [
+    {
+        id: 1, name: 'Nat Disston', email: 'nat.disston@gmail.com', phone: '203-912-3698',
+        avatar: '#3a6b8a',
+        companies: [
+            { name: 'Equity Zen', industry: 'FinTech' },
+            { name: 'ZX Ventures', industry: 'Ventures' },
+            { name: 'Atomic', industry: 'Ventures' }
+        ],
+        role: 'Operating Partner, Atomic',
+        sector: 'tech',
+        yearsInMiami: 5, longTerm: 'Yes',
+        marital: 'Married', kids: 'Yes',
+        clubs: ['Key Biscayne Yacht Club'],
+        interests: ['Padel','Pickleball','Tennis','Snow Skiing','Snowboarding','Kite Boarding','Wake Surfing','Boating','Yachting','Networking','Poker','Game Nights','Travel','Dining','Weekend BBQ','Investments','Startups','Crypto','AI','Technology','Fitness','Wellness','Surfing'],
+        eventPriority: 'Group activities — Poker, Game nights, kite surf, boat day',
+        wouldLead: 'Poker, Padel, Boat',
+        whyJoin: 'Meet great dudes, mix up the work environment',
+        growthIdea: 'Keep small for now, referral only',
+        tier: 'Founding', joinDate: '2024-09-15',
+        /* WHY: Synthetic spend/visit data demonstrates the analytics capabilities */
+        ytdSpend: 38200, monthlyAvg: 9550, visits: 47, lastVisit: '2026-04-14',
+        avgCheck: 812, favVenue: 'Torno Pvt', favDrink: 'Barolo, Old Fashioned',
+        eventsAttended: 14, referrals: 3, spendTrend: [6200, 8100, 9400, 7800, 6700]
+    },
+    {
+        id: 2, name: 'Raul Henriquez', email: 'raulhenriquez@gmail.com', phone: '305-496-4116',
+        avatar: '#8a3a5a',
+        companies: [
+            { name: 'Candor Venture', industry: 'VC' },
+            { name: 'Deubase', industry: 'Software Staffing' },
+            { name: 'Cameo', industry: 'Celebrity Marketing' }
+        ],
+        role: 'Partner, Media Ventures',
+        sector: 'finance',
+        yearsInMiami: 3, longTerm: 'Yes',
+        marital: 'Single', kids: 'No',
+        clubs: ['SOHO House', 'AEI Milken YLC'],
+        interests: ['Padel','Pickleball','Tennis','Golf','Snow Skiing','Snowboarding','Boating','Yachting','Sports Viewing','Networking','Clubs','Poker','Game Nights','Travel','Dining','Weekend BBQ','Cigars','Wine Tasting','Watches','Art','Investments','Startups','Real Estate','AI','Technology','Fitness','Wellness'],
+        eventPriority: 'Padel, wine, cigars',
+        wouldLead: 'Wine night',
+        whyJoin: 'Local perspective',
+        tier: 'Founding', joinDate: '2024-09-15',
+        ytdSpend: 42100, monthlyAvg: 10525, visits: 62, lastVisit: '2026-04-16',
+        avgCheck: 679, favVenue: 'Roof Bar', favDrink: 'Brunello, Negroni',
+        eventsAttended: 18, referrals: 5, spendTrend: [8900, 10200, 9100, 7400, 6500]
+    },
+    {
+        id: 3, name: 'Max Sabert', email: 'max.sabert@ubs.com', phone: '513-484-3904',
+        avatar: '#4a6b3a',
+        companies: [{ name: 'UBS', industry: 'Finance / Private Wealth' }],
+        role: 'Private Wealth Advisor, UBS',
+        sector: 'finance',
+        yearsInMiami: 5, longTerm: 'Yes',
+        marital: 'Married', kids: 'Yes',
+        clubs: ['Aman'],
+        interests: ['Padel','Pickleball','Tennis','Golf','Sports Viewing','Networking','Poker','Game Nights','Travel','Dining','Weekend BBQ','Watches','Art','Investments','Startups','AI','Technology','Fitness','Wellness','Wine'],
+        eventPriority: 'Social Events',
+        wouldLead: 'Any that I checked off',
+        whyJoin: 'Meeting like-minded people',
+        tier: 'Platinum', joinDate: '2024-11-01',
+        ytdSpend: 31400, monthlyAvg: 7850, visits: 38, lastVisit: '2026-04-12',
+        avgCheck: 826, favVenue: 'Torno', favDrink: 'Champagne, Whiskey Sour',
+        eventsAttended: 11, referrals: 2, spendTrend: [5800, 7200, 8100, 6200, 4100]
+    },
+    {
+        id: 4, name: 'TJ Hennessy', email: 'TJ@brickdynamics.com', phone: '310-962-7388',
+        avatar: '#6b4a3a',
+        companies: [
+            { name: 'Brick Dynamics', industry: 'Tech' },
+            { name: 'Bird', industry: 'Tech / Mobility' },
+            { name: 'Arena Ventures', industry: 'Venture Capital' }
+        ],
+        role: 'Founder, Brick Dynamics',
+        sector: 'tech',
+        yearsInMiami: 3.5, longTerm: 'Not Sure',
+        longTermFactors: 'Family, Work',
+        marital: 'Married', kids: 'Planning',
+        clubs: ['SOHO House'],
+        interests: ['Padel','Pickleball','Tennis','Golf','Snow Skiing','Snowboarding','Boating','Yachting','Sports Viewing','Networking','Poker','Game Nights','Travel','Dining','Weekend BBQ','Cigars','Wine Tasting','Watches','Art','Investments','Startups','Crypto','AI','Technology','Fitness','Wellness','Racing','Everglades Hunting'],
+        eventPriority: 'Poker, padel/golf, dinner + wine, events/activities',
+        wouldLead: 'Padel/golf',
+        whyJoin: 'Meet great people + help each other out',
+        growthIdea: 'Selectively adding + invites',
+        tier: 'Founding', joinDate: '2024-09-15',
+        ytdSpend: 35800, monthlyAvg: 8950, visits: 44, lastVisit: '2026-04-15',
+        avgCheck: 814, favVenue: 'Torno', favDrink: 'Bordeaux, Mezcal Negroni',
+        eventsAttended: 16, referrals: 4, spendTrend: [7100, 8400, 9200, 6800, 4300]
+    },
+    {
+        id: 5, name: 'Aaron Anderson', email: 'aaron.anderson.100@gmail.com', phone: '847-363-4747',
+        avatar: '#3a5a8a',
+        companies: [
+            { name: 'KASA', industry: 'Real Estate & Tech' },
+            { name: 'AMLI', industry: 'Real Estate Investing' }
+        ],
+        role: 'Founder, KASA',
+        sector: 'tech',
+        yearsInMiami: 2.8, longTerm: 'Yes',
+        marital: 'Single', kids: 'No',
+        clubs: [],
+        interests: ['Padel','Pickleball','Tennis','Hunting','Fishing','Poker','Game Nights','Travel','Dining','Real Estate','Fitness','Wellness'],
+        eventPriority: 'Padel',
+        whyJoin: 'Networking, business opportunities, community building',
+        tier: 'Gold', joinDate: '2025-01-10',
+        ytdSpend: 18600, monthlyAvg: 4650, visits: 24, lastVisit: '2026-04-10',
+        avgCheck: 775, favVenue: 'Roof Bar', favDrink: 'IPA, Ranch Water',
+        eventsAttended: 8, referrals: 1, spendTrend: [3200, 4100, 4800, 3900, 2600]
+    },
+    {
+        id: 6, name: 'Austin Criden', email: 'acriden@gmail.com', phone: '305-496-1993',
+        avatar: '#8a6b3a',
+        companies: [
+            { name: 'Palm Tree Crew', industry: 'Entertainment' },
+            { name: 'Southern Shine', industry: 'Car Wash' },
+            { name: 'Biscayne Growth', industry: 'Private Equity' }
+        ],
+        role: 'CEO / Founder',
+        sector: 'founders',
+        yearsInMiami: 30, longTerm: 'Yes',
+        marital: 'Married', kids: 'Yes',
+        clubs: ["ZZ's Lagorce"],
+        interests: ['Padel','Pickleball','Tennis','Golf','Snow Skiing','Snowboarding','Hunting','Fishing','Boating','Yachting','Sports Viewing','Networking','Clubs','Poker','Game Nights','Travel','Dining','Weekend BBQ','Cigars','Wine Tasting','Watches','Art','Investments','Startups','Real Estate','Crypto','AI','Technology','Fitness','Wellness'],
+        eventPriority: 'Let the group pick, people own events like YPO',
+        wouldLead: 'People should lead like YPO',
+        whyJoin: 'Friendships, good times, do some business together',
+        growthIdea: 'Keep it tight, have restrictions + process',
+        tier: 'Founding', joinDate: '2024-09-15',
+        ytdSpend: 52300, monthlyAvg: 13075, visits: 71, lastVisit: '2026-04-16',
+        avgCheck: 737, favVenue: 'Torno', favDrink: 'Opus One, Espresso Martini',
+        eventsAttended: 21, referrals: 7, spendTrend: [11200, 12400, 10800, 9600, 8300]
+    },
+    {
+        id: 7, name: 'Henri Sejournet', email: 'henri.sejournet@gmail.com', phone: '202-710-6961',
+        avatar: '#5a3a8a',
+        companies: [
+            { name: 'Afiniti', industry: 'Enterprise AI Solutions' },
+            { name: 'Oliver Wyman', industry: 'Strategy Consulting' }
+        ],
+        role: 'Founder, Teton AI (Healthcare AI)',
+        sector: 'tech',
+        yearsInMiami: 2.5, longTerm: 'Likely',
+        longTermFactors: 'Unclear how long in the U.S.',
+        marital: 'Single', kids: 'Planning',
+        clubs: ['Considering The Moore'],
+        interests: ['Padel','Pickleball','Tennis','Snow Skiing','Snowboarding','Kite Boarding','Wake Surfing','Networking','Travel','Dining','Weekend BBQ','Cigars','Wine Tasting','Watches','Art','Investments','Startups','AI','Technology'],
+        eventPriority: 'Social, sports, business education',
+        wouldLead: 'Wine nights, cool guest speeches',
+        whyJoin: 'Introductions and ideas, help members',
+        growthIdea: 'WhatsApp group with sub-threads by theme, rating system',
+        tier: 'Gold', joinDate: '2025-02-01',
+        ytdSpend: 16800, monthlyAvg: 4200, visits: 22, lastVisit: '2026-04-13',
+        avgCheck: 764, favVenue: 'TS Bar', favDrink: 'Natural Wine, Aperol Spritz',
+        eventsAttended: 9, referrals: 2, spendTrend: [2800, 3400, 4100, 3600, 2900]
+    },
+    {
+        id: 8, name: 'Grant Johnson', email: 'grant@altapeakholdings.com', phone: '704-654-9949',
+        avatar: '#3a8a6b',
+        companies: [
+            { name: 'Hellman & Friedman', industry: 'Private Equity' },
+            { name: 'Searchlight Capital', industry: 'Private Equity' },
+            { name: 'MSD Partners', industry: 'Investment' }
+        ],
+        role: 'Owner & Exec Chairman, Alta Peak Holdings (Construction)',
+        sector: 'finance',
+        yearsInMiami: 0.5, longTerm: 'Yes',
+        marital: 'Married', kids: 'No',
+        clubs: [],
+        interests: ['Padel','Pickleball','Tennis','Golf','Snow Skiing','Snowboarding','Hunting','Fishing','Boating','Yachting','Travel','Cigars','Wine Tasting','Fitness','Wellness','Spearfishing'],
+        eventPriority: 'Fun, active, common time to get to know everyone',
+        wouldLead: 'Workouts, cycling, running, wine tastings',
+        whyJoin: 'Being challenged intellectually by sharp guys and having fun',
+        growthIdea: 'WhatsApp community group',
+        tier: 'Gold', joinDate: '2025-03-01',
+        ytdSpend: 12400, monthlyAvg: 3100, visits: 14, lastVisit: '2026-04-11',
+        avgCheck: 886, favVenue: 'Torno Pvt', favDrink: 'Burgundy, Dirty Martini',
+        eventsAttended: 5, referrals: 0, spendTrend: [1800, 2600, 3200, 2900, 1900]
+    },
+    {
+        id: 9, name: 'Devin Fatel', email: null, phone: null,
+        avatar: '#8a3a3a',
+        companies: [{ name: 'Onbrand', industry: 'Marketing / Tech' }],
+        role: 'CEO, Onbrand',
+        sector: 'founders',
+        yearsInMiami: 3, longTerm: 'Yes',
+        marital: 'Single', kids: 'No',
+        clubs: ['SOHO House'],
+        interests: ['Padel','Pickleball','Tennis','Networking','Travel','Dining','Fitness','Wellness'],
+        eventPriority: 'Physical events — padel, morning run, ocean',
+        wouldLead: 'Morning run / ocean dip',
+        whyJoin: 'Social gathering, deeper friendships',
+        growthIdea: 'Keep it intimate',
+        tier: 'Gold', joinDate: '2025-01-15',
+        ytdSpend: 14200, monthlyAvg: 3550, visits: 19, lastVisit: '2026-04-09',
+        avgCheck: 747, favVenue: 'Roof Bar', favDrink: 'Espresso Martini, Paloma',
+        eventsAttended: 7, referrals: 1, spendTrend: [2400, 3100, 3800, 2800, 2100]
+    },
+    {
+        id: 10, name: 'Hank Medina', email: 'liquidity@gmail.com', phone: '305-510-4854',
+        avatar: '#4a3a6b',
+        companies: [
+            { name: 'Jefferies', industry: 'Investment Banking' },
+            { name: 'Wexford Capital', industry: 'Private Equity' },
+            { name: 'Deutsche Bank', industry: 'Investment Banking' }
+        ],
+        role: 'Founder, Litquidity',
+        sector: 'finance',
+        yearsInMiami: 30, longTerm: 'Yes',
+        marital: 'In a Relationship', kids: 'No',
+        clubs: ['SOHO House', 'Hampton Racquet'],
+        interests: ['Padel','Pickleball','Tennis','Golf','Hunting','Fishing','Boating','Yachting','Sports Viewing','Networking','Clubs','Poker','Game Nights','Travel','Dining','Weekend BBQ','Cigars','Wine Tasting','Watches','Art','Investments','Startups','Real Estate','Crypto','AI','Technology','Fitness','Wellness'],
+        eventPriority: 'Fun stuff, padel',
+        whyJoin: 'Networking, business opportunities, community building',
+        tier: 'Platinum', joinDate: '2024-10-01',
+        ytdSpend: 25650, monthlyAvg: 6413, visits: 35, lastVisit: '2026-04-14',
+        avgCheck: 733, favVenue: 'TS Bar', favDrink: 'Macallan 18, Manhattan',
+        eventsAttended: 13, referrals: 3, spendTrend: [4800, 5600, 6200, 5100, 3950]
+    }
+];
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let currentView = 'profile';
+let selectedMember = MEMBERS[0];
+let compareMode = false;
+let compareSet = new Set();
+let activeFilter = 'all';
+
+/* ================================================================
+   SIDEBAR — member list rendering
+   ================================================================ */
+function renderMemberList(members) {
+    const list = document.getElementById('memberList');
+    list.innerHTML = members.map(m => `
+        <div class="ml-item ${m.id === selectedMember.id ? 'active' : ''}" onclick="selectMember(${m.id})" data-id="${m.id}">
+            <input type="checkbox" class="compare-check" onclick="event.stopPropagation(); toggleCompareItem(${m.id})" ${compareSet.has(m.id) ? 'checked' : ''}>
+            <div class="avatar" style="background:${m.avatar};color:#fff">${initials(m.name)}</div>
+            <div class="info">
+                <div class="name">${m.name}</div>
+                <div class="role">${m.role}</div>
+            </div>
+            <div class="spend">$${(m.ytdSpend/1000).toFixed(1)}k</div>
+        </div>
+    `).join('');
+}
+
+function initials(name) {
+    return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+}
+
+function selectMember(id) {
+    selectedMember = MEMBERS.find(m => m.id === id);
+    renderMemberList(getFilteredMembers());
+    if (currentView === 'profile') renderProfile();
+}
+
+function filterMembers() {
+    renderMemberList(getFilteredMembers());
+}
+
+function getFilteredMembers() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    return MEMBERS.filter(m => {
+        /* WHY: search across name, companies, role, interests — not just name */
+        const text = [m.name, m.role, ...m.companies.map(c => c.name + ' ' + c.industry), ...m.interests].join(' ').toLowerCase();
+        const matchesSearch = !q || text.includes(q);
+        let matchesFilter = true;
+        if (activeFilter === 'founders') matchesFilter = m.role.toLowerCase().includes('founder') || m.role.toLowerCase().includes('ceo') || m.role.toLowerCase().includes('owner');
+        if (activeFilter === 'finance') matchesFilter = m.sector === 'finance';
+        if (activeFilter === 'tech') matchesFilter = m.sector === 'tech';
+        if (activeFilter === 'married') matchesFilter = m.marital === 'Married';
+        if (activeFilter === 'single') matchesFilter = m.marital === 'Single';
+        if (activeFilter === 'top-spend') matchesFilter = m.ytdSpend >= 30000;
+        return matchesSearch && matchesFilter;
+    });
+}
+
+function setFilter(filter, btn) {
+    activeFilter = filter;
+    document.querySelectorAll('.sb-filters button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterMembers();
+}
+
+/* ================================================================
+   PROFILE VIEW
+   ================================================================ */
+function renderProfile() {
+    const m = selectedMember;
+    const trend = m.spendTrend;
+    const trendMax = Math.max(...trend);
+    document.getElementById('profileContent').innerHTML = `
+        <div class="profile-header">
+            <div class="avatar-lg" style="background:${m.avatar};color:#fff">${initials(m.name)}</div>
+            <div class="details">
+                <h2>${m.name}</h2>
+                <div class="subtitle">${m.role}</div>
+                <div class="tags">
+                    <span class="tag tier">${m.tier} Member</span>
+                    <span class="tag">${m.marital}${m.kids === 'Yes' ? ' · Has Kids' : m.kids === 'Planning' ? ' · Planning Kids' : ''}</span>
+                    <span class="tag">${m.yearsInMiami >= 10 ? 'Miami Native' : m.yearsInMiami + ' yrs in Miami'}</span>
+                    ${m.clubs.map(c => `<span class="tag">${c}</span>`).join('')}
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-kpis">
+            <div class="kpi"><div class="kv">$${(m.ytdSpend/1000).toFixed(1)}k</div><div class="kl">YTD Spend</div></div>
+            <div class="kpi"><div class="kv">${m.visits}</div><div class="kl">Visits YTD</div></div>
+            <div class="kpi"><div class="kv">$${m.avgCheck}</div><div class="kl">Avg Check</div></div>
+            <div class="kpi"><div class="kv">${m.eventsAttended}</div><div class="kl">Events</div></div>
+        </div>
+
+        <div class="profile-grid">
+            <div class="pcard">
+                <h3>Companies & Career</h3>
+                ${m.companies.map(c => `<div class="prow"><span class="pl">${c.industry}</span><span class="pv">${c.name}</span></div>`).join('')}
+                <div class="prow"><span class="pl">Current Role</span><span class="pv">${m.role}</span></div>
+                <div class="prow"><span class="pl">Sector</span><span class="pv" style="text-transform:capitalize">${m.sector}</span></div>
+            </div>
+
+            <div class="pcard">
+                <h3>Moore Preferences</h3>
+                <div class="prow"><span class="pl">Favorite Venue</span><span class="pv">${m.favVenue}</span></div>
+                <div class="prow"><span class="pl">Go-to Drinks</span><span class="pv">${m.favDrink}</span></div>
+                <div class="prow"><span class="pl">Monthly Avg</span><span class="pv">$${m.monthlyAvg.toLocaleString()}</span></div>
+                <div class="prow"><span class="pl">Last Visit</span><span class="pv">${m.lastVisit}</span></div>
+                <div class="prow"><span class="pl">Referrals Made</span><span class="pv">${m.referrals}</span></div>
+            </div>
+
+            <div class="pcard">
+                <h3>Interests & Activities</h3>
+                <div class="pill-list">
+                    ${m.interests.map(i => `<span class="pill">${i}</span>`).join('')}
+                </div>
+            </div>
+
+            <div class="pcard">
+                <h3>5-Month Spend Trend</h3>
+                <div style="display:flex;align-items:flex-end;gap:8px;height:100px;padding-top:10px;">
+                    ${trend.map((v, i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                        <span style="font-size:0.65rem;color:var(--muted)">$${(v/1000).toFixed(1)}k</span>
+                        <div style="width:100%;background:${i === trend.length - 1 ? 'var(--accent)' : 'var(--bg2)'};border-radius:4px 4px 0 0;height:${(v/trendMax)*80}px;transition:height 0.3s;"></div>
+                    </div>`).join('')}
+                </div>
+                <div style="display:flex;gap:8px;margin-top:6px;">
+                    ${['Dec','Jan','Feb','Mar','Apr'].map(m => `<div style="flex:1;text-align:center;font-size:0.6rem;color:var(--muted)">${m}</div>`).join('')}
+                </div>
+            </div>
+
+            <div class="pcard">
+                <h3>Event Priorities</h3>
+                <div class="prow"><span class="pl">Wants More</span><span class="pv">${m.eventPriority}</span></div>
+                ${m.wouldLead ? `<div class="prow"><span class="pl">Would Lead</span><span class="pv">${m.wouldLead}</span></div>` : ''}
+                <div class="prow"><span class="pl">Why They Joined</span><span class="pv">${m.whyJoin}</span></div>
+                ${m.growthIdea ? `<div class="prow"><span class="pl">Growth Idea</span><span class="pv">${m.growthIdea}</span></div>` : ''}
+            </div>
+
+            <div class="pcard">
+                <h3>Contact</h3>
+                <div class="prow"><span class="pl">Email</span><span class="pv">${m.email || 'Not provided'}</span></div>
+                <div class="prow"><span class="pl">Phone</span><span class="pv">${m.phone || 'Not provided'}</span></div>
+                <div class="prow"><span class="pl">Join Date</span><span class="pv">${m.joinDate}</span></div>
+                <div class="prow"><span class="pl">Long-term?</span><span class="pv">${m.longTerm}${m.longTermFactors ? ' (' + m.longTermFactors + ')' : ''}</span></div>
+            </div>
+        </div>
+    `;
+}
+
+/* ================================================================
+   ANALYTICS VIEW
+   ================================================================ */
+function renderAnalytics() {
+    const sorted = [...MEMBERS].sort((a, b) => b.ytdSpend - a.ytdSpend);
+    const maxSpend = sorted[0].ytdSpend;
+    const totalSpend = MEMBERS.reduce((s, m) => s + m.ytdSpend, 0);
+    const totalVisits = MEMBERS.reduce((s, m) => s + m.visits, 0);
+    const avgCheck = Math.round(MEMBERS.reduce((s, m) => s + m.avgCheck, 0) / MEMBERS.length);
+
+    /* Interest frequency */
+    const interestCount = {};
+    MEMBERS.forEach(m => m.interests.forEach(i => { interestCount[i] = (interestCount[i] || 0) + 1; }));
+    const topInterests = Object.entries(interestCount).sort((a, b) => b[1] - a[1]).slice(0, 12);
+
+    /* Sector breakdown */
+    const sectors = {};
+    MEMBERS.forEach(m => { sectors[m.sector] = (sectors[m.sector] || 0) + 1; });
+
+    /* Tier breakdown */
+    const tiers = {};
+    MEMBERS.forEach(m => { tiers[m.tier] = (tiers[m.tier] || 0) + 1; });
+
+    document.getElementById('analyticsView').innerHTML = `
+        <div class="analytics-grid">
+            <div class="pcard full">
+                <h3>Spend Leaderboard — YTD</h3>
+                ${sorted.map(m => `
+                    <div class="ana-bar">
+                        <span class="ab-label">${m.name.split(' ')[0]}</span>
+                        <div class="ab-track"><div class="ab-fill" style="width:${(m.ytdSpend/maxSpend)*100}%"></div></div>
+                        <span class="ab-val">$${(m.ytdSpend/1000).toFixed(1)}k</span>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="pcard">
+                <h3>Club Totals</h3>
+                <div class="prow"><span class="pl">Total YTD Spend</span><span class="pv">$${(totalSpend/1000).toFixed(0)}k</span></div>
+                <div class="prow"><span class="pl">Total Visits</span><span class="pv">${totalVisits}</span></div>
+                <div class="prow"><span class="pl">Avg Check (all)</span><span class="pv">$${avgCheck}</span></div>
+                <div class="prow"><span class="pl">Avg Visits/Member</span><span class="pv">${Math.round(totalVisits / MEMBERS.length)}</span></div>
+                <div class="prow"><span class="pl">Total Referrals</span><span class="pv">${MEMBERS.reduce((s, m) => s + m.referrals, 0)}</span></div>
+                <div class="prow"><span class="pl">Total Events</span><span class="pv">${MEMBERS.reduce((s, m) => s + m.eventsAttended, 0)}</span></div>
+            </div>
+
+            <div class="pcard">
+                <h3>Member Breakdown</h3>
+                <div class="prow"><span class="pl">By Sector</span><span class="pv"></span></div>
+                ${Object.entries(sectors).map(([k, v]) => `<div class="prow"><span class="pl" style="text-transform:capitalize;padding-left:10px">${k}</span><span class="pv">${v}</span></div>`).join('')}
+                <div class="prow" style="margin-top:8px"><span class="pl">By Tier</span><span class="pv"></span></div>
+                ${Object.entries(tiers).map(([k, v]) => `<div class="prow"><span class="pl" style="padding-left:10px">${k}</span><span class="pv">${v}</span></div>`).join('')}
+            </div>
+
+            <div class="pcard full">
+                <h3>Top Shared Interests (${MEMBERS.length} members)</h3>
+                ${topInterests.map(([name, count]) => `
+                    <div class="ana-bar">
+                        <span class="ab-label">${name}</span>
+                        <div class="ab-track"><div class="ab-fill" style="width:${(count/MEMBERS.length)*100}%;background:${count >= 8 ? 'var(--green)' : count >= 5 ? 'var(--accent)' : 'var(--muted)'}"></div></div>
+                        <span class="ab-val">${count}/${MEMBERS.length}</span>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="pcard full">
+                <h3>Visit Frequency — Last 30 Days</h3>
+                <table class="widget-table">
+                    <tr><th>Member</th><th>Visits</th><th>Spend</th><th>Avg Check</th><th>Fav Venue</th><th>Last Visit</th></tr>
+                    ${sorted.map(m => `<tr>
+                        <td style="font-weight:600">${m.name}</td>
+                        <td>${m.visits}</td>
+                        <td>$${m.ytdSpend.toLocaleString()}</td>
+                        <td>$${m.avgCheck}</td>
+                        <td>${m.favVenue}</td>
+                        <td>${m.lastVisit}</td>
+                    </tr>`).join('')}
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+/* ================================================================
+   COMPARE VIEW
+   ================================================================ */
+function toggleCompare() {
+    compareMode = !compareMode;
+    document.body.classList.toggle('compare-mode', compareMode);
+    document.getElementById('compareBtn').classList.toggle('on', compareMode);
+    if (!compareMode && compareSet.size >= 2) renderCompare();
+    if (!compareMode) { compareSet.clear(); renderMemberList(getFilteredMembers()); }
+}
+
+function toggleCompareItem(id) {
+    if (compareSet.has(id)) compareSet.delete(id); else compareSet.add(id);
+    if (compareSet.size >= 2) renderCompare();
+}
+
+function renderCompare() {
+    switchView('profile', document.querySelector('.tab'));
+    const members = MEMBERS.filter(m => compareSet.has(m.id));
+    /* WHY: find shared interests to highlight overlap */
+    const allInterests = members.map(m => new Set(m.interests));
+    const shared = [...allInterests[0]].filter(i => allInterests.every(s => s.has(i)));
+
+    document.getElementById('profileContent').innerHTML = `
+        <h2 style="margin-bottom:8px">Comparing ${members.length} Members</h2>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:20px"><strong>${shared.length}</strong> shared interests: ${shared.slice(0, 8).join(', ')}${shared.length > 8 ? '...' : ''}</p>
+        <div class="compare-grid">
+            ${members.map(m => `
+                <div class="compare-card">
+                    <div class="cc-header">
+                        <div class="avatar-sm" style="background:${m.avatar};color:#fff">${initials(m.name)}</div>
+                        <div><h3>${m.name}</h3><p>${m.role}</p></div>
+                    </div>
+                    <div class="cc-row"><span class="cl">YTD Spend</span><span class="cv ${m.ytdSpend >= 35000 ? 'high' : m.ytdSpend < 20000 ? 'low' : ''}">$${(m.ytdSpend/1000).toFixed(1)}k</span></div>
+                    <div class="cc-row"><span class="cl">Visits</span><span class="cv">${m.visits}</span></div>
+                    <div class="cc-row"><span class="cl">Avg Check</span><span class="cv">$${m.avgCheck}</span></div>
+                    <div class="cc-row"><span class="cl">Events</span><span class="cv">${m.eventsAttended}</span></div>
+                    <div class="cc-row"><span class="cl">Referrals</span><span class="cv">${m.referrals}</span></div>
+                    <div class="cc-row"><span class="cl">Tier</span><span class="cv">${m.tier}</span></div>
+                    <div class="cc-row"><span class="cl">Fav Venue</span><span class="cv">${m.favVenue}</span></div>
+                    <div class="cc-row"><span class="cl">Go-to Drink</span><span class="cv">${m.favDrink.split(',')[0]}</span></div>
+                    <div class="cc-row"><span class="cl">Sector</span><span class="cv" style="text-transform:capitalize">${m.sector}</span></div>
+                    <div class="cc-row"><span class="cl">Miami Years</span><span class="cv">${m.yearsInMiami >= 10 ? 'Native' : m.yearsInMiami}</span></div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+/* ================================================================
+   VIEW SWITCHING
+   ================================================================ */
+function switchView(view, tab) {
+    currentView = view;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    if (tab) tab.classList.add('active');
+    document.getElementById('profileView').style.display = view === 'profile' ? '' : 'none';
+    document.getElementById('analyticsView').style.display = view === 'analytics' ? '' : 'none';
+    document.getElementById('chatView').style.display = view === 'chat' ? '' : 'none';
+    if (view === 'profile') renderProfile();
+    if (view === 'analytics') renderAnalytics();
+    if (view === 'chat' && !document.getElementById('chatArea').children.length) initChat();
+}
+
+/* ================================================================
+   CHAT — Natural Language Query Engine
+   ================================================================ */
+function initChat() {
+    addChatMsg(`Welcome to <strong>Moore Member Intelligence</strong>. I have full profiles on all <strong>10 members</strong> — spend history, interests, companies, preferences, and more.<br><br>
+    Try asking:<br>
+    &bull; <strong>"Who are the top 3 spenders?"</strong><br>
+    &bull; <strong>"Compare Nat and TJ"</strong><br>
+    &bull; <strong>"Which members are into crypto?"</strong><br>
+    &bull; <strong>"Who should I seat together at dinner?"</strong><br>
+    &bull; <strong>"Show me Grant Johnson's profile"</strong>`, 'ai');
+}
+
+function addChatMsg(html, type) {
+    const area = document.getElementById('chatArea');
+    const div = document.createElement('div');
+    div.className = 'msg ' + type;
+    div.innerHTML = `<div class="msg-header">${type === 'ai' ? 'Moore Intelligence' : 'You'}</div><div class="msg-body">${html}</div>`;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+}
+
+function sendChat() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addChatMsg(text, 'user');
+    /* WHY: typing indicator with 600ms delay feels responsive */
+    const area = document.getElementById('chatArea');
+    const typing = document.createElement('div');
+    typing.className = 'msg ai';
+    typing.id = 'typing';
+    typing.innerHTML = `<div class="msg-header">Moore Intelligence</div><div class="msg-body"><div class="typing"><span></span><span></span><span></span></div></div>`;
+    area.appendChild(typing);
+    area.scrollTop = area.scrollHeight;
+    setTimeout(() => {
+        typing.remove();
+        addChatMsg(processQuery(text), 'ai');
+    }, 600);
+}
+
+function askChat(text) {
+    document.getElementById('chatInput').value = text;
+    sendChat();
+}
+
+function processQuery(text) {
+    const t = text.toLowerCase();
+
+    /* ---- Member lookup by name ---- */
+    const mentioned = MEMBERS.filter(m => {
+        const parts = m.name.toLowerCase().split(' ');
+        return parts.some(p => t.includes(p));
+    });
+
+    /* ---- Compare two or more members ---- */
+    if ((t.includes('compare') || t.includes('vs') || t.includes('versus') || t.includes('difference')) && mentioned.length >= 2) {
+        const shared = getSharedInterests(mentioned);
+        return `<strong>Comparing ${mentioned.map(m => m.name).join(' vs ')}</strong><br><br>
+            <table class="widget-table">
+                <tr><th></th>${mentioned.map(m => `<th>${m.name.split(' ')[0]}</th>`).join('')}</tr>
+                <tr><td style="color:var(--muted)">YTD Spend</td>${mentioned.map(m => `<td><strong>$${(m.ytdSpend/1000).toFixed(1)}k</strong></td>`).join('')}</tr>
+                <tr><td style="color:var(--muted)">Visits</td>${mentioned.map(m => `<td>${m.visits}</td>`).join('')}</tr>
+                <tr><td style="color:var(--muted)">Avg Check</td>${mentioned.map(m => `<td>$${m.avgCheck}</td>`).join('')}</tr>
+                <tr><td style="color:var(--muted)">Events</td>${mentioned.map(m => `<td>${m.eventsAttended}</td>`).join('')}</tr>
+                <tr><td style="color:var(--muted)">Fav Venue</td>${mentioned.map(m => `<td>${m.favVenue}</td>`).join('')}</tr>
+                <tr><td style="color:var(--muted)">Sector</td>${mentioned.map(m => `<td style="text-transform:capitalize">${m.sector}</td>`).join('')}</tr>
+                <tr><td style="color:var(--muted)">Referrals</td>${mentioned.map(m => `<td>${m.referrals}</td>`).join('')}</tr>
+            </table><br>
+            <strong>${shared.length} shared interests:</strong> ${shared.join(', ')}`;
+    }
+
+    /* ---- Single member profile ---- */
+    if (mentioned.length === 1 && (t.includes('profile') || t.includes('show') || t.includes('tell me about') || t.includes('who is') || t.includes('info'))) {
+        const m = mentioned[0];
+        return `<strong>${m.name}</strong> — ${m.role}<br><br>
+            <table class="widget-table">
+                <tr><td style="color:var(--muted)">Tier</td><td><strong>${m.tier}</strong></td></tr>
+                <tr><td style="color:var(--muted)">YTD Spend</td><td><strong>$${m.ytdSpend.toLocaleString()}</strong></td></tr>
+                <tr><td style="color:var(--muted)">Visits</td><td>${m.visits}</td></tr>
+                <tr><td style="color:var(--muted)">Avg Check</td><td>$${m.avgCheck}</td></tr>
+                <tr><td style="color:var(--muted)">Fav Venue</td><td>${m.favVenue}</td></tr>
+                <tr><td style="color:var(--muted)">Go-to Drinks</td><td>${m.favDrink}</td></tr>
+                <tr><td style="color:var(--muted)">Companies</td><td>${m.companies.map(c => c.name).join(', ')}</td></tr>
+                <tr><td style="color:var(--muted)">Clubs</td><td>${m.clubs.length ? m.clubs.join(', ') : 'None listed'}</td></tr>
+                <tr><td style="color:var(--muted)">Events Attended</td><td>${m.eventsAttended}</td></tr>
+                <tr><td style="color:var(--muted)">Referrals</td><td>${m.referrals}</td></tr>
+                <tr><td style="color:var(--muted)">Miami</td><td>${m.yearsInMiami >= 10 ? 'Born & raised' : m.yearsInMiami + ' years'}</td></tr>
+                <tr><td style="color:var(--muted)">Status</td><td>${m.marital}${m.kids === 'Yes' ? ', has kids' : ''}</td></tr>
+            </table>`;
+    }
+
+    /* ---- Top spenders ---- */
+    if (t.includes('top') && (t.includes('spend') || t.includes('spender') || t.includes('money') || t.includes('revenue'))) {
+        const sorted = [...MEMBERS].sort((a, b) => b.ytdSpend - a.ytdSpend);
+        const top = sorted.slice(0, 5);
+        return `<strong>Top 5 Spenders — YTD</strong><br><br>
+            <table class="widget-table">
+                <tr><th>#</th><th>Member</th><th>YTD Spend</th><th>Visits</th><th>Avg Check</th></tr>
+                ${top.map((m, i) => `<tr><td>${i + 1}</td><td><strong>${m.name}</strong></td><td style="color:var(--accent)">$${m.ytdSpend.toLocaleString()}</td><td>${m.visits}</td><td>$${m.avgCheck}</td></tr>`).join('')}
+            </table><br>
+            <strong>${top[0].name}</strong> leads with $${(top[0].ytdSpend/1000).toFixed(1)}k across ${top[0].visits} visits. They average $${top[0].avgCheck}/check and favor ${top[0].favVenue}.`;
+    }
+
+    /* ---- Interest-based queries ---- */
+    const interestKeywords = {
+        'crypto': ['Crypto'], 'ai': ['AI','Technology'], 'golf': ['Golf'], 'padel': ['Padel','Pickleball','Tennis'],
+        'wine': ['Wine','Wine Tasting','Cigars'], 'poker': ['Poker','Game Nights'], 'boat': ['Boating','Yachting'],
+        'ski': ['Snow Skiing','Snowboarding'], 'hunt': ['Hunting','Fishing'], 'real estate': ['Real Estate'],
+        'art': ['Watches','Art'], 'fitness': ['Fitness','Wellness'], 'invest': ['Investments','Startups'],
+        'travel': ['Travel'], 'kite': ['Kite Boarding','Wake Surfing']
+    };
+    for (const [keyword, interests] of Object.entries(interestKeywords)) {
+        if (t.includes(keyword)) {
+            const matches = MEMBERS.filter(m => interests.some(i => m.interests.includes(i)));
+            return `<strong>${matches.length} members interested in ${interests[0]}</strong><br><br>
+                <table class="widget-table">
+                    <tr><th>Member</th><th>Role</th><th>YTD Spend</th><th>Would Lead?</th></tr>
+                    ${matches.map(m => `<tr>
+                        <td><strong>${m.name}</strong></td>
+                        <td style="color:var(--muted)">${m.role.split(',')[0]}</td>
+                        <td>$${(m.ytdSpend/1000).toFixed(1)}k</td>
+                        <td>${m.wouldLead && m.wouldLead.toLowerCase().includes(keyword) ? '<span style="color:var(--green)">Yes</span>' : '—'}</td>
+                    </tr>`).join('')}
+                </table>`;
+        }
+    }
+
+    /* ---- Who has kids ---- */
+    if (t.includes('kid') || t.includes('children') || t.includes('family') || t.includes('parent')) {
+        const withKids = MEMBERS.filter(m => m.kids === 'Yes');
+        const planning = MEMBERS.filter(m => m.kids === 'Planning');
+        return `<strong>Family Status</strong><br><br>
+            <strong>Have kids (${withKids.length}):</strong> ${withKids.map(m => m.name).join(', ')}<br>
+            <strong>Planning (${planning.length}):</strong> ${planning.map(m => m.name).join(', ')}<br>
+            <strong>No kids:</strong> ${MEMBERS.filter(m => m.kids === 'No').map(m => m.name).join(', ')}<br><br>
+            All ${withKids.length} parents are married and among the most active members — ${withKids.map(m => `${m.name.split(' ')[0]} ($${(m.ytdSpend/1000).toFixed(1)}k)`).join(', ')}. Consider family-friendly event options for higher engagement.`;
+    }
+
+    /* ---- Finance / sector queries ---- */
+    if (t.includes('finance') || t.includes('banking') || t.includes('pe') || t.includes('private equity') || t.includes('wealth')) {
+        const fin = MEMBERS.filter(m => m.sector === 'finance');
+        return `<strong>Finance Sector Members (${fin.length})</strong><br><br>
+            <table class="widget-table">
+                <tr><th>Member</th><th>Companies</th><th>YTD Spend</th><th>Visits</th></tr>
+                ${fin.map(m => `<tr><td><strong>${m.name}</strong></td><td>${m.companies.map(c => c.name).join(', ')}</td><td>$${(m.ytdSpend/1000).toFixed(1)}k</td><td>${m.visits}</td></tr>`).join('')}
+            </table>`;
+    }
+
+    /* ---- Founders / CEO ---- */
+    if (t.includes('founder') || t.includes('ceo') || t.includes('entrepreneur') || t.includes('owner')) {
+        const founders = MEMBERS.filter(m => m.role.toLowerCase().includes('founder') || m.role.toLowerCase().includes('ceo') || m.role.toLowerCase().includes('owner'));
+        return `<strong>Founders & CEOs (${founders.length})</strong><br><br>
+            <table class="widget-table">
+                <tr><th>Member</th><th>Company</th><th>Industry</th><th>YTD Spend</th></tr>
+                ${founders.map(m => `<tr><td><strong>${m.name}</strong></td><td>${m.companies[0].name}</td><td>${m.companies[0].industry}</td><td>$${(m.ytdSpend/1000).toFixed(1)}k</td></tr>`).join('')}
+            </table><br>
+            Combined founder spend: <strong>$${(founders.reduce((s, m) => s + m.ytdSpend, 0)/1000).toFixed(0)}k</strong>. This group represents your highest-value segment.`;
+    }
+
+    /* ---- Newest / newest members ---- */
+    if (t.includes('new') || t.includes('recent') || t.includes('latest') || t.includes('joined')) {
+        const sorted = [...MEMBERS].sort((a, b) => new Date(b.joinDate) - new Date(a.joinDate));
+        return `<strong>Members by Join Date</strong><br><br>
+            <table class="widget-table">
+                <tr><th>Member</th><th>Joined</th><th>Tier</th><th>YTD Spend</th><th>Visits</th></tr>
+                ${sorted.map(m => `<tr><td><strong>${m.name}</strong></td><td>${m.joinDate}</td><td>${m.tier}</td><td>$${(m.ytdSpend/1000).toFixed(1)}k</td><td>${m.visits}</td></tr>`).join('')}
+            </table><br>
+            <strong>${sorted[0].name}</strong> is the newest member (joined ${sorted[0].joinDate}). They've already logged ${sorted[0].visits} visits and $${(sorted[0].ytdSpend/1000).toFixed(1)}k in spend.`;
+    }
+
+    /* ---- Seat together / dinner pairing ---- */
+    if (t.includes('seat') || t.includes('dinner') || t.includes('pair') || t.includes('table') || t.includes('together') || t.includes('introduce')) {
+        const pairs = [];
+        for (let i = 0; i < MEMBERS.length; i++) {
+            for (let j = i + 1; j < MEMBERS.length; j++) {
+                const shared = getSharedInterests([MEMBERS[i], MEMBERS[j]]);
+                pairs.push({ a: MEMBERS[i], b: MEMBERS[j], shared: shared.length, interests: shared });
+            }
+        }
+        pairs.sort((a, b) => b.shared - a.shared);
+        const top = pairs.slice(0, 5);
+        return `<strong>Best Dinner Pairings</strong> (by shared interests)<br><br>
+            <table class="widget-table">
+                <tr><th>Pair</th><th>Overlap</th><th>Key Shared Interests</th></tr>
+                ${top.map(p => `<tr><td><strong>${p.a.name.split(' ')[0]} + ${p.b.name.split(' ')[0]}</strong></td><td style="color:var(--green)">${p.shared}</td><td style="font-size:0.75rem">${p.interests.slice(0, 5).join(', ')}</td></tr>`).join('')}
+            </table><br>
+            Top pairing: <strong>${top[0].a.name}</strong> and <strong>${top[0].b.name}</strong> share ${top[0].shared} interests. Both are ${top[0].a.marital === top[0].b.marital ? top[0].a.marital.toLowerCase() : 'in different life stages'} — great chemistry potential.`;
+    }
+
+    /* ---- Beverage / drink preferences ---- */
+    if (t.includes('beverage') || t.includes('drink') || t.includes('wine') || t.includes('cocktail') || t.includes('alcohol') || t.includes('bar')) {
+        return `<strong>Member Beverage Preferences</strong><br><br>
+            <table class="widget-table">
+                <tr><th>Member</th><th>Go-to Drinks</th><th>Fav Venue</th><th>Avg Check</th></tr>
+                ${MEMBERS.map(m => `<tr><td><strong>${m.name.split(' ')[0]}</strong></td><td>${m.favDrink}</td><td>${m.favVenue}</td><td>$${m.avgCheck}</td></tr>`).join('')}
+            </table><br>
+            <strong>Wine preference is dominant</strong> — ${MEMBERS.filter(m => m.interests.includes('Wine Tasting') || m.interests.includes('Wine')).length}/10 members list wine as an interest. Barolo, Brunello, Burgundy, and Opus One are the most-ordered bottles. Strong opportunity for curated wine events.`;
+    }
+
+    /* ---- Clubs / memberships ---- */
+    if (t.includes('club') || t.includes('membership') || t.includes('soho') || t.includes('member of')) {
+        const clubCount = {};
+        MEMBERS.forEach(m => m.clubs.forEach(c => { clubCount[c] = (clubCount[c] || 0) + 1; }));
+        return `<strong>Club & Membership Overlap</strong><br><br>
+            <table class="widget-table">
+                <tr><th>Club</th><th>Members</th><th>Who</th></tr>
+                ${Object.entries(clubCount).sort((a, b) => b[1] - a[1]).map(([club, count]) => `<tr><td><strong>${club}</strong></td><td>${count}</td><td>${MEMBERS.filter(m => m.clubs.includes(club)).map(m => m.name.split(' ')[0]).join(', ')}</td></tr>`).join('')}
+            </table><br>
+            <strong>SOHO House</strong> is the most common membership (${clubCount['SOHO House'] || 0} members). The Moore can position as the elevated alternative — more exclusive, curated community over open-membership volume.`;
+    }
+
+    /* ---- Events / engagement ---- */
+    if (t.includes('event') || t.includes('engagement') || t.includes('attend') || t.includes('active') || t.includes('most active')) {
+        const sorted = [...MEMBERS].sort((a, b) => b.eventsAttended - a.eventsAttended);
+        return `<strong>Event Engagement Ranking</strong><br><br>
+            <table class="widget-table">
+                <tr><th>#</th><th>Member</th><th>Events</th><th>Visits</th><th>Referrals</th><th>Last Visit</th></tr>
+                ${sorted.map((m, i) => `<tr><td>${i + 1}</td><td><strong>${m.name}</strong></td><td style="color:var(--accent)">${m.eventsAttended}</td><td>${m.visits}</td><td>${m.referrals}</td><td>${m.lastVisit}</td></tr>`).join('')}
+            </table><br>
+            <strong>${sorted[0].name}</strong> is the most engaged — ${sorted[0].eventsAttended} events, ${sorted[0].visits} visits, ${sorted[0].referrals} referrals. They want: "${sorted[0].eventPriority}"`;
+    }
+
+    /* ---- Referrals ---- */
+    if (t.includes('referral') || t.includes('refer') || t.includes('brought') || t.includes('invite')) {
+        const sorted = [...MEMBERS].sort((a, b) => b.referrals - a.referrals);
+        return `<strong>Referral Leaders</strong><br><br>
+            <table class="widget-table">
+                <tr><th>Member</th><th>Referrals</th><th>Growth Idea</th></tr>
+                ${sorted.filter(m => m.referrals > 0).map(m => `<tr><td><strong>${m.name}</strong></td><td style="color:var(--green)">${m.referrals}</td><td style="font-size:0.75rem">${m.growthIdea || '—'}</td></tr>`).join('')}
+            </table><br>
+            Total referrals: <strong>${MEMBERS.reduce((s, m) => s + m.referrals, 0)}</strong>. Consensus is clear: keep the community tight and referral-only.`;
+    }
+
+    /* ---- Single member mentioned but no specific query type ---- */
+    if (mentioned.length === 1) {
+        const m = mentioned[0];
+        return `<strong>${m.name}</strong><br><br>
+            ${m.role} &middot; ${m.tier} Member &middot; ${m.marital}<br>
+            <strong>$${m.ytdSpend.toLocaleString()}</strong> YTD across <strong>${m.visits}</strong> visits (avg $${m.avgCheck}/check)<br>
+            Favorites: ${m.favVenue}, ${m.favDrink}<br>
+            Companies: ${m.companies.map(c => c.name).join(', ')}<br>
+            Interests: ${m.interests.slice(0, 8).join(', ')}${m.interests.length > 8 ? '...' : ''}<br><br>
+            What would you like to know about ${m.name.split(' ')[0]}? Try "compare ${m.name.split(' ')[0]} and [another member]" or ask about their spend, interests, or preferences.`;
+    }
+
+    /* ---- Overlap / shared interests ---- */
+    if (t.includes('overlap') || t.includes('common') || t.includes('shared') || t.includes('share')) {
+        const interestCount = {};
+        MEMBERS.forEach(m => m.interests.forEach(i => { interestCount[i] = (interestCount[i] || 0) + 1; }));
+        const universal = Object.entries(interestCount).filter(([, c]) => c >= 8).sort((a, b) => b[1] - a[1]);
+        const niche = Object.entries(interestCount).filter(([, c]) => c <= 3).sort((a, b) => a[1] - b[1]);
+        return `<strong>Interest Overlap Analysis</strong><br><br>
+            <strong>Near-universal (8+ members):</strong><br>${universal.map(([i, c]) => `&bull; ${i} (${c}/10)`).join('<br>')}<br><br>
+            <strong>Niche (1-3 members):</strong><br>${niche.slice(0, 8).map(([i, c]) => `&bull; ${i} (${c}/10) — ${MEMBERS.filter(m => m.interests.includes(i)).map(m => m.name.split(' ')[0]).join(', ')}`).join('<br>')}<br><br>
+            <strong>Takeaway:</strong> Padel, dining, and travel are table stakes. To create memorable member-only experiences, lean into niche interests: wine + cigars dinners, spearfishing trips, art collecting events.`;
+    }
+
+    /* ---- Fallback: general summary ---- */
+    if (t.includes('summary') || t.includes('overview') || t.includes('report') || t.includes('all')) {
+        const totalSpend = MEMBERS.reduce((s, m) => s + m.ytdSpend, 0);
+        return `<strong>Member Intelligence Summary</strong><br><br>
+            <strong>10 members</strong> &middot; $${(totalSpend/1000).toFixed(0)}k total YTD spend &middot; ${MEMBERS.reduce((s, m) => s + m.visits, 0)} total visits<br><br>
+            <strong>Top spender:</strong> ${[...MEMBERS].sort((a, b) => b.ytdSpend - a.ytdSpend)[0].name} ($${([...MEMBERS].sort((a, b) => b.ytdSpend - a.ytdSpend)[0].ytdSpend/1000).toFixed(1)}k)<br>
+            <strong>Most active:</strong> ${[...MEMBERS].sort((a, b) => b.visits - a.visits)[0].name} (${[...MEMBERS].sort((a, b) => b.visits - a.visits)[0].visits} visits)<br>
+            <strong>Top referrer:</strong> ${[...MEMBERS].sort((a, b) => b.referrals - a.referrals)[0].name} (${[...MEMBERS].sort((a, b) => b.referrals - a.referrals)[0].referrals} referrals)<br>
+            <strong>Sectors:</strong> Tech (4), Finance (3), Founders (2), Other (1)<br>
+            <strong>Consensus:</strong> Keep community tight, referral-only, high-quality events`;
+    }
+
+    /* ---- True fallback ---- */
+    return `I can answer questions about any of the <strong>10 members</strong>. Try:<br><br>
+        &bull; <strong>By name:</strong> "Tell me about ${MEMBERS[Math.floor(Math.random() * MEMBERS.length)].name}"<br>
+        &bull; <strong>Compare:</strong> "Compare Nat and Austin"<br>
+        &bull; <strong>By interest:</strong> "Who's into crypto?" / "Wine lovers" / "Golf members"<br>
+        &bull; <strong>By data:</strong> "Top spenders" / "Most active" / "Newest members"<br>
+        &bull; <strong>Strategic:</strong> "Who should I seat together?" / "Referral leaders" / "Club overlap"<br>
+        &bull; <strong>Family:</strong> "Who has kids?" / "Single members"<br>
+        &bull; <strong>Sector:</strong> "Finance members" / "Founders and CEOs"`;
+}
+
+function getSharedInterests(members) {
+    const sets = members.map(m => new Set(m.interests));
+    return [...sets[0]].filter(i => sets.every(s => s.has(i)));
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+renderMemberList(MEMBERS);
+renderProfile();
+</script>
+</body>
+</html>

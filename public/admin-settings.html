@@ -152,6 +152,7 @@
       <div class="flex gap-1 border-b border-gray-200 mb-6">
         <button class="settings-tab active" data-tab="team">Team</button>
         <button class="settings-tab" data-tab="permissions">Permissions</button>
+        <button class="settings-tab" data-tab="system">System</button>
       </div>
 
       <!-- ═══ Team Tab ═══ -->
@@ -185,23 +186,58 @@
           <div class="p-8 text-center text-gray-400 text-sm">Loading permissions...</div>
         </div>
       </div>
+
+      <!-- ═══ System Tab ═══ -->
+      <div id="tab-system" class="hidden">
+        <h2 class="headline text-lg font-bold text-gray-800 mb-4">System</h2>
+
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-semibold text-gray-800">Creative Labs Tunnel URL</h3>
+            <span id="creativeLabsStatus" class="text-xs text-gray-400">—</span>
+          </div>
+          <p class="text-sm text-gray-500 mb-4">
+            Public URL of the cloudflared tunnel that exposes Eric's home-dashboard
+            (<code class="text-xs bg-gray-100 px-1 py-0.5 rounded">localhost:3100</code>) to the team.
+            The Robot Command and Beam Bot Playground tiles proxy through
+            <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">/cl/*</code> on this server, which forwards
+            requests to this URL — so the URL is never seen by browsers and avoids any local DNS filters.
+            Update when the tunnel rotates — find the current URL on the MacBook with
+            <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">pm2 logs creative-labs-tunnel</code>.
+          </p>
+          <form id="creativeLabsForm" class="flex gap-2">
+            <input
+              type="url"
+              id="creativeLabsUrl"
+              name="creativeLabsUrl"
+              placeholder="https://abc-def-ghi-jkl.trycloudflare.com"
+              class="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <button type="submit" class="brand-btn-primary px-5 py-2 rounded-xl text-sm font-semibold">Save</button>
+          </form>
+          <div id="creativeLabsMeta" class="text-xs text-gray-400 mt-2"></div>
+        </div>
+      </div>
     </main>
   </div>
 
   <!-- ═══ Invite Modal ═══ -->
   <div id="inviteModal" class="modal-overlay hidden">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width:640px;max-height:90vh;overflow-y:auto;">
       <h3 class="headline text-lg font-bold mb-4">Invite Team Member</h3>
       <form id="inviteForm" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input type="email" name="email" required
-                 class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-          <input type="text" name="name"
-                 class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" name="email" required
+                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input type="text" name="name"
+                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+          </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
@@ -211,17 +247,77 @@
             <option value="module_owner">Module Owner</option>
             <option value="viewer">Viewer</option>
           </select>
+          <p class="text-xs text-gray-500 mt-1">Role sets the default matrix below. Override any row per user.</p>
         </div>
-        <div id="moduleCheckboxes" class="hidden">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Module Access (edit)</label>
-          <div class="grid grid-cols-2 gap-2" id="moduleCheckboxGrid">
-            <!-- WHY: Populated from MODULES array so it stays in sync with the permission system -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-medium text-gray-700">Module Access</label>
+            <button type="button" id="resetToRoleDefaults" class="text-xs text-blue-600 hover:underline">Reset to role defaults</button>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-3" id="inviteModuleGrid">
+            <!-- Populated by JS from MODULES + role_permissions -->
           </div>
         </div>
         <p id="inviteError" class="text-red-600 text-sm font-medium hidden"></p>
         <div class="flex gap-3 justify-end pt-2">
           <button type="button" onclick="closeInviteModal()" class="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">Cancel</button>
           <button type="submit" class="brand-btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Send Invite</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ Edit User Modal ═══ -->
+  <div id="editUserModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:640px;max-height:90vh;overflow-y:auto;">
+      <h3 class="headline text-lg font-bold mb-4">Edit Team Member</h3>
+      <form id="editUserForm" class="space-y-4">
+        <input type="hidden" name="id">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" name="email" disabled
+                   class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input type="text" name="name"
+                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select name="role" required
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+              <option value="admin">Admin</option>
+              <option value="module_owner">Module Owner</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select name="status" required
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+              <option value="active">Active</option>
+              <option value="invited">Invited</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-medium text-gray-700">Module Access (overrides)</label>
+            <button type="button" id="clearEditOverrides" class="text-xs text-blue-600 hover:underline">Clear all overrides</button>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-3" id="editModuleGrid">
+            <!-- Populated by JS from user's current overrides -->
+          </div>
+        </div>
+        <p id="editUserError" class="text-red-600 text-sm font-medium hidden"></p>
+        <div class="flex gap-3 justify-end pt-2">
+          <button type="button" onclick="closeEditUserModal()" class="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">Cancel</button>
+          <button type="submit" class="brand-btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold">Save Changes</button>
         </div>
       </form>
     </div>
@@ -248,14 +344,17 @@ const ROLE_LABELS = {
   super_admin: 'Super Admin', admin: 'Admin', module_owner: 'Module Owner', viewer: 'Viewer'
 };
 const EDITABLE_ROLES = ['admin', 'module_owner', 'viewer'];
+const PERM_OPTIONS = [
+  { value: 'edit', label: 'Edit' },
+  { value: 'view', label: 'View' },
+  { value: 'none', label: 'None' },
+];
 
 let currentUser = null;
-
-// WHY: Populate module checkboxes from the MODULES array so they stay in sync
-const checkboxGrid = document.getElementById('moduleCheckboxGrid');
-MODULES.filter(m => m !== 'settings').forEach(m => {
-  checkboxGrid.innerHTML += `<label class="flex items-center gap-2 text-sm"><input type="checkbox" name="modules" value="${m}"> ${MODULE_LABELS[m]}</label>`;
-});
+// Cache of role → module → permission, hydrated on page load. Used to seed the
+// invite modal's per-module dropdowns with the right defaults when the role
+// picker changes, without a round-trip per role switch.
+let roleMatrix = {};
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -272,8 +371,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  await loadPermissions();
   loadUsers();
-  loadPermissions();
 });
 
 // ── Tabs ─────────────────────────────────────────────────────
@@ -283,7 +382,57 @@ document.querySelectorAll('.settings-tab').forEach(tab => {
     tab.classList.add('active');
     document.getElementById('tab-team').classList.toggle('hidden', tab.dataset.tab !== 'team');
     document.getElementById('tab-permissions').classList.toggle('hidden', tab.dataset.tab !== 'permissions');
+    document.getElementById('tab-system').classList.toggle('hidden', tab.dataset.tab !== 'system');
+    if (tab.dataset.tab === 'system') loadCreativeLabsUrl();
   });
+});
+
+// ── System: Creative Labs Tunnel URL ─────────────────────────
+async function loadCreativeLabsUrl() {
+  const input = document.getElementById('creativeLabsUrl');
+  const meta = document.getElementById('creativeLabsMeta');
+  const status = document.getElementById('creativeLabsStatus');
+  try {
+    const r = await fetch('/api/system-settings/creative_labs_url');
+    if (r.status === 404) {
+      input.value = '';
+      status.textContent = 'Not set';
+      status.className = 'text-xs text-amber-600';
+      meta.textContent = '';
+      return;
+    }
+    if (!r.ok) throw new Error(`Server returned ${r.status}`);
+    const data = await r.json();
+    input.value = data.value || '';
+    status.textContent = 'Configured';
+    status.className = 'text-xs text-green-600';
+    meta.textContent = `Last updated ${data.updated_at} by ${data.updated_by || 'unknown'}`;
+  } catch (e) {
+    status.textContent = 'Error';
+    status.className = 'text-xs text-red-600';
+    meta.textContent = e.message;
+  }
+}
+
+document.getElementById('creativeLabsForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const value = document.getElementById('creativeLabsUrl').value.trim();
+  const meta = document.getElementById('creativeLabsMeta');
+  if (!value) return;
+  try {
+    const r = await fetch('/api/system-settings/creative_labs_url', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `Save failed (${r.status})`);
+    meta.textContent = `Saved at ${data.updated_at}`;
+    document.getElementById('creativeLabsStatus').textContent = 'Configured';
+    document.getElementById('creativeLabsStatus').className = 'text-xs text-green-600';
+  } catch (err) {
+    meta.textContent = `Error: ${err.message}`;
+  }
 });
 
 // ── Team ─────────────────────────────────────────────────────
@@ -319,7 +468,7 @@ function renderUsers(users) {
         <div class="text-gray-400 text-xs">${lastLogin}</div>
         <div class="flex gap-1">
           ${u.status === 'invited' ? `<button class="action-btn" onclick="resendInvite(${u.id})">Resend</button>` : ''}
-          ${!isSuperAdmin ? `<button class="action-btn" onclick="editUser(${u.id},'${escapeHtml(u.name||'')}','${u.role}','${u.status}')">\u270E</button>` : ''}
+          ${!isSuperAdmin ? `<button class="action-btn" onclick="openEditUserModal(${u.id})" title="Edit user">\u270E</button>` : ''}
           ${!isSuperAdmin ? `<button class="action-btn danger" onclick="deleteUser(${u.id},'${escapeHtml(u.email)}')">\u2715</button>` : ''}
         </div>
       </div>
@@ -328,20 +477,64 @@ function renderUsers(users) {
 }
 
 // ── Invite ───────────────────────────────────────────────────
+function renderModuleGrid(containerId, currentMap) {
+  // Render per-module Edit/View/None dropdowns seeded from currentMap.
+  // currentMap: { module: 'edit'|'view'|'none' }
+  const container = document.getElementById(containerId);
+  const rows = MODULES.map(mod => {
+    const selected = currentMap[mod] || 'none';
+    const options = PERM_OPTIONS.map(o =>
+      `<option value="${o.value}" ${o.value === selected ? 'selected' : ''}>${o.label}</option>`
+    ).join('');
+    return `
+      <div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
+        <span class="text-sm text-gray-700">${MODULE_LABELS[mod]}</span>
+        <select data-module="${mod}" class="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-semibold bg-white">
+          ${options}
+        </select>
+      </div>
+    `;
+  }).join('');
+  container.innerHTML = rows;
+}
+
+function collectModuleGrid(containerId) {
+  // WHY: Send only the modules whose dropdown differs from 'none' — 'none' is
+  // the stored default, but we explicitly write everything so per-user
+  // overrides win over the role matrix on resolution.
+  const out = {};
+  document.querySelectorAll(`#${containerId} select[data-module]`).forEach(sel => {
+    out[sel.dataset.module] = sel.value;
+  });
+  return out;
+}
+
+function seedInviteGridFromRole(role) {
+  const defaults = {};
+  MODULES.forEach(m => { defaults[m] = roleMatrix[role]?.[m] || 'none'; });
+  renderModuleGrid('inviteModuleGrid', defaults);
+}
+
 function openInviteModal() {
-  document.getElementById('inviteModal').classList.remove('hidden');
-  document.getElementById('inviteForm').reset();
+  const form = document.getElementById('inviteForm');
+  form.reset();
   document.getElementById('inviteError').classList.add('hidden');
-  document.getElementById('moduleCheckboxes').classList.add('hidden');
+  seedInviteGridFromRole(form.role.value);
+  document.getElementById('inviteModal').classList.remove('hidden');
 }
 
 function closeInviteModal() {
   document.getElementById('inviteModal').classList.add('hidden');
 }
 
-// WHY: Show module checkboxes only for module_owner role
-document.querySelector('[name="role"]').addEventListener('change', (e) => {
-  document.getElementById('moduleCheckboxes').classList.toggle('hidden', e.target.value !== 'module_owner');
+// Re-seed grid when the role picker changes, so the super admin sees what the
+// new role's defaults look like before deciding what to override.
+document.querySelector('#inviteForm [name="role"]').addEventListener('change', (e) => {
+  seedInviteGridFromRole(e.target.value);
+});
+
+document.getElementById('resetToRoleDefaults').addEventListener('click', () => {
+  seedInviteGridFromRole(document.querySelector('#inviteForm [name="role"]').value);
 });
 
 document.getElementById('inviteForm').addEventListener('submit', async (e) => {
@@ -351,9 +544,7 @@ document.getElementById('inviteForm').addEventListener('submit', async (e) => {
   errEl.classList.add('hidden');
 
   const role = form.role.value;
-  const modules = role === 'module_owner'
-    ? [...form.querySelectorAll('[name="modules"]:checked')].map(c => c.value)
-    : [];
+  const modulePermissions = collectModuleGrid('inviteModuleGrid');
 
   const btn = form.querySelector('[type="submit"]');
   btn.disabled = true;
@@ -367,7 +558,7 @@ document.getElementById('inviteForm').addEventListener('submit', async (e) => {
         email: form.email.value,
         name: form.name.value,
         role,
-        modules,
+        modulePermissions,
       }),
     });
     const data = await res.json();
@@ -390,6 +581,124 @@ document.getElementById('inviteForm').addEventListener('submit', async (e) => {
 // WHY: Close modal when clicking overlay background
 document.getElementById('inviteModal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeInviteModal();
+});
+
+// ── Edit User Modal ──────────────────────────────────────────
+async function openEditUserModal(id) {
+  const form = document.getElementById('editUserForm');
+  const errEl = document.getElementById('editUserError');
+  errEl.classList.add('hidden');
+
+  // Pull the user row + current permission overrides in parallel so the modal
+  // opens with everything hydrated, not half-loaded.
+  try {
+    const [users, permsRes] = await Promise.all([
+      fetch('/api/users').then(r => r.json()),
+      fetch(`/api/users/${id}/permissions`).then(r => r.json()),
+    ]);
+    const user = users.find(u => u.id === id);
+    if (!user) { alert('User not found'); return; }
+
+    form.id.value = user.id;
+    form.email.value = user.email;
+    form.name.value = user.name || '';
+    form.role.value = user.role;
+    form.status.value = user.status;
+
+    // Merge role defaults with user overrides so the admin sees the effective
+    // map — overrides are highlighted conceptually by the dropdown position.
+    const effective = {};
+    MODULES.forEach(m => { effective[m] = roleMatrix[user.role]?.[m] || 'none'; });
+    (permsRes.overrides || []).forEach(o => { effective[o.module] = o.permission; });
+    renderModuleGrid('editModuleGrid', effective);
+
+    document.getElementById('editUserModal').classList.remove('hidden');
+  } catch (err) {
+    alert('Failed to load user: ' + err.message);
+  }
+}
+
+function closeEditUserModal() {
+  document.getElementById('editUserModal').classList.add('hidden');
+}
+
+document.getElementById('clearEditOverrides').addEventListener('click', () => {
+  // "Clear overrides" re-renders the grid using role defaults only. On save,
+  // every select that matches the role default will still be written as an
+  // override — the PUT replaces the set, so writing the role default as an
+  // override is harmless and keeps the UI behavior predictable.
+  const role = document.querySelector('#editUserForm [name="role"]').value;
+  const defaults = {};
+  MODULES.forEach(m => { defaults[m] = roleMatrix[role]?.[m] || 'none'; });
+  renderModuleGrid('editModuleGrid', defaults);
+});
+
+// When role changes in edit modal, re-seed the grid with that role's defaults
+// (same UX as invite). User can still override before saving.
+document.querySelector('#editUserForm [name="role"]').addEventListener('change', (e) => {
+  const defaults = {};
+  MODULES.forEach(m => { defaults[m] = roleMatrix[e.target.value]?.[m] || 'none'; });
+  renderModuleGrid('editModuleGrid', defaults);
+});
+
+document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const errEl = document.getElementById('editUserError');
+  errEl.classList.add('hidden');
+
+  const userId = parseInt(form.id.value, 10);
+  const overrides = collectModuleGrid('editModuleGrid');
+
+  const btn = form.querySelector('[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    // PATCH user first (name/role/status), then replace permissions. Two calls
+    // because the backend keeps them as separate endpoints; order matters so
+    // the role is committed before the overrides reference it.
+    const patchRes = await fetch(`/api/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name.value,
+        role: form.role.value,
+        status: form.status.value,
+      }),
+    });
+    if (!patchRes.ok) {
+      const data = await patchRes.json();
+      errEl.textContent = data.error || 'Failed to update user';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    const permsRes = await fetch(`/api/users/${userId}/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ overrides }),
+    });
+    if (!permsRes.ok) {
+      const data = await permsRes.json();
+      errEl.textContent = data.error || 'Failed to update permissions';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    closeEditUserModal();
+    loadUsers();
+  } catch {
+    errEl.textContent = 'Network error. Please try again.';
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+  }
+});
+
+document.getElementById('editUserModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeEditUserModal();
 });
 
 // ── User actions ─────────────────────────────────────────────
@@ -418,46 +727,25 @@ async function deleteUser(id, email) {
   } catch { alert('Network error'); }
 }
 
-async function editUser(id, name, role, status) {
-  const newRole = prompt(`Change role for ${name || 'user'}?\nCurrent: ${ROLE_LABELS[role]}\n\nOptions: admin, module_owner, viewer`, role);
-  if (!newRole || newRole === role) return;
-  if (!EDITABLE_ROLES.includes(newRole)) { alert('Invalid role'); return; }
-  try {
-    const res = await fetch(`/api/users/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: newRole }),
-    });
-    if (res.ok) loadUsers();
-    else {
-      const data = await res.json();
-      alert(data.error || 'Failed to update');
-    }
-  } catch { alert('Network error'); }
-}
-
 // ── Permissions ──────────────────────────────────────────────
 async function loadPermissions() {
   try {
     const res = await fetch('/api/roles/permissions');
     if (!res.ok) throw new Error('Failed to load permissions');
-    const perms = await res.json();
-    renderPermissions(perms);
+    const data = await res.json();
+    // Backend shape: { matrix: { role: { module: level } }, modules, roles }
+    renderPermissions(data.matrix || {});
   } catch (err) {
     document.getElementById('permMatrix').innerHTML =
       `<div class="p-8 text-center text-red-500 text-sm">${err.message}</div>`;
   }
 }
 
-function renderPermissions(perms) {
-  // WHY: Build a map of role → module → permission for quick lookup
-  const matrix = {};
-  for (const p of perms) {
-    if (!matrix[p.role]) matrix[p.role] = {};
-    matrix[p.role][p.module] = p.permission;
-  }
+function renderPermissions(matrix) {
+  // WHY: Cache globally so the invite + edit-user modals can seed their
+  // per-module dropdowns with the right defaults without a second API call.
+  roleMatrix = matrix;
 
-  const cols = EDITABLE_ROLES.length + 1;
   const colTemplate = `180px repeat(${EDITABLE_ROLES.length}, 1fr)`;
 
   let html = `<div class="perm-grid" style="grid-template-columns:${colTemplate};font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-radius:8px 8px 0 0;">
@@ -485,6 +773,11 @@ function renderPermissions(perms) {
 }
 
 async function updateRolePerm(role, module, permission) {
+  // Optimistically update the in-memory cache so the invite/edit modals see
+  // the new default immediately after a role-matrix edit, without another
+  // round-trip. loadPermissions() is called on failure to re-sync from server.
+  if (!roleMatrix[role]) roleMatrix[role] = {};
+  roleMatrix[role][module] = permission;
   try {
     const res = await fetch('/api/roles/permissions', {
       method: 'PATCH',
