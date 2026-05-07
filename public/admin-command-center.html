@@ -5961,10 +5961,6 @@ async function refreshAll() {
   renderActivityFeed();
   renderMap();
   renderRegionalMaps();
-  document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
-}
-
-// ── Stats row ───────────────────────────────────────────────────
   renderToolkitActivityLeds();
   loadProjectHub();
   loadCommunityBoard();
@@ -6250,11 +6246,6 @@ function renderStats() {
   const leads = deals.filter(d => d.stage === 'lead').length;
   const qualified = deals.filter(d => ['qualified','site_walk','configured'].includes(d.stage)).length;
   const proposed = deals.filter(d => ['proposed','negotiation'].includes(d.stage)).length;
-  const won = deals.filter(d => ['won','deploying','active'].includes(d.stage)).length;
-
-  const totalMRR = deals
-    .filter(d => ['won','deploying','active'].includes(d.stage) && d.value_monthly)
-    .reduce((sum, d) => sum + Number(d.value_monthly), 0);
 
   // WHY: MRR is a dollar value — split into prefix/suffix for the counter animation.
   // Values under 1000 display raw; over 1000 display as "XK" shorthand.

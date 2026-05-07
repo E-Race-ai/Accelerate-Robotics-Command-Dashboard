@@ -262,11 +262,6 @@ function renderKanban(filtered) {
             const actorShort = d.last_activity_actor ? d.last_activity_actor.split('@')[0] : '';
             const actLabel = ACTION_LABELS[d.last_activity_action] || '';
 
-            return `
-            <div class="deal-card brand-deal-card">
-              <div class="brand-deal-stripe" style="background:linear-gradient(180deg, ${STAGE_COLORS[stage]}, ${STAGE_COLORS[stage]}88);"></div>
-              <a href="/admin/deals/${d.id}#overview" style="text-decoration:none;color:inherit;">
-                <div class="brand-deal-name">${escapeHtml(d.name)}</div>
             // Next-meeting chip state. Tag past meetings red and "soon"
             // (within 24h) amber so the urgency reads at a glance.
             const meetMs = d.next_meeting_at ? Date.parse(d.next_meeting_at) : null;
@@ -668,16 +663,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('adminEmail').textContent = user.email;
   }
 
-  // WHY: Read stage filter from URL — Deploy tab links to ?stage=won&stage=deploying&stage=active
-  const urlStages = new URLSearchParams(window.location.search).getAll('stage');
-  if (urlStages.length > 0) {
-    stageFilter = urlStages;
-    view = 'table'; // WHY: Table view is better for filtered stage views — shows all deals in one list
-    // Update page heading to reflect the filter
-    const heading = document.querySelector('h1.headline');
-    if (heading) heading.textContent = 'Deployments';
-    const subtitle = document.querySelector('h1.headline + p');
-    if (subtitle) subtitle.textContent = 'Won deals, active deployments, and go-live tracking';
   // WHY: Read stage filter from URL — used by the Deploy tab as well as the
   // Command Center stat tiles + bottleneck callouts that link to ?stage=lead,
   // ?stage=proposed, etc. We adapt the heading to whatever stages were passed
@@ -746,7 +731,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  await fetchDeals();
   try {
     await fetchDeals();
   } catch (e) {
