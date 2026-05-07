@@ -7192,7 +7192,11 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
            </div>
          </div>`
       : `<div class="schedule-day-anchor" style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;padding:8px 10px;margin:8px 0">
-           <button type="button" onclick="window._autoPickAnchor(${r.id})" style="width:100%;background:transparent;border:0;color:var(--accent-deep);font-weight:600;font-size:0.78rem;cursor:pointer;padding:4px">🛏 Pick overnight anchor for ${escapeHtml(r.zone || 'this day')}</button>
+           <div style="font-size:0.7rem;font-weight:600;color:#64748b;margin-bottom:4px">🛏 Pick overnight anchor</div>
+           <select onchange="window._pickAnchor(${r.id}, this.value)" style="width:100%;padding:6px 8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.78rem;font-weight:600;color:#0c4a6e;background:white;cursor:pointer">
+             <option value="">— Select a hotel —</option>
+             ${stops.map(s => `<option value="${s.hotel_saved_id}">${escapeHtml(s.name)}${s.est_adr_dollars ? ' · ~$' + s.est_adr_dollars + '/nt' : ''}${s.ai_fit_score ? ' · fit ' + s.ai_fit_score : ''}</option>`).join('')}
+           </select>
          </div>`;
 
     return `
@@ -7221,19 +7225,23 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
   }).join('');
 }
 
-// ── Anchor-hotel auto-pick + manual select ─────────────────────────
-window._autoPickAnchor = async function(routeId) {
+// ── Anchor-hotel manual select ───────────────────────────────────
+// WHY: Replaced auto-pick with a dropdown so the rep chooses where to stay
+// instead of the system guessing. Sends the selected hotel_id to the
+// existing auto-anchor endpoint which already supports explicit overrides.
+window._pickAnchor = async function(routeId, hotelId) {
+  if (!hotelId) return;
   try {
     const r = await fetch(`/api/hotel-research/routes/${routeId}/auto-anchor`, {
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ hotel_id: Number(hotelId) }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
     if (typeof loadScheduleWeek === 'function') loadScheduleWeek();
   } catch (err) {
-    alert('Could not pick anchor: ' + err.message);
+    alert('Could not set anchor: ' + err.message);
   }
 };
 
