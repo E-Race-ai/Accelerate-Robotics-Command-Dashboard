@@ -241,6 +241,22 @@ function createTestDb() {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS role_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      role TEXT NOT NULL,
+      module TEXT NOT NULL,
+      permission TEXT NOT NULL DEFAULT 'none' CHECK(permission IN ('edit', 'view', 'none')),
+      UNIQUE(role, module)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+      module TEXT NOT NULL,
+      permission TEXT NOT NULL CHECK(permission IN ('edit', 'view', 'none')),
+      UNIQUE(user_id, module)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_prospects_market ON prospects(market_id);
     CREATE INDEX IF NOT EXISTS idx_prospects_status ON prospects(status);
     CREATE INDEX IF NOT EXISTS idx_deals_stage ON deals(stage);

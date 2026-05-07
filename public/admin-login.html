@@ -61,6 +61,48 @@
     // WHY: Redirect to dashboard if already logged in so admins don't see the login page unnecessarily
     checkAuth().then(user => { if (user) window.location.href = safeReturn; });
 
+    // ── Forgot password toggle ─────────────────────────────────
+    document.getElementById('forgotPasswordBtn').addEventListener('click', () => {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('forgotForm').classList.remove('hidden');
+    });
+    document.getElementById('backToLoginBtn').addEventListener('click', () => {
+      document.getElementById('forgotForm').classList.add('hidden');
+      document.getElementById('loginForm').classList.remove('hidden');
+    });
+
+    document.getElementById('forgotForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msgEl = document.getElementById('forgotMsg');
+      msgEl.classList.add('hidden');
+
+      const form = e.target;
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+
+      try {
+        const res = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email.value }),
+        });
+        const data = await res.json();
+        // WHY: Always show success — server returns ok:true even for unknown emails to prevent enumeration
+        msgEl.textContent = 'If an account exists with that email, a reset link has been sent.';
+        msgEl.className = 'text-green-600 text-sm font-medium text-center';
+        msgEl.classList.remove('hidden');
+      } catch {
+        msgEl.textContent = 'Network error. Please try again.';
+        msgEl.className = 'text-red-600 text-sm font-medium text-center';
+        msgEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Reset Link';
+      }
+    });
+
+    // ── Login form ────────────────────────────────────────────
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errEl = document.getElementById('loginError');

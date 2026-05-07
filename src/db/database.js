@@ -1062,6 +1062,30 @@ function bootstrapAdminRoles() {
 }
 bootstrapAdminRoles();
 
+// ── Seed role permissions ───────────────────────────────────────
+// WHY: Pre-populate default permissions so every role has a known baseline.
+// Admins can customize later; this avoids a blank permissions table on first boot.
+// Also backfills new modules into existing databases that were seeded before the module list grew.
+function seedRolePermissions() {
+  const { ALL_MODULES } = require('../services/permissions');
+  const defaults = {
+    // WHY: admin gets full edit on everything; module_owner/viewer get view on toolkit pages, none on settings
+    admin: Object.fromEntries(ALL_MODULES.map(m => [m, 'edit'])),
+    module_owner: Object.fromEntries(ALL_MODULES.map(m => [m, m === 'settings' ? 'none' : 'view'])),
+    viewer: Object.fromEntries(ALL_MODULES.map(m => [m, m === 'settings' ? 'none' : 'view'])),
+  };
+  // WHY: Use INSERT OR IGNORE so new modules get seeded without overwriting admin-customized values
+  const insert = db.prepare('INSERT OR IGNORE INTO role_permissions (role, module, permission) VALUES (?, ?, ?)');
+  const seed = db.transaction(() => {
+    for (const [role, perms] of Object.entries(defaults)) {
+      for (const mod of ALL_MODULES) { insert.run(role, mod, perms[mod]); }
+    }
+  });
+  seed();
+}
+
+seedRolePermissions();
+
 // ── Seed deals ──────────────────────────────────────────────────
 // WHY: Pre-populate with existing hotel pipeline. Idempotent — skips if deals exist.
 try {

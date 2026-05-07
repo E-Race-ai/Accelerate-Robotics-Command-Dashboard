@@ -1,9 +1,11 @@
 const express = require('express');
+const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const db = require('../db/database');
 const { requireAuth, JWT_SECRET } = require('../middleware/auth');
+const { getAllPermissions } = require('../services/permissions');
 const { sendPasswordResetEmail } = require('../services/email');
 
 const router = express.Router();

@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -75,7 +75,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 // ── Trigger AI market research ───────────────────────────────
 const { runResearch } = require('../services/market-research');
 
-router.post('/:id/research', requireAuth, async (req, res) => {
+router.post('/:id/research', requireAuth, requirePermission('prospects', 'edit'), async (req, res) => {
   // WHY: parseInt handles both number and string values from JSON body
   const count = parseInt(req.body.count, 10);
   const validCounts = [5, 8, 10];

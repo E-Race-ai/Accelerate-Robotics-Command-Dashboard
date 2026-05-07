@@ -1,4 +1,6 @@
 const jwt = require('jsonwebtoken');
+const db = require('../db/database');
+const { hasPermission } = require('../services/permissions');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -9,6 +11,7 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
  */
 function requireAuth(req, res, next) {
   const token = req.cookies?.token;
+  const isDev = process.env.NODE_ENV !== 'production';
 
   if (!token) {
     // WHY: Prod must reject unauthenticated requests. Dev passes through so `npm run dev` doesn't require login.
@@ -136,5 +139,22 @@ function requireRole(...allowedRoles) {
   };
 }
 
+/**
+ * Returns middleware that checks if the authenticated user has the required
+ * permission level on a given module. Must be used AFTER requireAuth.
+ */
+function requirePermission(module, level) {
+  return (req, res, next) => {
+    if (!req.admin) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    if (!hasPermission(db, req.admin, module, level)) {
+      return res.status(403).json({ error: 'You do not have permission to access this resource' });
+    }
+    next();
+  };
+}
+
+module.exports = { requireAuth, requireRole, requirePermission, JWT_SECRET };
 module.exports = { requireAuth, requireRole, JWT_SECRET };
 module.exports = { requireAuth, softAuth, requireRole, requirePermission, requireAuthPage, JWT_SECRET };

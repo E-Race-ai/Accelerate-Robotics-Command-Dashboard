@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 const { generateId } = require('../services/id-generator');
 
 const router = express.Router({ mergeParams: true });

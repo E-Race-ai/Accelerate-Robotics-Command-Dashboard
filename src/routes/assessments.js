@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 const { generateId } = require('../services/id-generator');
 
 const router = express.Router();
@@ -159,7 +159,7 @@ async function upsertAssessment(id, body, res) {
 
 // ── GET /meta/team ─────────────────────────────────────────────
 // WHY: Registered BEFORE /:id so Express doesn't match 'meta' as an :id param
-router.get('/meta/team', requireAuth, (req, res) => {
+router.get('/meta/team', requireAuth, requirePermission('assessments', 'view'), (req, res) => {
   res.json(TEAM_MEMBERS);
 });
 

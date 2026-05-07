@@ -1,11 +1,8 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
-
-// All routes require admin auth
-router.use(requireAuth);
 
 // ── List recipients ─────────────────────────────────────────────
 router.get('/', async (req, res) => {
