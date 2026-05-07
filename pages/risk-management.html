@@ -1353,6 +1353,65 @@
     .mit-delta[data-delta="0"] { color: var(--ink-3); }
     @media (max-width: 880px) { .mit-row { grid-template-columns: 1fr; gap: 6px; } .mit-row .mit-delta { text-align: left; } }
 
+    /* ── Grouped mitigation view: each category is its own card with a
+       tinted header so the eye can scan TYPE quickly. Inside each card
+       the rows still use band colors for severity, so the reader gets
+       both axes at once: which kind of risk + how serious. */
+    .mit-groups { display: flex; flex-direction: column; gap: 14px; }
+    .mit-group {
+      background: white;
+      border: 0.5px solid var(--line);
+      border-left: 3px solid var(--mg-color, var(--ink));
+    }
+    .mit-group-head {
+      display: grid;
+      grid-template-columns: 28px 1fr auto auto;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 18px;
+      background: var(--mg-tint, var(--paper-2));
+      border-bottom: 0.5px solid var(--line);
+    }
+    .mit-group-head .mg-icon {
+      width: 28px; height: 28px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--mg-color, var(--ink));
+    }
+    .mit-group-head .mg-icon svg { width: 22px; height: 22px; }
+    .mit-group-head .mg-name {
+      font-family: var(--font-mono);
+      font-size: 11px; letter-spacing: 0.20em; text-transform: uppercase;
+      font-weight: 600;
+      color: var(--mg-color, var(--ink));
+    }
+    .mit-group-head .mg-count {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.10em; text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .mit-group-head .mg-total {
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--success);
+      padding: 3px 8px;
+      background: white;
+      border: 0.5px solid var(--line);
+    }
+    .mit-group-head .mg-total[data-zero="true"] { color: var(--ink-3); }
+    .mit-group-rows {
+      padding: 4px 18px 10px;
+    }
+    /* Inside a group, drop the per-row bottom rule so the group itself
+       provides the separation; rows feel like related rows in a ledger. */
+    .mit-group-rows .mit-row {
+      border-bottom: 0.5px solid rgba(14,20,32,0.04);
+      padding: 9px 0;
+    }
+    .mit-group-rows .mit-row:last-child { border-bottom: 0; }
+    /* Title in a grouped row drops the cat-mini (redundant — group says it). */
+    .mit-group-rows .cat-mini { display: none; }
+
     /* ─── Owner accountability board ─────────────────────────────── */
     .owner-grid {
       display: grid;
@@ -1950,6 +2009,21 @@ const CATEGORY_LABEL = {
 
 const TREND_GLYPH = { rising: '↑', stable: '→', falling: '↓' };
 
+// ─── Category type-colors — distinct from the MUTCD band palette.
+// Bands convey SEVERITY (red/yellow/green/orange); categories convey
+// TYPE (indigo/teal/violet/etc). Together they let the eye decode
+// "what kind of risk" + "how serious" simultaneously without conflict.
+const CATEGORY_COLOR = {
+  strategic:   { ink: '#3730A3', tint: 'rgba(55,48,163,0.10)',  border: 'rgba(55,48,163,0.40)'  },
+  operational: { ink: '#0E7490', tint: 'rgba(14,116,144,0.10)', border: 'rgba(14,116,144,0.40)' },
+  financial:   { ink: '#92400E', tint: 'rgba(146,64,14,0.10)',  border: 'rgba(146,64,14,0.40)'  },
+  technology:  { ink: '#6D28D9', tint: 'rgba(109,40,217,0.10)', border: 'rgba(109,40,217,0.40)' },
+  regulatory:  { ink: '#475569', tint: 'rgba(71,85,105,0.10)',  border: 'rgba(71,85,105,0.40)'  },
+  people:      { ink: '#BE123C', tint: 'rgba(190,18,60,0.10)',  border: 'rgba(190,18,60,0.40)'  },
+  legal:       { ink: '#1E3A8A', tint: 'rgba(30,58,138,0.10)',  border: 'rgba(30,58,138,0.40)'  },
+  reputation:  { ink: '#A16207', tint: 'rgba(161,98,7,0.10)',   border: 'rgba(161,98,7,0.40)'   },
+};
+
 // ─── Category icons — monochrome SVG so severity color stays the
 // only color signal on the row. Each category gets a recognizable
 // symbol (pulled from Lucide-style stroke icons). ────────────────
@@ -2313,19 +2387,38 @@ function renderTodaysThree() {
 //   • inherent  — biggest underlying threat first (where to add more controls)
 function renderMitigationBars() {
   const el = $('mitBars');
-  const sorted = [...DASHBOARD.risks].sort((a, b) => {
+  const MAX = 25;
+
+  // Group by category so the eye reads TYPE first.
+  const groups = {};
+  for (const r of DASHBOARD.risks) {
+    (groups[r.category] = groups[r.category] || []).push(r);
+  }
+
+  // Sort risks WITHIN each group by the active toggle so the group's
+  // "first row" is the one that matters most under the chosen lens.
+  const rowSort = (a, b) => {
     if (MIT_SORT === 'residual') return b.residual.score - a.residual.score;
     if (MIT_SORT === 'inherent') return b.inherent.score - a.inherent.score;
     return b.delta - a.delta;
+  };
+  for (const cat of Object.keys(groups)) groups[cat].sort(rowSort);
+
+  // Order GROUPS by aggregate residual exposure descending — biggest
+  // category problem first, regardless of the within-group sort.
+  const orderedCats = Object.keys(groups).sort((a, b) => {
+    const sumRes = c => groups[c].reduce((s, r) => s + r.residual.score, 0);
+    return sumRes(b) - sumRes(a);
   });
-  // Find the max so all bars share a scale (out of 25)
-  const MAX = 25;
-  el.innerHTML = sorted.map(r => {
+
+  // Build a single bar's HTML — same as before but extracted so groups
+  // can drop it in directly.
+  const rowHTML = r => {
     const inherentPct = (r.inherent.score / MAX) * 100;
     const residualPct = (r.residual.score / MAX) * 100;
     return `
       <div class="mit-row" data-id="${r.id}">
-        <div class="mit-title">${escapeHtml(r.title)}<span class="cat-mini">${escapeHtml(CATEGORY_LABEL[r.category] || r.category)} · ${escapeHtml(r.owner || 'unassigned')}</span></div>
+        <div class="mit-title">${escapeHtml(r.title)}</div>
         <div class="mit-bar-wrap">
           <div class="mit-bar inherent" style="width:${inherentPct}%;">${r.inherent.score}</div>
           <div class="mit-bar residual" data-band="${r.residual.band}" style="width:${residualPct}%;">${r.residual.score}</div>
@@ -2333,8 +2426,29 @@ function renderMitigationBars() {
         <div class="mit-delta" data-delta="${r.delta}">${r.delta > 0 ? '−' + r.delta : '0'}</div>
       </div>
     `;
-  }).join('');
-  el.querySelectorAll('.mit-row').forEach(row => row.addEventListener('click', () => openRisk(Number(row.dataset.id))));
+  };
+
+  el.innerHTML = `<div class="mit-groups">` + orderedCats.map(cat => {
+    const rows = groups[cat];
+    const totalDelta = rows.reduce((s, r) => s + r.delta, 0);
+    const color = CATEGORY_COLOR[cat] || CATEGORY_COLOR.strategic;
+    const styleVars = `--mg-color:${color.ink}; --mg-tint:${color.tint};`;
+    return `
+      <div class="mit-group" style="${styleVars}">
+        <div class="mit-group-head">
+          <span class="mg-icon">${CATEGORY_ICON[cat] || ''}</span>
+          <span class="mg-name">${escapeHtml(CATEGORY_LABEL[cat] || cat)}</span>
+          <span class="mg-count">${rows.length} risk${rows.length === 1 ? '' : 's'}</span>
+          <span class="mg-total" data-zero="${totalDelta === 0}" title="Total inherent − residual saved by controls in this category">${totalDelta > 0 ? '−' + totalDelta : '0'} pts saved</span>
+        </div>
+        <div class="mit-group-rows">${rows.map(rowHTML).join('')}</div>
+      </div>
+    `;
+  }).join('') + `</div>`;
+
+  el.querySelectorAll('.mit-row').forEach(row =>
+    row.addEventListener('click', () => openRisk(Number(row.dataset.id)))
+  );
 }
 // Wire the sort toggle once
 document.addEventListener('click', (e) => {
