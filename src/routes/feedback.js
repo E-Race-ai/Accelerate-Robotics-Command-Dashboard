@@ -214,6 +214,23 @@ router.patch('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ── DELETE /:id — Remove feedback item (admin only) ──────────
+router.delete('/:id', requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+
+  try {
+    // WHY: Screenshots have ON DELETE CASCADE, so deleting the feedback row
+    // automatically removes associated screenshot BLOBs.
+    const r = await db.run('DELETE FROM feedback WHERE id = ?', [id]);
+    if (!r.changes) return res.status(404).json({ error: 'not found' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[feedback] delete failed:', e);
+    res.status(500).json({ error: 'Failed to delete feedback' });
+  }
+});
+
 // ── GET /:id/screenshots/:shotId — Serve image bytes (admin) ──
 router.get('/:id/screenshots/:shotId', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id, 10);
