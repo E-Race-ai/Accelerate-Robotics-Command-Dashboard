@@ -1118,6 +1118,39 @@ const ready = isTestEnv ? Promise.resolve() : (async () => {
     console.warn('[db] AI Fit Score v1 boot pass failed:', err.message);
   }
 
+  // ── 2026-Q2 ERM audit rename migration ───────────────────────────
+  // The 2026-Q2 deep-research audit reframed six risks (changed title
+  // and/or rescored). Existing DBs still hold the old-titled rows; the
+  // idempotent seed below would skip them because the new titles are
+  // missing. Delete the obsoleted rows so the seed pass inserts the
+  // canonical versions in their place.
+  // Idempotent: only acts on rows that still match the OLD title; once
+  // they're gone the DELETE is a no-op on subsequent boots.
+  // CAUTION: this clobbers any team edits made to those six rows in
+  // the interim — the audit is the canonical source of truth here.
+  try {
+    const obsoletedTitles = [
+      'Customer concentration — Thesis Hotel >40% of pipeline',
+      'Bear Robotics / Servi takes Miami market before we scale',
+      'Production server outage — acceleraterobotics.ai down',
+      'Customer PII exposure or breach',
+      'Hospitality union pushback on robot deployments',
+      'Negative customer review goes viral on hospitality forums',
+    ];
+    let deleted = 0;
+    for (const title of obsoletedTitles) {
+      const r = await run('DELETE FROM risk_register WHERE title = ?', [title]);
+      // libsql client returns rowsAffected on the result; tolerate either shape
+      const n = (r && (r.rowsAffected ?? r.changes ?? 0)) || 0;
+      if (n > 0) deleted += n;
+    }
+    if (deleted > 0) {
+      console.log(`[db] ERM-2026Q2: removed ${deleted} obsoleted-title risk rows; seed pass will insert canonical versions`);
+    }
+  } catch (err) {
+    console.warn('[db] ERM-2026Q2 rename migration failed:', err.message);
+  }
+
   // ── Seed Enterprise Risk Management baseline ─────────────────────
   // Idempotent: inserts any seed risks whose `title` is not already
   // present, so adding new entries to the seed file picks them up on
