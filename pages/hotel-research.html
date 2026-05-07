@@ -7191,13 +7191,16 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
              <button type="button" onclick="window._openAssessmentForm(${r.id})" style="background:#fbbf24;color:#1e293b;border:0;padding:3px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer">📝 Assessment</button>
            </div>
          </div>`
-      : `<div class="schedule-day-anchor" style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;padding:8px 10px;margin:8px 0">
+      : stops.length ? `<div class="schedule-day-anchor" style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;padding:8px 10px;margin:8px 0">
            <div style="font-size:0.7rem;font-weight:600;color:#64748b;margin-bottom:4px">🛏 Pick overnight anchor</div>
-           <select onchange="window._pickAnchor(${r.id}, this.value)" style="width:100%;padding:6px 8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.78rem;font-weight:600;color:#0c4a6e;background:white;cursor:pointer">
+           <select id="anchor-sel-${r.id}" onchange="window._pickAnchor(${r.id}, this.value)" style="width:100%;padding:6px 8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.78rem;font-weight:600;color:#0c4a6e;background:white;cursor:pointer">
              <option value="">— Select a hotel —</option>
-             ${stops.map(s => `<option value="${s.hotel_saved_id}">${escapeHtml(s.name)}${s.est_adr_dollars ? ' · ~$' + s.est_adr_dollars + '/nt' : ''}${s.ai_fit_score ? ' · fit ' + s.ai_fit_score : ''}</option>`).join('')}
+             ${stops.map(s => `<option value="${s.hotel_saved_id}" data-name="${escapeHtml(s.name)}" data-city="${escapeHtml(s.city || '')}">${escapeHtml(s.name)}${s.est_adr_dollars ? ' · ~$' + s.est_adr_dollars + '/nt' : ''}${s.ai_fit_score ? ' · fit ' + s.ai_fit_score : ''}</option>`).join('')}
            </select>
-         </div>`;
+           <div id="anchor-book-${r.id}" style="margin-top:6px;display:none">
+             <a id="anchor-book-link-${r.id}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;background:#0c4a6e;color:white;padding:5px 10px;border-radius:6px;font-size:0.72rem;text-decoration:none;font-weight:600">🛏 Book stay</a>
+           </div>
+         </div>` : '';
 
     return `
       <div class="schedule-day ${isToday ? 'today' : ''}" data-date="${iso}" data-route-id="${r.id}">
@@ -7230,7 +7233,23 @@ function renderScheduleDay(iso, dayName, dayDate, isToday, routes, stopsByRoute)
 // instead of the system guessing. Sends the selected hotel_id to the
 // existing auto-anchor endpoint which already supports explicit overrides.
 window._pickAnchor = async function(routeId, hotelId) {
-  if (!hotelId) return;
+  const bookDiv = document.getElementById('anchor-book-' + routeId);
+  const bookLink = document.getElementById('anchor-book-link-' + routeId);
+  if (!hotelId) {
+    if (bookDiv) bookDiv.style.display = 'none';
+    return;
+  }
+
+  // WHY: Show booking link immediately so the rep can book while the anchor saves
+  const sel = document.getElementById('anchor-sel-' + routeId);
+  const opt = sel?.options[sel.selectedIndex];
+  const hotelName = opt?.dataset?.name || '';
+  const city = opt?.dataset?.city || '';
+  if (bookDiv && bookLink) {
+    bookLink.href = `https://www.google.com/search?q=${encodeURIComponent('book ' + hotelName + ' ' + city + ' tonight')}`;
+    bookDiv.style.display = 'block';
+  }
+
   try {
     const r = await fetch(`/api/hotel-research/routes/${routeId}/auto-anchor`, {
       method: 'POST', credentials: 'same-origin',
