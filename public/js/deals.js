@@ -8,6 +8,10 @@ let dealMap = null; // Leaflet map instance — lazy-initialized
 let stageFilter = null;
 
 const STAGES = ['lead', 'qualified', 'site_walk', 'configured', 'proposed', 'negotiation', 'won', 'deploying', 'active', 'lost'];
+// WHY: 'lost' lives outside the trail — losing a deal isn't a forward step. Every
+// other stage maps to one pip, drawn left-to-right in pipeline order so the
+// trail reads as "where is this deal in our funnel" at a glance.
+const PIPELINE_TRAIL_STAGES = ['lead', 'qualified', 'site_walk', 'configured', 'proposed', 'negotiation', 'won', 'deploying', 'active'];
 const STAGE_LABELS = {
   lead: 'Lead', qualified: 'Qualified', site_walk: 'Site Walk',
   configured: 'Configured', proposed: 'Proposed', negotiation: 'Negotiation',
@@ -22,7 +26,17 @@ const STAGE_COLORS = {
 // ── API ────────────────────────────────────────────────────────
 async function fetchDeals() {
   const res = await fetch('/api/deals');
-  if (!res.ok) throw new Error('Failed to fetch deals');
+  if (!res.ok) {
+    // WHY: 401 means the JWT cookie is missing or expired — redirect to login so the user can re-authenticate
+    if (res.status === 401) {
+      window.location.href = '/admin-login';
+      return;
+    }
+    console.error(`GET /api/deals failed with ${res.status}`);
+    deals = [];
+    render();
+    return;
+  }
   deals = await res.json();
   render();
 }
@@ -47,6 +61,75 @@ async function updateDealStage(id, stage) {
     body: JSON.stringify({ stage }),
   });
   await fetchDeals();
+}
+
+// ── Dormant flag + Next-meeting scheduler (board #8) ──────────
+// Soft-pause a deal without moving it out of the pipeline, and schedule
+// the next follow-up so it surfaces on the kanban card.
+async function toggleDormant(id, makeDormant) {
+  await fetch(`/api/deals/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_dormant: makeDormant ? 1 : 0 }),
+  });
+  await fetchDeals();
+}
+
+async function setNextMeeting(id, isoOrNull) {
+  await fetch(`/api/deals/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    // Empty value clears the meeting; the API treats '' as null.
+    body: JSON.stringify({ next_meeting_at: isoOrNull || '' }),
+  });
+  await fetchDeals();
+}
+
+// WHY: Format "Tue Apr 30 · 2:30 PM" — short enough to fit in a card chip,
+// human enough to scan without converting from raw ISO in your head.
+function formatMeetingDate(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const dayPart = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const timePart = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${dayPart} · ${timePart}`;
+}
+
+// Convert ISO from API → value attribute for <input type="datetime-local">,
+// which expects "YYYY-MM-DDTHH:MM" with no seconds and no timezone.
+function isoToDatetimeLocalValue(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Toggle the inline datetime-local input next to the Schedule button.
+// Native picker needs an explicit click on the input to open in most
+// browsers, so we both reveal it and call .showPicker() where available.
+function openMeetingPicker(btn, dealId) {
+  // The input is the next sibling of the Schedule button in the card-actions row.
+  const input = btn.parentElement?.querySelector(`.card-meeting-input[data-deal-id="${dealId}"]`);
+  if (!input) return;
+  input.classList.toggle('is-open');
+  if (input.classList.contains('is-open')) {
+    // showPicker() is the modern API for triggering the native picker
+    // programmatically. Fall back to focus() in browsers that don't have it.
+    try { input.showPicker?.(); } catch (e) { /* not supported, no-op */ }
+    input.focus();
+  }
+}
+
+function onMeetingInputChange(input) {
+  const dealId = input.dataset.dealId;
+  if (!dealId) return;
+  // Convert the local-time string back to a UTC ISO so the server stores
+  // a single canonical timestamp.
+  const v = input.value;
+  if (!v) { setNextMeeting(dealId, null); return; }
+  const iso = new Date(v).toISOString();
+  setNextMeeting(dealId, iso);
 }
 
 // WHY: Called from kanban card "Move to..." dropdown — wraps updateDealStage with reset on cancel
@@ -184,6 +267,36 @@ function renderKanban(filtered) {
               <div class="brand-deal-stripe" style="background:linear-gradient(180deg, ${STAGE_COLORS[stage]}, ${STAGE_COLORS[stage]}88);"></div>
               <a href="/admin/deals/${d.id}#overview" style="text-decoration:none;color:inherit;">
                 <div class="brand-deal-name">${escapeHtml(d.name)}</div>
+            // Next-meeting chip state. Tag past meetings red and "soon"
+            // (within 24h) amber so the urgency reads at a glance.
+            const meetMs = d.next_meeting_at ? Date.parse(d.next_meeting_at) : null;
+            const meetIsPast = meetMs && meetMs < Date.now();
+            const meetIsSoon = meetMs && !meetIsPast && (meetMs - Date.now()) < 24 * 60 * 60 * 1000;
+            const meetClass = meetIsPast ? 'is-past' : meetIsSoon ? 'is-soon' : '';
+            const isDormant = !!Number(d.is_dormant);
+            // Stage-trail: pipeline-position visual ("step N of M"). Built once
+            // per card so we don't repeat the indexOf in every interpolation.
+            const stageIdx = PIPELINE_TRAIL_STAGES.indexOf(stage);
+            const isLostStage = stage === 'lost';
+            const trailTitle = isLostStage
+              ? 'Deal lost'
+              : `${STAGE_LABELS[stage]} — step ${stageIdx + 1} of ${PIPELINE_TRAIL_STAGES.length}`;
+            const trailHtml = `
+              <div class="deal-stage-trail${isLostStage ? ' is-lost' : ''}" title="${escapeHtml(trailTitle)}">
+                ${PIPELINE_TRAIL_STAGES.map((s, i) => {
+                  let cls = '';
+                  if (!isLostStage && i < stageIdx) cls = 'passed';
+                  else if (!isLostStage && i === stageIdx) cls = 'current';
+                  const styleAttr = i === stageIdx ? `style="--current-stage-color:${STAGE_COLORS[s]};"` : '';
+                  return `<span class="stage-dot ${cls}" ${styleAttr} title="${escapeHtml(STAGE_LABELS[s])}"></span>`;
+                }).join('')}
+              </div>`;
+
+            return `
+            <div class="deal-card brand-deal-card${isDormant ? ' is-dormant' : ''}">
+              <div class="brand-deal-stripe" style="background:linear-gradient(180deg, ${STAGE_COLORS[stage]}, ${STAGE_COLORS[stage]}88);"></div>
+              <a href="/admin/deals/${d.id}#overview" style="text-decoration:none;color:inherit;">
+                <div class="brand-deal-name">${escapeHtml(d.name)}${isDormant ? '<span class="deal-dormant-badge">💤 Dormant</span>' : ''}</div>
                 ${d.facility_brand ? `<div class="deal-brand-tag">${escapeHtml(d.facility_brand)}${d.facility_operator && d.facility_operator !== d.facility_brand ? ' · ' + escapeHtml(d.facility_operator) : ''}</div>` : ''}
                 <div class="brand-deal-meta">
                   ${escapeHtml(d.facility_type || '')}${d.facility_type && (d.city || d.state) ? ' · ' : ''}${escapeHtml(d.city || '')}${d.state ? ', ' + escapeHtml(d.state) : ''}
@@ -198,6 +311,8 @@ function renderKanban(filtered) {
                   ${elevators ? `<div class="deal-stat-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><polyline points="8 8 6 10 8 12"/><polyline points="16 8 18 10 16 12"/></svg><span class="deal-stat-val">${elevators}</span> elevators</div>` : ''}
                   ${d.source ? `<div class="deal-stat-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg><span class="deal-stat-val" style="text-transform:capitalize;">${escapeHtml(d.source)}</span></div>` : ''}
                 </div>` : ''}
+
+                ${trailHtml}
 
                 ${prob > 0 ? `
                 <div class="deal-prob-bar">
@@ -230,6 +345,12 @@ function renderKanban(filtered) {
                   ${d.last_activity_at ? `<span>· ${timeAgo(d.last_activity_at)}</span>` : ''}
                 </div>` : ''}
 
+                ${d.next_meeting_at ? `
+                <div class="deal-meeting-chip ${meetClass}" title="${meetIsPast ? 'Meeting is in the past' : meetIsSoon ? 'Within 24 hours' : 'Upcoming meeting'}${d.next_meeting_note ? ' — ' + escapeHtml(d.next_meeting_note) : ''}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span>${escapeHtml(formatMeetingDate(d.next_meeting_at))}</span>
+                </div>` : ''}
+
                 <div class="deal-owner">${escapeHtml(d.owner || 'Unassigned')}</div>
               </a>
               <div class="card-actions" onclick="event.stopPropagation()">
@@ -238,6 +359,12 @@ function renderKanban(filtered) {
                   <option value="">Move to...</option>
                   ${moveOptions}
                 </select>
+                <button type="button" class="card-action icon-btn ${d.next_meeting_at ? 'is-active' : ''}" title="Schedule next meeting" onclick="openMeetingPicker(this, '${d.id}')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Schedule
+                </button>
+                <input type="datetime-local" class="card-meeting-input" data-deal-id="${d.id}" value="${escapeHtml(isoToDatetimeLocalValue(d.next_meeting_at))}" onchange="onMeetingInputChange(this)">
+                <button type="button" class="card-action icon-btn ${isDormant ? 'is-active' : ''}" title="${isDormant ? 'Reactivate' : 'Mark dormant — pause without losing'}" onclick="toggleDormant('${d.id}', ${isDormant ? 'false' : 'true'})">${isDormant ? '▶ Reactivate' : '💤 Dormant'}</button>
                 <button class="card-action danger" onclick="deleteDeal('${d.id}', '${escapeHtml(d.name).replace(/'/g, "\\'")}')">Delete</button>
               </div>
             </div>`;
@@ -551,6 +678,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (heading) heading.textContent = 'Deployments';
     const subtitle = document.querySelector('h1.headline + p');
     if (subtitle) subtitle.textContent = 'Won deals, active deployments, and go-live tracking';
+  // WHY: Read stage filter from URL — used by the Deploy tab as well as the
+  // Command Center stat tiles + bottleneck callouts that link to ?stage=lead,
+  // ?stage=proposed, etc. We adapt the heading to whatever stages were passed
+  // instead of hard-coding "Deployments" for every filter.
+  const urlStages = new URLSearchParams(window.location.search).getAll('stage')
+    .filter(s => STAGES.includes(s));
+  if (urlStages.length > 0) {
+    stageFilter = urlStages;
+    view = 'table'; // Table view reads better for a flat filtered list
+    const heading = document.querySelector('h1.headline');
+    const subtitle = document.querySelector('h1.headline + p');
+    // Specific aliases for known multi-stage groupings; otherwise derive
+    // from the stage labels. These mirror the Command Center stat tiles —
+    // each tile counts a stage bundle and links here with the matching ?stage= set.
+    const has = s => urlStages.includes(s);
+    const isDeployBundle = urlStages.length >= 2 && has('won') && has('deploying') && has('active');
+    const isQualifiedBundle = urlStages.length >= 2 && has('qualified') && has('site_walk') && has('configured');
+    const isProposedBundle = urlStages.length >= 2 && has('proposed') && has('negotiation');
+    if (isDeployBundle) {
+      if (heading) heading.textContent = 'Deployments';
+      if (subtitle) subtitle.textContent = 'Won deals, active deployments, and go-live tracking';
+    } else if (isQualifiedBundle) {
+      if (heading) heading.textContent = 'Qualified deals';
+      if (subtitle) subtitle.textContent = 'Qualified, site walk, and configured stages';
+    } else if (isProposedBundle) {
+      if (heading) heading.textContent = 'Proposed deals';
+      if (subtitle) subtitle.textContent = 'Proposed and negotiation stages';
+    } else if (urlStages.length === 1) {
+      const label = STAGE_LABELS[urlStages[0]] || urlStages[0];
+      if (heading) heading.textContent = `${label} deals`;
+      if (subtitle) subtitle.textContent = `All deals currently in the ${label.toLowerCase()} stage`;
+    } else {
+      const labels = urlStages.map(s => STAGE_LABELS[s] || s).join(' · ');
+      if (heading) heading.textContent = `Filtered: ${labels}`;
+      if (subtitle) subtitle.textContent = `Deals across ${urlStages.length} stages`;
+    }
   }
 
   // WHY: Register event listeners BEFORE async data loading so they're
@@ -584,4 +747,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   await fetchDeals();
+  try {
+    await fetchDeals();
+  } catch (e) {
+    console.error('Failed to load deals:', e);
+    // WHY: Still call render() so the user sees empty columns + stats instead of a blank page
+    render();
+  }
 });

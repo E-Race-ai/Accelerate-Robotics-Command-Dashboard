@@ -13,7 +13,7 @@ This repo ships with `render.yaml` at the root — a Render Blueprint that decla
 
 1. Render dashboard → **New** → **Blueprint**
 2. Connect GitHub → select `E-Race-ai/accelerate-robotics`
-3. Render detects `render.yaml` → review the plan: one Web Service (`accelerate-robotics`) + one Persistent Disk (`accelerate-data`, 1 GB, mounted at `/app/data`)
+3. Render detects `render.yaml` → review the plan: one Web Service (`accelerate-robotics`), no persistent disk (Turso hosts the database externally)
 4. Click **Apply**
 
 ### 2. Set the secret env vars
@@ -22,7 +22,9 @@ The blueprint declares these as `sync: false` so Render prompts for them on firs
 
 | Key | Source |
 |---|---|
-| `JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` — generate fresh, don't reuse the Railway one |
+| `DATABASE_URL` | Turso database URL, e.g. `libsql://<db>-<org>.aws-us-west-2.turso.io` |
+| `DATABASE_AUTH_TOKEN` | From `turso db tokens create <db>` or Turso dashboard → database → Create Token |
+| `JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` — generate fresh, don't reuse Railway's |
 | `ADMIN_EMAIL` | Initial admin login email |
 | `ADMIN_PASSWORD` | Initial admin login password (set once, change via UI later) |
 | `BOOTSTRAP_ADMIN_EMAILS` | Comma-separated emails to promote to `role='admin'` every boot (e.g. `claude.e.race@atlasmobility.com`) |
@@ -30,7 +32,7 @@ The blueprint declares these as `sync: false` so Render prompts for them on firs
 | `EMAIL_FROM` | Verified sender (e.g. `notifications@acceleraterobotics.ai`) |
 | `ANTHROPIC_API_KEY` | From Anthropic console |
 
-Non-secret env vars (`NODE_ENV`, `DB_PATH`) are hard-coded in `render.yaml` and auto-populated.
+Non-secret env var (`NODE_ENV=production`) is hard-coded in `render.yaml`.
 
 ### 3. Wait for first deploy
 

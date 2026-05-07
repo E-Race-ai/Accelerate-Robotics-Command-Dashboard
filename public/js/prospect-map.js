@@ -100,6 +100,11 @@ function updateProspectMap(markets, prospects) {
   marketsById = {};
   markets.forEach(m => { marketsById[m.id] = m; });
 
+  // WHY: Container was display:none while user was on Card/Table view, so Leaflet's
+  // cached size is stale. Without this, tiles render at the wrong scale and markers
+  // land in the wrong pixel positions on the second visit to map view.
+  map.invalidateSize();
+
   renderMarketBubbles(markets, prospects);
   renderConnectionLines(markets, prospects);
   renderMapProspectList(markets, prospects);
