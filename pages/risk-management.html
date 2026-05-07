@@ -487,6 +487,165 @@
       color: var(--ink-3); border: 0.5px solid var(--hairline);
     }
 
+    /* ─── Action Board — overdue + due-this-week columns ────────── */
+    .action-board {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 880px) { .action-board { grid-template-columns: 1fr; } }
+    .action-col {
+      background: white;
+      border: 0.5px solid var(--line);
+      padding: 22px 24px;
+      position: relative;
+    }
+    .action-col::before {
+      content: ''; position: absolute; inset: 5px;
+      border: 0.5px solid var(--line);
+      pointer-events: none;
+    }
+    .action-col.overdue {
+      background: #fff8f6;
+    }
+    .action-col-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .action-col-head h3 {
+      font-family: var(--font-display);
+      font-weight: 400; font-size: 22px; letter-spacing: -0.012em;
+      margin: 0; line-height: 1;
+    }
+    .action-col-head .count {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.10em; text-transform: uppercase;
+      padding: 3px 10px;
+      background: var(--paper); color: var(--ink-2);
+    }
+    .action-col.overdue .count { background: rgba(229,72,77,0.12); color: var(--danger); }
+    .action-row {
+      display: grid;
+      grid-template-columns: 14px 1fr auto auto;
+      gap: 10px; align-items: center;
+      padding: 10px 0;
+      border-bottom: 0.5px solid rgba(14,20,32,0.06);
+      cursor: pointer;
+    }
+    .action-row:last-child { border-bottom: 0; }
+    .action-row:hover .ar-title { color: var(--primary); }
+    .action-row .ar-check {
+      width: 14px; height: 14px;
+      border: 1px solid var(--hairline);
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .action-row .ar-check:hover { border-color: var(--primary); }
+    .action-row .ar-check[data-checked="true"] {
+      background: var(--success); border-color: var(--success);
+    }
+    .action-row .ar-check[data-checked="true"]::after {
+      content: '✓'; position: absolute; top: -2px; left: 1px;
+      color: white; font-size: 11px; font-weight: 700;
+    }
+    .action-row .ar-prio {
+      width: 6px; height: 6px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .action-row .ar-prio[data-p="high"] { background: var(--danger); }
+    .action-row .ar-prio[data-p="medium"] { background: var(--warning); }
+    .action-row .ar-prio[data-p="low"] { background: var(--ink-faint); }
+    .action-row .ar-title {
+      font-family: var(--font-display);
+      font-size: 16px; font-weight: 500; line-height: 1.2;
+      transition: color 0.12s;
+    }
+    .action-row[data-status="done"] .ar-title { text-decoration: line-through; color: var(--ink-faint); }
+    .action-row .ar-meta {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.10em; text-transform: uppercase;
+      color: var(--ink-3); margin-top: 2px;
+    }
+    .action-row .ar-due {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .action-row .ar-due[data-overdue="true"] { color: var(--danger); }
+    .action-row .ar-due[data-soon="true"] { color: var(--warning); }
+    .action-row .ar-owner {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.06em; color: var(--ink-2);
+    }
+    .action-empty {
+      font-family: var(--font-display); font-style: italic;
+      font-size: 16px; color: var(--ink-3);
+      padding: 16px 0; text-align: center;
+    }
+
+    /* ─── Action list inside drawer ──────────────────────────────── */
+    .drawer-actions-list {
+      display: flex; flex-direction: column; gap: 4px;
+      margin: 8px 0 12px;
+    }
+    .drawer-action-item {
+      display: grid;
+      grid-template-columns: 14px 6px 1fr auto auto;
+      gap: 10px; align-items: center;
+      padding: 10px 0;
+      border-bottom: 0.5px solid rgba(14,20,32,0.06);
+    }
+    .drawer-action-item .ai-title {
+      font-family: var(--font-display); font-size: 15px; font-weight: 500;
+      line-height: 1.2;
+    }
+    .drawer-action-item .ai-meta {
+      font-family: var(--font-mono); font-size: 10px;
+      color: var(--ink-3); letter-spacing: 0.10em; text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .drawer-action-item[data-status="done"] .ai-title {
+      text-decoration: line-through; color: var(--ink-faint);
+    }
+    .drawer-action-item .ai-due {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    }
+    .drawer-action-item .ai-due[data-overdue="true"] { color: var(--danger); }
+    .drawer-action-item .ai-x {
+      background: transparent; border: 0; cursor: pointer;
+      color: var(--ink-faint); font-size: 14px;
+      padding: 0 4px;
+    }
+    .drawer-action-item .ai-x:hover { color: var(--danger); }
+
+    .add-action-form {
+      display: grid;
+      grid-template-columns: 1fr 120px 110px 1fr auto;
+      gap: 8px; align-items: center;
+      margin-top: 12px;
+    }
+    .add-action-form input,
+    .add-action-form select {
+      padding: 6px 8px;
+      border: 0; border-bottom: 0.5px solid var(--hairline);
+      background: transparent;
+      font: inherit; font-family: 'Instrument Serif', serif; font-size: 14px;
+      color: var(--ink); border-radius: 0;
+    }
+    .add-action-form input:focus, .add-action-form select:focus {
+      outline: 0; border-bottom-color: var(--primary);
+    }
+    .add-action-form button {
+      padding: 8px 14px;
+      background: var(--ink); color: var(--paper);
+      border: 0;
+      font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      cursor: pointer;
+    }
+    .add-action-form button:hover { background: var(--primary); }
+    @media (max-width: 600px) { .add-action-form { grid-template-columns: 1fr; } }
+
     /* ─── Today's 3 — curated CEO focus ──────────────────────────── */
     .todays-three {
       display: grid;
@@ -917,6 +1076,25 @@
       </div>
     </div>
 
+    <!-- ═══ Mitigation Action Board — what's actually being done ═══ -->
+    <div class="sec-rule"><span class="label">Mitigation actions · what's being done</span></div>
+    <div class="action-board">
+      <div class="action-col overdue">
+        <div class="action-col-head">
+          <h3>Overdue</h3>
+          <span class="count" id="actionOverdueCount">0</span>
+        </div>
+        <div id="actionOverdueList"></div>
+      </div>
+      <div class="action-col">
+        <div class="action-col-head">
+          <h3>Due this week</h3>
+          <span class="count" id="actionWeekCount">0</span>
+        </div>
+        <div id="actionWeekList"></div>
+      </div>
+    </div>
+
     <!-- ═══ Owner accountability — who carries what ═══ -->
     <div class="sec-rule"><span class="label">Owner accountability</span></div>
     <div class="owner-grid" id="ownerGrid"></div>
@@ -986,9 +1164,66 @@ async function loadDashboard() {
   renderTopRisks();
   renderAlerts();
   renderOwnerBoard();
+  renderActionBoard(); // NEW
   renderFeeds();
   renderToolbar();
   renderRegister();
+}
+
+// ─── Action Board — overdue + due-this-week cross-risk view ──────
+async function renderActionBoard() {
+  let board;
+  try {
+    const res = await fetch('/api/risk-management/actions/board', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    board = await res.json();
+  } catch (err) {
+    console.warn('[erm] action board fetch failed:', err);
+    board = { overdue: [], due_this_week: [], later: [], stats: {} };
+  }
+  $('actionOverdueCount').textContent = board.stats.overdue || 0;
+  $('actionWeekCount').textContent    = board.stats.due_this_week || 0;
+  $('actionOverdueList').innerHTML = renderActionRows(board.overdue);
+  $('actionWeekList').innerHTML    = renderActionRows(board.due_this_week);
+  // Wire row clicks: open the parent risk's drawer; checkbox toggles done.
+  document.querySelectorAll('.action-board .action-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.ar-check')) return;
+      openRisk(Number(row.dataset.riskId));
+    });
+    row.querySelector('.ar-check')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const aid = Number(row.dataset.actionId);
+      const isDone = row.dataset.status === 'done';
+      await fetch(`/api/risk-management/actions/${aid}`, {
+        method: 'PATCH', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: isDone ? 'open' : 'done' }),
+      });
+      loadDashboard();
+    });
+  });
+}
+
+function renderActionRows(items) {
+  if (!items || items.length === 0) {
+    return '<div class="action-empty">— nothing here, well done —</div>';
+  }
+  return items.map(a => {
+    const due = a.due_date ? new Date(a.due_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+    return `
+      <div class="action-row" data-action-id="${a.id}" data-risk-id="${a.risk_id}" data-status="${a.status}">
+        <div class="ar-check" data-checked="${a.status === 'done'}" title="Toggle done"></div>
+        <div class="ar-prio" data-p="${a.priority}" title="${a.priority} priority"></div>
+        <div>
+          <div class="ar-title">${escapeHtml(a.title)}</div>
+          <div class="ar-meta">${escapeHtml(a.risk?.title || '')}</div>
+        </div>
+        <div class="ar-due" data-overdue="${a.is_overdue}" data-soon="${a.is_due_soon}">${due}</div>
+        <div class="ar-owner">${escapeHtml(a.owner || '—')}</div>
+      </div>
+    `;
+  }).join('');
 }
 
 // ─── Today's 3 — auto-curated CEO focus list ───────────────────────
@@ -1338,6 +1573,25 @@ async function openRisk(id) {
     </div>
     ${history && history.length > 1 ? `<div class="drawer-section"><h4>Score history</h4><p style="font-family:var(--font-mono);font-size:12px;">${history.map(h => `${h.changed_at.slice(0,10)} · ${h.residual_score}`).join(' · ')}</p></div>` : ''}
 
+    <!-- Mitigation Actions — concrete tasks under this risk -->
+    <div class="drawer-section">
+      <h4>Mitigation actions <span id="actionsCount" style="margin-left:8px;color:var(--ink-faint);font-weight:400;letter-spacing:0.06em;font-family:var(--font-mono);font-size:10px;"></span></h4>
+      <div class="drawer-actions-list" id="drawerActions">
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:0.10em;text-transform:uppercase;padding:8px 0;">Loading…</div>
+      </div>
+      <form class="add-action-form" id="addActionForm">
+        <input type="text" name="title" placeholder="What needs to happen?" required>
+        <input type="text" name="owner" placeholder="Owner">
+        <select name="priority">
+          <option value="medium" selected>medium</option>
+          <option value="high">high</option>
+          <option value="low">low</option>
+        </select>
+        <input type="date" name="due_date">
+        <button type="submit">+ Add</button>
+      </form>
+    </div>
+
     <!-- Inline edit form — every field PATCHes back to the API on input -->
     <div class="drawer-section" id="editPanel" hidden>
       <h4>Edit</h4>
@@ -1447,6 +1701,87 @@ async function openRisk(id) {
       timer = setTimeout(() => patchField(el.dataset.field, el.value), 700);
     });
   });
+
+  // Mitigation actions panel inside the drawer — fetch + bind
+  loadDrawerActions(id);
+}
+
+async function loadDrawerActions(riskId) {
+  const list = $('drawerActions');
+  if (!list) return;
+  let actions = [];
+  try {
+    const res = await fetch(`/api/risk-management/risks/${riskId}/actions`, { credentials: 'same-origin' });
+    if (res.ok) actions = (await res.json()).actions || [];
+  } catch {}
+  $('actionsCount').textContent = actions.length
+    ? `${actions.filter(a => a.status !== 'done').length} open · ${actions.filter(a => a.status === 'done').length} done`
+    : '';
+  list.innerHTML = actions.length === 0
+    ? `<div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:0.10em;text-transform:uppercase;padding:8px 0;">No actions yet — add one below.</div>`
+    : actions.map(a => {
+        const due = a.due_date ? new Date(a.due_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        return `
+          <div class="drawer-action-item" data-status="${a.status}" data-id="${a.id}">
+            <div class="ar-check" data-checked="${a.status === 'done'}" title="Toggle done"></div>
+            <div class="ar-prio" data-p="${a.priority}"></div>
+            <div>
+              <div class="ai-title">${escapeHtml(a.title)}</div>
+              <div class="ai-meta">${escapeHtml(a.owner || 'unassigned')}${a.notes ? ' · ' + escapeHtml(a.notes.slice(0, 60)) : ''}</div>
+            </div>
+            <div class="ai-due" data-overdue="${a.is_overdue}">${escapeHtml(due)}</div>
+            <button class="ai-x" title="Delete">×</button>
+          </div>
+        `;
+      }).join('');
+
+  // Bind: checkbox toggles done/open, x deletes, click opens edit (later)
+  list.querySelectorAll('.drawer-action-item').forEach(row => {
+    const aid = Number(row.dataset.id);
+    row.querySelector('.ar-check').addEventListener('click', async () => {
+      const isDone = row.dataset.status === 'done';
+      await fetch(`/api/risk-management/actions/${aid}`, {
+        method: 'PATCH', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: isDone ? 'open' : 'done' }),
+      });
+      loadDrawerActions(riskId);
+      // Bump the global dashboard so action board / stats reflect change
+      loadDashboard();
+    });
+    row.querySelector('.ai-x').addEventListener('click', async () => {
+      if (!confirm('Delete this action?')) return;
+      await fetch(`/api/risk-management/actions/${aid}`, { method: 'DELETE', credentials: 'same-origin' });
+      loadDrawerActions(riskId);
+      loadDashboard();
+    });
+  });
+
+  // Bind add-form submit
+  const form = $('addActionForm');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const body = {
+        title: fd.get('title'),
+        owner: fd.get('owner') || null,
+        priority: fd.get('priority') || 'medium',
+        due_date: fd.get('due_date') || null,
+      };
+      if (!body.title) return;
+      const res = await fetch(`/api/risk-management/risks/${riskId}/actions`, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        form.reset();
+        loadDrawerActions(riskId);
+        loadDashboard();
+      }
+    }, { once: true });
+  }
 }
 
 function openCellList(key, risks) {

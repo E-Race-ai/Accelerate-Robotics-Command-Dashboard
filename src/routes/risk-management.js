@@ -168,9 +168,40 @@ router.get('/dashboard', async (req, res) => {
     const avgScore = total ? +(risks.reduce((s, r) => s + r.residual.score, 0) / total).toFixed(1) : 0;
     const totalMitigationValue = risks.reduce((s, r) => s + r.delta, 0);
 
+    // Action rollup — joined in so the dashboard can render the action
+    // strip + per-risk action counts without a second fetch.
+    let actionStats = { open_total: 0, in_progress: 0, overdue: 0, due_this_week: 0, high_priority: 0 };
+    let actionsByRisk = {};
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const weekOut = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+      const aRows = await db.all(
+        `SELECT id, risk_id, status, priority, due_date FROM risk_mitigation_actions WHERE status != 'done'`,
+        [],
+      );
+      for (const a of aRows) {
+        actionStats.open_total++;
+        if (a.status === 'in_progress') actionStats.in_progress++;
+        if (a.priority === 'high') actionStats.high_priority++;
+        if (a.due_date && a.due_date < today) actionStats.overdue++;
+        else if (a.due_date && a.due_date <= weekOut) actionStats.due_this_week++;
+        if (!actionsByRisk[a.risk_id]) actionsByRisk[a.risk_id] = { open: 0, overdue: 0 };
+        actionsByRisk[a.risk_id].open++;
+        if (a.due_date && a.due_date < today) actionsByRisk[a.risk_id].overdue++;
+      }
+    } catch (e) {
+      // table might not exist yet on first boot — silent fallback to zeroes
+      console.warn('[risk] action stats fallback:', e.message);
+    }
+    // Attach per-risk action counts to the risks array
+    for (const r of risks) {
+      r.actions = actionsByRisk[r.id] || { open: 0, overdue: 0 };
+    }
+
     res.json({
       generated_at: new Date().toISOString(),
       stats: { total, critical, high, overdue, avg_score: avgScore, mitigation_value: totalMitigationValue },
+      action_stats: actionStats,
       heatmap,
       top,
       alerts,
@@ -310,6 +341,175 @@ router.delete('/risks/:id', async (req, res) => {
   await db.run(`UPDATE risk_register SET status = 'closed', updated_at = ? WHERE id = ?`,
     [new Date().toISOString(), id]);
   res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Mitigation actions — concrete tasks tied to each risk
+// ═══════════════════════════════════════════════════════════════════
+
+const ACTION_STATUS   = new Set(['open', 'in_progress', 'done', 'blocked']);
+const ACTION_PRIORITY = new Set(['low', 'medium', 'high']);
+
+function shapeAction(row) {
+  if (!row) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    id: row.id,
+    risk_id: row.risk_id,
+    title: row.title,
+    description: row.description,
+    owner: row.owner,
+    status: row.status,
+    priority: row.priority,
+    due_date: row.due_date,
+    completed_at: row.completed_at,
+    notes: row.notes,
+    is_overdue: row.due_date && row.status !== 'done' && row.due_date < today,
+    is_due_soon: row.due_date && row.status !== 'done'
+      && row.due_date >= today
+      && row.due_date <= new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+// List actions for a single risk
+router.get('/risks/:id/actions', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid risk id' });
+  try {
+    const rows = await db.all(
+      `SELECT * FROM risk_mitigation_actions
+       WHERE risk_id = ?
+       ORDER BY
+         CASE status WHEN 'done' THEN 1 ELSE 0 END,
+         CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+         due_date IS NULL, due_date,
+         id DESC`,
+      [id],
+    );
+    res.json({ actions: rows.map(shapeAction) });
+  } catch (err) {
+    console.error('[risk] actions list failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create an action under a risk
+router.post('/risks/:id/actions', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid risk id' });
+  const b = req.body || {};
+  if (!b.title || typeof b.title !== 'string') return res.status(400).json({ error: 'title required' });
+  // Validate the parent risk exists so we don't orphan rows.
+  const risk = await db.one('SELECT id FROM risk_register WHERE id = ?', [id]);
+  if (!risk) return res.status(404).json({ error: 'risk not found' });
+
+  try {
+    const r = await db.run(
+      `INSERT INTO risk_mitigation_actions
+         (risk_id, title, description, owner, status, priority, due_date, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        b.title.slice(0, 200),
+        b.description ? String(b.description).slice(0, 4000) : null,
+        b.owner ? String(b.owner).slice(0, 120) : null,
+        ACTION_STATUS.has(b.status) ? b.status : 'open',
+        ACTION_PRIORITY.has(b.priority) ? b.priority : 'medium',
+        b.due_date || null,
+        b.notes ? String(b.notes).slice(0, 4000) : null,
+      ],
+    );
+    const created = await db.one('SELECT * FROM risk_mitigation_actions WHERE id = ?', [r.lastInsertRowid]);
+    res.status(201).json({ action: shapeAction(created) });
+  } catch (err) {
+    console.error('[risk] action create failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update an action — partial. Status transition to 'done' stamps
+// completed_at automatically; reverting clears it.
+router.patch('/actions/:actionId', async (req, res) => {
+  const aid = Number(req.params.actionId);
+  if (!Number.isInteger(aid) || aid <= 0) return res.status(400).json({ error: 'invalid action id' });
+  const b = req.body || {};
+  const current = await db.one('SELECT * FROM risk_mitigation_actions WHERE id = ?', [aid]);
+  if (!current) return res.status(404).json({ error: 'action not found' });
+
+  const fields = []; const args = [];
+  const push = (col, val) => { fields.push(`${col} = ?`); args.push(val); };
+
+  if (b.title !== undefined)       push('title', String(b.title).slice(0, 200));
+  if (b.description !== undefined) push('description', b.description ? String(b.description).slice(0, 4000) : null);
+  if (b.owner !== undefined)       push('owner', b.owner ? String(b.owner).slice(0, 120) : null);
+  if (b.notes !== undefined)       push('notes', b.notes ? String(b.notes).slice(0, 4000) : null);
+  if (b.due_date !== undefined)    push('due_date', b.due_date || null);
+  if (b.priority !== undefined && ACTION_PRIORITY.has(b.priority)) push('priority', b.priority);
+
+  if (b.status !== undefined && ACTION_STATUS.has(b.status)) {
+    push('status', b.status);
+    if (b.status === 'done' && current.status !== 'done') {
+      push('completed_at', new Date().toISOString());
+    } else if (b.status !== 'done' && current.status === 'done') {
+      push('completed_at', null);
+    }
+  }
+
+  if (fields.length === 0) return res.status(400).json({ error: 'no fields to update' });
+  push('updated_at', new Date().toISOString());
+  args.push(aid);
+  await db.run(`UPDATE risk_mitigation_actions SET ${fields.join(', ')} WHERE id = ?`, args);
+  const updated = await db.one('SELECT * FROM risk_mitigation_actions WHERE id = ?', [aid]);
+  res.json({ action: shapeAction(updated) });
+});
+
+// Hard delete (vs soft because actions are cheap and reps want them gone)
+router.delete('/actions/:actionId', async (req, res) => {
+  const aid = Number(req.params.actionId);
+  if (!Number.isInteger(aid) || aid <= 0) return res.status(400).json({ error: 'invalid action id' });
+  await db.run('DELETE FROM risk_mitigation_actions WHERE id = ?', [aid]);
+  res.json({ ok: true });
+});
+
+// Action board — overdue + due-this-week + later, with parent-risk
+// title joined in so the UI doesn't need a second fetch.
+router.get('/actions/board', async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT a.*, r.title AS risk_title, r.category AS risk_category
+       FROM risk_mitigation_actions a
+       JOIN risk_register r ON r.id = a.risk_id
+       WHERE a.status != 'done'
+       ORDER BY a.due_date IS NULL, a.due_date,
+         CASE a.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END`,
+      [],
+    );
+    const weekOut = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    const overdue = []; const dueSoon = []; const later = [];
+    for (const r of rows) {
+      const a = shapeAction(r);
+      a.risk = { id: r.risk_id, title: r.risk_title, category: r.risk_category };
+      if (a.is_overdue) overdue.push(a);
+      else if (a.due_date && a.due_date <= weekOut) dueSoon.push(a);
+      else later.push(a);
+    }
+    res.json({
+      overdue,
+      due_this_week: dueSoon,
+      later,
+      stats: {
+        open_total: rows.length,
+        overdue: overdue.length,
+        due_this_week: dueSoon.length,
+        high_priority: rows.filter(r => r.priority === 'high').length,
+      },
+    });
+  } catch (err) {
+    console.error('[risk] action board failed:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
