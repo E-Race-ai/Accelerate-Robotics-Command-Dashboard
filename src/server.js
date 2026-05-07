@@ -268,6 +268,9 @@ app.use('/api/system-settings', systemSettingsRoutes);
 // 100–500kb base64) fits in the POST body.
 app.use('/api/print-label', express.json({ limit: '5mb' }), require('./routes/print-label'));
 
+// Enterprise Risk Management — CEO's living risk register.
+app.use('/api/risk-management', require('./routes/risk-management'));
+
 // WHY: Proxy /cl/* to the tunnel URL stored in system_settings.creative_labs_url.
 // This serves home-dashboard (running on Eric's MacBook on localhost:3100) to
 // the team via acceleraterobotics.ai, bypassing Eric's local DNS filter that
