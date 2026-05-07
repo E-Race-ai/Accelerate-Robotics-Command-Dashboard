@@ -69,6 +69,33 @@ module.exports = [
   // ─── Operational ────────────────────────────────────────────────
   {
     category: 'operational',
+    title: 'Geopolitical escalation disrupts Pacific shipping or vendor support',
+    description:
+      'Taiwan Strait tensions, Red Sea routing disruptions, or broader ' +
+      'US-China decoupling could halt or delay shipments of replacement ' +
+      'units, spare parts, and firmware updates from our Chinese vendors. ' +
+      'Service continuity at deployed sites is the first casualty. ' +
+      'Distinct from the regulatory tariff/ban risk: this fires even when ' +
+      'no policy lever is pulled, just from logistics + supply-chain ' +
+      'failure modes. Wired to geopolitical shipping headlines.',
+    inherent_likelihood: 3, inherent_impact: 4,
+    residual_likelihood: 2, residual_impact: 4,
+    mitigation:
+      '90-day spare-unit inventory at flagship sites. Critical-parts cache ' +
+      '(LiDAR module, drive wheels, batteries) staged with customers. ' +
+      'Service-van runbook with field-replaceable units. Vendor SLAs ' +
+      'cover 72-hour replacement under normal trade conditions.',
+    owner: 'Eric Race',
+    trend: 'stable',
+    linked_metrics: [
+      'news:taiwan-strait-shipping',
+      'news:red-sea-shipping',
+      'news:china-export-controls-robotics',
+    ],
+    tags: ['geopolitical', 'supply-chain', 'continuity'],
+  },
+  {
+    category: 'operational',
     title: 'Keenon vendor reliability — robots fail mid-deployment',
     description:
       'Single-vendor dependency. Hardware failures during a paid ' +
@@ -213,6 +240,35 @@ module.exports = [
     owner: 'Eric Race',
     trend: 'stable',
     tags: ['labor', 'positioning'],
+  },
+  {
+    category: 'regulatory',
+    title: 'Tariffs, import bans, or covered-list designation on Chinese robotics vendors',
+    description:
+      'Our entire deployed fleet (Keenon) and most evaluated alternatives ' +
+      '(Pudu) are Chinese-built. A US tariff escalation, BIS Entity List ' +
+      'addition, Section 1260H designation, or outright import ban would ' +
+      'suspend the supply chain overnight and force migration to ' +
+      'non-Chinese platforms (Bear, Cobot, ROG) on a compressed timeline. ' +
+      'Score is intended to wire to a Reuters / Bloomberg / USTR / BIS ' +
+      'headline feed once the news ingestion service is live.',
+    inherent_likelihood: 4, inherent_impact: 4,
+    residual_likelihood: 4, residual_impact: 3,
+    mitigation:
+      'Active eval of Bear Robotics (S. Korea) + Cobot (US) as non-Chinese ' +
+      'platforms. 90-day spare-unit inventory at flagship deployments. ' +
+      'Vendor diversification roadmap. Customer contract language allows ' +
+      'platform substitution if a vendor becomes restricted.',
+    owner: 'Eric Race',
+    review_cadence_days: 14,
+    trend: 'rising',
+    linked_metrics: [
+      'news:china-robotics-tariff',
+      'news:bis-entity-list-keenon-pudu',
+      'news:section-1260h-robotics',
+      'news:section-301-robotics',
+    ],
+    tags: ['geopolitical', 'import-export', 'china', 'supply-chain', 'board-level'],
   },
   {
     category: 'regulatory',
