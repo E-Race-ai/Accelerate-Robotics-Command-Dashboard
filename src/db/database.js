@@ -876,6 +876,32 @@ async function initSchema() {
     changed_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`);
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_risk_history_risk ON risk_history(risk_id, changed_at DESC)`);
+
+  // ── Mitigation actions — concrete tasks tied to each risk ───────
+  // Each row is one thing being done (or planned) to reduce a risk.
+  // Closed-loop link to risk_register: when actions land, the rep
+  // updates the risk's residual score and risk_history captures it.
+  // Status flow: open → in_progress → done | blocked
+  // Priority drives the action-board sort and the due-soon alerting.
+  await client.execute(`CREATE TABLE IF NOT EXISTS risk_mitigation_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    risk_id INTEGER NOT NULL REFERENCES risk_register(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    owner TEXT,
+    status TEXT NOT NULL DEFAULT 'open'
+      CHECK(status IN ('open','in_progress','done','blocked')),
+    priority TEXT NOT NULL DEFAULT 'medium'
+      CHECK(priority IN ('low','medium','high')),
+    due_date TEXT,
+    completed_at TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_actions_risk ON risk_mitigation_actions(risk_id)`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_actions_status ON risk_mitigation_actions(status, due_date)`);
+
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_triage_votes_hotel ON hotel_triage_votes(hotel_saved_id)`);
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_triage_votes_player ON hotel_triage_votes(player)`);
 
