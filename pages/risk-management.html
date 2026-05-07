@@ -729,6 +729,176 @@
     .register .score-pill[data-band="low"]      { background: var(--band-low-solid);  color: white; }
     .register .delta-good { color: var(--success); font-family: var(--font-mono); font-size: 11px; }
 
+    /* ── Visual rows: band stripe down the left edge of each row ──── */
+    /* The first cell gets a thick colored stripe so band distribution
+       is scannable from a distance. Critical band uses a hatched fill
+       so it stands out from plain red even on monochrome printers. */
+    .register tbody tr td:first-child {
+      border-left: 5px solid transparent;
+      padding-left: 14px;
+    }
+    .register tbody tr[data-band="critical"] td:first-child {
+      border-left-color: var(--band-crit-solid);
+      background-image: linear-gradient(90deg, rgba(220,38,38,0.06), transparent 64px);
+    }
+    .register tbody tr[data-band="high"]     td:first-child { border-left-color: var(--band-high-solid); background-image: linear-gradient(90deg, rgba(234,88,12,0.05), transparent 64px); }
+    .register tbody tr[data-band="moderate"] td:first-child { border-left-color: var(--band-mod-solid);  background-image: linear-gradient(90deg, rgba(202,138,4,0.05), transparent 64px); }
+    .register tbody tr[data-band="low"]      td:first-child { border-left-color: var(--band-low-solid);  background-image: linear-gradient(90deg, rgba(22,163,74,0.04), transparent 64px); }
+
+    /* ── Tinted category icon — the icon now reads as "type" at a glance.
+       Icon background uses a soft band tint so type AND severity are
+       both visible from the first cell. */
+    .register .cat-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--paper-2);
+      color: var(--ink-2);
+      transition: transform 0.12s;
+    }
+    .register .cat-icon svg { width: 19px; height: 19px; }
+    .register tbody tr[data-band="critical"] .cat-icon { background: rgba(220,38,38,0.14);  color: var(--band-crit-solid); }
+    .register tbody tr[data-band="high"]     .cat-icon { background: rgba(234,88,12,0.14);  color: var(--band-high-solid); }
+    .register tbody tr[data-band="moderate"] .cat-icon { background: rgba(202,138,4,0.14);  color: var(--band-mod-solid); }
+    .register tbody tr[data-band="low"]      .cat-icon { background: rgba(22,163,74,0.14);  color: var(--band-low-solid); }
+    .register tbody tr:hover .cat-icon { transform: scale(1.06); }
+
+    /* ── Containment bar — replaces the two-dot inherent→residual flow.
+       A 1-25 track. Faint full bar = inherent (worst case). Solid
+       colored bar = residual (current). The gap is what controls
+       are containing. Δ-saved badge sits on the right. */
+    .containment {
+      display: grid;
+      grid-template-columns: 24px 1fr 38px;
+      align-items: center;
+      gap: 10px;
+      width: 220px;
+      max-width: 100%;
+    }
+    .containment .ct-num {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--ink-3); text-align: right;
+    }
+    .containment .ct-track {
+      position: relative;
+      height: 18px;
+      background: var(--paper-2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .containment .ct-inherent {
+      position: absolute; top: 0; bottom: 0; left: 0;
+      background: rgba(14,20,32,0.10);
+      border-right: 1px dashed rgba(14,20,32,0.35);
+    }
+    .containment .ct-residual {
+      position: absolute; top: 0; bottom: 0; left: 0;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 6px;
+      font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+      color: white;
+      transition: width 0.3s;
+    }
+    .containment .ct-residual[data-band="critical"] {
+      background: var(--band-crit-solid);
+      background-image: repeating-linear-gradient(45deg, transparent 0 5px, rgba(255,255,255,0.18) 5px 6px);
+    }
+    .containment .ct-residual[data-band="high"]     { background: var(--band-high-solid); }
+    .containment .ct-residual[data-band="moderate"] { background: var(--band-mod-solid); color: var(--ink); }
+    .containment .ct-residual[data-band="low"]      { background: var(--band-low-solid); }
+    .containment .ct-delta {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--band-low-solid);
+      text-align: right;
+    }
+    .containment .ct-delta[data-zero="true"] { color: var(--ink-faint); }
+    .containment .ct-axis {
+      grid-column: 2;
+      display: flex; justify-content: space-between;
+      font-family: var(--font-mono); font-size: 8px;
+      color: var(--ink-faint);
+      letter-spacing: 0.10em; text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    /* ── Countdown bar — visual urgency on the next-review cell.
+       Bar fills toward red as the due date approaches. Overdue =
+       red striped. Plenty-of-time = green. */
+    .review-countdown {
+      display: flex; flex-direction: column; gap: 4px;
+      width: 110px;
+    }
+    .review-countdown .rc-line {
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .review-countdown .rc-date {
+      font-family: var(--font-display); font-size: 14px; color: var(--ink);
+    }
+    .review-countdown .rc-rel {
+      font-family: var(--font-mono); font-size: 9px;
+      letter-spacing: 0.10em; text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .review-countdown .rc-bar {
+      height: 4px; background: var(--paper-2); border-radius: 2px; overflow: hidden;
+    }
+    .review-countdown .rc-fill {
+      height: 100%;
+      background: var(--band-low-solid);
+    }
+    /* Color the fill by urgency bucket. Stripes for overdue. */
+    .review-countdown[data-urgency="overdue"] .rc-date,
+    .review-countdown[data-urgency="overdue"] .rc-rel { color: var(--band-crit-solid); }
+    .review-countdown[data-urgency="overdue"] .rc-fill {
+      background: var(--band-crit-solid);
+      background-image: repeating-linear-gradient(45deg, transparent 0 4px, rgba(255,255,255,0.25) 4px 5px);
+    }
+    .review-countdown[data-urgency="soon"] .rc-fill { background: var(--band-mod-solid); }
+    .review-countdown[data-urgency="soon"] .rc-rel  { color: var(--band-mod-solid); }
+    .review-countdown[data-urgency="watch"] .rc-fill { background: var(--band-high-solid); }
+
+    /* ── Mitigation cell — when actions exist, show them as a tiny
+       stack of segments (open vs done). Nothing visible when no
+       actions, so the row isn't cluttered. */
+    .mitigation-cell {
+      display: flex; flex-direction: column; gap: 5px;
+      min-width: 96px;
+    }
+    .mitigation-cell .mc-line {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.06em;
+      color: var(--ink-2);
+    }
+    .mitigation-cell .mc-line[data-overdue="true"] { color: var(--band-crit-solid); font-weight: 600; }
+    .mitigation-cell .mc-segs {
+      display: flex; gap: 2px;
+    }
+    .mitigation-cell .mc-seg {
+      flex: 1; height: 6px; border-radius: 1px;
+      background: var(--paper-2);
+    }
+    .mitigation-cell .mc-seg[data-state="open"]    { background: var(--ink-3); }
+    .mitigation-cell .mc-seg[data-state="overdue"] { background: var(--band-crit-solid); }
+    .mitigation-cell .mc-seg[data-state="done"]    { background: var(--band-low-solid); }
+    .mitigation-cell .mc-empty {
+      font-family: var(--font-mono); font-size: 10px;
+      color: var(--ink-faint); letter-spacing: 0.10em; text-transform: uppercase;
+    }
+
+    /* ── Owner cell — a tinted ring on the monogram circle showing the
+       band of THIS particular risk. Big + airy so it reads. */
+    .register .owner-mono { gap: 10px; }
+    .register .owner-mono .om-circle {
+      width: 32px; height: 32px;
+      box-shadow: 0 0 0 2px var(--paper) inset, 0 0 0 3px transparent;
+    }
+    .register tbody tr[data-band="critical"] .om-circle { box-shadow: 0 0 0 2px var(--paper) inset, 0 0 0 3px var(--band-crit-solid); }
+    .register tbody tr[data-band="high"]     .om-circle { box-shadow: 0 0 0 2px var(--paper) inset, 0 0 0 3px var(--band-high-solid); }
+    .register tbody tr[data-band="moderate"] .om-circle { box-shadow: 0 0 0 2px var(--paper) inset, 0 0 0 3px var(--band-mod-solid); }
+    .register tbody tr[data-band="low"]      .om-circle { box-shadow: 0 0 0 2px var(--paper) inset, 0 0 0 3px var(--band-low-solid); }
+
     /* ── Data feeds panel — placeholders for live wires ──────────── */
     .feeds-grid {
       display: grid;
@@ -1698,6 +1868,70 @@ function reviewRel(dateStr) {
   return { date, rel, cls };
 }
 
+// Containment bar — visualizes inherent vs residual on a 1-25 track.
+// Faint full bar shows the inherent (worst-case) exposure; the colored
+// solid bar shows residual (current). The empty space between them is
+// what controls are containing — the visual story of "what we saved."
+function containmentBar(inh, res, delta) {
+  const inhPct = (inh.score / 25) * 100;
+  const resPct = (res.score / 25) * 100;
+  return `
+    <div class="containment" title="Inherent ${inh.score} → residual ${res.score} (${delta>0?'−'+delta:'0'} pts saved)">
+      <span class="ct-num">${inh.score}<span style="color:var(--ink-faint);">→</span></span>
+      <div class="ct-track">
+        <div class="ct-inherent" style="width:${inhPct}%;"></div>
+        <div class="ct-residual" data-band="${res.band}" style="width:${resPct}%;">${res.score}</div>
+      </div>
+      <span class="ct-delta" data-zero="${delta === 0}">${delta > 0 ? '−' + delta : '0'}</span>
+    </div>
+  `;
+}
+
+// Next-review urgency bucket — drives the countdown bar's color and fill.
+// Buckets are intentionally coarse so the team reads them at a glance.
+function reviewUrgency(dateStr) {
+  if (!dateStr) return { urgency: 'far', fillPct: 0 };
+  const due = new Date(dateStr + 'T12:00:00');
+  const now = new Date();
+  const days = Math.round((due - now) / 86400000);
+  // The bar fills as the deadline approaches. Reference window = 60 days
+  // (a quarter-ish) so the bar is empty when due >60d out, full when ≤0d.
+  const fillPct = Math.max(0, Math.min(100, Math.round((1 - days / 60) * 100)));
+  let urgency = 'far';
+  if (days < 0)       urgency = 'overdue';
+  else if (days <= 7) urgency = 'soon';
+  else if (days <= 21) urgency = 'watch';
+  return { urgency, fillPct };
+}
+
+// Mitigation cell: tiny segment bar of action states, with a label.
+// We show up to 8 segments; rest collapses into a "+N more" tail.
+function mitigationCell(actions) {
+  const open = actions?.open || 0;
+  const overdue = actions?.overdue || 0;
+  if (open === 0 && overdue === 0) {
+    return '<div class="mitigation-cell"><span class="mc-empty">— no actions —</span></div>';
+  }
+  const total = open;
+  const segCount = Math.min(8, total);
+  const segs = [];
+  for (let i = 0; i < segCount; i++) {
+    const state = i < overdue ? 'overdue' : 'open';
+    segs.push(`<div class="mc-seg" data-state="${state}"></div>`);
+  }
+  // Pad to 8 with empty segments so the bar width is consistent across rows.
+  while (segs.length < 8) segs.push('<div class="mc-seg"></div>');
+  const label = overdue > 0
+    ? `${open} open · <strong>${overdue} overdue</strong>`
+    : `${open} open action${open === 1 ? '' : 's'}`;
+  return `
+    <div class="mitigation-cell">
+      <div class="mc-segs">${segs.join('')}</div>
+      <div class="mc-line" data-overdue="${overdue > 0}">${label}</div>
+    </div>
+  `;
+}
+
 let DASHBOARD = null;
 let FILTER = { category: 'all', status: 'open', q: '' };
 
@@ -2180,17 +2414,14 @@ function renderRegister() {
     return true;
   });
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--ink-3);font-style:italic;padding:32px;">No risks match.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-3);font-style:italic;padding:32px;">No risks match.</td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(r => {
     const rel = reviewRel(r.next_review_due);
-    const a = r.actions || { open: 0, overdue: 0 };
-    const actionBadge = a.open > 0
-      ? `<span class="actions-badge" data-overdue="${a.overdue > 0}" title="${a.open} open mitigation action${a.open===1?'':'s'}${a.overdue?', '+a.overdue+' overdue':''}"><span class="ab-dot"></span>${a.open} action${a.open===1?'':'s'}${a.overdue?` · ${a.overdue} overdue`:''}</span>`
-      : '';
+    const urg = reviewUrgency(r.next_review_due);
     return `
-      <tr>
+      <tr data-band="${r.residual.band}">
         <td>
           <div class="row-title-flow">
             ${catIcon(r.category)}
@@ -2204,18 +2435,21 @@ function renderRegister() {
           </div>
         </td>
         <td>${ownerMono(r.owner)}</td>
-        <td>${scoreFlow(r.inherent, r.residual, r.delta)}</td>
+        <td>${containmentBar(r.inherent, r.residual, r.delta)}</td>
         <td>
           <span class="trend-cell">
             <span class="trend-arrow" data-t="${r.trend}" title="${r.trend}">${TREND_GLYPH[r.trend]}</span>
             ${sparkline([{ residual_score: r.residual.score }])}
           </span>
         </td>
-        <td>${actionBadge}</td>
+        <td>${mitigationCell(r.actions)}</td>
         <td>
-          <div class="review-cell ${rel.cls}">
-            <span class="rc-date">${escapeHtml(rel.date)}</span>
-            <span class="rc-rel">${escapeHtml(rel.rel)}</span>
+          <div class="review-countdown" data-urgency="${urg.urgency}">
+            <div class="rc-line">
+              <span class="rc-date">${escapeHtml(rel.date)}</span>
+              <span class="rc-rel">${escapeHtml(rel.rel)}</span>
+            </div>
+            <div class="rc-bar"><div class="rc-fill" style="width:${urg.fillPct}%;"></div></div>
           </div>
         </td>
       </tr>
