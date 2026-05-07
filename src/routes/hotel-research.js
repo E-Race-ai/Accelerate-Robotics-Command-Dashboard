@@ -1246,14 +1246,22 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
       if (!zone) continue;
       const cap = Math.max(1, Math.min(15, Number(cfg?.cap) || 8));
 
-      // ── Dedupe: nuke any prior route for this exact (date, zone) before
-      // creating a new one. Without this, repeated wizard clicks pile up
-      // duplicate Mon/Tue cards in the schedule view (the visual mess Eric
-      // saw — 3x Coral Gables, 3x Coconut Grove, etc.).
-      await db.run(
-        `DELETE FROM bdr_routes WHERE scheduled_date = ? AND zone = ?`,
-        [date, zone],
-      );
+      // ── Dedupe: nuke any prior route for this exact (date, zone, owner)
+      // before creating a new one. Without this, repeated wizard clicks pile
+      // up duplicate Mon/Tue cards in the schedule view.
+      // WHY: Scoped to created_by so Ben's generate doesn't erase Celia's routes.
+      const owner = req.admin?.email || null;
+      if (owner) {
+        await db.run(
+          `DELETE FROM bdr_routes WHERE scheduled_date = ? AND zone = ? AND created_by = ?`,
+          [date, zone, owner],
+        );
+      } else {
+        await db.run(
+          `DELETE FROM bdr_routes WHERE scheduled_date = ? AND zone = ? AND created_by IS NULL`,
+          [date, zone],
+        );
+      }
 
       // Pick by AI fit score DESC (best targets first) instead of recency
       // (which surfaces junky motels that happened to be saved last).
