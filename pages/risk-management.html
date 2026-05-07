@@ -25,15 +25,32 @@
       --warning:      #F5A623;
       --danger:       #E5484D;
 
-      /* Risk band colors — heat-map cells use these */
-      --band-low:        #DCFCE7;
-      --band-low-ink:    #15803D;
-      --band-moderate:   #FEF3C7;
-      --band-mod-ink:    #B45309;
-      --band-high:       #FED7AA;
-      --band-high-ink:   #C2410C;
-      --band-critical:   #FECACA;
-      --band-crit-ink:   #B91C1C;
+      /* ── Risk-band palette — traffic-light semantics ──────────────
+         Universal road-sign convention so any teammate reads the
+         signal without thinking:
+            🟢 GREEN  — Low (1-4)        Monitor only
+            🟡 YELLOW — Moderate (5-9)   Caution · own + mitigate
+            🟠 ORANGE — High (10-15)     Act · weekly review
+            🔴 RED    — Critical (16-25) STOP · daily watch
+         Each band has:
+           --band-X       = soft tint (heat-map cells, score pills)
+           --band-X-ink   = readable text on soft tint
+           --band-X-solid = solid traffic-light color (bars, signals)  */
+      --band-low:        #DCFCE7;     /* soft green */
+      --band-low-ink:    #166534;
+      --band-low-solid:  #16A34A;     /* signal green — "go" */
+
+      --band-moderate:   #FEF3C7;     /* soft yellow */
+      --band-mod-ink:    #854D0E;
+      --band-mod-solid:  #EAB308;     /* signal yellow — "caution" */
+
+      --band-high:       #FFE4D5;     /* soft orange */
+      --band-high-ink:   #9A3412;
+      --band-high-solid: #EA580C;     /* construction orange — "act" */
+
+      --band-critical:   #FECACA;     /* soft red */
+      --band-crit-ink:   #991B1B;
+      --band-crit-solid: #DC2626;     /* stop-sign red — "stop" */
 
       --font-display: 'Instrument Serif', 'Georgia', serif;
       --font-body:    'Inter', -apple-system, sans-serif;
@@ -221,10 +238,22 @@
       transition: border-color 0.12s;
     }
     .hm-cell:hover { border-color: var(--primary); }
-    .hm-cell[data-band="low"]      { background: var(--band-low); }
-    .hm-cell[data-band="moderate"] { background: var(--band-moderate); }
-    .hm-cell[data-band="high"]     { background: var(--band-high); }
-    .hm-cell[data-band="critical"] { background: var(--band-critical); }
+    /* Heat-map cells use the soft tints so multiple risks remain readable
+       inside, but the cell border picks up the SOLID traffic-light color
+       to anchor the signal. Critical cells also get a thin diagonal
+       stripe so they stand apart from plain high cells. */
+    .hm-cell[data-band="low"]      { background: var(--band-low);      border-color: var(--band-low-solid); }
+    .hm-cell[data-band="moderate"] { background: var(--band-moderate); border-color: var(--band-mod-solid); }
+    .hm-cell[data-band="high"]     { background: var(--band-high);     border-color: var(--band-high-solid); }
+    .hm-cell[data-band="critical"] {
+      background: var(--band-critical);
+      border-color: var(--band-crit-solid);
+      background-image: repeating-linear-gradient(
+        45deg,
+        transparent 0 6px,
+        rgba(220,38,38,0.10) 6px 8px
+      );
+    }
     .hm-cell .score-pill {
       position: absolute; top: 4px; right: 4px;
       font-family: var(--font-mono);
@@ -263,13 +292,19 @@
       display: inline-flex; align-items: center; gap: 6px;
     }
     .hm-legend .swatch::before {
-      content: ''; width: 12px; height: 12px;
-      border: 0.5px solid var(--line);
+      content: ''; width: 14px; height: 14px;
+      border: 1px solid;
     }
-    .hm-legend .swatch[data-b="low"]::before      { background: var(--band-low); }
-    .hm-legend .swatch[data-b="moderate"]::before { background: var(--band-moderate); }
-    .hm-legend .swatch[data-b="high"]::before     { background: var(--band-high); }
-    .hm-legend .swatch[data-b="critical"]::before { background: var(--band-critical); }
+    /* Legend swatches use the SOLID colors so the legend itself reads
+       as a tiny set of road signs. */
+    .hm-legend .swatch[data-b="low"]::before      { background: var(--band-low-solid);      border-color: var(--band-low-ink); }
+    .hm-legend .swatch[data-b="moderate"]::before { background: var(--band-mod-solid);      border-color: var(--band-mod-ink); }
+    .hm-legend .swatch[data-b="high"]::before     { background: var(--band-high-solid);     border-color: var(--band-high-ink); }
+    .hm-legend .swatch[data-b="critical"]::before {
+      background: var(--band-crit-solid);
+      border-color: var(--band-crit-ink);
+      background-image: repeating-linear-gradient(45deg, transparent 0 3px, rgba(255,255,255,0.35) 3px 4px);
+    }
 
     /* ── Top risks panel ─────────────────────────────────────────── */
     .panel {
@@ -328,10 +363,11 @@
       font-size: 1.4rem; font-weight: 500;
       line-height: 1;
     }
-    .top-risk-row .score[data-band="critical"] { color: var(--band-crit-ink); }
-    .top-risk-row .score[data-band="high"]     { color: var(--band-high-ink); }
-    .top-risk-row .score[data-band="moderate"] { color: var(--band-mod-ink); }
-    .top-risk-row .score[data-band="low"]      { color: var(--band-low-ink); }
+    /* Score color = solid traffic-light hue. The number IS the signal. */
+    .top-risk-row .score[data-band="critical"] { color: var(--band-crit-solid); }
+    .top-risk-row .score[data-band="high"]     { color: var(--band-high-solid); }
+    .top-risk-row .score[data-band="moderate"] { color: var(--band-mod-solid); }
+    .top-risk-row .score[data-band="low"]      { color: var(--band-low-solid); }
     .top-risk-row .trend {
       font-family: var(--font-mono); font-size: 11px;
       width: 16px; text-align: center;
@@ -447,10 +483,16 @@
       letter-spacing: 0.08em;
       padding: 3px 9px;
     }
-    .register .score-pill[data-band="critical"] { background: var(--band-critical); color: var(--band-crit-ink); }
-    .register .score-pill[data-band="high"]     { background: var(--band-high);     color: var(--band-high-ink); }
-    .register .score-pill[data-band="moderate"] { background: var(--band-moderate); color: var(--band-mod-ink); }
-    .register .score-pill[data-band="low"]      { background: var(--band-low);      color: var(--band-low-ink); }
+    /* Score pills = solid signal color. White text on saturated fill so
+       the number reads clearly even at small sizes. Critical pulses with
+       a thin diagonal stripe to differentiate from plain red. */
+    .register .score-pill[data-band="critical"] {
+      background: var(--band-crit-solid); color: white;
+      background-image: repeating-linear-gradient(45deg, transparent 0 4px, rgba(255,255,255,0.18) 4px 5px);
+    }
+    .register .score-pill[data-band="high"]     { background: var(--band-high-solid); color: white; }
+    .register .score-pill[data-band="moderate"] { background: var(--band-mod-solid);  color: var(--ink); }
+    .register .score-pill[data-band="low"]      { background: var(--band-low-solid);  color: white; }
     .register .delta-good { color: var(--success); font-family: var(--font-mono); font-size: 11px; }
 
     /* ── Data feeds panel — placeholders for live wires ──────────── */
@@ -804,10 +846,21 @@
       position: absolute; left: 0; top: 0; bottom: 0;
       color: var(--paper);
     }
-    .mit-bar.residual[data-band="critical"] { background: var(--band-crit-ink); }
-    .mit-bar.residual[data-band="high"]     { background: var(--band-high-ink); }
-    .mit-bar.residual[data-band="moderate"] { background: var(--band-mod-ink); }
-    .mit-bar.residual[data-band="low"]      { background: var(--band-low-ink); }
+    /* Bars use the SOLID traffic-light colors so the row reads at a glance:
+       red bars = stop, yellow = caution, green = clear. Critical gets a
+       diagonal-stripe overlay so it pops above plain red even on a screen
+       full of red rows. */
+    .mit-bar.residual[data-band="critical"] {
+      background: var(--band-crit-solid);
+      background-image: repeating-linear-gradient(
+        45deg,
+        transparent 0 6px,
+        rgba(255,255,255,0.18) 6px 8px
+      );
+    }
+    .mit-bar.residual[data-band="high"]     { background: var(--band-high-solid); }
+    .mit-bar.residual[data-band="moderate"] { background: var(--band-mod-solid); color: var(--ink); }
+    .mit-bar.residual[data-band="low"]      { background: var(--band-low-solid); }
     .mit-delta {
       font-family: var(--font-mono);
       font-size: 12px; font-weight: 600;
@@ -872,10 +925,13 @@
       letter-spacing: 0.06em;
       padding: 2px 7px;
     }
-    .owner-card .owner-risk .or-score[data-band="critical"] { background: var(--band-critical); color: var(--band-crit-ink); }
-    .owner-card .owner-risk .or-score[data-band="high"]     { background: var(--band-high);     color: var(--band-high-ink); }
-    .owner-card .owner-risk .or-score[data-band="moderate"] { background: var(--band-moderate); color: var(--band-mod-ink); }
-    .owner-card .owner-risk .or-score[data-band="low"]      { background: var(--band-low);      color: var(--band-low-ink); }
+    .owner-card .owner-risk .or-score[data-band="critical"] {
+      background: var(--band-crit-solid); color: white;
+      background-image: repeating-linear-gradient(45deg, transparent 0 4px, rgba(255,255,255,0.18) 4px 5px);
+    }
+    .owner-card .owner-risk .or-score[data-band="high"]     { background: var(--band-high-solid); color: white; }
+    .owner-card .owner-risk .or-score[data-band="moderate"] { background: var(--band-mod-solid);  color: var(--ink); }
+    .owner-card .owner-risk .or-score[data-band="low"]      { background: var(--band-low-solid);  color: white; }
     .owner-card .owner-risk .or-trend {
       font-family: var(--font-mono); font-size: 14px; width: 14px; text-align: center;
     }
@@ -1050,10 +1106,10 @@
         </div>
         <div class="heatmap-wrap" id="heatmap"></div>
         <div class="hm-legend">
-          <span class="swatch" data-b="low">Low 1–4</span>
-          <span class="swatch" data-b="moderate">Moderate 5–9</span>
-          <span class="swatch" data-b="high">High 10–15</span>
-          <span class="swatch" data-b="critical">Critical 16–25</span>
+          <span class="swatch" data-b="low">🟢 Clear · Monitor (1–4)</span>
+          <span class="swatch" data-b="moderate">🟡 Caution · Mitigate (5–9)</span>
+          <span class="swatch" data-b="high">🟠 Act · Weekly review (10–15)</span>
+          <span class="swatch" data-b="critical">🔴 STOP · Daily watch (16–25)</span>
         </div>
       </div>
 
