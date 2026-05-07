@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Field Service Van · Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --primary: #FF6A3D;
+    --success: #13C2A8;
+    --warning: #F5A623;
+    --danger: #E5484D;
+    --signal: #FFD84D;
+    --ink: #0E1420;
+    --ink-2: #3A4352;
+    --paper: #F6F4EE;
+    --paper-2: #ECE8DB;
+    --line: rgba(14,20,32,.12);
+    --font-display: 'Instrument Serif', serif;
+    --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  code { font-family: var(--font-mono); font-size: .92em; background: var(--paper-2); padding: 1px 5px; border-radius: 4px; }
+
+  /* ── Top bar ─────────────────────────────────────────── */
+  .topbar { position: sticky; top: 0; z-index: 40; background: color-mix(in oklab, var(--paper) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .topbar-inner { max-width: 1240px; margin: 0 auto; padding: 14px 40px; display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+  .bc { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+  .bc a { text-decoration: none; } .bc a:hover { color: var(--ink); }
+  .bc .sep { opacity: .4; margin: 0 8px; }
+  .topbar-r { display: flex; gap: 14px; align-items: center; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; color: var(--ink-2); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.4); }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+
+  /* ── Page scaffolding ────────────────────────────────── */
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 40px 40px 120px; }
+
+  /* ── Hero ─────────────────────────────────────────────── */
+  .hero { padding: 60px 0 80px; border-bottom: 1px solid var(--line); margin-bottom: 80px; }
+  .hero-title { font-family: var(--font-display); font-weight: 400; font-size: clamp(48px, 6vw, 88px); line-height: .92; letter-spacing: -0.02em; margin: 0 0 24px; }
+  .hero-title em { font-style: italic; color: var(--primary); }
+  .hero-sub { font-size: 18px; line-height: 1.5; color: var(--ink-2); max-width: 56ch; margin: 0 0 32px; }
+
+  .hero-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px; transition: border-color .15s, box-shadow .15s; }
+  .stat-card:hover { border-color: var(--ink); box-shadow: 0 4px 16px rgba(14,20,32,.06); }
+  .stat-val { font-family: var(--font-display); font-size: 2.2rem; font-weight: 400; line-height: 1; letter-spacing: -0.02em; }
+  .stat-lbl { font-family: var(--font-mono); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-2); margin-top: 6px; }
+
+  /* ── Sections ─────────────────────────────────────────── */
+  .sec { padding: 80px 0; border-bottom: 1px solid var(--line); }
+  .sec:last-of-type { border-bottom: none; }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .eyebrow span { padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; font-weight: 500; }
+  h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(28px, 3.5vw, 44px); letter-spacing: -0.015em; line-height: 1.05; margin: 0 0 16px; }
+  .lede { font-size: 17px; line-height: 1.55; color: var(--ink-2); max-width: 60ch; margin: 0 0 32px; }
+  .sec-sub { font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); margin: 48px 0 16px; padding-top: 24px; border-top: 1px dashed var(--line); }
+
+  /* ── Cards ────────────────────────────────────────────── */
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+  .card:hover { border-color: var(--ink); box-shadow: 0 4px 16px rgba(14,20,32,.06); }
+
+  /* ── Mission cards ───────────────────────────────────── */
+  .mvp { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .mvp-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+  .mvp-lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; color: var(--primary); margin-bottom: 10px; font-weight: 600; }
+  .mvp-card h3 { font-family: var(--font-display); font-size: 22px; line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.005em; }
+  .mvp-card p { font-size: 13.5px; color: var(--ink-2); line-height: 1.5; margin: 0; }
+
+  /* ── Van candidate cards ─────────────────────────────── */
+  .candidates { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .van-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; transition: border-color .15s, box-shadow .15s; position: relative; }
+  .van-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+  .van-card.pick-1::before { background: var(--primary); }
+  .van-card.pick-2::before { background: var(--success); }
+  .van-card.pick-3::before { background: var(--warning); }
+  .van-card.pick-1 { border-color: color-mix(in oklab, var(--primary) 30%, var(--line)); }
+  .van-card.pick-2 { border-color: color-mix(in oklab, var(--success) 30%, var(--line)); }
+  .van-card.pick-3 { border-color: color-mix(in oklab, var(--warning) 30%, var(--line)); }
+  .van-card:hover { box-shadow: 0 8px 24px rgba(14,20,32,.06); }
+  .van-card.pick-1:hover { border-color: var(--primary); }
+  .van-card.pick-2:hover { border-color: var(--success); }
+  .van-card.pick-3:hover { border-color: var(--warning); }
+  .van-card-head { padding: 20px 22px 16px; border-bottom: 1px solid var(--line); }
+  .van-card-body { padding: 18px 22px 22px; }
+  .van-rank { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
+  .pick-1 .van-rank { color: var(--primary); }
+  .pick-2 .van-rank { color: var(--success); }
+  .pick-3 .van-rank { color: var(--warning); }
+  .van-name { font-family: var(--font-display); font-size: 22px; line-height: 1.15; letter-spacing: -0.005em; }
+  .van-config { font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; color: var(--ink-2); margin-top: 4px; }
+
+  .data-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 14px; }
+  .dp-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); font-weight: 500; }
+  .dp-value { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: -0.02em; margin-top: 1px; }
+  .dp-value-sm { font-size: .9rem; font-weight: 600; margin-top: 2px; }
+  .dp-value.price { color: var(--success); }
+
+  .tag { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; font-weight: 500; padding: 3px 8px; border-radius: 4px; display: inline-block; margin: 0 4px 4px 0; }
+  .tag-green { background: #e8faf5; color: #0a7c62; }
+  .tag-blue  { background: #e8f0ff; color: #1a4fd6; }
+  .tag-amber { background: #fff8e6; color: #8a6b00; }
+  .tag-purple { background: #f3eeff; color: #6b2fbd; }
+
+  /* ── Note ─────────────────────────────────────────────── */
+  .note { background: var(--paper-2); border-radius: 10px; padding: 20px; font-size: 14px; line-height: 1.55; }
+  .note b { display: block; font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 8px; }
+  .note em { font-style: italic; }
+
+  /* ── Callout ──────────────────────────────────────────── */
+  .callout { background: #fff; border: 1px solid var(--line); border-left: 4px solid; border-radius: 0 10px 10px 0; padding: 18px 22px; margin: 16px 0; }
+  .callout h4 { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .callout ul { padding-left: 20px; font-size: 14px; color: var(--ink-2); }
+  .callout li { margin-bottom: 6px; line-height: 1.5; }
+  .callout-danger { border-left-color: var(--danger); }
+  .callout-danger h4 { color: var(--danger); }
+  .callout-warning { border-left-color: var(--warning); }
+  .callout-warning h4 { color: #8a6b00; }
+
+  /* ── Data table ──────────────────────────────────────── */
+  .dtable { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .dtable th { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); text-align: left; padding: 10px 14px; border-bottom: 2px solid var(--line); font-weight: 600; }
+  .dtable td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .dtable tr:last-child td { border-bottom: none; }
+  .dtable td.num { text-align: right; font-family: var(--font-mono); font-weight: 500; font-size: 13px; }
+  .dtable td.label { font-weight: 600; color: var(--ink); }
+  .dtable td.note-col { font-size: 13px; color: var(--ink-2); }
+  .dtable tr.total td { background: var(--paper-2); font-weight: 700; border-top: 2px solid var(--ink); }
+
+  /* ── Zone layout ─────────────────────────────────────── */
+  .zones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .zone { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px; min-height: 220px; display: flex; flex-direction: column; }
+  .zone-num { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; color: var(--primary); font-weight: 600; }
+  .zone-name { font-family: var(--font-display); font-size: 22px; line-height: 1.15; letter-spacing: -0.005em; margin: 4px 0 14px; }
+  .zone ul { list-style: none; padding: 0; font-size: 13px; color: var(--ink-2); flex: 1; }
+  .zone li { padding: 4px 0; padding-left: 14px; position: relative; }
+  .zone li::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--line); position: absolute; left: 0; top: 10px; }
+
+  /* ── Systems (Power + Climate) ───────────────────────── */
+  .systems { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .system { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+  .system h3 { font-family: var(--font-display); font-size: 24px; letter-spacing: -0.01em; margin-bottom: 8px; }
+  .system > p { font-size: 14px; color: var(--ink-2); margin-bottom: 16px; line-height: 1.55; }
+  .spec-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .spec-row:last-child { border-bottom: none; }
+  .spec-k { font-weight: 600; }
+  .spec-v { color: var(--ink-2); }
+
+  /* ── Timeline ────────────────────────────────────────── */
+  .timeline { position: relative; padding-left: 56px; }
+  .timeline::before { content: ''; position: absolute; left: 24px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+  .tl-step { position: relative; margin-bottom: 24px; }
+  .tl-dot { position: absolute; left: -42px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 9px; font-weight: 600; color: #fff; z-index: 1; }
+  .tl-dot.done { background: var(--success); }
+  .tl-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px; transition: border-color .15s; }
+  .tl-card:hover { border-color: var(--ink); }
+  .tl-card h3 { font-family: var(--font-display); font-size: 22px; letter-spacing: -0.005em; margin-bottom: 10px; }
+  .tl-card ul { list-style: none; padding: 0; }
+  .tl-card li { font-size: 14px; color: var(--ink-2); padding: 4px 0; line-height: 1.5; }
+
+  /* ── Decision ────────────────────────────────────────── */
+  .decision { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 40px; }
+  .decision h2 { margin-bottom: 16px; }
+  .decision > p { font-size: 16px; color: var(--ink-2); line-height: 1.6; max-width: 68ch; margin-bottom: 28px; }
+  .decision-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .decision-item { background: var(--paper-2); border-radius: 10px; padding: 18px; }
+  .di-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; margin-bottom: 4px; }
+  .di-value { font-family: var(--font-display); font-size: 20px; letter-spacing: -0.005em; }
+
+  /* ── Key-value pairs ─────────────────────────────────── */
+  .kpair { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .kpair .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); padding-top: 3px; }
+  .kpair .v { font-size: 15px; line-height: 1.55; }
+
+  /* ── Footer ──────────────────────────────────────────── */
+  footer { border-top: 1px solid var(--line); padding: 24px 40px; max-width: 1240px; margin: 0 auto; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; color: var(--ink-2); }
+
+  /* ── Vehicle photo ─────────────────────────────────────── */
+  .vehicle-photo { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--paper-2); margin-bottom: 32px; }
+  .vehicle-photo img { width: 100%; height: auto; display: block; max-height: 420px; object-fit: cover; object-position: center; }
+  .vehicle-photo figcaption { padding: 14px 20px; font-size: 14px; color: var(--ink-2); background: #fff; border-top: 1px solid var(--line); }
+  .vehicle-photo figcaption strong { color: var(--ink); font-weight: 600; }
+
+  /* ── Archived alternative ────────────────────────────── */
+  .archived { background: var(--paper-2); border: 2px dashed var(--line); border-radius: 12px; padding: 28px; margin: 32px 0; }
+  .archived-badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; color: #fff; background: var(--ink-2); padding: 5px 12px; border-radius: 999px; display: inline-block; margin-bottom: 18px; }
+  .archived-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: center; }
+  .archived-grid img { width: 100%; border-radius: 10px; border: 1px solid var(--line); background: #fff; display: block; }
+  .archived-grid h3 { font-family: var(--font-display); font-size: 24px; letter-spacing: -0.01em; margin-bottom: 10px; }
+  .archived-grid p { font-size: 14px; color: var(--ink-2); line-height: 1.55; margin-bottom: 10px; }
+
+  /* ── Shopping checklist ──────────────────────────────── */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { display: flex; align-items: flex-start; gap: 16px; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist input[type="checkbox"] { margin-top: 4px; width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0; }
+  .checklist .cl-content { flex: 1; }
+  .checklist .cl-name { font-weight: 700; font-size: 15px; color: var(--ink); }
+  .checklist .cl-desc { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+  .checklist .cl-price { font-family: var(--font-mono); font-weight: 500; font-size: 14px; color: var(--ink); white-space: nowrap; flex-shrink: 0; padding: 0 12px; }
+  .checklist .cl-btn { display: inline-block; background: var(--ink); color: #fff; padding: 7px 16px; border-radius: 999px; font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: .04em; text-decoration: none; flex-shrink: 0; transition: background .15s; }
+  .checklist .cl-btn:hover { background: var(--primary); text-decoration: none; }
+  .cl-total { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-top: 2px solid var(--ink); font-weight: 700; font-size: 16px; }
+  .cl-total-amount { font-family: var(--font-mono); font-size: 15px; background: var(--paper-2); padding: 6px 14px; border-radius: 999px; }
+
+  /* ── Interior render ─────────────────────────────────── */
+  .render-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .render-card img { width: 100%; height: auto; display: block; }
+  .render-card .render-caption { padding: 14px 20px; font-size: 13px; color: var(--ink-2); text-align: center; line-height: 1.5; }
+
+  /* ── Responsive ──────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .hero-stats, .mvp, .candidates, .zones, .systems, .decision-grid, .archived-grid { grid-template-columns: 1fr; }
+    .hero-title { font-size: 48px; }
+    .wrap { padding: 24px 20px 80px; }
+    .topbar-inner { padding: 14px 20px; }
+    footer { padding: 24px 20px; flex-direction: column; gap: 8px; }
+  }
+
+  /* ── Print ───────────────────────────────────────────── */
+  @media print {
+    body { background: white !important; }
+    .topbar { position: static; backdrop-filter: none; }
+    .card, .van-card, .mvp-card, .zone, .system, .tl-card, .decision, .stat-card { box-shadow: none !important; break-inside: avoid; }
+    a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8px; color: #999; word-break: break-all; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <nav class="bc">
+      <a href="/admin">Command Center</a>
+      <span class="sep">/</span>
+      <a href="/admin">Operations</a>
+      <span class="sep">/</span>
+      <span style="color:var(--ink)">Field Service Van</span>
+    </nav>
+    <div class="topbar-r">
+      <span class="pill">Vehicle Selection + Build-Out</span>
+      <span>April 2026</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- HERO -->
+<header class="hero">
+  <h1 class="hero-title">Field<br/><em>service van.</em></h1>
+  <p class="hero-sub">A rolling robot workshop and deployment platform. Drive from site to site — deploy, repair, launch, and represent Accelerate Robotics as a polished, visible presence at every customer property.</p>
+
+  <div class="hero-stats">
+    <div class="stat-card">
+      <div class="stat-val">$42K</div>
+      <div class="stat-lbl">Turnkey Budget</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">4 Zones</div>
+      <div class="stat-lbl">Interior Layout</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">200Ah</div>
+      <div class="stat-lbl">Off-Grid Power</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">30d</div>
+      <div class="stat-lbl">Timeline to Launch</div>
+    </div>
+  </div>
+</header>
+
+<!-- TARGET VEHICLE PHOTO -->
+<figure class="vehicle-photo">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/e/e8/2023_Ram_ProMaster_2500_cargo_van_high_roof_159-inch_wheelbase%2C_front_right%2C_09-24-2023.jpg"
+       alt="2023 Ram ProMaster 2500 High Roof 159-inch wheelbase — the target service van"/>
+  <figcaption>
+    <strong>Target vehicle:</strong> Ram ProMaster 2500 High Roof · 159" wheelbase · 76" interior height · flat low floor
+  </figcaption>
+</figure>
+
+<!-- MISSION -->
+<section class="sec">
+  <div class="eyebrow"><span>00</span> Mission</div>
+  <h2>Why we need this vehicle.</h2>
+  <p class="lede">The physical manifestation of white-glove service — show up equipped, solve problems on-site, never ship a broken robot back to a depot. One van, one tech.</p>
+
+  <div class="mvp">
+    <div class="mvp-card">
+      <div class="mvp-lbl">DEPLOY</div>
+      <h3>Transport</h3>
+      <p>Move robots (30–120 kg) to new customer sites with integrated ramp + tie-downs.</p>
+    </div>
+    <div class="mvp-card">
+      <div class="mvp-lbl">REPAIR</div>
+      <h3>Workshop</h3>
+      <p>Diagnostic bench, oscilloscope, soldering, spare parts, OTA updates — all on wheels.</p>
+    </div>
+    <div class="mvp-card">
+      <div class="mvp-lbl">LAUNCH</div>
+      <h3>Kickoff</h3>
+      <p>New program kickoffs, change orders, SLA reviews, staff training on-site.</p>
+    </div>
+    <div class="mvp-card">
+      <div class="mvp-lbl">REPRESENT</div>
+      <h3>Brand</h3>
+      <p>Branded rolling billboard — co-branded decals when parked at customer sites.</p>
+    </div>
+  </div>
+</section>
+
+<!-- VAN CANDIDATES -->
+<section class="sec">
+  <div class="eyebrow"><span>01</span> Vehicle Research</div>
+  <h2>Miami market — top candidates.</h2>
+  <p class="lede">Craigslist + CarGurus search, April 2026. Real listings with verified URLs.</p>
+
+  <div class="candidates">
+    <!-- #1 ProMaster -->
+    <div class="van-card pick-1">
+      <div class="van-card-head">
+        <div class="van-rank">01 · Recommended</div>
+        <div class="van-name">2020 RAM ProMaster 3500</div>
+        <div class="van-config">159" High Roof Extended</div>
+      </div>
+      <div class="van-card-body">
+        <div class="data-pair">
+          <div><div class="dp-label">Mileage</div><div class="dp-value">66,852</div></div>
+          <div><div class="dp-label">Asking Price</div><div class="dp-value price">$21,999</div></div>
+          <div><div class="dp-label">Location</div><div class="dp-value-sm">West Park, FL</div></div>
+          <div><div class="dp-label">Fuel</div><div class="dp-value-sm">Gas V6</div></div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <span class="tag tag-green">Lowest miles in class</span>
+          <span class="tag tag-green">FWD = low load floor</span>
+          <span class="tag tag-blue">Best TCO</span>
+        </div>
+        <p style="font-size: 13.5px; color: var(--ink-2); line-height: 1.5;">Lowest-mile high-roof 3500 on the market. FWD layout means ~21" load height vs. 28" on Sprinter/Transit — significantly easier robot ramp loading. Gas V6 is cheapest Miami maintenance with no DEF/DPF risk.</p>
+      </div>
+    </div>
+
+    <!-- #2 Sprinter -->
+    <div class="van-card pick-2">
+      <div class="van-card-head">
+        <div class="van-rank">02 · Brand Play</div>
+        <div class="van-name">2020 Mercedes Sprinter 2500</div>
+        <div class="van-config">170" High Roof</div>
+      </div>
+      <div class="van-card-body">
+        <div class="data-pair">
+          <div><div class="dp-label">Mileage</div><div class="dp-value">85,932</div></div>
+          <div><div class="dp-label">Asking Price</div><div class="dp-value price">$27,995</div></div>
+          <div><div class="dp-label">Location</div><div class="dp-value-sm">Hollywood, FL</div></div>
+          <div><div class="dp-label">Fuel</div><div class="dp-value-sm">Diesel</div></div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <span class="tag tag-purple">Luxury brand signal</span>
+          <span class="tag tag-green">Best resale</span>
+          <span class="tag tag-blue">Diesel longevity</span>
+        </div>
+        <p style="font-size: 13.5px; color: var(--ink-2); line-height: 1.5;">Best spec-to-price Sprinter available. Diesel longevity (400K+ with maintenance). Holds resale value. Best brand signal at Hilton/Curio customer sites — reads as luxury-service vendor.</p>
+      </div>
+    </div>
+
+    <!-- #3 Transit -->
+    <div class="van-card pick-3">
+      <div class="van-card-head">
+        <div class="van-rank">03 · Reliability Play</div>
+        <div class="van-name">2020 Ford Transit 350 HD</div>
+        <div class="van-config">Extended High Roof</div>
+      </div>
+      <div class="van-card-body">
+        <div class="data-pair">
+          <div><div class="dp-label">Mileage</div><div class="dp-value">91,287</div></div>
+          <div><div class="dp-label">Asking Price</div><div class="dp-value price">$28,900</div></div>
+          <div><div class="dp-label">Location</div><div class="dp-value-sm">Hialeah, FL</div></div>
+          <div><div class="dp-label">Fuel</div><div class="dp-value-sm">Gas V6</div></div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <span class="tag tag-green">Highest payload</span>
+          <span class="tag tag-blue">Best FL dealer network</span>
+          <span class="tag tag-amber">Boring-reliable</span>
+        </div>
+        <p style="font-size: 13.5px; color: var(--ink-2); line-height: 1.5;">350HD payload rating handles two S300-class robots + full tool chest + spares without going over GVWR. Best Ford service density in South Florida — the operational reliability play.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Runner-up table -->
+  <div class="sec-sub">Additional qualified candidates</div>
+  <div class="card" style="margin-bottom: 20px;">
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th>Year / Make / Model</th>
+          <th>Configuration</th>
+          <th style="text-align:right">Miles</th>
+          <th style="text-align:right">Price</th>
+          <th>Location</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="label">2021 Mercedes Sprinter 2500</td><td class="note-col">170" High Roof · Diesel</td><td class="num">73,491</td><td class="num">$28,990</td><td>Pompano Beach</td></tr>
+        <tr><td class="label">2021 RAM ProMaster 3500</td><td class="note-col">159" High Roof Extended</td><td class="num">101,481</td><td class="num">$18,995</td><td>Hollywood</td></tr>
+        <tr><td class="label">2020 RAM ProMaster 3500</td><td class="note-col">159" High Roof Extended</td><td class="num">89,320</td><td class="num">$18,999</td><td>West Park</td></tr>
+        <tr><td class="label">2021 Ford Transit 250</td><td class="note-col">High Roof Standard WB</td><td class="num">81,280</td><td class="num">$24,900</td><td>Hialeah</td></tr>
+        <tr><td class="label">2020 Ford Transit 250</td><td class="note-col">Extended High Roof</td><td class="num">86,210</td><td class="num">$23,995</td><td>Miami</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Red flags -->
+  <div class="callout callout-danger">
+    <h4>
+      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      Miami Market Red Flags — Do Not Pursue
+    </h4>
+    <ul>
+      <li><strong>"Finance-bait" listings</strong> — Hollywood dealers post $10-14K headline prices on 2019+ vans; it's actually "$2K down" advertised payment, not sale price</li>
+      <li><strong>2023 Ford Transit 350 @ $19,999 (Miami, "Roberto")</strong> — implausibly cheap, almost certainly salvage/rebuilt title</li>
+      <li><strong>2008 Dodge Sprinter @ $23,500</strong> — pre-emissions era, overpriced</li>
+      <li><strong>2016 Sprinter @ $12,900 (272K mi)</strong> — mileage disqualifies</li>
+    </ul>
+  </div>
+
+  <!-- Archived compact alternative -->
+  <div class="archived">
+    <span class="archived-badge">Archived — Compact Alternative</span>
+    <div class="archived-grid">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/9/9f/2015_Ram_ProMaster_City_Tradesman_Cargo_Van%2C_front_left.jpg"
+           alt="Ram ProMaster City Tradesman"/>
+      <div>
+        <h3>Ram ProMaster City</h3>
+        <p>If the plan ever needs to pivot to a smaller van — e.g. a garage clearance constraint — the <strong>Ram ProMaster City</strong> is the only worth-considering compact. 74.2" tall (fits under 6'7"), ~131 cu ft cargo, 48.4" wheel-well to wheel-well, ~1,880 lb payload. Closest thing to a mini full-size for shelving.</p>
+        <p>Example listing: <a href="https://miami.craigslist.org/mdc/ctd/d/hollywood-2017-dodge-ram-promaster-city/7926525397.html" target="_blank" style="color: var(--primary); text-decoration: underline;">2017 ProMaster City, $6,999, Miramar</a> (clean title, 1 owner).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SHOPPING LIST -->
+<section class="sec">
+  <div class="eyebrow"><span>02</span> Shopping List</div>
+  <h2>Tier 1 shopping list.</h2>
+  <p class="lede">Van interior build. Tick each item as you order it; your progress saves automatically. Mobile WiFi gear is in <a href="#wifi" style="color: var(--primary); text-decoration: underline;">Section 05</a>.</p>
+
+  <div class="card">
+    <ul class="checklist" id="tier1-checklist">
+      <li>
+        <input type="checkbox" data-id="vi-ltrack"/>
+        <div class="cl-content">
+          <div class="cl-name">L-track (floor) x2</div>
+          <div class="cl-desc">US Cargo Control 96" Aluminum L-Track — secures upright robots on the floor</div>
+        </div>
+        <div class="cl-price">$62 ea</div>
+        <a class="cl-btn" href="https://www.uscargocontrol.com/products/96-airline-track-style-l-track-black" target="_blank">Buy</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="vi-etrack"/>
+        <div class="cl-content">
+          <div class="cl-name">Vertical E-track (wall) x2</div>
+          <div class="cl-desc">US Cargo Control 5' Vertical Galvanized — mount to passenger-wall studs</div>
+        </div>
+        <div class="cl-price">$23 ea</div>
+        <a class="cl-btn" href="https://www.uscargocontrol.com/products/e-track-5-vertical-galvanized" target="_blank">Buy</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="vi-straps"/>
+        <div class="cl-content">
+          <div class="cl-name">Cam-buckle straps x4</div>
+          <div class="cl-desc">1"x6' S-hook — cam, NOT ratchet (ratchets crack plastic panels)</div>
+        </div>
+        <div class="cl-price">~$9 ea</div>
+        <a class="cl-btn" href="https://www.uscargocontrol.com/products/1X6-Cam-Buckle-Strap-W-S-Hooks" target="_blank">Buy</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="vi-shelving"/>
+        <div class="cl-content">
+          <div class="cl-name">Ranger Design driver-side shelving</div>
+          <div class="cl-desc">RPL-27 ProMaster 159" WB + 6550-PL driver install kit (quote only — call 1-800-565-5321)</div>
+        </div>
+        <div class="cl-price">~$2,500–3,500</div>
+        <a class="cl-btn" href="https://rangerdesign.com/products/aluminum-van-shelving-package-ram-promaster-159-wb-rpl-27/" target="_blank">Quote</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="vi-bench"/>
+        <div class="cl-content">
+          <div class="cl-name">Fold-down workbench</div>
+          <div class="cl-desc">Adrian Steel #66881 Folding Desk — laptop + diagnostics surface (call 517-265-6194)</div>
+        </div>
+        <div class="cl-price">~$180–220</div>
+        <a class="cl-btn" href="https://www.adriansteel.com/products/details/66881/" target="_blank">Quote</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="vi-ramp"/>
+        <div class="cl-content">
+          <div class="cl-name">10-ft aluminum walk ramp</div>
+          <div class="cl-desc">EZ-ACCESS TRAVERSE WR10 · 1,200 lb capacity · 30.5" usable width</div>
+        </div>
+        <div class="cl-price">$734</div>
+        <a class="cl-btn" href="https://www.homedepot.com/p/EZ-ACCESS-TRAVERSE-10-ft-Aluminum-Walk-Ramp-TRAVERSE-WR10/206685780" target="_blank">Buy</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="vi-dolly"/>
+        <div class="cl-content">
+          <div class="cl-name">Powered appliance dolly</div>
+          <div class="cl-desc">Magliner LiftPlus 48" Electric Stacker — lifts robots into the van</div>
+        </div>
+        <div class="cl-price">~$3,200–3,600</div>
+        <a class="cl-btn" href="https://handtrucks2go.com/Magliner-Liftplus-Electric-Stacker-hand-Truck-48.html" target="_blank">Buy</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="vi-inverter"/>
+        <div class="cl-content">
+          <div class="cl-name">1500W pure sine inverter</div>
+          <div class="cl-desc">Victron Phoenix 12/1600 120V — runs laptop + one Keenon charger</div>
+        </div>
+        <div class="cl-price">~$510</div>
+        <a class="cl-btn" href="https://www.currentconnected.com/product/victron-12v-phoenix/" target="_blank">Buy</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="vi-lights"/>
+        <div class="cl-content">
+          <div class="cl-name">LED interior lighting kit</div>
+          <div class="cl-desc">Legend MotionBright 3-light Model L — plug-and-play, 1,800 lm/light</div>
+        </div>
+        <div class="cl-price">~$495</div>
+        <a class="cl-btn" href="https://www.legendsoftheroad.com/products/motion-sensor-light-kit" target="_blank">Buy</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="vi-fire"/>
+        <div class="cl-content">
+          <div class="cl-name">Fire extinguisher (ABC 2.5 lb)</div>
+          <div class="cl-desc">Amerex B417T — ABC, NOT Class D. Correct for LiFePO4. Wall bracket included.</div>
+        </div>
+        <div class="cl-price">$63</div>
+        <a class="cl-btn" href="https://www.homedepot.com/p/AMEREX-1-A-10-B-C-2-5-lbs-ABC-Dry-Chemical-Fire-Extinguisher-B417T/316898802" target="_blank">Buy</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="vi-packout"/>
+        <div class="cl-content">
+          <div class="cl-name">Milwaukee PACKOUT stack</div>
+          <div class="cl-desc">48-22-8401 · 22" Rolling + Large + Medium · IP65</div>
+        </div>
+        <div class="cl-price">~$295–349</div>
+        <a class="cl-btn" href="https://www.homedepot.com/p/Milwaukee-PACKOUT-22-in-Rolling-Tool-Box-22-in-Large-Tool-Box-and-22-in-Medium-Tool-Box-ProSystem-Low-Profile-Handle-48-22-8401/330035447" target="_blank">Buy</a>
+      </li>
+    </ul>
+    <div class="cl-total">
+      <span>Van interior hardware total</span>
+      <span class="cl-total-amount">~$7,600–8,900</span>
+    </div>
+  </div>
+
+  <div class="callout callout-warning" style="margin-top: 20px;">
+    <h4>Before you hit "buy"</h4>
+    <ul>
+      <li><strong>Ranger Design + Adrian Steel</strong> are quote-only. Call Ranger Design <strong>1-800-565-5321</strong>, Adrian Steel <strong>517-265-6194</strong>.</li>
+      <li><strong>Magliner LiftPlus</strong> lifts robots into the van; if you also need stairs, you need the <a href="https://www.magliner.com/powered-stair-climbing-hand-truck-170-model" target="_blank" style="color: var(--primary); text-decoration: underline;">Model 170 Stair Climber</a> separately.</li>
+      <li><strong>Walk ramp:</strong> TRAVERSE WR10 is non-folding — confirm it fits diagonally inside the 159" WB with shelving installed.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- INTERIOR RENDER -->
+<section class="sec">
+  <div class="eyebrow"><span>03</span> Interior Render</div>
+  <h2>What the finished van looks like.</h2>
+
+  <div class="render-card">
+    <img src="van-interior-render.png" alt="Ram ProMaster interior render — service van build"/>
+    <div class="render-caption">
+      Driver-side shelving loaded with parts · open passenger bay · Milwaukee PACKOUT near the rear · laptop workstation on the fold-down bench · LED lighting overhead
+    </div>
+  </div>
+</section>
+
+<!-- INTERIOR LAYOUT -->
+<section class="sec">
+  <div class="eyebrow"><span>04</span> Interior Layout</div>
+  <h2>Four-zone functional layout.</h2>
+  <p class="lede">Rear-to-front. 170" wheelbase high roof cargo van.</p>
+
+  <div class="zones">
+    <div class="zone">
+      <div class="zone-num">ZONE 01 · REAR</div>
+      <div class="zone-name">Robot Bay</div>
+      <ul>
+        <li>Folding aluminum ramp (2,500 lb)</li>
+        <li>E-track floor + walls</li>
+        <li>Non-slip rubber mat</li>
+        <li>Heavy wheel chocks</li>
+        <li>Soft cam-buckle straps</li>
+        <li>LED overhead work lights</li>
+      </ul>
+    </div>
+    <div class="zone">
+      <div class="zone-num">ZONE 02 · MIDDLE</div>
+      <div class="zone-name">Workbench</div>
+      <ul>
+        <li>Fold-down 24"x48" bench</li>
+        <li>4" swivel vise</li>
+        <li>ESD-safe mat + ground</li>
+        <li>Articulating task light</li>
+        <li>Laptop dock (diagnostic)</li>
+        <li>12V air compressor</li>
+      </ul>
+    </div>
+    <div class="zone">
+      <div class="zone-num">ZONE 03 · CURB SIDE</div>
+      <div class="zone-name">Tools + Parts</div>
+      <ul>
+        <li>Spare batteries (all models)</li>
+        <li>LiDAR modules</li>
+        <li>Wheel assemblies</li>
+        <li>Tool chest (Packout/Snap-on)</li>
+        <li>Fluke 115 + oscilloscope</li>
+        <li>Solder station, heat gun</li>
+        <li>Consumables + fasteners</li>
+      </ul>
+    </div>
+    <div class="zone">
+      <div class="zone-num">ZONE 04 · FRONT</div>
+      <div class="zone-name">Office / Drive</div>
+      <ul>
+        <li>Swivel captain's chair</li>
+        <li>Fold-down laptop tray</li>
+        <li>12V/USB-C hub</li>
+        <li>LTE/5G mobile hotspot</li>
+        <li>Go-bag with site checklists</li>
+        <li>Customer swag kit</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; color: var(--ink-2);">
+    &larr; REAR DOORS (180&deg; barn) &nbsp;&nbsp;·&nbsp;&nbsp; FRONT (cab) &rarr;
+  </div>
+</section>
+
+<!-- POWER + CLIMATE -->
+<section class="sec">
+  <div class="eyebrow"><span>05</span> Systems</div>
+  <h2>Power & climate.</h2>
+
+  <div class="systems">
+    <div class="system">
+      <h3>Power system</h3>
+      <p>Field repairs need real power — oscilloscope, soldering iron, laptop, and overnight robot charging all running simultaneously.</p>
+      <div class="spec-row"><span class="spec-k">House bank</span><span class="spec-v">2x 100Ah LiFePO4 (200Ah)</span></div>
+      <div class="spec-row"><span class="spec-k">DC-DC charger</span><span class="spec-v">Victron Orion-Tr 30A</span></div>
+      <div class="spec-row"><span class="spec-k">Solar</span><span class="spec-v">200W roof + Victron MPPT</span></div>
+      <div class="spec-row"><span class="spec-k">Inverter</span><span class="spec-v">Victron MultiPlus 2000VA</span></div>
+      <div class="spec-row"><span class="spec-k">Shore power</span><span class="spec-v">30A RV-style inlet</span></div>
+      <div class="spec-row"><span class="spec-k">Alt path</span><span class="spec-v">Goal Zero Yeti 3000X ($3,500)</span></div>
+    </div>
+    <div class="system">
+      <h3>Climate control</h3>
+      <p><strong style="color: var(--danger);">Miami heat is the enemy of robot batteries and your soldering hand.</strong> An uninsulated cargo van hits 120 &deg;F in 30 minutes. Lithium degrades fast above 120 &deg;F.</p>
+      <div class="spec-row"><span class="spec-k">Roof A/C</span><span class="spec-v">Dometic Penguin II 13.5K BTU</span></div>
+      <div class="spec-row"><span class="spec-k">Exhaust fan</span><span class="spec-v">Maxxair Maxxfan Deluxe</span></div>
+      <div class="spec-row"><span class="spec-k">Insulation</span><span class="spec-v">Thinsulate + reflective</span></div>
+      <div class="spec-row"><span class="spec-k">Window tint</span><span class="spec-v">Legal limit, all rear</span></div>
+    </div>
+  </div>
+
+  <!-- Mobile WiFi -->
+  <div class="sec-sub" id="wifi">Mobile WiFi</div>
+
+  <div class="note" style="margin-bottom: 24px;">
+    <b>Decision</b>
+    <strong>Cellular-first, dual-carrier.</strong> Netgear Nighthawk M6 Pro + T-Mobile Business 100GB + Verizon backup SIM. <strong>~$700 hardware, $110–130/mo.</strong> Skip Starlink Mini as the primary — urban Miami garages and loading docks have no sky view, and 5G uploads are actually <em>faster</em> than Starlink in those spots.
+  </div>
+
+  <!-- Head-to-head comparison -->
+  <div class="card" style="margin-bottom: 20px;">
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Setup</th>
+          <th style="text-align:right">Monthly</th>
+          <th style="text-align:right">Hardware</th>
+          <th>Upload</th>
+          <th>Garage?</th>
+          <th>Power</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background: color-mix(in oklab, var(--primary) 8%, white); border-left: 4px solid var(--primary); font-weight: 500;">
+          <td class="num">1</td>
+          <td class="label">M6 Pro + T-Mo 100GB + Verizon backup<br/><span style="font-size: 12px; color: var(--ink-2); font-weight: 400;">Dual-carrier insurance · best real-world uploads</span><br/><span class="tag tag-green" style="margin-top: 6px; display: inline-block;">Recommended</span></td>
+          <td class="num">$110–130</td>
+          <td class="num">~$700</td>
+          <td>20–60 Mbps</td>
+          <td><span class="tag tag-green" style="margin: 0;">Yes</span></td>
+          <td>8–12W</td>
+        </tr>
+        <tr style="opacity: .55;">
+          <td class="num">2</td>
+          <td class="label">Peplink MAX BR1 Pro 5G (dual SIM)<br/><span style="font-size: 12px; color: var(--ink-2); font-weight: 400;">Pro-grade, seamless failover, SpeedFusion</span><br/><span class="tag tag-amber" style="margin-top: 6px; display: inline-block;">Optional upgrade</span></td>
+          <td class="num">$130</td>
+          <td class="num">~$1,100</td>
+          <td>20–60 Mbps</td>
+          <td><span class="tag tag-green" style="margin: 0;">Yes</span></td>
+          <td>10–15W</td>
+        </tr>
+        <tr style="opacity: .55;">
+          <td class="num">3</td>
+          <td class="label">Inseego MiFi X Pro 5G + T-Mo 100GB<br/><span style="font-size: 12px; color: var(--ink-2); font-weight: 400;">Cheapest "it just works" single-carrier path</span><br/><span class="tag tag-amber" style="margin-top: 6px; display: inline-block;">Budget fallback</span></td>
+          <td class="num">$50</td>
+          <td class="num">~$350</td>
+          <td>20–60 Mbps</td>
+          <td><span class="tag tag-green" style="margin: 0;">Yes</span></td>
+          <td>6–10W</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- WiFi buy checklist -->
+  <h3 style="font-family: var(--font-display); font-size: 24px; letter-spacing: -0.01em; margin-bottom: 6px;">Buy checklist — required items only</h3>
+  <p style="font-size: 14px; color: var(--ink-2); margin-bottom: 16px;">Minimum kit to get dual-carrier 5G running in the van. Progress saves automatically.</p>
+
+  <div class="card" style="margin-bottom: 20px;">
+    <ul class="checklist" id="wifi-checklist">
+      <li>
+        <input type="checkbox" data-id="wf-m6pro"/>
+        <div class="cl-content">
+          <div class="cl-name">Netgear Nighthawk M6 Pro (unlocked)</div>
+          <div class="cl-desc">The hotspot itself — dual-SIM capable. <strong>Ask for UNLOCKED</strong> so you can swap SIMs between T-Mo and Verizon.</div>
+        </div>
+        <div class="cl-price">~$550</div>
+        <a class="cl-btn" href="https://www.netgear.com/home/mobile-wifi/hotspots/mr6550/" target="_blank">Buy</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="wf-tmo"/>
+        <div class="cl-content">
+          <div class="cl-name">T-Mobile Business 100GB hotspot plan</div>
+          <div class="cl-desc">Primary SIM. Ask specifically for "$50 100GB hotspot plan on a business line". Don't let them upsell to consumer.</div>
+        </div>
+        <div class="cl-price">$50/mo</div>
+        <a class="cl-btn" href="https://www.t-mobile.com/business/plans/business-unlimited-data-plans" target="_blank">Plan</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="wf-vzw"/>
+        <div class="cl-content">
+          <div class="cl-name">Verizon Business hotspot line (backup SIM)</div>
+          <div class="cl-desc">Second carrier — the whole point of the dual-carrier decision. Goes in the M6 Pro's second SIM slot.</div>
+        </div>
+        <div class="cl-price">$60–80/mo</div>
+        <a class="cl-btn" href="https://www.verizon.com/business/answers/unlimited-hotspot-plans/" target="_blank">Plan</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="wf-socket"/>
+        <div class="cl-content">
+          <div class="cl-name">12V to USB-C PD socket</div>
+          <div class="cl-desc">Blue Sea 1045 or similar. Permanent power for the M6 Pro off the Victron bank. USB-C PD 45W+ so it can charge while in use.</div>
+        </div>
+        <div class="cl-price">~$40</div>
+        <a class="cl-btn" href="https://www.amazon.com/s?k=blue+sea+12v+usb-c+pd+socket" target="_blank">Search</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="wf-fuse"/>
+        <div class="cl-content">
+          <div class="cl-name">5A inline fuse + holder</div>
+          <div class="cl-desc">Safety between the Victron and the USB-C socket. Non-negotiable on any DC run.</div>
+        </div>
+        <div class="cl-price">~$8</div>
+        <a class="cl-btn" href="https://www.amazon.com/s?k=5a+inline+fuse+holder+12v" target="_blank">Search</a>
+      </li>
+      <li>
+        <input type="checkbox" data-id="wf-rammount"/>
+        <div class="cl-content">
+          <div class="cl-name">RAM mount for the M6 Pro</div>
+          <div class="cl-desc">Keeps the hotspot visible, accessible, and high up for the best internal-antenna reception.</div>
+        </div>
+        <div class="cl-price">~$35</div>
+        <a class="cl-btn" href="https://www.amazon.com/s?k=ram+mount+netgear+m6" target="_blank">Search</a>
+      </li>
+    </ul>
+    <div class="cl-total">
+      <span>Hardware total</span>
+      <span class="cl-total-amount">~$680</span>
+    </div>
+    <div class="cl-total" style="border-top: 1px solid var(--line);">
+      <span>Monthly plans</span>
+      <span class="cl-total-amount">$110–130/mo</span>
+    </div>
+  </div>
+
+  <!-- Install summary -->
+  <div class="note">
+    <b>Install summary — ~2 hours</b>
+    <ul style="margin: 8px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: var(--ink-2);">
+      <li>M6 Pro on a RAM mount at the tech's workstation</li>
+      <li>Poynting/Parsec roof antenna &rarr; LMR-240 through a Scanstrut gland &rarr; TS-9 pigtails into M6 Pro</li>
+      <li>Blue Sea 12V-to-USB-C PD socket wired to the Victron bank via a 5A fuse</li>
+      <li>Update M6 Pro firmware before first use — some builds have been buggy</li>
+    </ul>
+  </div>
+</section>
+
+<!-- BUDGET -->
+<section class="sec">
+  <div class="eyebrow"><span>06</span> Investment</div>
+  <h2>Total investment.</h2>
+  <p class="lede">Turnkey budget based on recommended ProMaster path.</p>
+
+  <div class="card">
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th>Line Item</th>
+          <th>Notes</th>
+          <th style="text-align:right">Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="label">2020 RAM ProMaster 3500</td><td class="note-col">West Park, FL · 66,852 mi · high-roof extended</td><td class="num">$21,999</td></tr>
+        <tr><td class="label">FL title + tax + tag</td><td class="note-col">6% state + 1% Miami-Dade surtax + fees</td><td class="num">~$1,800</td></tr>
+        <tr><td class="label">Pre-purchase inspection</td><td class="note-col">European Diesel Shop (Medley) or Andy's Auto (Doral)</td><td class="num">$200</td></tr>
+        <tr><td class="label">Ranger Design cargo upfit</td><td class="note-col">Pre-engineered shelving, partition, ladder rack</td><td class="num">$4,500</td></tr>
+        <tr><td class="label">Goal Zero Yeti 3000X + 200W solar</td><td class="note-col">Off-grid power (skips custom electrical install)</td><td class="num">$3,500</td></tr>
+        <tr><td class="label">Tools + spare parts starter kit</td><td class="note-col">Oscilloscope, Fluke, Packout chest, LiDAR spares, batteries</td><td class="num">$4,000</td></tr>
+        <tr><td class="label">Wrap + branding</td><td class="note-col">Full vinyl wrap, magnetic co-brand panels, QR decals</td><td class="num">$4,500</td></tr>
+        <tr><td class="label">Misc build</td><td class="note-col">Aluminum ramp, tie-downs, ESD mat, lighting, hotspot</td><td class="num">$1,500</td></tr>
+        <tr class="total"><td>Total Turnkey</td><td>ProMaster path · ready for deployment</td><td class="num">$42,000</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note" style="margin-top: 16px;">
+    <b>Sprinter alternative</b>
+    Sprinter path adds ~$6,500 for equivalent buildout — justifiable if the luxury brand signal at Hilton/Curio properties is strategically important.
+  </div>
+</section>
+
+<!-- ACTION PLAN -->
+<section class="sec">
+  <div class="eyebrow"><span>07</span> Action Plan</div>
+  <h2>Next 30 days.</h2>
+  <p class="lede">From purchase to first deployment.</p>
+
+  <div class="timeline">
+    <div class="tl-step">
+      <div class="tl-dot">1</div>
+      <div class="tl-card">
+        <h3>Week 1 — Verify & inspect</h3>
+        <ul>
+          <li>Call West Park dealer on ProMaster — confirm available, request VIN</li>
+          <li>Pull Carfax + NMVTIS (flood check — critical in South Florida)</li>
+          <li>Demand dash mileage photo before visiting</li>
+          <li>Book PPI at European Diesel Shop or Andy's Auto</li>
+          <li>Call Hollywood dealer on Sprinter backup candidate</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tl-step">
+      <div class="tl-dot">2</div>
+      <div class="tl-card">
+        <h3>Week 2 — Purchase</h3>
+        <ul>
+          <li>PPI results reviewed — pass or walk away</li>
+          <li>Test drive both top candidates</li>
+          <li>Negotiate — ProMasters depreciate fast, aim $20-21K out the door</li>
+          <li>Purchase + title transfer (commercial auto insurance activated)</li>
+          <li>Schedule wrap design kickoff (2-week lead time starts now)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tl-step">
+      <div class="tl-dot">3</div>
+      <div class="tl-card">
+        <h3>Week 3 — Build-out</h3>
+        <ul>
+          <li>Order Ranger Design cargo package (shelving, partition, ladder rack)</li>
+          <li>Order Goal Zero Yeti 3000X + 200W solar panel</li>
+          <li>Order tools + spare parts starter kit (Packout, Fluke, LiDAR spares, batteries)</li>
+          <li>Install cargo package (DIY weekend or local installer)</li>
+          <li>Wrap design approved, production begins</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tl-step">
+      <div class="tl-dot done">4</div>
+      <div class="tl-card" style="border-color: var(--success);">
+        <h3>Week 4 — Launch</h3>
+        <ul>
+          <li>Apply wrap + magnetic co-brand panels</li>
+          <li>Full load-out — tools, parts, robots, consumables</li>
+          <li>Stage overnight shake-down drive (test GPS, tie-downs)</li>
+          <li><strong style="color: var(--success);">Ready for Phase 1 kickoff</strong></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DECISION -->
+<section class="sec" style="border-bottom: none;">
+  <div class="eyebrow"><span>08</span> The Call</div>
+  <div class="decision">
+    <h2>Buy the ProMaster.<br/><em style="font-style:italic; color:var(--primary);">Build it fast.</em></h2>
+    <p>The 2020 RAM ProMaster 3500 at $21,999 / 66,852 mi / West Park, FL is the right first service van for Accelerate Robotics. Lowest load floor, lowest miles, cheapest Miami maintenance, $6K headroom for a better build-out. Miami service-van market has real flood/title risk — PPI is non-negotiable. Sprinter stays on the table as a brand-signal upgrade when a second van is needed for expansion.</p>
+
+    <div class="decision-grid">
+      <div class="decision-item">
+        <div class="di-label">Pick</div>
+        <div class="di-value">2020 RAM ProMaster 3500 High Roof</div>
+      </div>
+      <div class="decision-item">
+        <div class="di-label">Price</div>
+        <div class="di-value">$21,999 · $42K turnkey</div>
+      </div>
+      <div class="decision-item">
+        <div class="di-label">Timeline</div>
+        <div class="di-value">30 days to deployment</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div>Accelerate Robotics · Operations Asset · Field Service Van · April 2026</div>
+  <code>docs/operations/service-van-buildout.md</code>
+</footer>
+
+<script>
+(function() {
+  var KEY = 'accelerate-van-checklist-state';
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) {}
+  var allBoxes = document.querySelectorAll('.checklist input[type="checkbox"][data-id]');
+  function persist() {
+    var state = {};
+    allBoxes.forEach(function(c) { if (c.checked) state[c.dataset.id] = 1; });
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+  }
+  allBoxes.forEach(function(cb) {
+    if (saved[cb.dataset.id]) cb.checked = true;
+    cb.addEventListener('change', persist);
+  });
+})();
+</script>
+</body>
+</html>

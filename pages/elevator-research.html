@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elevator Research — Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<style>
+  :root {
+    --bg: #f7f8fc;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --text-dim: #4b5563;
+    --text-faint: #9ca3af;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    display: flex;
+    flex-direction: column;
+  }
+  h1 { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+  /* WHY: Fixed-height layout — header + tabs are sticky-feeling at top,
+     iframe fills the remaining viewport so each tool reads at full size. */
+  .topbar {
+    flex: 0 0 auto;
+    padding: 18px 28px 0;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+  .crumbs {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.78rem; color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+  .crumbs a {
+    color: var(--text-dim); text-decoration: none;
+  }
+  .crumbs a:hover { color: #0284c7; }
+  h1 {
+    font-size: 1.45rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .hdr-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .hdr-desc {
+    font-size: 0.85rem; color: var(--text-dim);
+    margin: 2px 0 0;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 4px;
+    margin-top: 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: -1px; /* overlap the topbar's bottom border */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 10px 18px;
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.is-active {
+    color: var(--tab-color, #0284c7);
+    border-bottom-color: var(--tab-color, #0284c7);
+  }
+  .tab:focus-visible {
+    outline: 2px solid var(--tab-color, #0284c7);
+    outline-offset: -4px;
+    border-radius: 4px;
+  }
+
+  /* Frame */
+  .frame-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    background: var(--bg);
+  }
+  iframe.frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: white;
+    display: block;
+  }
+
+  /* Open-in-new link, top right */
+  .open-link {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .open-link:hover {
+    border-color: var(--tab-color, #0284c7);
+    color: var(--tab-color, #0284c7);
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+  <div class="crumbs">
+    <a href="/admin">Toolkit</a>
+    <span>›</span>
+    <span>Elevator Research</span>
+  </div>
+  <div class="hdr-row">
+    <div>
+      <h1>Elevator Research</h1>
+      <p class="hdr-desc" id="tabDesc">Button emulator test — interactive sim of the dry-contact button bridge.</p>
+    </div>
+    <a id="openInNew" class="open-link" href="/repos/accelerate-elevator/pages/button-emulator-sim.html" target="_blank" rel="noopener">
+      Open in new tab ↗
+    </a>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Elevator research views">
+    <button type="button" class="tab is-active" data-tab="sim" role="tab" aria-selected="true"
+            data-href="/repos/accelerate-elevator/pages/button-emulator-sim.html"
+            data-color="#0284c7"
+            data-desc="Button emulator test — interactive sim of the dry-contact button bridge.">Sim</button>
+    <button type="button" class="tab" data-tab="install" role="tab" aria-selected="false"
+            data-href="/repos/accelerate-elevator/pages/install-guide.html"
+            data-color="#7c3aed"
+            data-desc="Field install guide — wiring, mounting, and commissioning steps.">Install</button>
+    <button type="button" class="tab" data-tab="bom" role="tab" aria-selected="false"
+            data-href="/repos/accelerate-elevator/pages/bom-order-guide.html"
+            data-color="#ca8a04"
+            data-desc="Bill of materials — parts, quantities, and ordering links.">BOM</button>
+  </div>
+</div>
+
+<div class="frame-wrap">
+  <iframe id="frame" class="frame" src="/repos/accelerate-elevator/pages/button-emulator-sim.html" title="Elevator Sim"></iframe>
+</div>
+
+<script>
+  // Tabs swap the iframe's src + the "open in new tab" link. Active tab is
+  // stored in the URL hash (e.g. #install) so deep-links and refresh restore
+  // state, and so users can share a link to a specific tab.
+  const tabs = document.querySelectorAll('.tab');
+  const frame = document.getElementById('frame');
+  const openLink = document.getElementById('openInNew');
+  const desc = document.getElementById('tabDesc');
+  const topbar = document.getElementById('topbar');
+
+  function activate(name, { pushHash = true } = {}) {
+    const target = document.querySelector(`.tab[data-tab="${name}"]`);
+    if (!target) return;
+    tabs.forEach(t => {
+      const on = t === target;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    const href = target.dataset.href;
+    if (frame.getAttribute('src') !== href) frame.setAttribute('src', href);
+    frame.title = target.textContent.trim();
+    openLink.href = href;
+    desc.textContent = target.dataset.desc;
+    topbar.style.setProperty('--tab-color', target.dataset.color);
+    if (pushHash) {
+      // Use replaceState so the browser back button doesn't fill up with
+      // intermediate tab states — only the original entry stays in history.
+      history.replaceState(null, '', '#' + name);
+    }
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.tab)));
+
+  // Initial state — read hash, default to 'sim' if missing/invalid.
+  const initial = (location.hash || '').replace('#', '');
+  if (initial && document.querySelector(`.tab[data-tab="${initial}"]`)) {
+    activate(initial, { pushHash: false });
+  } else {
+    activate('sim', { pushHash: false });
+  }
+
+  // React to back/forward navigation between hashes.
+  window.addEventListener('hashchange', () => {
+    const name = (location.hash || '').replace('#', '') || 'sim';
+    activate(name, { pushHash: false });
+  });
+</script>
+
+</body>
+</html>

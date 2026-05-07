@@ -301,6 +301,8 @@ See [`../50-operations/`](../50-operations/) for environments, runbooks, and on-
 
 ## 9. Financial plan
 
+**For the full financial analysis** — unit economics, three-year forecast, P&L, cash-flow projections, capital use, financing strategy, sensitivity analysis — see [`financial-analysis.md`](financial-analysis.md). This section is the summary.
+
 ### Current quarter (Q2 2026)
 
 - **Must ship:** Thesis Hotel Phase 1 (C30 pilot). First signed pilot agreement. First revenue.

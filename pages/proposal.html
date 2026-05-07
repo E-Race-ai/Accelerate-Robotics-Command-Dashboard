@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposal — Accelerate Robotics</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --accent: #0055ff;
+        --accent-light: #00c8ff;
+        --accent-soft: rgba(0, 85, 255, 0.15);
+        --panel-bg: #0f1218;
+        --panel-bg-deep: #080b10;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fff; color: #1f2937; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; font-feature-settings: 'tnum'; }
+    .accel-gradient { background: linear-gradient(135deg, var(--accent), var(--accent-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ── Configurator panel (dark themed) ─────────── */
+    .config-panel {
+        background: linear-gradient(160deg, var(--panel-bg) 0%, var(--panel-bg-deep) 100%);
+        color: #fff;
+        border-radius: 1.5rem;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        position: relative;
+        overflow: hidden;
+    }
+    .config-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 40%),
+                          radial-gradient(circle at 80% 100%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 40%);
+        pointer-events: none;
+    }
+    .config-panel > * { position: relative; }
+
+    /* ── Slider ─────────── */
+    .slider-wrap { position: relative; padding: 1.5rem 0; }
+    .slider-track {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        position: relative;
+        margin: 0 12px;
+    }
+    .slider-fill {
+        position: absolute; inset: 0 auto 0 0;
+        background: linear-gradient(90deg, var(--accent) 0%, var(--accent-light) 100%);
+        border-radius: 999px;
+        box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 50%, transparent);
+        transition: width 0.25s ease;
+    }
+    .slider-ticks {
+        position: absolute; inset: 0;
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0 12px; pointer-events: none;
+    }
+    .tick { width: 2px; height: 12px; background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
+    .tick.tier-marker { width: 3px; height: 18px; background: var(--accent-light); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 70%, transparent); }
+    .slider-input {
+        -webkit-appearance: none; appearance: none;
+        width: 100%; background: transparent;
+        position: absolute; top: 50%; left: 0; right: 0;
+        transform: translateY(-50%); height: 40px;
+        cursor: pointer; padding: 0 12px;
+    }
+    .slider-input::-webkit-slider-thumb {
+        -webkit-appearance: none; appearance: none;
+        width: 28px; height: 28px;
+        background: linear-gradient(135deg, var(--accent-light), var(--accent));
+        border: 3px solid #fff; border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px color-mix(in srgb, var(--accent) 60%, transparent), 0 0 0 1px rgba(0,0,0,0.2);
+        transition: transform 0.15s ease;
+    }
+    .slider-input::-webkit-slider-thumb:active { transform: scale(1.15); cursor: grabbing; }
+    .slider-input::-moz-range-thumb {
+        width: 28px; height: 28px;
+        background: linear-gradient(135deg, var(--accent-light), var(--accent));
+        border: 3px solid #fff; border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px color-mix(in srgb, var(--accent) 60%, transparent);
+    }
+
+    /* ── Robot grid ─────────── */
+    .robot-slot {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative; overflow: hidden;
+        opacity: 0.4; filter: grayscale(0.6);
+    }
+    .robot-slot.active {
+        background: linear-gradient(140deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
+        border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+        opacity: 1; filter: none;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    .robot-slot.active::after {
+        content: ''; position: absolute; top: 0; right: 0;
+        width: 10px; height: 10px; margin: 8px;
+        background: var(--accent-light); border-radius: 50%;
+        box-shadow: 0 0 12px var(--accent-light);
+    }
+    .robot-chip-mini {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 2rem; height: 2rem; border-radius: 0.5rem;
+        background: color-mix(in srgb, var(--accent) 18%, transparent);
+        color: var(--accent-light);
+        font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+        font-size: 0.7rem; letter-spacing: 0.04em;
+    }
+    .robot-slot.active .robot-chip-mini { background: var(--accent); color: #fff; }
+    .robot-photo {
+        width: 100%; aspect-ratio: 4 / 3;
+        object-fit: contain; object-position: center;
+        margin-bottom: 0.5rem;
+        background: radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 65%),
+                    linear-gradient(140deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
+        border-radius: 0.5rem; padding: 0.25rem;
+        filter: grayscale(0.85) brightness(0.7);
+        transition: filter 0.5s ease, transform 0.5s ease;
+    }
+    .robot-slot.active .robot-photo { filter: grayscale(0) brightness(1); transform: scale(1.02); }
+
+    /* ── Preset chips ─────────── */
+    .preset-chip {
+        padding: 0.5rem 1rem; border-radius: 0.6rem;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.85);
+        cursor: pointer; font-size: 0.8rem; font-weight: 600;
+        transition: all 0.2s ease;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+    .preset-chip:hover { background: rgba(255, 255, 255, 0.1); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+    .preset-chip.active {
+        background: var(--accent); color: #fff; border-color: var(--accent);
+        box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+
+    /* ── LED indicators ─────────── */
+    .led-indicator {
+        display: flex; align-items: center; gap: 9px;
+        padding: 9px 11px; border-radius: 6px;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: background 0.35s ease, border-color 0.35s ease;
+    }
+    .led-indicator.on {
+        background: color-mix(in srgb, var(--accent) 9%, transparent);
+        border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    .led-dot {
+        flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%;
+        background: #3a3833;
+        box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+        transition: background 0.35s ease, box-shadow 0.35s ease;
+    }
+    .led-indicator.on .led-dot {
+        background: #5eff88;
+        box-shadow: 0 0 9px rgba(94, 255, 136, 0.75), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.6);
+        animation: ledPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes ledPulse {
+        0%, 100% { box-shadow: 0 0 8px rgba(94, 255, 136, 0.65), 0 0 2px #5eff88; }
+        50%      { box-shadow: 0 0 14px rgba(94, 255, 136, 0.95), 0 0 4px #5eff88; }
+    }
+    .led-label { font-size: 11px; color: rgba(255,255,255,0.45); font-weight: 500; transition: color 0.35s ease; }
+    .led-indicator.on .led-label { color: #fff; font-weight: 600; }
+    .led-threshold { font-family: 'Space Grotesk', sans-serif; font-size: 9px; color: rgba(255,255,255,0.3); margin-left: auto; }
+    .led-indicator.on .led-threshold { color: var(--accent-light); }
+
+    /* ── Toggle ─────────── */
+    .toggle {
+        display: inline-flex; align-items: center;
+        width: 52px; height: 28px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 999px; position: relative;
+        cursor: pointer; transition: background 0.2s ease; flex-shrink: 0;
+    }
+    .toggle::after {
+        content: ''; position: absolute;
+        width: 22px; height: 22px; background: #fff; border-radius: 50%;
+        top: 3px; left: 3px; transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle.on::after { left: 27px; }
+
+    /* ── Stat tiles ─────────── */
+    .stat-tile {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1rem; padding: 1rem 1.25rem;
+        transition: all 0.3s ease;
+    }
+    .stat-tile.accent {
+        background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent) 5%, transparent));
+        border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .stat-tile.accent-green {
+        background: linear-gradient(135deg, rgba(58, 106, 58, 0.22), rgba(58, 106, 58, 0.08));
+        border-color: rgba(90, 180, 100, 0.4);
+    }
+
+    /* ── Hours/Impact card ─────────── */
+    .hours-card {
+        background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, transparent), color-mix(in srgb, var(--accent) 4%, transparent));
+        border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+        border-radius: 1.25rem; padding: 2rem 2rem 1.75rem;
+    }
+    .hours-eyebrow {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.7rem; font-weight: 700;
+        letter-spacing: 0.22em; text-transform: uppercase;
+        color: var(--accent-light); text-align: center; margin-bottom: 0.5rem;
+    }
+    .hours-anchor {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.45rem; font-weight: 500; color: #fff;
+        text-align: center; line-height: 1.35;
+        margin: 0 auto 2rem; max-width: 46rem;
+    }
+    .hours-anchor em { color: var(--accent-light); font-style: normal; font-weight: 600; }
+
+    .pillar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem; }
+    .pillar {
+        background: rgba(255,255,255,0.035);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 1rem; padding: 1.4rem 1.25rem 1.35rem;
+        display: flex; flex-direction: column; position: relative;
+        border-top: 2px solid var(--accent);
+    }
+    .pillar .p-eyebrow { font-family: 'Space Grotesk', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent-light); margin-bottom: 0.5rem; }
+    .pillar .p-num { font-family: 'Space Grotesk', monospace; font-size: 2.6rem; font-weight: 700; color: #fff; line-height: 1; }
+    .pillar .p-num .plus { color: var(--accent-light); font-weight: 600; }
+    .pillar .p-unit { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: #ccc; font-style: italic; margin-top: 0.25rem; }
+    .pillar .p-body { font-size: 0.82rem; color: #d0d0d0; line-height: 1.5; margin-top: 0.9rem; flex: 1; }
+    .pillar .p-body strong { color: #fff; }
+    .pillar .p-foot { font-size: 0.7rem; color: #888; margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px solid rgba(255,255,255,0.08); }
+
+    /* ── Revenue hero ─────────── */
+    .revenue-hero {
+        background: linear-gradient(135deg, rgba(139,194,161,0.12), color-mix(in srgb, var(--accent) 8%, transparent));
+        border: 1px solid rgba(139,194,161,0.35);
+        border-top: 3px solid #8bc2a1;
+        border-radius: 1rem; padding: 2rem 2.5rem;
+        display: grid; grid-template-columns: auto 1fr;
+        gap: 0 2.5rem; align-items: center; margin-bottom: 1.25rem;
+    }
+    .revenue-hero .rv-eyebrow { font-family: 'Space Grotesk', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #8bc2a1; grid-column: 1 / -1; margin-bottom: 0.6rem; }
+    .revenue-hero .rv-num { font-family: 'Space Grotesk', monospace; font-size: 3.6rem; font-weight: 700; color: var(--accent-light); line-height: 1; }
+    .revenue-hero .rv-num .plus { color: #8bc2a1; }
+    .revenue-hero .rv-unit { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: #ccc; font-style: italic; margin-top: 0.15rem; }
+    .revenue-hero .rv-body { font-size: 0.88rem; color: #d0d0d0; line-height: 1.6; }
+    .revenue-hero .rv-body strong { color: #fff; }
+    .revenue-hero .rv-annual { grid-column: 1 / -1; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.08); font-family: 'Space Grotesk', sans-serif; font-size: 0.82rem; color: #888; }
+    .revenue-hero .rv-annual .big { color: var(--accent-light); font-weight: 700; font-size: 1.15rem; }
+    @media (max-width: 820px) {
+        .pillar-grid { grid-template-columns: 1fr; }
+        .revenue-hero { grid-template-columns: 1fr; gap: 0.5rem 0; padding: 1.5rem 1.25rem; }
+    }
+
+    /* ── Phase timeline ─────────── */
+    .phase-timeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.5rem; }
+    .phase-card {
+        background: #f9fafb; border: 1px solid #e5e7eb;
+        border-radius: 0.75rem; padding: 1rem; transition: all 0.3s ease;
+    }
+    .phase-card.included { background: #fafaf8; border-color: var(--accent); }
+    .phase-card.skipped { opacity: 0.35; filter: grayscale(0.8); }
+
+    /* ── Savings table ─────────── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th { background: var(--panel-bg); color: #fff; font-weight: 700; text-align: left; padding: 0.65rem 0.85rem; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .data-table th.right { text-align: right; }
+    .data-table td { padding: 0.6rem 0.85rem; border-bottom: 1px solid #e5e7eb; }
+    .data-table tr:nth-child(even) td { background: #fafafa; }
+    .data-table td.num { text-align: right; font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
+    .data-table tr.total td { background: #f0f9ff !important; font-weight: 700; border-top: 2px solid var(--accent); }
+
+    /* ── Unlock cards ─────────── */
+    .unlock-card {
+        padding: 1rem; border-radius: 0.5rem;
+        background: #fff; border: 1px solid rgba(0,0,0,0.08);
+        border-left: 3px solid var(--accent);
+    }
+    .unlock-card.locked {
+        background: rgba(0,0,0,0.02); border: 1px dashed rgba(0,0,0,0.15);
+        border-left: 3px dashed rgba(0,0,0,0.15); opacity: 0.75;
+    }
+
+    /* ── Loading state ─────────── */
+    .loading-overlay {
+        display: flex; align-items: center; justify-content: center;
+        min-height: 60vh; flex-direction: column; gap: 1rem;
+    }
+    .spinner {
+        width: 40px; height: 40px; border: 3px solid #e5e7eb;
+        border-top-color: var(--accent); border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Print ─────────── */
+    @media print {
+        .no-print { display: none !important; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff !important; font-size: 11pt; }
+        section { break-inside: avoid; page-break-inside: avoid; }
+        h2, h3, .headline { break-after: avoid; page-break-after: avoid; }
+        .slider-wrap, .preset-chips-row, .toggle-row, #shareBtn { display: none !important; }
+        .config-panel { box-shadow: none !important; }
+        .robot-slot { opacity: 1 !important; filter: none !important; break-inside: avoid; border: 1px solid #ccc !important; }
+        .robot-slot.active { box-shadow: none !important; transform: none !important; }
+        .robot-slot.active::after { border-radius: 50% !important; -webkit-border-radius: 50% !important; overflow: hidden !important; box-shadow: none !important; width: 8px !important; height: 8px !important; background: #2e7d32 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .robot-photo { filter: none !important; transform: none !important; max-height: 120px; object-fit: contain; }
+        .led-dot { animation: none !important; border-radius: 50% !important; -webkit-border-radius: 50% !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .led-indicator.on .led-dot { background: #00c853 !important; box-shadow: none !important; animation: none !important; border-radius: 50% !important; -webkit-border-radius: 50% !important; }
+        .stat-tile { border: 1px solid #ddd !important; box-shadow: none !important; }
+        .phase-card { break-inside: avoid; box-shadow: none !important; }
+        .data-table td, .data-table th { border: 1px solid #ccc !important; }
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+        .fixed, [style*="position: fixed"], .sticky, [style*="position: sticky"] { position: static !important; }
+    }
+    @media (max-width: 768px) { .phase-timeline { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- Loading state (shown while narration loads) -->
+<div class="loading-overlay" id="loadingState">
+    <div class="spinner"></div>
+    <p class="text-sm text-gray-500">Generating proposal narratives...</p>
+</div>
+
+<!-- Main content (hidden until data loads) -->
+<div id="proposalContent" style="display:none">
+
+    <!-- Section 1: Header -->
+    <header class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white px-6 md:px-8 py-10 md:py-12 relative overflow-hidden" id="headerSection"></header>
+
+    <!-- Section 2: Intro -->
+    <section class="max-w-6xl mx-auto px-6 md:px-8 pt-10 pb-4" id="introSection"></section>
+
+    <!-- Section 3: Configurator panel -->
+    <section class="max-w-6xl mx-auto px-6 md:px-8 py-8" id="configuratorSection"></section>
+
+    <!-- Section 7: Phase timeline -->
+    <section class="max-w-6xl mx-auto px-6 md:px-8 py-12" id="phaseSection"></section>
+
+    <!-- Section 8: Savings breakdown -->
+    <section class="max-w-6xl mx-auto px-6 md:px-8 py-8" id="savingsTableSection"></section>
+
+    <!-- Section 9: Service tier unlocks -->
+    <section class="max-w-6xl mx-auto px-6 md:px-8 py-12" id="unlocksSection"></section>
+
+    <!-- Section 10: Footer -->
+    <footer class="bg-gray-50 border-t border-gray-200 px-6 md:px-8 py-8" id="footerSection"></footer>
+</div>
+
+<script>
+/* ──────────────────────────────────────────────────────────────────
+   UNIVERSAL PROPOSAL — DATA LOADING, THEMING, AND RENDER PIPELINE
+   ────────────────────────────────────────────────────────────────── */
+
+/* ── Property theme palettes ─────────────────────────────────── */
+const THEMES = {
+    hotel:         { primary: '#0055ff', secondary: '#00c8ff', panelBg: '#0f1218', panelBgDeep: '#080b10' },
+    resort:        { primary: '#2d8a6e', secondary: '#7ecfb0', panelBg: '#0f1a16', panelBgDeep: '#081210' },
+    hospital:      { primary: '#1a73e8', secondary: '#4fc3f7', panelBg: '#0f1520', panelBgDeep: '#080d18' },
+    senior_living: { primary: '#7c5cbf', secondary: '#b39ddb', panelBg: '#16121f', panelBgDeep: '#0e0a16' },
+    luxury:        { primary: '#8a6f47', secondary: '#d9c9a8', panelBg: '#151515', panelBgDeep: '#0a0a0a' },
+};
+
+// WHY: Luxury auto-detection — small or premium-named properties get the bronze palette
+// regardless of their base type, matching Moore Miami's aesthetic.
+const LUXURY_KEYWORDS = /club|boutique|member|residence|manor|chateau/i;
+const LUXURY_ROOM_THRESHOLD = 50;
+
+function detectTheme(property) {
+    if (property.rooms < LUXURY_ROOM_THRESHOLD || LUXURY_KEYWORDS.test(property.name)) {
+        return THEMES.luxury;
+    }
+    return THEMES[property.type] || THEMES.hotel;
+}
+
+function applyTheme(theme) {
+    const root = document.documentElement;
+    root.style.setProperty('--accent', theme.primary);
+    root.style.setProperty('--accent-light', theme.secondary);
+    root.style.setProperty('--panel-bg', theme.panelBg);
+    root.style.setProperty('--panel-bg-deep', theme.panelBgDeep);
+}
+
+/* ── FTE cost by property type ───────────────────────────────── */
+const FTE_COST = {
+    hotel: 4200,
+    resort: 4500,
+    hospital: 4800,
+    senior_living: 4000,
+    luxury: 5200,  // WHY: Private-club / ultra-premium roles skew senior
+};
+
+function getFteMonthlyCost(property) {
+    if (property.rooms < LUXURY_ROOM_THRESHOLD || LUXURY_KEYWORDS.test(property.name)) {
+        return FTE_COST.luxury;
+    }
+    return FTE_COST[property.type] || FTE_COST.hotel;
+}
+
+/* ── Intelligence Platform constants ─────────────────────────── */
+const INTEL_Y1_INSTALL = 38500;  // one-time capex
+const INTEL_Y2_LICENSE = 10000;  // annual software license
+
+/* ── Preset tier chip generation ─────────────────────────────── */
+function generatePresets(fleetSize) {
+    if (fleetSize <= 2) return [{ label: 'Pilot', count: 1 }, { label: 'Full', count: fleetSize }];
+    if (fleetSize <= 4) return [{ label: 'Pilot', count: 1 }, { label: 'Core', count: 2 }, { label: 'Full', count: fleetSize }];
+    if (fleetSize <= 7) return [{ label: 'Pilot', count: 1 }, { label: 'Core', count: 3 }, { label: 'Full', count: fleetSize }];
+    return [{ label: 'Pilot', count: 1 }, { label: 'Core', count: 3 }, { label: 'Extended', count: 6 }, { label: 'Full', count: fleetSize }];
+}
+
+/* ── Phase generation ────────────────────────────────────────── */
+function generatePhaseBreaks(fleetSize) {
+    // WHY: Returns array of { upTo, name, timeframe } describing which slots belong to each phase.
+    const phases = [{ upTo: 1, name: 'Pilot', timeframe: 'Month 1' }];
+    if (fleetSize >= 2) phases.push({ upTo: Math.min(3, fleetSize), name: 'Core Service', timeframe: 'Months 2-3' });
+    if (fleetSize >= 4) phases.push({ upTo: Math.min(6, fleetSize), name: 'Full Property', timeframe: 'Months 3-5' });
+    if (fleetSize >= 7) phases.push({ upTo: fleetSize, name: 'Autonomous Operations', timeframe: 'Months 5-7' });
+    return phases;
+}
+
+/* ── Fallback narratives (used when /api/narrate is unavailable) ── */
+// WHY: Fallback narratives match the gold-standard proposal voice (Moore/Thesis) so
+// the proposal reads well even when the Claude API is unavailable or slow.
+function generateFallbackNarratives(data) {
+    const { property, fleet } = data;
+    const phaseBreaks = generatePhaseBreaks(fleet.length);
+    const pName = property.name;
+    const pType = property.type || 'property';
+    const pMarket = property.market || 'the market';
+    const serviceList = fleet.map(s => s.serviceLine.toLowerCase()).join(', ');
+
+    // WHY: Savings capture language mirrors real proposals — specific expense-line
+    // eliminations (contract termination, FTE non-backfill), not generic "labor offset."
+    const SAVINGS_LANGUAGE = {
+        cleaning: 'Third-party floor-care contract — terminated',
+        delivery: 'Runner overtime and late-shift coverage — not backfilled',
+        logistics: 'Linen/supply runner shift — not backfilled',
+        security: 'Overnight security patrol supplement — reduced',
+        service: 'Guest-facing concierge coverage gap — extended autonomously',
+        disinfection: 'Third-party sanitization contract — terminated',
+    };
+
+    const UNLOCK_LANGUAGE = {
+        cleaning: 'EVS staff shifts from floor maintenance to room turns and guest-facing cleaning',
+        delivery: 'Front desk and F&B staff stay on-floor instead of running deliveries through elevators',
+        logistics: 'Housekeeping focuses on room turns instead of hauling linen carts between floors',
+        security: 'Security team focuses on guest interaction and incident response, not routine patrol loops',
+        service: 'Guests receive branded autonomous service available 24/7 — something no staffing model can sustain',
+        disinfection: 'High-touch surfaces are sanitized on a consistent schedule without pulling EVS from other tasks',
+    };
+
+    return {
+        intro: `${pName} is a ${property.rooms}-room ${pType} in ${pMarket}. This fleet is designed to extend service past what human staffing can sustainably cover — a branded operational amenity, not back-of-house infrastructure.`,
+        headline: 'Build your fleet. See the impact.',
+        valueProp: `This fleet doesn't replace your team. It gives your team leverage — shifting repetitive logistics to robots so staff can focus on the guest-facing, high-touch work that defines ${pName}.`,
+        robots: fleet.map(s => ({
+            goalId: s.goalId,
+            roleDescription: `${s.serviceLine} — ${s.robot.company} ${s.robot.model_name}`,
+            unlockNarrative: UNLOCK_LANGUAGE[s.type] || `Staff time shifts from ${s.serviceLine.toLowerCase()} logistics to higher-value guest interaction.`,
+            savingsCapture: SAVINGS_LANGUAGE[s.type] || `$${s.savings.toLocaleString()}/mo expense-line offset`,
+        })),
+        tierName: phaseBreaks[phaseBreaks.length - 1].name,
+        tierNarrative: `With ${fleet.length} robot${fleet.length > 1 ? 's' : ''} deployed, the fleet covers ${serviceList}. Every robot carries the ${pName} identity — guests see a service amenity, not a vendor's equipment.`,
+        phases: phaseBreaks.map((p, i) => ({
+            name: p.name,
+            timeframe: p.timeframe,
+            description: i === 0
+                ? `Deploy ${phases_robot_range(p, phaseBreaks, fleet)} for a 30-day pilot. Measurable success criteria agreed in advance — go/no-go at day 30.`
+                : `Commission ${phases_robot_range(p, phaseBreaks, fleet)}. ${property.floors > 1 && i === 1 ? 'Elevator integration (button emulator) activates multi-floor autonomy. ' : ''}Each phase builds on the previous with clear gates.`,
+        })),
+    };
+}
+
+// WHY: Helper to describe which robots deploy in each phase for fallback text
+function phases_robot_range(phase, allPhases, fleet) {
+    const idx = allPhases.indexOf(phase);
+    const start = idx === 0 ? 0 : allPhases[idx - 1].upTo;
+    const end = phase.upTo;
+    const names = fleet.slice(start, end).map(s => `${s.robot.company} ${s.robot.model_name}`);
+    return names.join(', ') || 'as configured';
+}
+
+/* ── HTML ESCAPING ─────────────────────────────────────────── */
+// WHY: Data arrives from localStorage and URL hash (both user-controllable).
+// A crafted share link could inject arbitrary HTML/JS without escaping.
+function escapeHtml(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+function esc(str) { return escapeHtml(str); }
+
+/* ── STATE ────────────────────────────────────────────────────── */
+let DATA = null;       // the full payload from localStorage or URL hash
+let NARRATIVES = null; // from /api/narrate or fallback
+let state = { count: 1, intel: false };
+
+/* ── DATA LOADING ────────────────────────────────────────────── */
+function loadData() {
+    // Priority 1: URL hash (share link)
+    if (location.hash.startsWith('#config=')) {
+        try {
+            const encoded = location.hash.slice('#config='.length);
+            const json = atob(encoded);
+            return JSON.parse(json);
+        } catch (e) {
+            console.error('[proposal] Failed to parse share link:', e);
+        }
+    }
+    // Priority 2: localStorage (fleet designer handoff)
+    const stored = localStorage.getItem('accelerate-proposal');
+    if (stored) {
+        try {
+            return JSON.parse(stored);
+        } catch (e) {
+            console.error('[proposal] Failed to parse localStorage:', e);
+        }
+    }
+    return null;
+}
+
+async function fetchNarratives(data) {
+    try {
+        const res = await fetch('/api/narrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                property: data.property,
+                facility: data.facility,
+                fleet: data.fleet,
+            }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    } catch (err) {
+        console.warn('[proposal] Narration failed, using fallback:', err.message);
+        return null;
+    }
+}
+
+/* ── INIT ─────────────────────────────────────────────────────── */
+async function init() {
+    DATA = loadData();
+    if (!DATA || !DATA.fleet || DATA.fleet.length === 0) {
+        document.getElementById('loadingState').innerHTML = `
+            <div style="text-align:center; padding:4rem;">
+                <h2 class="headline text-2xl font-bold text-gray-800 mb-4">No Fleet Data Found</h2>
+                <p class="text-gray-500 mb-6">Open the Fleet Designer, configure a fleet, and click "Generate Proposal" to get started.</p>
+                <a href="fleet-designer.html" class="inline-block px-6 py-3 rounded-lg text-white font-semibold" style="background:var(--accent)">Open Fleet Designer</a>
+            </div>
+        `;
+        return;
+    }
+
+    // WHY: Sort fleet by score descending — highest-scored robot is position 1 on the slider.
+    // This reveals robots in order of value, building the business case incrementally.
+    DATA.fleet.sort((a, b) => b.score - a.score);
+
+    // Apply property theming
+    const theme = detectTheme(DATA.property);
+    applyTheme(theme);
+
+    // Update page title
+    document.title = `${DATA.property.name} — Proposal`;
+
+    // Set slider max to fleet size, default to full fleet
+    state.count = DATA.fleet.length;
+
+    // Fetch narratives (non-blocking — render with fallback if it fails)
+    const narrated = await fetchNarratives(DATA);
+    NARRATIVES = narrated || generateFallbackNarratives(DATA);
+
+    // Hide loading, show content
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('proposalContent').style.display = 'block';
+
+    // Render all sections
+    render();
+}
+
+/* ── RENDER ALL ───────────────────────────────────────────────── */
+function render() {
+    renderHeader();
+    renderIntro();
+    renderConfigurator();
+    renderImpact();
+    renderSavings();
+    renderHiring();
+    renderAnnualSummary();
+    renderPhases();
+    renderSavingsTable();
+    renderUnlocks();
+    renderFooter();
+}
+
+/* ── SHARE PROPOSAL ─────────────────────────────────────────── */
+function shareProposal() {
+    // WHY: Encode the full payload (minus generatedAt) as base64 in the URL hash.
+    // This makes the link self-contained — no server needed to store proposals.
+    const payload = { ...DATA, generatedAt: new Date().toISOString() };
+    const encoded = btoa(JSON.stringify(payload));
+    const url = location.origin + location.pathname + '#config=' + encoded;
+
+    navigator.clipboard.writeText(url).then(() => {
+        const toast = document.getElementById('shareToast');
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2500);
+    }).catch(() => {
+        // WHY: Fallback for browsers that block clipboard access
+        prompt('Copy this link:', url);
+    });
+}
+
+function renderHeader() {
+    const p = DATA.property;
+    const el = document.getElementById('headerSection');
+    el.style.background = `linear-gradient(135deg, var(--panel-bg), var(--panel-bg-deep))`;
+    el.innerHTML = `
+        <div class="max-w-6xl mx-auto relative">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-xl border-2 flex items-center justify-center" style="border-color: var(--accent-light)">
+                        <span class="font-bold text-2xl headline" style="color: var(--accent-light)">${esc(p.name.charAt(0))}</span>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">${esc(p.name)}</h1>
+                        <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Executive Proposal · Live Configurator</p>
+                    </div>
+                </div>
+                <div class="flex flex-col md:items-end gap-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                        </div>
+                        <span class="text-sm font-bold tracking-tight accel-gradient tech-font">Accelerate Robotics</span>
+                    </div>
+                    <div class="text-[10px] text-gray-400 md:text-right tracking-wide">
+                        One Brain. Many Bots.<br>
+                        <span class="text-gray-500">${p.rooms}-room ${esc(p.type)} · ${p.floors} floors · ${esc(p.market || '')}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderIntro() {
+    const el = document.getElementById('introSection');
+    el.innerHTML = `
+        <div class="max-w-3xl">
+            <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color: var(--accent)">Executive Proposal</p>
+            <h2 class="headline text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">${esc(NARRATIVES.headline)}</h2>
+            <p class="text-gray-600 leading-relaxed">${esc(NARRATIVES.intro)}</p>
+            <p class="text-gray-600 leading-relaxed mt-3">${esc(NARRATIVES.valueProp)}</p>
+        </div>
+    `;
+}
+
+function renderConfigurator() {
+    const n = state.count;
+    const total = DATA.fleet.length;
+    const presets = generatePresets(total);
+    const pct = total > 1 ? ((n - 1) / (total - 1)) * 100 : 100;
+
+    // Build preset chips HTML
+    const presetChipsHtml = presets.map(p =>
+        `<button class="preset-chip${p.count === n ? ' active' : ''}" data-count="${p.count}">${p.label} · ${p.count}</button>`
+    ).join('');
+
+    // Build slider ticks HTML
+    const presetCounts = presets.map(p => p.count);
+    let ticksHtml = '';
+    for (let i = 1; i <= total; i++) {
+        ticksHtml += `<div class="tick${presetCounts.includes(i) ? ' tier-marker' : ''}"></div>`;
+    }
+
+    // Build robot grid HTML
+    let robotGridHtml = '';
+    DATA.fleet.forEach((slot, i) => {
+        const active = i < n;
+        const r = slot.robot;
+        const narr = NARRATIVES.robots[i] || {};
+        robotGridHtml += `
+            <div class="robot-slot${active ? ' active' : ''}">
+                ${r.image_url ? `<img class="robot-photo" src="${esc(r.image_url)}" alt="${esc(r.model_name)}" loading="lazy">` : '<div class="robot-photo" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:0.7rem;">No image</div>'}
+                <p class="text-xs font-bold text-white leading-snug">${esc(r.model_name)}</p>
+                <p class="text-[10px] text-gray-400 leading-snug mt-0.5">${esc(slot.serviceLine)}</p>
+            </div>
+        `;
+    });
+
+    // Build service LED HTML
+    let ledHtml = '';
+    let onCount = 0;
+    DATA.fleet.forEach((slot, i) => {
+        const on = i < n;
+        if (on) onCount++;
+        ledHtml += `
+            <div class="led-indicator${on ? ' on' : ''}">
+                <span class="led-dot"></span>
+                <span class="led-label">${esc(slot.serviceLine)}</span>
+                <span class="led-threshold">${i + 1}+</span>
+            </div>
+        `;
+    });
+
+    const el = document.getElementById('configuratorSection');
+    el.innerHTML = `
+        <div class="config-panel p-6 md:p-10">
+            <!-- Fleet size header -->
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+                <div>
+                    <p class="text-[11px] uppercase tracking-widest font-semibold mb-2" style="color:var(--accent-light)">Fleet Size</p>
+                    <div class="flex items-baseline gap-3">
+                        <div class="text-6xl md:text-7xl font-bold tech-font text-white" id="fleetCount">${n}</div>
+                        <div class="text-xl text-gray-400 font-light">/ ${total} robots</div>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-1" id="tierLabel">${esc(NARRATIVES.tierName)}</p>
+                </div>
+                <div class="flex flex-wrap gap-2 preset-chips-row" id="presetChips">${presetChipsHtml}</div>
+            </div>
+
+            <!-- Slider -->
+            <div class="slider-wrap mb-2 no-print">
+                <div class="slider-track">
+                    <div class="slider-fill" id="sliderFill" style="width: ${pct}%"></div>
+                    <div class="slider-ticks">${ticksHtml}</div>
+                </div>
+                <input type="range" min="1" max="${total}" value="${n}" step="1" class="slider-input" id="fleetSlider">
+            </div>
+
+            <!-- Robot grid -->
+            <div class="mt-8">
+                <p class="text-[11px] uppercase tracking-widest font-semibold mb-3" style="color:var(--accent-light)">Fleet Composition</p>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5" id="robotGrid">${robotGridHtml}</div>
+            </div>
+
+            <!-- Service line LEDs -->
+            <div class="mt-8">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[11px] uppercase tracking-widest font-semibold" style="color:var(--accent-light)">Service Lines — System Status</p>
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400">
+                        <span class="tech-font text-[#5eff88] font-bold" id="serviceOnCount">${onCount}</span>
+                        <span class="text-gray-500"> / ${total} online</span>
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2" id="serviceLedGrid">${ledHtml}</div>
+            </div>
+
+            <!-- Intelligence Platform toggle -->
+            <div class="mt-8 toggle-row">
+                <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div class="flex-1 pr-4">
+                        <p class="text-sm font-semibold text-white">Facility Intelligence Platform</p>
+                        <p class="text-[11px] text-gray-400 mt-0.5">Asset sensing, BLE + UWB tags, smart-dispatch rules, ops dashboard · <span style="color:var(--accent-light)">$${INTEL_Y1_INSTALL.toLocaleString()} Y1 install · $${(INTEL_Y2_LICENSE/1000).toFixed(0)}K/yr license</span></p>
+                    </div>
+                    <div class="toggle${state.intel ? ' on' : ''}" id="intelToggle"></div>
+                </div>
+            </div>
+
+            <!-- Impact divider -->
+            <div class="mt-12 mb-8 text-center">
+                <p class="text-[11px] uppercase tracking-widest font-semibold mb-2" style="color:var(--accent-light)">Now see what this fleet delivers</p>
+                <p class="headline text-2xl md:text-3xl font-bold text-white" style="line-height:1.3">Better service. Stronger bottom line.</p>
+            </div>
+
+            <!-- Impact section (rendered by renderImpact) -->
+            <div id="impactContainer"></div>
+
+            <!-- Savings stats (rendered by renderSavings) -->
+            <div id="savingsContainer"></div>
+
+            <!-- Annual summary (rendered by renderAnnualSummary) -->
+            <div id="annualContainer"></div>
+
+            <!-- vs. Hiring (rendered by renderHiring) -->
+            <div id="hiringContainer"></div>
+        </div>
+    `;
+
+    // Wire slider
+    document.getElementById('fleetSlider').addEventListener('input', (e) => {
+        state.count = parseInt(e.target.value);
+        render();
+    });
+
+    // Wire preset chips
+    document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            state.count = parseInt(chip.dataset.count);
+            render();
+        });
+    });
+
+    // Wire intel toggle
+    document.getElementById('intelToggle').addEventListener('click', () => {
+        state.intel = !state.intel;
+        render();
+    });
+}
+
+function renderImpact() {
+    const n = state.count;
+    const activeFleet = DATA.fleet.slice(0, n);
+    const totalSavings = activeFleet.reduce((s, r) => s + r.savings, 0);
+    const fteCost = getFteMonthlyCost(DATA.property);
+    const fteFreed = (totalSavings / fteCost).toFixed(1);
+    const touchpoints = n * 6;
+    const touchpointsMonthly = touchpoints * 30;
+    const revenueMonthly = n * 2500;
+    const revenueAnnual = revenueMonthly * 12;
+
+    document.getElementById('impactContainer').innerHTML = `
+        <div class="hours-card mb-8">
+            <div class="hours-eyebrow">Enhanced Service Capacity</div>
+            <div class="hours-anchor">
+                Every robot in your fleet <em>creates capacity your current staffing can't reach</em> — and turns each hour into revenue or service quality your operation leaves on the table today.
+            </div>
+            <div class="pillar-grid">
+                <div class="pillar">
+                    <div class="p-eyebrow">New Service Touchpoints</div>
+                    <div class="p-num"><span class="plus">+</span>${touchpoints}</div>
+                    <div class="p-unit">service events / day</div>
+                    <div class="p-body"><strong>Deliveries, cleaning runs, supply transport, and guest interactions</strong> that currently require pulling staff away from higher-value work.</div>
+                    <div class="p-foot">&asymp; ${touchpointsMonthly.toLocaleString()} service events / month</div>
+                </div>
+                <div class="pillar">
+                    <div class="p-eyebrow">Staff Freed for Higher-Value Work</div>
+                    <div class="p-num"><span class="plus">+</span>${fteFreed}</div>
+                    <div class="p-unit">FTE equivalent freed</div>
+                    <div class="p-body"><strong>The fleet handles repetitive logistics</strong> — corridor cleaning, supply runs, delivery — so your best people stay where they create the most value.</div>
+                    <div class="p-foot">Based on $${fteCost.toLocaleString()}/mo fully-loaded FTE cost</div>
+                </div>
+            </div>
+            <div class="revenue-hero">
+                <div class="rv-eyebrow">Estimated Additional Revenue Capacity</div>
+                <div>
+                    <div class="rv-num"><span class="plus">+</span>$${revenueMonthly.toLocaleString()}</div>
+                    <div class="rv-unit">new monthly revenue capacity</div>
+                </div>
+                <div class="rv-body">
+                    Extended service hours, faster turnover between events, and <strong>automated delivery during off-peak windows</strong> that currently go unserved. This is revenue capacity that doesn't exist without the fleet.
+                </div>
+                <div class="rv-annual">
+                    <span class="big">$${revenueAnnual.toLocaleString()}</span> / year in estimated new revenue capacity
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderSavings() {
+    const n = state.count;
+    const activeFleet = DATA.fleet.slice(0, n);
+    const monthlyCost = activeFleet.reduce((s, r) => s + r.monthlyEstimate, 0);
+    const monthlySavings = activeFleet.reduce((s, r) => s + r.savings, 0);
+    const netMonthly = monthlySavings - monthlyCost;
+    const sign = netMonthly >= 0 ? '+$' : '−$';
+    const robotWord = n === 1 ? 'robot' : 'robots';
+    const avgCost = n > 0 ? Math.round(monthlyCost / n) : 0;
+
+    document.getElementById('savingsContainer').innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Fleet Cost</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white">$${monthlyCost.toLocaleString()}</p>
+                <p class="text-[11px] text-gray-500 mt-1">${n} ${robotWord} × ~$${avgCost.toLocaleString()} avg</p>
+            </div>
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Hard Savings</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font" style="color:var(--accent-light)">$${monthlySavings.toLocaleString()}</p>
+                <p class="text-[11px] text-gray-500 mt-1">Labor &amp; vendor contracts offset</p>
+            </div>
+            <div class="stat-tile accent-green">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Net Monthly Benefit</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white">${sign}${Math.abs(netMonthly).toLocaleString()}</p>
+                <p class="text-[11px] text-gray-300 mt-1">${netMonthly >= 0 ? '+' : '−'}$${Math.abs(netMonthly * 12).toLocaleString()} annualized</p>
+            </div>
+        </div>
+    `;
+}
+
+function renderHiring() {
+    const n = state.count;
+    const activeFleet = DATA.fleet.slice(0, n);
+    const monthlyCost = activeFleet.reduce((s, r) => s + r.monthlyEstimate, 0);
+    const monthlySavings = activeFleet.reduce((s, r) => s + r.savings, 0);
+    const fteCost = getFteMonthlyCost(DATA.property);
+    const fteCount = (monthlySavings / fteCost).toFixed(1);
+    const fteEquivCost = Math.round(parseFloat(fteCount) * fteCost);
+    const delta = fteEquivCost - monthlyCost;
+    const deltaPct = fteEquivCost > 0 ? Math.round((delta / fteEquivCost) * 100) : 0;
+    const deltaSign = delta >= 0 ? '' : '−';
+
+    document.getElementById('hiringContainer').innerHTML = `
+        <div class="mt-6 p-6 rounded-xl" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-[11px] uppercase tracking-widest font-semibold" style="color:var(--accent-light)">vs. Hiring — Fully Loaded Labor Comparison</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Your Fleet</p>
+                    <p class="text-3xl font-bold tech-font text-white">$${monthlyCost.toLocaleString()}<span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1">All-in — hardware, service, support</p>
+                </div>
+                <div class="text-center text-3xl text-gray-500 font-light hidden md:block">&rarr;</div>
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Equivalent FTE Coverage</p>
+                    <p class="text-3xl font-bold tech-font text-white">$${fteEquivCost.toLocaleString()}<span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1">${fteCount} FTEs × $${fteCost.toLocaleString()}/mo fully-loaded</p>
+                </div>
+            </div>
+            <div class="mt-5 pt-5 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-3">
+                <p class="text-sm text-gray-300">The fleet delivers this coverage for</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font" style="color:var(--accent-light)">${deltaSign}$${Math.abs(delta).toLocaleString()}/mo ${delta >= 0 ? 'less' : 'more'}</p>
+                <p class="text-sm text-gray-300">${Math.abs(deltaPct)}% ${delta >= 0 ? 'cheaper' : 'more'} · ${deltaSign}$${Math.abs(delta * 12).toLocaleString()}/yr delta</p>
+            </div>
+            <p class="text-[10px] text-gray-500 italic mt-4 leading-relaxed">
+                Not counted: recruiting, turnover, OT premiums, overnight differentials, agency markup. Hospitality turnover runs 70–100%/yr — typically adds 20–40% on top of base FTE cost.
+            </p>
+        </div>
+    `;
+}
+
+function renderAnnualSummary() {
+    const n = state.count;
+    const activeFleet = DATA.fleet.slice(0, n);
+    const monthlyCost = activeFleet.reduce((s, r) => s + r.monthlyEstimate, 0);
+    const monthlySavings = activeFleet.reduce((s, r) => s + r.savings, 0);
+    const netMonthly = monthlySavings - monthlyCost;
+    const annualNet = netMonthly * 12;
+    const intelY1 = state.intel ? INTEL_Y1_INSTALL : 0;
+    const intelY2 = state.intel ? INTEL_Y2_LICENSE : 0;
+    const year1 = monthlyCost * 12 + intelY1;
+    const year2 = monthlyCost * 12 + intelY2;
+    const sign = annualNet >= 0 ? '+$' : '−$';
+
+    document.getElementById('annualContainer').innerHTML = `
+        <div class="mt-4 p-5 rounded-xl" style="background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 15%, transparent), color-mix(in srgb, var(--accent) 4%, transparent)); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center md:text-left">
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest font-semibold mb-1" style="color:var(--accent-light)">Year 1 All-In</p>
+                    <p class="text-2xl font-bold tech-font text-white">$${year1.toLocaleString()}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest font-semibold mb-1" style="color:var(--accent-light)">Year 2+ Steady-State</p>
+                    <p class="text-2xl font-bold tech-font text-white">$${year2.toLocaleString()}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest font-semibold mb-1" style="color:var(--accent-light)">Annual Net Cash Benefit</p>
+                    <p class="text-2xl font-bold tech-font" style="color:var(--accent-light)">${sign}${Math.abs(annualNet).toLocaleString()}</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderPhases() {
+    const n = state.count;
+    const phaseBreaks = generatePhaseBreaks(DATA.fleet.length);
+
+    // WHY: Determine how many phases are "reached" at the current slider position
+    let activePhases = 0;
+    for (const p of phaseBreaks) {
+        if (n >= (phaseBreaks.indexOf(p) === 0 ? 1 : phaseBreaks[phaseBreaks.indexOf(p) - 1].upTo + 1)) {
+            activePhases++;
+        }
+    }
+
+    // Add intelligence phase if toggled
+    const allPhases = [...phaseBreaks];
+    if (state.intel || DATA.fleet.length >= 7) {
+        allPhases.push({ upTo: DATA.fleet.length, name: 'Intelligence Platform', timeframe: 'Months 7-8' });
+    }
+
+    let phasesHtml = '';
+    allPhases.forEach((phase, idx) => {
+        const isIntel = phase.name === 'Intelligence Platform';
+        const included = isIntel ? state.intel : idx < activePhases;
+        const narrated = NARRATIVES.phases[idx];
+        const desc = narrated ? esc(narrated.description) : `Deploy fleet robots for ${esc(phase.name.toLowerCase())}.`;
+
+        // WHY: List which robots deploy in this phase
+        const prevUpTo = idx > 0 && !isIntel ? allPhases[idx - 1].upTo : 0;
+        const robotNames = isIntel ? [] : DATA.fleet.slice(prevUpTo, phase.upTo).map(s => `${esc(s.robot.company)} ${esc(s.robot.model_name)}`);
+
+        phasesHtml += `
+            <div class="phase-card${included ? ' included' : ' skipped'}">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold tech-font" style="background:var(--accent)">${idx + 1}</div>
+                    <p class="text-[10px] uppercase tracking-widest text-gray-700 font-semibold">${esc(phase.timeframe)}</p>
+                </div>
+                <p class="font-bold text-gray-900 mb-1 text-sm">${esc(phase.name)}</p>
+                <p class="text-xs text-gray-600 leading-snug">${desc}</p>
+                ${robotNames.length > 0 ? `<p class="text-[10px] text-gray-400 mt-2">${robotNames.join(', ')}</p>` : ''}
+                ${isIntel && !state.intel ? '<p class="text-[10px] mt-2 text-gray-500 italic">Requires Intelligence Platform add-on</p>' : ''}
+            </div>
+        `;
+    });
+
+    document.getElementById('phaseSection').innerHTML = `
+        <div class="text-center mb-6">
+            <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color:var(--accent)">Deployment Timeline</p>
+            <h2 class="headline text-3xl font-bold text-gray-900 mb-3">Phased rollout. Proven at each step.</h2>
+        </div>
+        <div class="phase-timeline">${phasesHtml}</div>
+    `;
+}
+
+function renderSavingsTable() {
+    const n = state.count;
+    const activeFleet = DATA.fleet.slice(0, n);
+    let total = 0;
+
+    let rowsHtml = '';
+    activeFleet.forEach((slot, i) => {
+        total += slot.savings;
+        const narr = NARRATIVES.robots[i] || {};
+        rowsHtml += `
+            <tr>
+                <td><strong>${esc(slot.robot.company)} ${esc(slot.robot.model_name)}</strong></td>
+                <td>${esc(slot.serviceLine)}</td>
+                <td>${esc(narr.savingsCapture || 'Labor offset')}</td>
+                <td class="num">$${slot.savings.toLocaleString()}</td>
+            </tr>
+        `;
+    });
+
+    document.getElementById('savingsTableSection').innerHTML = `
+        <div class="text-center mb-6">
+            <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color:var(--accent)">Savings Breakdown</p>
+            <h2 class="headline text-3xl font-bold text-gray-900 mb-3">Where the money comes from</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Robot</th>
+                        <th>Service Line</th>
+                        <th>Replaces</th>
+                        <th class="right">Monthly Savings</th>
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+                <tfoot>
+                    <tr class="total">
+                        <td colspan="3">Total Monthly Savings</td>
+                        <td class="num">$${total.toLocaleString()}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    `;
+}
+
+function renderUnlocks() {
+    const n = state.count;
+    const CATEGORY_COLOR = {
+        cleaning: '#6b8e23', delivery: '#3b7a9a', logistics: '#5a6b7a',
+        service: '#8a6f47', security: '#4a3a6a',
+    };
+
+    let activeCardsHtml = '';
+    DATA.fleet.slice(0, n).forEach((slot, i) => {
+        const narr = NARRATIVES.robots[i] || {};
+        const color = CATEGORY_COLOR[slot.type] || 'var(--accent)';
+        activeCardsHtml += `
+            <div class="unlock-card" style="border-left-color:${color}">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <span class="tech-font text-[10px] uppercase tracking-widest font-bold" style="color:${color}">${esc(slot.type)}</span>
+                    <span class="tech-font text-[10px] text-gray-400">${esc(slot.robot.model_name)}</span>
+                </div>
+                <p class="text-sm text-gray-800 leading-snug">${esc(narr.unlockNarrative || 'Automates ' + slot.serviceLine.toLowerCase())}</p>
+            </div>
+        `;
+    });
+
+    // "Next up" preview
+    let lockedHtml = '';
+    const upcoming = DATA.fleet.slice(n, n + 2);
+    if (upcoming.length > 0) {
+        upcoming.forEach((slot, i) => {
+            const narr = NARRATIVES.robots[n + i] || {};
+            lockedHtml += `
+                <div class="unlock-card locked">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <span class="tech-font text-[10px] uppercase tracking-widest font-bold text-gray-400">+${n + i + 1}th robot</span>
+                        <span class="tech-font text-[10px] text-gray-400">${esc(slot.robot.model_name)}</span>
+                    </div>
+                    <p class="text-sm text-gray-500 leading-snug">${esc(narr.unlockNarrative || 'Automates ' + slot.serviceLine.toLowerCase())}</p>
+                </div>
+            `;
+        });
+    }
+
+    document.getElementById('unlocksSection').innerHTML = `
+        <div class="text-center mb-6">
+            <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color:var(--accent)">Service Tier</p>
+            <h2 class="headline text-3xl font-bold text-gray-900 mb-3">${esc(NARRATIVES.tierName)}</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">${esc(NARRATIVES.tierNarrative)}</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">${activeCardsHtml}</div>
+        ${lockedHtml ? `
+            <div class="mt-4">
+                <p class="text-sm text-gray-500 font-semibold mb-3">Next up — add more robots to unlock:</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">${lockedHtml}</div>
+            </div>
+        ` : ''}
+    `;
+}
+
+function renderFooter() {
+    const date = DATA.generatedAt ? new Date(DATA.generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    document.getElementById('footerSection').innerHTML = `
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-gray-800">Accelerate Robotics</p>
+                    <p class="text-xs text-gray-500">One Brain. Many Bots. · Generated ${date}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="shareBtn" class="no-print px-4 py-2 rounded-lg text-sm font-semibold text-white" style="background:var(--accent)" onclick="shareProposal()">Share Proposal</button>
+                <button class="no-print px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-700 hover:bg-gray-100" onclick="window.print()">Print / Save PDF</button>
+                <a href="fleet-designer.html" class="no-print text-xs text-gray-500 hover:text-gray-700 underline">Back to Fleet Designer</a>
+            </div>
+        </div>
+        <div id="shareToast" style="display:none; position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); background:#1f2937; color:#fff; padding:0.75rem 1.5rem; border-radius:0.5rem; font-size:0.85rem; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+            Link copied to clipboard!
+        </div>
+    `;
+}
+
+/* ── BOOT ─────────────────────────────────────────────────────── */
+init();
+</script>
+
+</body>
+</html>
