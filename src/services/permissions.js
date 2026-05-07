@@ -33,34 +33,6 @@ async function getEffectivePermission(db, user, module) {
   return 'none';
 }
 
-/**
- * Checks if user has at least the required permission level on a module.
- * edit (2) satisfies a view (1) check. none (0) fails everything.
- */
-function hasPermission(db, user, module, requiredLevel) {
-  const effective = getEffectivePermission(db, user, module);
-  return PERMISSION_LEVELS[effective] >= PERMISSION_LEVELS[requiredLevel];
-}
-
-/**
- * Returns all effective permissions for a user across all modules.
- * Used by /api/auth/me to send permission map to the frontend.
- */
-// WHY: Each toolkit card in the command center dashboard is a separate module.
-// API-backed modules (deals, prospects, assessments, inquiries) are enforced both
-// frontend (card visibility) and backend (requirePermission middleware).
-// Static page modules (robot_catalog, elevator_sim, etc.) are frontend-only visibility.
-const ALL_MODULES = [
-  'deals', 'prospects', 'assessments', 'robot_command', 'robot_catalog',
-  'investors', 'national_rollout', 'financial_analysis', 'robots_dossier',
-  'service_van', 'elevator_sim', 'elevator_install', 'elevator_bom',
-  'inquiries', 'settings',
-];
-
-function getAllPermissions(db, user) {
-  const result = {};
-  for (const mod of ALL_MODULES) {
-    result[mod] = getEffectivePermission(db, user, mod);
 async function hasPermission(db, user, module, requiredLevel) {
   const effective = await getEffectivePermission(db, user, module);
   return PERMISSION_LEVELS[effective] >= PERMISSION_LEVELS[requiredLevel];
