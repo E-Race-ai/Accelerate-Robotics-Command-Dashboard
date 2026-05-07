@@ -63,8 +63,6 @@ function requirePermission(module, level) {
       return res.status(401).json({ error: 'Authentication required' });
     }
     try {
-      const db = require('../db/database');
-      const { hasPermission } = require('../services/permissions');
       const allowed = await hasPermission(db, req.admin, module, level);
       if (!allowed) {
         return res.status(403).json({ error: `Missing ${level} permission on ${module}` });
@@ -123,38 +121,4 @@ function requireAuthPage(req, res, next) {
   }
 }
 
-/**
- * Returns middleware that checks if the authenticated user has one of the allowed roles.
- * Must be used AFTER requireAuth.
- */
-function requireRole(...allowedRoles) {
-  return (req, res, next) => {
-    if (!req.admin) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-    if (!allowedRoles.includes(req.admin.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-    next();
-  };
-}
-
-/**
- * Returns middleware that checks if the authenticated user has the required
- * permission level on a given module. Must be used AFTER requireAuth.
- */
-function requirePermission(module, level) {
-  return (req, res, next) => {
-    if (!req.admin) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-    if (!hasPermission(db, req.admin, module, level)) {
-      return res.status(403).json({ error: 'You do not have permission to access this resource' });
-    }
-    next();
-  };
-}
-
-module.exports = { requireAuth, requireRole, requirePermission, JWT_SECRET };
-module.exports = { requireAuth, requireRole, JWT_SECRET };
 module.exports = { requireAuth, softAuth, requireRole, requirePermission, requireAuthPage, JWT_SECRET };
