@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Robotics — Thesis Hotel Proposal</title>
+<style>
+  @page { size: letter; margin: 0.6in; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 10.5pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    max-width: 8.5in;
+    margin: 0 auto;
+    padding: 0.6in;
+    background: #fff;
+  }
+  h1 { font-size: 22pt; font-weight: 700; color: #0d2137; margin-bottom: 2pt; border-bottom: 3px solid #0d2137; padding-bottom: 6pt; }
+  h2 { font-size: 14pt; font-weight: 700; color: #0d2137; margin-top: 22pt; margin-bottom: 8pt; border-bottom: 1px solid #ccc; padding-bottom: 4pt; page-break-after: avoid; }
+  h3 { font-size: 11pt; font-weight: 700; color: #1a3a5c; margin-top: 14pt; margin-bottom: 5pt; page-break-after: avoid; }
+  h4 { font-size: 10pt; font-weight: 700; color: #1a3a5c; margin-top: 10pt; margin-bottom: 4pt; page-break-after: avoid; }
+  p { margin-bottom: 7pt; }
+  .subtitle { font-size: 12pt; color: #555; margin-bottom: 2pt; }
+  .meta { font-size: 9pt; color: #777; margin-bottom: 14pt; }
+  .confidential { display: inline-block; background: #c0392b; color: #fff; font-size: 8pt; font-weight: 700; padding: 2pt 6pt; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 6pt; }
+  .draft { display: inline-block; background: #e67e22; color: #fff; font-size: 8pt; font-weight: 700; padding: 2pt 6pt; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 6pt; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 14pt 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt 0; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: #0d2137; color: #fff; font-weight: 700; text-align: left; padding: 5pt 8pt; font-size: 9pt; }
+  td { padding: 4pt 8pt; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7f9fb; }
+  td.num { text-align: right; font-family: 'Courier New', monospace; font-size: 9.5pt; }
+  td.center { text-align: center; }
+  td.label { font-weight: 600; color: #1a3a5c; }
+  tr.total td { background: #eef4ed !important; font-weight: 700; border-top: 2px solid #0d2137; }
+  tr.highlight td { background: #e8f5e9 !important; }
+
+  .callout { background: #eaf2f8; border-left: 4px solid #2980b9; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-green { background: #eef4ed; border-left: 4px solid #27ae60; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+  .callout-amber { background: #fdf2e9; border-left: 4px solid #e67e22; padding: 8pt 12pt; margin: 10pt 0 14pt 0; font-size: 10pt; }
+
+  ul, ol { margin: 4pt 0 8pt 18pt; }
+  li { margin-bottom: 3pt; }
+  strong { color: #0d2137; }
+
+  .section-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: #999; margin-bottom: 4pt; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8pt; margin: 10pt 0 14pt 0; }
+  .stat-box { background: #f4f6f9; border-top: 3px solid #0d2137; padding: 8pt 10pt; text-align: center; page-break-inside: avoid; }
+  .stat-box .number { font-size: 15pt; font-weight: 700; color: #0d2137; display: block; }
+  .stat-box .label { font-size: 7.5pt; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .phase-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10pt; margin: 10pt 0 14pt 0; }
+  .phase-card { border: 1px solid #d0d7de; border-radius: 4pt; padding: 10pt 12pt; page-break-inside: avoid; }
+  .phase-card .phase-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1px; color: #2980b9; font-weight: 700; margin-bottom: 2pt; }
+  .phase-card .phase-title { font-size: 11pt; font-weight: 700; color: #0d2137; margin-bottom: 4pt; }
+  .phase-card .phase-body { font-size: 9pt; line-height: 1.4; color: #333; }
+  .phase-card.p1 { border-top: 4px solid #2980b9; }
+  .phase-card.p2 { border-top: 4px solid #7c3aed; }
+  .phase-card.p3 { border-top: 4px solid #e67e22; }
+
+  .page-break { page-break-before: always; }
+  .footer { margin-top: 28pt; padding-top: 10pt; border-top: 1px solid #ccc; font-size: 8pt; color: #999; text-align: center; }
+  .note { font-size: 9pt; color: #777; font-style: italic; margin: 4pt 0 8pt 0; }
+
+  blockquote { background: #f4f6f9; border-left: 4px solid #0d2137; padding: 10pt 14pt; margin: 10pt 0; font-style: italic; font-size: 10pt; }
+
+  .signature-block { margin-top: 28pt; padding-top: 14pt; border-top: 1px solid #ccc; }
+  .signature-block .sig-line { display: inline-block; width: 3in; border-bottom: 1px solid #333; margin-right: 12pt; height: 20pt; vertical-align: bottom; }
+  .signature-block .sig-label { font-size: 9pt; color: #555; }
+
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none; }
+  }
+
+  .no-print { text-align: center; padding: 20pt 0; background: #f4f6f9; margin: 0 -0.6in; }
+  .no-print button { padding: 10pt 24pt; background: #0d2137; color: #fff; border: none; border-radius: 4pt; font-family: 'Georgia', serif; font-size: 11pt; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; }
+  .no-print button:hover { background: #1a3a5c; }
+</style>
+</head>
+<body>
+
+<!-- =============================================================
+     COVER / EXECUTIVE SUMMARY
+============================================================= -->
+<h1>Accelerate Robotics <span style="font-weight:400;font-size:13pt;">&mdash; Deployment Proposal</span></h1>
+<p class="subtitle">The Thesis Hotel &mdash; Miami, Florida</p>
+<p class="meta">A 7-Robot Coordinated Fleet under Robot-as-a-Service &mdash; April 2026 <span class="confidential">Confidential</span> <span class="draft">Working Draft</span></p>
+
+<h2 style="margin-top: 16pt;">Executive Summary</h2>
+
+<p>The Thesis Hotel is Accelerate Robotics' first deployment site &mdash; a 10-story mixed-use hotel and residences property in Miami. This proposal covers a <strong>7-robot coordinated fleet</strong> rolled out across three phases over approximately six months, operated under a <strong>Robot-as-a-Service (RaaS)</strong> agreement with no capital outlay from the hotel.</p>
+
+<div class="stat-grid">
+  <div class="stat-box">
+    <span class="number">7</span>
+    <span class="label">Robots, Full Fleet</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">3</span>
+    <span class="label">Deployment Phases</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">$10.50</span>
+    <span class="label">Per Bot / Hour, All-In</span>
+  </div>
+  <div class="stat-box">
+    <span class="number">$0</span>
+    <span class="label">Upfront Hotel Capital</span>
+  </div>
+</div>
+
+<h3>The Fleet at a Glance</h3>
+
+<table>
+<tr>
+  <th style="width:4%">#</th>
+  <th style="width:18%">Robot</th>
+  <th style="width:36%">Role</th>
+  <th style="width:28%">Environment</th>
+  <th style="width:14%">Phase</th>
+</tr>
+<tr><td class="center">1</td><td class="label">Keenon C40</td><td>Hard-floor scrub / sweep / mop</td><td>Lobby, Restaurant 1, Restaurant 2, Kitchen</td><td>Phase 2</td></tr>
+<tr><td class="center">2</td><td class="label">Keenon C30 #1</td><td>Autonomous carpet cleaner</td><td>Hotel guest floors 2&ndash;10</td><td>Phase 1</td></tr>
+<tr><td class="center">3</td><td class="label">Keenon C30 #2</td><td>Carpet cleaner + passive corridor monitor</td><td>Residences wing</td><td>Phase 3</td></tr>
+<tr><td class="center">4</td><td class="label">Keenon W3</td><td>Enclosed-cabin room delivery</td><td>Hotel guest floors, lobby dock</td><td>Phase 2</td></tr>
+<tr><td class="center">5</td><td class="label">Keenon S100</td><td>Autonomous bellhop &mdash; luggage</td><td>Lobby &harr; guest rooms</td><td>Phase 2</td></tr>
+<tr><td class="center">6</td><td class="label">Keenon S300 #1</td><td>Dirty linens heavy-cart transport</td><td>Guest floors &rarr; basement laundry</td><td>Phase 2</td></tr>
+<tr><td class="center">7</td><td class="label">Keenon S300 #2</td><td>Food service heavy-cart transport</td><td>Kitchen &rarr; upstairs pool deck</td><td>Phase 3</td></tr>
+</table>
+
+<h3>The Value Proposition</h3>
+
+<table>
+<tr><th style="width:55%">Metric</th><th style="text-align:right">Year 1 (Full Fleet)</th></tr>
+<tr><td><strong>Annual RaaS cost to The Thesis Hotel</strong></td><td class="num">~$238,000</td></tr>
+<tr><td>Equivalent hospitality labor displaced (conservative)</td><td class="num">~$357,600</td></tr>
+<tr><td>Equivalent hospitality labor displaced (with overtime, turnover, weekends)</td><td class="num">~$500,000&ndash;$550,000</td></tr>
+<tr class="highlight"><td><strong>Net operational savings</strong></td><td class="num"><strong>~$120,000&ndash;$310,000 / yr</strong></td></tr>
+<tr><td>Upfront capital from hotel</td><td class="num">$0</td></tr>
+<tr><td>Minimum commitment</td><td class="num">90 days</td></tr>
+<tr><td>Payback</td><td class="num">Immediate</td></tr>
+</table>
+
+<div class="callout-green">
+<strong>Savings start on day one of full-fleet operation.</strong> The RaaS model bundles hardware, software, deployment, training, maintenance, consumables, and support into a single hourly rate. The hotel pays only for billable hours actually operated.
+</div>
+
+<!-- =============================================================
+     CONTEXT
+============================================================= -->
+<div class="page-break"></div>
+
+<h2>1. Context</h2>
+
+<h3>The Site</h3>
+
+<p>The Thesis Hotel is a 10-story property in Miami. The building has three distinct environments sharing the same elevator infrastructure:</p>
+
+<ol>
+<li><strong>Hotel &mdash; floors 4&ndash;10.</strong> Guest rooms and carpeted corridors.</li>
+<li><strong>Amenity and lobby levels &mdash; floors 1&ndash;3.</strong> Restaurants, lobby, bar, pool deck (upper level), back-of-house.</li>
+<li><strong>Residences wing.</strong> Separate corridors with longer-term occupants.</li>
+</ol>
+
+<p>The full deployment covers all three environments with a coordinated fleet.</p>
+
+<h3>Why Accelerate Robotics</h3>
+
+<p><strong>One &mdash; we integrate robots from any vendor, not just one.</strong> Today's fleet is all Keenon, but the orchestration platform can add Pudu, Bear Robotics, Savioke, or future humanoids without rebuilding. You are buying a platform, not a hardware brand.</p>
+
+<p><strong>Two &mdash; we solve the elevator problem for a tenth of what the OEMs charge.</strong> Our universal button emulator lets any robot operate the elevator without modifying the elevator firmware or signing a ThyssenKrupp API contract. This is what makes a 7-robot deployment across 10 floors economically viable.</p>
+
+<p><strong>Three &mdash; we're anchored in Miami and committed to getting this right.</strong> This is our first site, which means it gets founder-level attention. You are not deal #47 &mdash; you are deal #1.</p>
+
+<h3>What the Robots Do and Don't Do</h3>
+
+<table>
+<tr><th style="width:50%">They do</th><th style="width:50%">They don't</th></tr>
+<tr>
+  <td>Clean floors &mdash; carpet and hard surfaces</td>
+  <td>Replace housekeeping, bell staff, front desk, or restaurant staff</td>
+</tr>
+<tr>
+  <td>Carry bags, linens, food, and amenities through the building</td>
+  <td>Enter guest rooms without a human</td>
+</tr>
+<tr>
+  <td>Ride elevators autonomously</td>
+  <td>Handle interpersonal guest service</td>
+</tr>
+<tr>
+  <td>Monitor corridors for anomalies (residences only, with HOA consent)</td>
+  <td>Make discretionary operational decisions</td>
+</tr>
+</table>
+
+<p>The robots handle the repetitive, injury-prone, transit-heavy tasks. Your staff handles everything else, with more time and energy for what actually matters to guests.</p>
+
+<!-- =============================================================
+     THE FLEET
+============================================================= -->
+<h2>2. The 7-Robot Fleet</h2>
+
+<p>The fleet is designed around the natural rhythm of the property &mdash; meal service windows, housekeeping turnover, check-in peaks, pool service hours, overnight quiet time. Each robot has a dedicated role and a clear handoff with the human staff it works alongside.</p>
+
+<h3>Per-Robot Operating Profile</h3>
+
+<table>
+<tr>
+  <th style="width:4%">#</th>
+  <th style="width:14%">Robot</th>
+  <th style="width:28%">Peak hours</th>
+  <th style="width:54%">Value proposition</th>
+</tr>
+<tr>
+  <td class="center">1</td>
+  <td class="label">C40</td>
+  <td>04:00&ndash;13:00 + 22:30&ndash;00:30</td>
+  <td>Consistent, hotel-wide hard-floor cleaning without adding a labor shift. Runs Restaurant 1 &rarr; Lobby &rarr; Restaurant 2 &rarr; Kitchen deep sweep.</td>
+</tr>
+<tr>
+  <td class="center">2</td>
+  <td class="label">C30 #1</td>
+  <td>06:00&ndash;21:00</td>
+  <td>Carpets cleaned to standard every day, on a repeatable schedule. 9 floors / 90 minutes each via the elevator.</td>
+</tr>
+<tr>
+  <td class="center">3</td>
+  <td class="label">C30 #2</td>
+  <td>05:00&ndash;07:00, 15:00&ndash;17:00 + passive monitor</td>
+  <td>Corridor cleanliness plus anomaly detection for long-term residents. Optional, HOA-gated.</td>
+</tr>
+<tr>
+  <td class="center">4</td>
+  <td class="label">W3</td>
+  <td>24/7 on-demand</td>
+  <td>Privacy-respecting room delivery of amenities (hair dryer, iron, towels) and after-hours room service.</td>
+</tr>
+<tr>
+  <td class="center">5</td>
+  <td class="label">S100</td>
+  <td>Check-in / check-out peaks</td>
+  <td>Robotic bellhop &mdash; guest luggage from front desk to room, freeing bell staff for high-touch guest interaction.</td>
+</tr>
+<tr>
+  <td class="center">6</td>
+  <td class="label">S300 #1</td>
+  <td>Turnover peaks</td>
+  <td>Replaces the longest physical-carry task housekeeping does &mdash; dirty linens from guest floors to basement laundry.</td>
+</tr>
+<tr>
+  <td class="center">7</td>
+  <td class="label">S300 #2</td>
+  <td>10:00&ndash;21:00 continuous</td>
+  <td>Frees the pool-deck attendant from elevator-running between the kitchen and the upstairs pool service.</td>
+</tr>
+</table>
+
+<h3>The Novel Use Case &mdash; Residences Monitoring</h3>
+
+<p>The residences C30 does double duty: it cleans the corridors daily, and between sweeps it sits at a mid-corridor observation dock and runs <strong>passive anomaly detection</strong>:</p>
+
+<ul>
+<li>Package or trash left in a hallway</li>
+<li>Water or liquid on the floor (leak from under a door)</li>
+<li>Noise exceeding a threshold from a unit</li>
+<li>Visual smoke or fire</li>
+<li>Resident down or prolonged stationary (with HOA approval)</li>
+</ul>
+
+<p><strong>No new hardware is required</strong> &mdash; the C30's existing sensors handle everything. The intelligence lives in the Accelerate Robotics orchestration platform.</p>
+
+<div class="callout-amber">
+<strong>Optional and HOA-gated.</strong> The monitoring capability requires HOA board review, resident disclosure, and explicit consent. If the HOA declines, the residences C30 runs as a pure cleaning deployment at the standard RaaS rate &mdash; no penalty, and monitoring can be added later if the HOA changes position.
+</div>
+
+<!-- =============================================================
+     PHASED DEPLOYMENT
+============================================================= -->
+<div class="page-break"></div>
+
+<h2>3. Phased Deployment</h2>
+
+<p>Deployment follows three phases over approximately six months. Each phase has a hard go/no-go gate at the end &mdash; the hotel is never locked into the next phase without evidence the previous one worked.</p>
+
+<div class="phase-grid">
+  <div class="phase-card p1">
+    <div class="phase-label">Phase 1 &mdash; Month 1&ndash;2</div>
+    <div class="phase-title">Cleaning Proof</div>
+    <div class="phase-body">
+      One Keenon C30 on hotel guest-floor carpets. 30-day monitored pilot. Daily operation with housekeeping. Pre- and post-deployment labor audit.
+      <p style="margin-top:4pt"><strong>Gate:</strong> &ge; 90% uptime, zero safety incidents, &ge; 2 hours/day labor reclaimed, positive staff sentiment.</p>
+    </div>
+  </div>
+  <div class="phase-card p2">
+    <div class="phase-label">Phase 2 &mdash; Month 2&ndash;4</div>
+    <div class="phase-title">Elevator + Hotel Fleet</div>
+    <div class="phase-body">
+      Universal button-emulator install. Add C40 (hard floors), W3 (room delivery), S100 (bellhop), S300 #1 (linens). Multi-floor autonomous operation begins.
+      <p style="margin-top:4pt"><strong>Gate:</strong> 20 consecutive supervised elevator rides, no guest complaints, no safety incidents.</p>
+    </div>
+  </div>
+  <div class="phase-card p3">
+    <div class="phase-label">Phase 3 &mdash; Month 4&ndash;6</div>
+    <div class="phase-title">Residences + Pool Food</div>
+    <div class="phase-body">
+      Add C30 #2 (residences) and S300 #2 (kitchen to pool deck). HOA review and consent flow complete. Monitoring capability commissioned if approved.
+      <p style="margin-top:4pt"><strong>Gate:</strong> Residences operational with HOA sign-off, pool food runs without missed orders.</p>
+    </div>
+  </div>
+</div>
+
+<h3>Phase 1 &mdash; Cleaning Proof (Month 1&ndash;2)</h3>
+
+<p><strong>Goal:</strong> Prove the platform can operate at Thesis Hotel without incident. Build trust with staff. Generate the first real ROI data.</p>
+
+<p><strong>Scope:</strong> Robot #2 &mdash; Keenon C30 #1 on hotel guest-floor carpets. 30-day monitored pilot with housekeeping as primary operator. Pre- and post-deployment labor audit.</p>
+
+<p><strong>Success criteria:</strong></p>
+<ul>
+<li>&ge; 90% uptime across scheduled sessions</li>
+<li>Zero safety incidents</li>
+<li>&ge; 2 hours/day of housekeeping labor reclaimed</li>
+<li>Positive housekeeping sentiment &mdash; the team wants to keep it</li>
+<li>&le; 1 guest complaint related to the robot over 30 days</li>
+</ul>
+
+<h3>Phase 2 &mdash; Elevator Integration + Hotel-Side Fleet (Month 2&ndash;4)</h3>
+
+<p><strong>Goal:</strong> Unlock multi-floor operation. Add the full hotel-side fleet.</p>
+
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Elevator integration via the universal button emulator &mdash; install with authorized ThyssenKrupp mechanic</li>
+<li>Add Robot #1 &mdash; Keenon C40 (downstairs hard floors)</li>
+<li>Add Robot #4 &mdash; Keenon W3 (room delivery)</li>
+<li>Add Robot #5 &mdash; Keenon S100 (luggage bellhop)</li>
+<li>Add Robot #6 &mdash; Keenon S300 #1 (dirty linens)</li>
+</ul>
+
+<p><strong>Success criteria:</strong></p>
+<ul>
+<li>20 consecutive successful elevator rides by the W3, supervised</li>
+<li>C40 completes the full restaurant-lobby-restaurant-kitchen route without incident</li>
+<li>S100 completes 20 supervised bellhop trips</li>
+<li>S300 #1 completes 20 supervised linens runs to the basement</li>
+<li>No guest complaints related to any new robot &mdash; no safety incidents</li>
+</ul>
+
+<h3>Phase 3 &mdash; Residences + Food + Monitoring (Month 4&ndash;6)</h3>
+
+<p><strong>Goal:</strong> Complete the 7-robot fleet. Launch the monitoring capability (subject to HOA approval).</p>
+
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Add Robot #3 &mdash; Keenon C30 #2 (residences cleaning + monitoring)</li>
+<li>Add Robot #7 &mdash; Keenon S300 #2 (kitchen to pool-deck food transport)</li>
+<li>HOA review and sign-off on monitoring scope</li>
+<li>Resident disclosure and consent protocol</li>
+<li>Alert routing and on-call integration for critical events</li>
+</ul>
+
+<p><strong>Success criteria:</strong></p>
+<ul>
+<li>Residences corridor cleaning operational with HOA and resident support</li>
+<li>Food delivery to pool deck operational without missed orders</li>
+<li>Monitoring capability running with appropriate privacy and alert scope (if approved)</li>
+<li>First month of residences alert data reviewed with HOA</li>
+</ul>
+
+<!-- =============================================================
+     INVESTMENT
+============================================================= -->
+<div class="page-break"></div>
+
+<h2>4. Investment Summary</h2>
+
+<h3>Pricing Structure &mdash; Robot-as-a-Service</h3>
+
+<p><strong>$10.50 per robot per billable hour, all-inclusive.</strong> The hotel pays one line item per month based on billable hours actually operated. No capital purchase, no multi-year lock-in, no separate maintenance or consumables charges.</p>
+
+<p><strong>"All-inclusive"</strong> means every one of the following is bundled into the hourly rate:</p>
+
+<table>
+<tr><th style="width:50%">Included in RaaS</th><th style="width:50%">Included in RaaS</th></tr>
+<tr>
+  <td>Robot hardware (on our balance sheet, not yours)</td>
+  <td>Deployment and commissioning</td>
+</tr>
+<tr>
+  <td>SLAM mapping and route design</td>
+  <td>Elevator integration (button emulator install)</td>
+</tr>
+<tr>
+  <td>Ongoing fleet management software</td>
+  <td>24/7 remote monitoring</td>
+</tr>
+<tr>
+  <td>On-call technical support</td>
+  <td>Scheduled preventive maintenance</td>
+</tr>
+<tr>
+  <td>Consumables (brushes, filters, squeegee, mop pads)</td>
+  <td>Break-fix repair</td>
+</tr>
+<tr>
+  <td>Loaner robot if a primary is out for repair</td>
+  <td>Annual safety inspection + written report</td>
+</tr>
+<tr>
+  <td>3-day on-site commissioning training</td>
+  <td>Quarterly refresher training</td>
+</tr>
+<tr>
+  <td>Monthly business review + performance reporting</td>
+  <td>Extended warranty coverage beyond Keenon manufacturer</td>
+</tr>
+</table>
+
+<h3>Phase 1 Pilot Discount</h3>
+
+<p><strong>$8.50 per robot per billable hour</strong> for the 30-day Phase 1 pilot. This is a 19% discount against the standard rate, intended to lower the barrier to getting started. Pricing returns to $10.50/hr at the start of Phase 2.</p>
+
+<h3>Monthly Cost Projection</h3>
+
+<p class="note">Assumptions: 75% utilization, 12 billable hours per day per robot (some robots operate fewer hours per their schedules and bill proportionally lower). Final billing is based on actual operated hours.</p>
+
+<table>
+<tr>
+  <th style="width:22%">Phase</th>
+  <th style="width:15%">Months</th>
+  <th style="width:28%">Fleet size</th>
+  <th style="width:20%; text-align:right">Monthly cost</th>
+  <th style="width:15%">Rate</th>
+</tr>
+<tr>
+  <td class="label">Phase 1 pilot</td>
+  <td>Month 1</td>
+  <td>1 &times; C30</td>
+  <td class="num">~$2,300</td>
+  <td>$8.50/hr</td>
+</tr>
+<tr>
+  <td class="label">Phase 2 ramp</td>
+  <td>Month 2&ndash;3</td>
+  <td>5 robots (add C40, W3, S100, S300 #1)</td>
+  <td class="num">~$14,200</td>
+  <td>$10.50/hr</td>
+</tr>
+<tr>
+  <td class="label">Phase 3 full</td>
+  <td>Month 4+</td>
+  <td>7 robots (add C30 #2, S300 #2)</td>
+  <td class="num">~$19,900</td>
+  <td>$10.50/hr</td>
+</tr>
+<tr class="total">
+  <td colspan="3"><strong>Annualized Year 1 full fleet</strong></td>
+  <td class="num"><strong>~$238,000</strong></td>
+  <td></td>
+</tr>
+</table>
+
+<h3>Comparison to Current Labor Cost</h3>
+
+<p>Target labor displaced by the 7-robot fleet (conservative single-shift estimates):</p>
+
+<table>
+<tr>
+  <th style="width:20%">Robot</th>
+  <th style="width:34%">Current equivalent labor</th>
+  <th style="width:14%; text-align:right">Hours/day</th>
+  <th style="width:14%; text-align:right">Loaded $/hr</th>
+  <th style="width:18%; text-align:right">Monthly cost</th>
+</tr>
+<tr><td class="label">C40</td><td>Overnight floor cleaner</td><td class="num">8</td><td class="num">$22</td><td class="num">$5,280</td></tr>
+<tr><td class="label">C30 #1</td><td>Daytime carpet cleaning rotation</td><td class="num">10</td><td class="num">$22</td><td class="num">$6,600</td></tr>
+<tr><td class="label">C30 #2</td><td>Residences cleaning + monitor</td><td class="num">4 + on-call</td><td class="num">$24</td><td class="num">$4,000</td></tr>
+<tr><td class="label">W3</td><td>After-hours amenity runs</td><td class="num">6</td><td class="num">$22</td><td class="num">$3,960</td></tr>
+<tr><td class="label">S100</td><td>Bellhop transfers</td><td class="num">5</td><td class="num">$18</td><td class="num">$2,700</td></tr>
+<tr><td class="label">S300 #1</td><td>Linens transit</td><td class="num">6</td><td class="num">$22</td><td class="num">$3,960</td></tr>
+<tr><td class="label">S300 #2</td><td>Pool kitchen runner</td><td class="num">5</td><td class="num">$22</td><td class="num">$3,300</td></tr>
+<tr class="total"><td colspan="4"><strong>Total human-labor equivalent</strong></td><td class="num"><strong>~$29,800 / mo</strong></td></tr>
+</table>
+
+<table>
+<tr><th style="width:60%">Annualized comparison</th><th style="text-align:right">Year 1</th></tr>
+<tr><td>Current equivalent labor (conservative, single-shift)</td><td class="num">~$357,600</td></tr>
+<tr><td>Upper estimate with overtime, no-shows, benefits, turnover, weekends</td><td class="num">~$500,000&ndash;$550,000</td></tr>
+<tr><td>Accelerate Robotics 7-robot RaaS (full fleet)</td><td class="num">~$238,000</td></tr>
+<tr class="highlight"><td><strong>Net savings range</strong></td><td class="num"><strong>$120,000&ndash;$310,000 / yr</strong></td></tr>
+</table>
+
+<h3>What the Hotel Does NOT Pay For</h3>
+
+<ul>
+<li>No robot purchase</li>
+<li>No software license purchase</li>
+<li>No elevator integration capital</li>
+<li>No deployment professional services fee (bundled)</li>
+<li>No SLA fee (bundled)</li>
+<li>No maintenance fee (bundled)</li>
+<li>No consumables fee (bundled)</li>
+</ul>
+
+<p>The only additional costs are basic site prep (110V outlets at charging docks if not already available, minor housekeeping closet adjustments) and standard IT work to set up a dedicated 2.4 GHz IoT SSID.</p>
+
+<h3>Commitment Terms</h3>
+
+<ul>
+<li><strong>90-day minimum term</strong> &mdash; covers Phase 1 pilot plus start of Phase 2</li>
+<li><strong>30-day cancellation notice</strong> after the 90-day minimum</li>
+<li><strong>No penalty</strong> for cancellation after Month 3 &mdash; just return the robots</li>
+<li><strong>No long-term lock-in</strong> &mdash; this is a service agreement, not a finance lease</li>
+<li><strong>Right-sizing</strong> &mdash; the hotel can add or remove robots at phase boundaries with 30-day notice</li>
+</ul>
+
+<!-- =============================================================
+     SLA
+============================================================= -->
+<div class="page-break"></div>
+
+<h2>5. Service Level Agreement</h2>
+
+<p>Every robot in the fleet is covered by the same SLA, included in the RaaS rate.</p>
+
+<h3>Response Times</h3>
+
+<table>
+<tr>
+  <th style="width:32%">Event</th>
+  <th style="width:34%">Response</th>
+  <th style="width:34%">Resolution target</th>
+</tr>
+<tr>
+  <td>Robot offline or unresponsive</td>
+  <td>&le; 15 min business hours / &le; 30 min off-hours</td>
+  <td>Remote restart &le; 1 hr; on-site &le; 4 hrs if needed</td>
+</tr>
+<tr>
+  <td>Safety-related incident</td>
+  <td>Immediate, 24/7</td>
+  <td>On-site &le; 2 hrs regardless of time</td>
+</tr>
+<tr>
+  <td>Cleaning or delivery quality issue</td>
+  <td>Next business hour</td>
+  <td>Root-cause &le; 1 business day</td>
+</tr>
+<tr>
+  <td>Scheduled maintenance</td>
+  <td>7 days advance notice</td>
+  <td>Zero disruption to operation</td>
+</tr>
+<tr>
+  <td>Firmware update</td>
+  <td>24 hours advance notice</td>
+  <td>Deployed outside service hours</td>
+</tr>
+</table>
+
+<h3>Training &mdash; Included</h3>
+
+<p>Three-day on-site training as part of commissioning:</p>
+
+<table>
+<tr><th style="width:18%">Day</th><th>Focus</th></tr>
+<tr>
+  <td class="label">Day 1 &mdash; Setup</td>
+  <td>Facility walk-through, route planning, Wi-Fi verification, charging dock setup, workflow integration planning.</td>
+</tr>
+<tr>
+  <td class="label">Day 2 &mdash; Training</td>
+  <td>Hands-on use for housekeeping, front desk, and facility ops; loading/unloading procedures for delivery robots; troubleshooting basics; live testing in real operating conditions.</td>
+</tr>
+<tr>
+  <td class="label">Day 3 &mdash; Launch</td>
+  <td>Fine-tuning routes and schedules, operational best practices, performance testing during real service hours, final sign-off and readiness check.</td>
+</tr>
+</table>
+
+<p>Ongoing training is included: <strong>one refresher session per quarter</strong>, or on staff turnover.</p>
+
+<h3>Performance Reporting</h3>
+
+<p><strong>Monthly business review</strong> with the GM and/or Head of Engineering covering uptime by robot, task completion stats, labor hours reclaimed, guest complaints or incidents, maintenance events, billing summary, and upcoming schedule.</p>
+
+<p><strong>Quarterly optimization review</strong> covering route efficiency, utilization trends, schedule recommendations, and expansion opportunities.</p>
+
+<!-- =============================================================
+     WHAT HOTEL PROVIDES
+============================================================= -->
+<h2>6. What the Hotel Provides</h2>
+
+<h3>Site Infrastructure</h3>
+<ul>
+<li>110V / 15A outlets at each charging dock location (7 docks total, full fleet)</li>
+<li>2.4 GHz Wi-Fi coverage at &ge; &minus;65 dBm across all robot routes</li>
+<li>Dedicated IoT SSID or VLAN for the robot fleet (no guest network)</li>
+<li>DHCP reservations for robot MAC addresses</li>
+<li>Back-of-house access for service visits</li>
+</ul>
+
+<h3>Elevator Access</h3>
+<ul>
+<li>Permission for Accelerate Robotics plus authorized ThyssenKrupp mechanic to install the button emulator in the elevator cab</li>
+<li>Temporary elevator out-of-service window (~2 hours per cab) during Phase 2 install</li>
+<li>Elevator service vendor contact and coordination</li>
+</ul>
+
+<h3>Staffing Partnership</h3>
+<ul>
+<li>Designated Head of Engineering and/or Facility Ops point of contact</li>
+<li>Housekeeping team willingness to work alongside the robots</li>
+<li>Front desk willingness to dispatch the S100 (luggage) and W3 (room delivery)</li>
+<li>Kitchen expediter coordination for the S300 food transport</li>
+</ul>
+
+<h3>Access and Security</h3>
+<ul>
+<li>After-hours access to the kitchen for the C40 overnight cleaning window</li>
+<li>Back-of-house access to the basement laundry for the S300 #1 linens run</li>
+<li>Pool-deck access for the S300 #2 food carrier</li>
+<li>Residences HOA coordination for Robot #3 (required for monitoring capability)</li>
+</ul>
+
+<h3>Insurance</h3>
+<ul>
+<li>Hotel's general property insurance remains primary for the building</li>
+<li>Accelerate Robotics carries commercial general liability and robot-specific equipment coverage</li>
+</ul>
+
+<!-- =============================================================
+     RISKS
+============================================================= -->
+<div class="page-break"></div>
+
+<h2>7. Risks and Mitigations</h2>
+
+<table>
+<tr><th style="width:40%">Risk</th><th style="width:60%">Mitigation</th></tr>
+<tr>
+  <td class="label">Phase 1 pilot fails publicly</td>
+  <td>Conservative scope (one robot, one use case). Rollback plan &mdash; robot parked, housekeeping goes back to manual workflow. No public launch until Day 30 review.</td>
+</tr>
+<tr>
+  <td class="label">Elevator integration fails</td>
+  <td>Button emulator is pre-bench-tested before install day. Keenon E-Box is the fallback. Worst case, install is reverted and we redesign with no disruption to the hotel.</td>
+</tr>
+<tr>
+  <td class="label">2.4 GHz Wi-Fi gotcha</td>
+  <td>Mandatory pre-deployment Wi-Fi survey with hotel IT. If 2.4 GHz coverage is absent, we install a dedicated IoT SSID before robots arrive.</td>
+</tr>
+<tr>
+  <td class="label">Housekeeping or staff pushback</td>
+  <td>Framed as capacity expansion, not replacement. Staff included in pilot planning. Baseline labor data collected with the team, not done <em>to</em> them.</td>
+</tr>
+<tr>
+  <td class="label">HOA declines residences monitoring</td>
+  <td>Residences C30 runs as cleaning-only at the standard rate. No penalty. Monitoring can be added later if the HOA changes position.</td>
+</tr>
+<tr>
+  <td class="label">Guest interacts with a robot unsafely</td>
+  <td>Signage, staff briefing, escalation SOP. All robots have emergency stops. Incident log maintained and reviewed monthly.</td>
+</tr>
+<tr>
+  <td class="label">Elevator service contract blocks panel work</td>
+  <td>Coordinated install with authorized ThyssenKrupp mechanic paid for the install window. Insurance coverage confirmed in advance.</td>
+</tr>
+<tr>
+  <td class="label">Robot damaged by staff or guest</td>
+  <td>Accelerate Robotics carries equipment coverage; incident response protocol; replacement or loaner deployed same day.</td>
+</tr>
+</table>
+
+<!-- =============================================================
+     ASK
+============================================================= -->
+<h2>8. The Ask</h2>
+
+<p>Three things from Thesis Hotel leadership:</p>
+
+<ol>
+<li><strong>Sign the 90-day Phase 1 pilot agreement.</strong> This is the low-commitment, high-evidence start. One robot, one use case, measurable outcomes.</li>
+<li><strong>Commit to the 7-robot fleet if Phase 1 hits its success criteria.</strong> We want to plan Phase 2 in parallel with running Phase 1. If Phase 1 fails the targets, we walk away with no penalty.</li>
+<li><strong>Introduce us to the HOA board.</strong> The residences monitoring use case is unique to Thesis Hotel's mixed-use structure. An early HOA conversation lets us design the consent and privacy flow in parallel with Phase 1 and Phase 2, so Phase 3 is ready to go live when we're ready to commission it.</li>
+</ol>
+
+<!-- =============================================================
+     NEXT STEPS
+============================================================= -->
+<h2>9. What Happens Next</h2>
+
+<table>
+<tr><th style="width:18%">Week</th><th>Activity</th></tr>
+<tr>
+  <td class="label">Week 1</td>
+  <td>Pilot contract signed. Kickoff meeting scheduled. Site survey date confirmed.</td>
+</tr>
+<tr>
+  <td class="label">Week 2</td>
+  <td>Full property walk with Head of Engineering and Facility Ops. Corridor measurements, threshold audit, Wi-Fi survey. Elevator panel inspection with ThyssenKrupp service. Network topology review with hotel IT. Charging dock locations confirmed. HOA introductory meeting scheduled.</td>
+</tr>
+<tr>
+  <td class="label">Week 3</td>
+  <td>First C30 robot delivered and installed. SLAM mapping on target guest floors. Housekeeping training session. Pre-deployment baseline capture. Day 1 go-live.</td>
+</tr>
+<tr>
+  <td class="label">Week 4&ndash;6</td>
+  <td>Phase 1 pilot operation under supervision. Daily check-ins in Week 1, weekly thereafter. Incident log maintained. Data captured against success criteria.</td>
+</tr>
+<tr>
+  <td class="label">Week 7</td>
+  <td>Day 30 review. Retrospective meeting with GM, Head of Engineering, Facility Ops. Decision on Phase 2 go/no-go. If go: Phase 2 contract amendment signed, fleet expansion begins.</td>
+</tr>
+</table>
+
+<!-- =============================================================
+     CONTACT & SIGNATURE
+============================================================= -->
+<h2>10. Contact</h2>
+
+<p><strong>Eric Race</strong> &mdash; Founder &amp; CEO, Accelerate Robotics<br>
+eric@acceleraterobotics.ai<br>
+Miami, Florida</p>
+
+<p>Deployment coordination, field service, and on-call escalation all flow through Eric during Phase 1 and Phase 2 of Thesis Hotel. As the fleet expands beyond this site, named roles will be assigned for field service and customer success &mdash; but for the first 90 days you have direct founder access.</p>
+
+<div class="signature-block">
+<p><strong>Proposal acknowledgment</strong> &mdash; this is a proposal, not a contract. A definitive services agreement will be drafted and executed separately.</p>
+<p style="margin-top: 24pt">
+  <span class="sig-line">&nbsp;</span>
+  <span class="sig-label">The Thesis Hotel &mdash; Authorized Signatory</span>
+</p>
+<p style="margin-top: 18pt">
+  <span class="sig-line">&nbsp;</span>
+  <span class="sig-label">Date</span>
+</p>
+<p style="margin-top: 24pt">
+  <span class="sig-line">&nbsp;</span>
+  <span class="sig-label">Eric Race &mdash; Accelerate Robotics</span>
+</p>
+<p style="margin-top: 18pt">
+  <span class="sig-line">&nbsp;</span>
+  <span class="sig-label">Date</span>
+</p>
+</div>
+
+<div class="footer">
+Accelerate Robotics &middot; acceleraterobotics.ai &middot; Miami, Florida &middot; Confidential &mdash; The Thesis Hotel &middot; April 2026
+</div>
+
+<!-- Print button (screen only) -->
+<div class="no-print">
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+</body>
+</html>
