@@ -822,8 +822,60 @@ async function initSchema() {
       voted_at TEXT NOT NULL DEFAULT (datetime('now')),
       voted_by_email TEXT,
       UNIQUE(hotel_saved_id, player)
-    )`,
+    )`
   );
+
+  // ── Enterprise Risk Management register ─────────────────────────
+  // The CEO's living risk dashboard. Each row is one named risk
+  // facing the company, scored on a 5×5 likelihood × impact matrix
+  // both *inherent* (raw, no controls) and *residual* (after the
+  // mitigations we have in place today). Owner is who's accountable.
+  // Trend tracks rising/stable/falling. linked_metrics is a JSON
+  // array of automated data feeds that contribute to this risk's
+  // score so it can update in real time.
+  await client.execute(`CREATE TABLE IF NOT EXISTS risk_register (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL CHECK(category IN (
+      'strategic','operational','financial','technology',
+      'regulatory','people','legal','reputation'
+    )),
+    title TEXT NOT NULL,
+    description TEXT,
+    inherent_likelihood INTEGER NOT NULL CHECK(inherent_likelihood BETWEEN 1 AND 5),
+    inherent_impact INTEGER NOT NULL CHECK(inherent_impact BETWEEN 1 AND 5),
+    residual_likelihood INTEGER NOT NULL CHECK(residual_likelihood BETWEEN 1 AND 5),
+    residual_impact INTEGER NOT NULL CHECK(residual_impact BETWEEN 1 AND 5),
+    mitigation TEXT,
+    owner TEXT,
+    status TEXT NOT NULL DEFAULT 'open'
+      CHECK(status IN ('open','mitigating','monitored','closed')),
+    trend TEXT NOT NULL DEFAULT 'stable'
+      CHECK(trend IN ('rising','stable','falling')),
+    review_cadence_days INTEGER NOT NULL DEFAULT 30,
+    last_reviewed_at TEXT,
+    next_review_due TEXT,
+    linked_metrics TEXT,
+    tags TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_risk_status ON risk_register(status)`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_risk_category ON risk_register(category)`);
+
+  // Time-series: every score change is logged so we can render a
+  // trend line per risk over months. Decoupled from the register
+  // row so we don't lose history when the score updates.
+  await client.execute(`CREATE TABLE IF NOT EXISTS risk_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    risk_id INTEGER NOT NULL REFERENCES risk_register(id) ON DELETE CASCADE,
+    residual_likelihood INTEGER NOT NULL,
+    residual_impact INTEGER NOT NULL,
+    residual_score INTEGER NOT NULL,
+    note TEXT,
+    changed_by TEXT,
+    changed_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_risk_history_risk ON risk_history(risk_id, changed_at DESC)`);
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_triage_votes_hotel ON hotel_triage_votes(hotel_saved_id)`);
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_triage_votes_player ON hotel_triage_votes(player)`);
 
@@ -1038,6 +1090,46 @@ const ready = isTestEnv ? Promise.resolve() : (async () => {
     // Non-fatal — server boots even if scoring trips. Eric can re-run via
     // POST /api/hotel-research/score-all anytime.
     console.warn('[db] AI Fit Score v1 boot pass failed:', err.message);
+  }
+
+  // ── Seed Enterprise Risk Management baseline ─────────────────────
+  // First-boot only: populate risk_register with a sensible v1 set of
+  // risks for a hospitality robotics startup. Once the table has any
+  // rows we never re-seed (so user edits stick). To reset: truncate
+  // the table manually.
+  try {
+    const existing = await one('SELECT COUNT(*) as n FROM risk_register');
+    if (existing && existing.n === 0) {
+      const seeds = require('./seeds/risk-register-seeds');
+      console.log(`[db] Seeding risk_register with ${seeds.length} baseline risks…`);
+      const stamp = new Date().toISOString();
+      for (const r of seeds) {
+        await run(
+          `INSERT INTO risk_register
+            (category, title, description,
+             inherent_likelihood, inherent_impact,
+             residual_likelihood, residual_impact,
+             mitigation, owner, status, trend,
+             review_cadence_days, last_reviewed_at, next_review_due,
+             linked_metrics, tags)
+           VALUES (?,?,?, ?,?, ?,?, ?,?,?,?, ?,?,?, ?,?)`,
+          [
+            r.category, r.title, r.description,
+            r.inherent_likelihood, r.inherent_impact,
+            r.residual_likelihood, r.residual_impact,
+            r.mitigation, r.owner, r.status || 'open', r.trend || 'stable',
+            r.review_cadence_days || 30,
+            stamp,
+            new Date(Date.now() + (r.review_cadence_days || 30) * 86400000).toISOString().slice(0, 10),
+            r.linked_metrics ? JSON.stringify(r.linked_metrics) : null,
+            r.tags ? JSON.stringify(r.tags) : null,
+          ],
+        );
+      }
+      console.log(`[db] Seeded ${seeds.length} risks`);
+    }
+  } catch (err) {
+    console.warn('[db] risk_register seed failed:', err.message);
   }
 })().catch((err) => {
   console.error('[db] Initialization failed:', err);

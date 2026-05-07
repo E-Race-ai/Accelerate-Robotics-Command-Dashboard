@@ -1249,10 +1249,17 @@
       font-size: 11px; color: #94a3b8; font-weight: 600;
       margin-left: auto;
     }
-    /* Hide the section body when its bar is collapsed. We toggle the
-       bar's class and use the adjacent-sibling combinator so we don't
-       have to wrap each section. */
-    .cc-section-body.is-collapsed { display: none; }
+    /* The section body wrapper is layout-transparent — `display: contents`
+       means its box vanishes and its children become layout-children of
+       the section element. Critical: without this, sections that use
+       flex/grid (like .wf-pipeline) broke because their children landed
+       inside an extra block-level wrapper. With contents, the wf-step
+       items remain direct flex children of #workflowPipeline.
+
+       When collapsed we can't just hide the body box (it has none under
+       contents), so we hide each child individually instead. */
+    .cc-section-body { display: contents; }
+    .cc-section-body.is-collapsed > * { display: none !important; }
 
     /* ═══ Right-rail minimap ═══
        Fixed-position vertical list of section names, with the active
@@ -2682,6 +2689,15 @@
             </div>
             <div class="ql-title">Membership AI</div>
             <div class="ql-desc">Member intel · Moore Miami</div>
+          </a>
+
+          <!-- Enterprise Risk Management — CEO-grade live risk register -->
+          <a href="/pages/risk-management.html" class="ql-card" data-module="risk_management" data-dept="enterprise" data-topic="governance" data-size="M" style="--ql-accent:#9F1239;">
+            <div class="ql-icon" style="background:#fff1f2;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9F1239" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-12V5l-8-3-8 3v5c0 8 8 12 8 12z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="0.5" fill="#9F1239"/></svg>
+            </div>
+            <div class="ql-title">Risk Management</div>
+            <div class="ql-desc">CEO heat map · live alerts</div>
           </a>
 
           <!-- Collab Bulletin Board — cross-team help requests -->
@@ -6596,20 +6612,25 @@ document.addEventListener('click', (e) => {
 // reload.
 // ═══════════════════════════════════════════════════════════════════
 const CC_SECTIONS = [
+  // Default-expanded so widgets that need geometry to initialize (Leaflet
+  // maps, charts, the activity grid) measure themselves correctly on
+  // first paint. Reps can collapse anything they don't want; state
+  // persists in localStorage.
   { id: 'toolkitSection',         name: 'Toolkit',     defaultCollapsed: false },
   { id: 'meetingAgenda',          name: 'Agenda',      defaultCollapsed: false },
   { id: 'velocityHero',           name: 'Velocity',    defaultCollapsed: false },
   { id: 'workflowPipeline',       name: 'Pipeline',    defaultCollapsed: false },
-  { id: 'communityBoard',         name: 'Community',   defaultCollapsed: true  },
+  { id: 'communityBoard',         name: 'Community',   defaultCollapsed: false },
   { id: 'gsdSection',             name: 'GSD',         defaultCollapsed: false },
-  // Heavier widgets default collapsed — they fetch on expand if needed.
-  // The user can pin them open by expanding once; state persists.
-  { id: 'productivityCalendar',   name: 'Activity',    defaultCollapsed: true  },
-  { id: 'dealMap',                name: 'Map',         defaultCollapsed: true  },
-  { id: 'projectHub',             name: 'Team Sync',   defaultCollapsed: true  },
+  { id: 'productivityCalendar',   name: 'Activity',    defaultCollapsed: false },
+  { id: 'dealMap',                name: 'Map',         defaultCollapsed: false },
+  { id: 'projectHub',             name: 'Team Sync',   defaultCollapsed: false },
 ];
 
-const CC_STORAGE_KEY = 'cc:collapsed-sections:v1';
+// Bumped storage version to ignore any saved-collapsed state from the
+// earlier version of this list (some users had Map/Activity stuck
+// collapsed from a default we no longer recommend).
+const CC_STORAGE_KEY = 'cc:collapsed-sections:v2';
 function _ccLoadState() {
   try { return JSON.parse(localStorage.getItem(CC_STORAGE_KEY) || '{}'); } catch { return {}; }
 }
@@ -6625,11 +6646,50 @@ function _ccIsCollapsed(id) {
   return !!(cfg && cfg.defaultCollapsed);
 }
 
+// Section expand-handlers — widgets that need to (re)compute geometry on
+// expansion register here. Leaflet maps especially: they can't measure
+// themselves while inside a `display: none` container, so when a section
+// expands we run invalidateSize() on any maps inside.
+const CC_EXPAND_HANDLERS = {
+  dealMap: () => {
+    // Map deal-pipeline view. ccMap is the global Leaflet instance.
+    if (typeof ccMap !== 'undefined' && ccMap) {
+      setTimeout(() => ccMap.invalidateSize(), 60);
+    } else if (typeof renderMap === 'function') {
+      // Map wasn't initialized while hidden — boot it now.
+      setTimeout(renderMap, 60);
+    }
+    // Regional Focus also has its own maps; the existing tab-show
+    // handler invalidates them when its tab is clicked, but if the
+    // user expands the deal map section while Regional Focus is the
+    // active tab, we want to nudge those too.
+    document.querySelectorAll('.region-map-container .leaflet-container').forEach(el => {
+      const m = el._leaflet_map; // Leaflet stashes map ref here
+      if (m && typeof m.invalidateSize === 'function') {
+        setTimeout(() => m.invalidateSize(), 60);
+      }
+    });
+  },
+  productivityCalendar: () => {
+    // Re-render the calendar grid in case dimensions changed.
+    if (typeof pcalRender === 'function') setTimeout(pcalRender, 50);
+  },
+  projectHub: () => {
+    // Sprint hub timeline + assignment columns — fire any registered
+    // re-layout. Future: add a renderProjectHub() hook here.
+  },
+};
+
 function _ccSetCollapsed(id, collapsed) {
   const state = _ccLoadState();
   state[id] = !!collapsed;
   _ccSaveState(state);
   _ccApplyCollapse(id, collapsed);
+  // Fire the expand handler when transitioning to expanded. Wrapped in
+  // try so a misbehaving handler can't break the toggle.
+  if (!collapsed && CC_EXPAND_HANDLERS[id]) {
+    try { CC_EXPAND_HANDLERS[id](); } catch (e) { console.warn('[cc] expand handler failed for', id, e); }
+  }
 }
 
 function _ccApplyCollapse(id, collapsed) {

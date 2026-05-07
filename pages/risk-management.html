@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enterprise Risk Management · Accelerate Robotics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── Brand-aligned palette per /pages/brand/brand-guidelines.html ── */
+    :root {
+      --paper:        #F6F4EE;
+      --paper-2:      #ECE8DB;
+      --ink:          #0E1420;
+      --ink-2:        #3A4352;
+      --ink-3:        #6F7785;
+      --ink-faint:    #98A0AC;
+      --line:         rgba(14,20,32,0.12);
+      --hairline:     rgba(14,20,32,0.18);
+
+      --primary:      #FF6A3D;
+      --signal:       #FFD84D;
+      --success:      #13C2A8;
+      --warning:      #F5A623;
+      --danger:       #E5484D;
+
+      /* Risk band colors — heat-map cells use these */
+      --band-low:        #DCFCE7;
+      --band-low-ink:    #15803D;
+      --band-moderate:   #FEF3C7;
+      --band-mod-ink:    #B45309;
+      --band-high:       #FED7AA;
+      --band-high-ink:   #C2410C;
+      --band-critical:   #FECACA;
+      --band-crit-ink:   #B91C1C;
+
+      --font-display: 'Instrument Serif', 'Georgia', serif;
+      --font-body:    'Inter', -apple-system, sans-serif;
+      --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 15px; line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+
+    /* ── Top bar ──────────────────────────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center; gap: 18px;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--line);
+      background: var(--paper);
+      position: sticky; top: 0; z-index: 20;
+    }
+    .topbar .brand {
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-2);
+    }
+    .topbar .brand strong { color: var(--ink); }
+    .topbar .crumb {
+      font-family: var(--font-mono);
+      font-size: 11px; color: var(--ink-3);
+      letter-spacing: 0.10em; text-transform: uppercase;
+    }
+    .topbar .actions { margin-left: auto; display: flex; gap: 8px; }
+    .topbar a, .topbar button {
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 8px 14px;
+      border: 0.5px solid var(--hairline);
+      background: transparent;
+      color: var(--ink); cursor: pointer; text-decoration: none;
+      transition: all 0.12s;
+    }
+    .topbar a:hover, .topbar button:hover {
+      border-color: var(--primary); color: var(--primary);
+    }
+    .topbar .btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .topbar .btn-primary:hover { background: var(--primary); border-color: var(--primary); color: var(--paper); }
+
+    /* ── Page container ──────────────────────────────────────────── */
+    .pg { max-width: 1400px; margin: 0 auto; padding: 36px 28px 80px; }
+
+    /* ── Editorial hero ──────────────────────────────────────────── */
+    .pg-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-3);
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .pg-eyebrow::before {
+      content: ''; width: 36px; height: 0.5px; background: var(--primary);
+    }
+    .pg h1 {
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: clamp(36px, 5.2vw, 64px);
+      line-height: 1.0;
+      letter-spacing: -0.018em;
+      margin: 0 0 14px;
+      max-width: 24ch;
+    }
+    .pg h1 em { font-style: italic; color: var(--primary); }
+    .pg .lede {
+      font-size: 17px; line-height: 1.55; color: var(--ink-2);
+      max-width: 64ch; margin: 0 0 28px;
+    }
+
+    /* ── Section rule with terminal mark ─────────────────────────── */
+    .sec-rule {
+      display: flex; align-items: center; gap: 14px;
+      margin: 36px 0 16px;
+    }
+    .sec-rule::before { content: ''; flex: 1; height: 0.5px; background: var(--line); }
+    .sec-rule .label {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .sec-rule::after { content: ''; flex: 0 0 32px; height: 0.5px; background: var(--primary); }
+
+    /* ── Stat strip — composite of total / critical / overdue ───── */
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: white;
+      border: 0.5px solid var(--line);
+      padding: 18px 20px;
+      position: relative;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; left: 0; top: 14px; bottom: 14px;
+      width: 2px; background: var(--primary);
+    }
+    .stat-card .k {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-3); margin-bottom: 8px;
+    }
+    .stat-card .v {
+      font-family: var(--font-display);
+      font-size: 2.4rem; font-weight: 500;
+      line-height: 1; letter-spacing: -0.02em;
+    }
+    .stat-card .v em { font-style: italic; color: var(--primary); }
+    .stat-card .sub {
+      font-family: var(--font-mono);
+      font-size: 11px; color: var(--ink-3);
+      letter-spacing: 0.06em; margin-top: 6px;
+    }
+
+    /* ── Two-column grid: heatmap LEFT · top risks + alerts RIGHT ─ */
+    .row-2col {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 28px;
+    }
+    @media (max-width: 1080px) { .row-2col { grid-template-columns: 1fr; } }
+
+    /* ── Heat map ────────────────────────────────────────────────── */
+    .heatmap-frame {
+      background: white;
+      border: 0.5px solid var(--line);
+      padding: 24px 28px;
+      position: relative;
+    }
+    .heatmap-frame::before {
+      content: ''; position: absolute; inset: 5px;
+      border: 0.5px solid var(--line);
+      pointer-events: none;
+    }
+    .heatmap-head {
+      display: flex; align-items: baseline; gap: 14px;
+      margin-bottom: 14px;
+    }
+    .heatmap-head h2 {
+      font-family: var(--font-display);
+      font-weight: 400; font-size: 28px; letter-spacing: -0.012em;
+      margin: 0; line-height: 1;
+    }
+    .heatmap-head .axis-note {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.1em; color: var(--ink-3);
+      text-transform: uppercase;
+    }
+
+    .heatmap-wrap {
+      display: grid;
+      grid-template-columns: 24px repeat(5, 1fr);
+      grid-template-rows: repeat(5, 60px) 24px;
+      gap: 4px;
+    }
+    .hm-yaxis-label, .hm-xaxis-label {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--ink-3);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .hm-yaxis-label { writing-mode: vertical-rl; transform: rotate(180deg); }
+    .hm-cell {
+      border: 0.5px solid var(--line);
+      padding: 6px 8px;
+      position: relative;
+      cursor: pointer;
+      display: flex; flex-direction: column; gap: 2px;
+      transition: border-color 0.12s;
+    }
+    .hm-cell:hover { border-color: var(--primary); }
+    .hm-cell[data-band="low"]      { background: var(--band-low); }
+    .hm-cell[data-band="moderate"] { background: var(--band-moderate); }
+    .hm-cell[data-band="high"]     { background: var(--band-high); }
+    .hm-cell[data-band="critical"] { background: var(--band-critical); }
+    .hm-cell .score-pill {
+      position: absolute; top: 4px; right: 4px;
+      font-family: var(--font-mono);
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--ink-2);
+    }
+    .hm-cell .count {
+      font-family: var(--font-display);
+      font-size: 1.6rem; font-weight: 500; line-height: 1;
+      color: var(--ink);
+    }
+    .hm-cell .cat-dots {
+      display: flex; gap: 2px; flex-wrap: wrap; margin-top: 2px;
+    }
+    .hm-cell .cat-dots .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--ink-2);
+    }
+    .hm-cell.empty { cursor: default; opacity: 0.3; }
+    .hm-axis-x { grid-column: 2 / span 5; }
+    .hm-axis-y { grid-row: 1 / span 5; }
+    .hm-axis-titles {
+      display: flex; justify-content: space-between;
+      font-family: var(--font-mono); font-size: 9px;
+      letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3);
+      padding: 0 2px;
+    }
+    .hm-legend {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      margin-top: 18px;
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3);
+    }
+    .hm-legend .swatch {
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .hm-legend .swatch::before {
+      content: ''; width: 12px; height: 12px;
+      border: 0.5px solid var(--line);
+    }
+    .hm-legend .swatch[data-b="low"]::before      { background: var(--band-low); }
+    .hm-legend .swatch[data-b="moderate"]::before { background: var(--band-moderate); }
+    .hm-legend .swatch[data-b="high"]::before     { background: var(--band-high); }
+    .hm-legend .swatch[data-b="critical"]::before { background: var(--band-critical); }
+
+    /* ── Top risks panel ─────────────────────────────────────────── */
+    .panel {
+      background: white;
+      border: 0.5px solid var(--line);
+      padding: 24px 28px;
+      position: relative;
+    }
+    .panel::before {
+      content: ''; position: absolute; inset: 5px;
+      border: 0.5px solid var(--line);
+      pointer-events: none;
+    }
+    .panel-head {
+      display: flex; align-items: baseline; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .panel-head h2 {
+      font-family: var(--font-display);
+      font-weight: 400; font-size: 24px; letter-spacing: -0.012em;
+      margin: 0; line-height: 1;
+    }
+    .panel-head .meta {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.10em; color: var(--ink-3);
+      text-transform: uppercase;
+    }
+    .top-risk-row {
+      display: grid;
+      grid-template-columns: 26px 1fr auto auto;
+      gap: 12px; align-items: center;
+      padding: 10px 0;
+      border-bottom: 0.5px solid var(--line);
+      cursor: pointer;
+    }
+    .top-risk-row:last-child { border-bottom: 0; }
+    .top-risk-row:hover { background: var(--paper); }
+    .top-risk-row .rank {
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 600; color: var(--ink-3);
+      letter-spacing: 0.06em;
+    }
+    .top-risk-row .title-line {
+      font-family: var(--font-display);
+      font-size: 17px; font-weight: 500; color: var(--ink);
+      line-height: 1.2;
+    }
+    .top-risk-row .meta-line {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.10em; text-transform: uppercase;
+      color: var(--ink-3);
+      margin-top: 2px;
+    }
+    .top-risk-row .score {
+      font-family: var(--font-display);
+      font-size: 1.4rem; font-weight: 500;
+      line-height: 1;
+    }
+    .top-risk-row .score[data-band="critical"] { color: var(--band-crit-ink); }
+    .top-risk-row .score[data-band="high"]     { color: var(--band-high-ink); }
+    .top-risk-row .score[data-band="moderate"] { color: var(--band-mod-ink); }
+    .top-risk-row .score[data-band="low"]      { color: var(--band-low-ink); }
+    .top-risk-row .trend {
+      font-family: var(--font-mono); font-size: 11px;
+      width: 16px; text-align: center;
+    }
+    .top-risk-row .trend[data-t="rising"]  { color: var(--danger); }
+    .top-risk-row .trend[data-t="falling"] { color: var(--success); }
+    .top-risk-row .trend[data-t="stable"]  { color: var(--ink-faint); }
+
+    /* ── Alerts panel ─────────────────────────────────────────────── */
+    .alert-list { display: flex; flex-direction: column; gap: 8px; }
+    .alert-item {
+      display: grid;
+      grid-template-columns: 18px 1fr auto;
+      gap: 10px; align-items: center;
+      padding: 10px 12px;
+      background: var(--paper);
+      border-left: 2px solid var(--primary);
+      cursor: pointer;
+    }
+    .alert-item:hover { background: var(--paper-2); }
+    .alert-item[data-kind="critical"] { border-left-color: var(--danger); }
+    .alert-item[data-kind="escalating"] { border-left-color: var(--warning); }
+    .alert-item[data-kind="overdue"] { border-left-color: var(--ink-3); }
+    .alert-item .icon {
+      font-size: 14px; line-height: 1; text-align: center;
+    }
+    .alert-item .what {
+      font-size: 14px; line-height: 1.3; color: var(--ink);
+    }
+    .alert-item .who {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.08em; color: var(--ink-3);
+      text-transform: uppercase;
+    }
+    .alert-item .badge {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .alert-empty {
+      font-family: var(--font-display); font-style: italic;
+      color: var(--ink-3); padding: 14px;
+      text-align: center;
+    }
+
+    /* ── Risk register table ─────────────────────────────────────── */
+    .register-toolbar {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      margin: 28px 0 12px;
+    }
+    .filter-chip {
+      font-family: var(--font-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      padding: 6px 12px;
+      background: white; border: 0.5px solid var(--hairline);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .filter-chip:hover { border-color: var(--primary); color: var(--primary); }
+    .filter-chip.is-active {
+      background: var(--ink); color: var(--paper); border-color: var(--ink);
+    }
+    .register-toolbar .search {
+      flex: 1 1 200px; max-width: 320px;
+      padding: 8px 12px;
+      border: 0; border-bottom: 0.5px solid var(--hairline);
+      background: transparent; font: inherit;
+      font-family: var(--font-display); font-size: 16px;
+    }
+    .register-toolbar .search:focus { outline: 0; border-bottom-color: var(--primary); }
+
+    .register {
+      width: 100%; border-collapse: collapse;
+      background: white; border: 0.5px solid var(--line);
+    }
+    .register th {
+      font-family: var(--font-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-3);
+      padding: 12px 16px; text-align: left;
+      border-bottom: 0.5px solid var(--line);
+      background: var(--paper);
+      position: sticky; top: 0;
+    }
+    .register td {
+      padding: 14px 16px;
+      border-bottom: 0.5px solid var(--line);
+      font-size: 14px; vertical-align: top;
+    }
+    .register tr:hover td { background: var(--paper); }
+    .register tr:last-child td { border-bottom: 0; }
+    .register .row-title {
+      font-family: var(--font-display);
+      font-size: 17px; font-weight: 500; color: var(--ink);
+      line-height: 1.25; cursor: pointer;
+    }
+    .register .row-mini {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.10em; text-transform: uppercase;
+      color: var(--ink-3); margin-top: 4px;
+    }
+    .register .cat-tag {
+      font-family: var(--font-mono); font-size: 9px;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      padding: 3px 8px; border: 0.5px solid var(--hairline);
+      color: var(--ink-2);
+      display: inline-block;
+    }
+    .register .score-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.08em;
+      padding: 3px 9px;
+    }
+    .register .score-pill[data-band="critical"] { background: var(--band-critical); color: var(--band-crit-ink); }
+    .register .score-pill[data-band="high"]     { background: var(--band-high);     color: var(--band-high-ink); }
+    .register .score-pill[data-band="moderate"] { background: var(--band-moderate); color: var(--band-mod-ink); }
+    .register .score-pill[data-band="low"]      { background: var(--band-low);      color: var(--band-low-ink); }
+    .register .delta-good { color: var(--success); font-family: var(--font-mono); font-size: 11px; }
+
+    /* ── Data feeds panel — placeholders for live wires ──────────── */
+    .feeds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .feed-card {
+      background: white;
+      border: 0.5px solid var(--line);
+      padding: 14px 18px;
+      position: relative;
+    }
+    .feed-card .fk {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .feed-card .fv {
+      font-family: var(--font-display);
+      font-size: 1.6rem; font-weight: 500;
+      line-height: 1; margin-top: 6px;
+    }
+    .feed-card .fs {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.06em; color: var(--ink-3);
+      margin-top: 4px;
+    }
+    .feed-card .badge-soon {
+      position: absolute; top: 12px; right: 12px;
+      font-family: var(--font-mono); font-size: 9px;
+      padding: 2px 6px; letter-spacing: 0.10em;
+      color: var(--ink-3); border: 0.5px solid var(--hairline);
+    }
+
+    /* ── Detail drawer ──────────────────────────────────────────── */
+    .drawer-backdrop {
+      position: fixed; inset: 0; background: rgba(14,20,32,0.40);
+      display: none; z-index: 100;
+    }
+    .drawer-backdrop.open { display: block; }
+    .drawer {
+      position: fixed; right: 0; top: 0; bottom: 0;
+      width: min(540px, 96vw);
+      background: var(--paper);
+      box-shadow: -10px 0 30px rgba(14,20,32,0.18);
+      transform: translateX(100%);
+      transition: transform 0.28s ease;
+      z-index: 101;
+      overflow-y: auto;
+    }
+    .drawer-backdrop.open .drawer { transform: translateX(0); }
+    .drawer-inner { padding: 32px 36px; }
+    .drawer-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-3);
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .drawer-eyebrow::before { content: ''; width: 28px; height: 0.5px; background: var(--primary); }
+    .drawer h3 {
+      font-family: var(--font-display);
+      font-weight: 400; font-size: 32px; letter-spacing: -0.014em;
+      margin: 0 0 12px; line-height: 1.05;
+    }
+    .drawer-section {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 0.5px solid var(--line);
+    }
+    .drawer-section h4 {
+      font-family: var(--font-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-3); margin: 0 0 10px;
+    }
+    .drawer-section p { margin: 0; line-height: 1.55; color: var(--ink-2); }
+    .drawer-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+    }
+    .drawer-grid .stat .k {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3);
+    }
+    .drawer-grid .stat .v {
+      font-family: var(--font-display); font-size: 24px; font-weight: 500;
+      margin-top: 4px; line-height: 1;
+    }
+    .drawer-actions {
+      display: flex; gap: 8px; margin-top: 28px; flex-wrap: wrap;
+    }
+    .drawer-actions .btn {
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      padding: 10px 16px;
+      border: 0.5px solid var(--hairline);
+      background: transparent; color: var(--ink); cursor: pointer;
+      transition: all 0.12s;
+    }
+    .drawer-actions .btn:hover { border-color: var(--primary); color: var(--primary); }
+    .drawer-actions .btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .drawer-actions .btn-primary:hover { background: var(--primary); border-color: var(--primary); }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="brand"><strong>Accelerate</strong> Robotics</div>
+    <div class="crumb">Enterprise Risk Management</div>
+    <div class="actions">
+      <a href="/admin">← Command Center</a>
+      <button class="btn-primary" id="btnNewRisk">+ New Risk</button>
+    </div>
+  </div>
+
+  <div class="pg">
+    <div class="pg-eyebrow">Living register · Last refreshed <span id="lastRefresh">—</span></div>
+    <h1>Where <em>the company</em> is exposed — and what's containing it.</h1>
+    <p class="lede">
+      Every meaningful risk facing Accelerate Robotics, scored on a 5×5 matrix
+      for both inherent and residual exposure. Heat-mapped, owner-assigned,
+      and (soon) wired to the data feeds that move them in real time.
+    </p>
+
+    <!-- Stat strip -->
+    <div class="stat-strip" id="statStrip"></div>
+
+    <!-- Heat map + top risks + alerts -->
+    <div class="row-2col">
+      <div class="heatmap-frame">
+        <div class="heatmap-head">
+          <h2><em>Heat</em> map</h2>
+          <span class="axis-note">Likelihood × Impact · residual scores</span>
+        </div>
+        <div class="heatmap-wrap" id="heatmap"></div>
+        <div class="hm-legend">
+          <span class="swatch" data-b="low">Low 1–4</span>
+          <span class="swatch" data-b="moderate">Moderate 5–9</span>
+          <span class="swatch" data-b="high">High 10–15</span>
+          <span class="swatch" data-b="critical">Critical 16–25</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px;">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Top risks</h2>
+            <span class="meta">By residual score</span>
+          </div>
+          <div id="topRisks"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2><em>Live</em> alerts</h2>
+            <span class="meta" id="alertCount">—</span>
+          </div>
+          <div class="alert-list" id="alertList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data feeds (live wires) -->
+    <div class="sec-rule"><span class="label">Live data feeds</span></div>
+    <div class="feeds-grid" id="feedsGrid"></div>
+
+    <!-- Risk register -->
+    <div class="sec-rule"><span class="label">Risk register</span></div>
+    <div class="register-toolbar" id="registerToolbar"></div>
+    <table class="register">
+      <thead>
+        <tr>
+          <th>Risk</th>
+          <th>Category</th>
+          <th>Owner</th>
+          <th>Inherent</th>
+          <th>Residual</th>
+          <th>Trend</th>
+          <th>Next review</th>
+        </tr>
+      </thead>
+      <tbody id="registerBody">
+        <tr><td colspan="7" style="text-align:center;color:var(--ink-3);font-style:italic;padding:32px;">Loading…</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+
+  <!-- Drawer -->
+  <div class="drawer-backdrop" id="drawerBackdrop">
+    <div class="drawer" id="drawer"><div class="drawer-inner" id="drawerInner"></div></div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const CATEGORY_LABEL = {
+  strategic: 'Strategic',
+  operational: 'Operational',
+  financial: 'Financial',
+  technology: 'Technology',
+  regulatory: 'Regulatory',
+  people: 'People',
+  legal: 'Legal',
+  reputation: 'Reputation',
+};
+
+const TREND_GLYPH = { rising: '↑', stable: '→', falling: '↓' };
+
+let DASHBOARD = null;
+let FILTER = { category: 'all', status: 'open', q: '' };
+
+async function loadDashboard() {
+  const res = await fetch('/api/risk-management/dashboard', { credentials: 'same-origin' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  DASHBOARD = await res.json();
+  $('lastRefresh').textContent = new Date(DASHBOARD.generated_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  renderStats();
+  renderHeatmap();
+  renderTopRisks();
+  renderAlerts();
+  renderFeeds();
+  renderToolbar();
+  renderRegister();
+}
+
+function renderStats() {
+  const s = DASHBOARD.stats;
+  const cells = [
+    { k: 'Open risks',     v: s.total,            sub: 'tracked + actively reviewed' },
+    { k: 'Critical band',  v: s.critical,         sub: 'score 16–25 · daily watch' },
+    { k: 'High band',      v: s.high,             sub: 'score 10–15 · weekly review' },
+    { k: 'Overdue review', v: s.overdue,          sub: 'past next-review-due' },
+    { k: 'Avg residual',   v: s.avg_score.toFixed(1), sub: 'across the open register' },
+    { k: 'Mitigation Δ',   v: '−' + s.mitigation_value, sub: 'sum of inherent − residual' },
+  ];
+  $('statStrip').innerHTML = cells.map(c => `
+    <div class="stat-card">
+      <div class="k">${escapeHtml(c.k)}</div>
+      <div class="v">${escapeHtml(String(c.v))}</div>
+      <div class="sub">${escapeHtml(c.sub)}</div>
+    </div>
+  `).join('');
+}
+
+function renderHeatmap() {
+  const grid = $('heatmap');
+  const cells = [];
+  // Y-axis label (vertical)
+  cells.push(`<div class="hm-yaxis-label hm-axis-y" style="grid-column:1;">Likelihood →</div>`);
+  // 5 rows × 5 cols (likelihood high at top → low at bottom)
+  for (let l = 5; l >= 1; l--) {
+    for (let i = 1; i <= 5; i++) {
+      const key = `${l}-${i}`;
+      const arr = DASHBOARD.heatmap[key] || [];
+      const score = l * i;
+      const band = score >= 16 ? 'critical' : score >= 10 ? 'high' : score >= 5 ? 'moderate' : 'low';
+      const dots = arr.slice(0, 6).map(() => '<span class="dot"></span>').join('');
+      cells.push(`
+        <div class="hm-cell ${arr.length === 0 ? 'empty' : ''}" data-band="${band}" data-cell="${key}" title="L=${l} · I=${i} · ${arr.length} risk${arr.length===1?'':'s'}">
+          <span class="score-pill">${score}</span>
+          ${arr.length > 0 ? `<span class="count">${arr.length}</span><div class="cat-dots">${dots}</div>` : ''}
+        </div>
+      `);
+    }
+  }
+  // X-axis tick labels (1-5)
+  cells.push(`<div class="hm-xaxis-label" style="grid-column:1;">Impact →</div>`);
+  for (let i = 1; i <= 5; i++) cells.push(`<div class="hm-xaxis-label">${i}</div>`);
+  grid.innerHTML = cells.join('');
+  // Cell click → open drawer with all risks in that cell
+  grid.addEventListener('click', (e) => {
+    const cell = e.target.closest('.hm-cell');
+    if (!cell || cell.classList.contains('empty')) return;
+    const key = cell.dataset.cell;
+    const risks = DASHBOARD.heatmap[key] || [];
+    if (risks.length === 1) openRisk(risks[0].id);
+    else if (risks.length > 1) openCellList(key, risks);
+  });
+}
+
+function renderTopRisks() {
+  const el = $('topRisks');
+  const items = DASHBOARD.top.map((r, i) => `
+    <div class="top-risk-row" data-id="${r.id}">
+      <span class="rank">${String(i + 1).padStart(2, '0')}</span>
+      <div>
+        <div class="title-line">${escapeHtml(r.title)}</div>
+        <div class="meta-line">${escapeHtml(CATEGORY_LABEL[r.category] || r.category)} · ${escapeHtml(r.owner || 'unassigned')}</div>
+      </div>
+      <span class="score" data-band="${r.residual.band}">${r.residual.score}</span>
+      <span class="trend" data-t="${r.trend}">${TREND_GLYPH[r.trend] || '→'}</span>
+    </div>
+  `).join('');
+  el.innerHTML = items;
+  el.querySelectorAll('.top-risk-row').forEach(row => {
+    row.addEventListener('click', () => openRisk(Number(row.dataset.id)));
+  });
+}
+
+function renderAlerts() {
+  const el = $('alertList');
+  const counter = $('alertCount');
+  const alerts = DASHBOARD.alerts;
+  counter.textContent = `${alerts.length} alert${alerts.length === 1 ? '' : 's'}`;
+  if (alerts.length === 0) {
+    el.innerHTML = `<div class="alert-empty">No alerts firing — every risk reviewed on time.</div>`;
+    return;
+  }
+  const ICON = { critical: '⬤', escalating: '↑', overdue: '⏱' };
+  const LABEL = {
+    critical: 'Critical band',
+    escalating: 'Escalating trend',
+    overdue: 'Review overdue',
+  };
+  el.innerHTML = alerts.slice(0, 12).map(a => `
+    <div class="alert-item" data-kind="${a.kind}" data-id="${a.risk_id}">
+      <span class="icon">${ICON[a.kind] || '!'}</span>
+      <div>
+        <div class="what">${escapeHtml(a.title)}</div>
+        <div class="who">${escapeHtml(LABEL[a.kind])}${a.score ? ' · score ' + a.score : ''}${a.due ? ' · due ' + a.due : ''}</div>
+      </div>
+      <span class="badge">${a.kind}</span>
+    </div>
+  `).join('');
+  el.querySelectorAll('.alert-item').forEach(it => {
+    it.addEventListener('click', () => openRisk(Number(it.dataset.id)));
+  });
+}
+
+// ── Live data feeds — placeholder now, real wires later ───────────
+function renderFeeds() {
+  const feeds = [
+    { k: 'Cash runway',         v: '— mo',   s: 'Plaid · monthly burn ÷ balance', soon: true },
+    { k: 'Pipeline weight',     v: '$ —',    s: 'CRM · open deals × stage prob.',  soon: true },
+    { k: 'Robot uptime · 30d',  v: '— %',    s: 'Robot Command telemetry',         soon: true },
+    { k: 'Vendor health · KEN', v: '— %',    s: 'Keenon API + ticket SLA',         soon: true },
+    { k: 'Server uptime · 30d', v: '— %',    s: 'Render + UptimeRobot',            soon: true },
+    { k: 'Customer NPS',        v: '— ',     s: 'Post-deployment survey',          soon: true },
+    { k: 'AR aging',            v: '— d',    s: 'Stripe · invoice age',            soon: true },
+    { k: 'Active deployments',  v: DASHBOARD.stats.total ? '—' : '—', s: 'Facilities · deployment status', soon: true },
+  ];
+  $('feedsGrid').innerHTML = feeds.map(f => `
+    <div class="feed-card">
+      ${f.soon ? `<span class="badge-soon">soon</span>` : ''}
+      <div class="fk">${escapeHtml(f.k)}</div>
+      <div class="fv">${escapeHtml(f.v)}</div>
+      <div class="fs">${escapeHtml(f.s)}</div>
+    </div>
+  `).join('');
+}
+
+function renderToolbar() {
+  const cats = ['all', ...Object.keys(CATEGORY_LABEL)];
+  const html = cats.map(c => `
+    <button class="filter-chip ${FILTER.category === c ? 'is-active' : ''}" data-cat="${c}">
+      ${c === 'all' ? 'All' : CATEGORY_LABEL[c]}
+    </button>
+  `).join('') + `
+    <input class="search" id="riskSearch" type="search" placeholder="Search risks…" value="${escapeHtml(FILTER.q)}">
+  `;
+  $('registerToolbar').innerHTML = html;
+  $('registerToolbar').querySelectorAll('.filter-chip').forEach(b => {
+    b.addEventListener('click', () => { FILTER.category = b.dataset.cat; renderToolbar(); renderRegister(); });
+  });
+  $('riskSearch').addEventListener('input', (e) => { FILTER.q = e.target.value.toLowerCase(); renderRegister(); });
+}
+
+function renderRegister() {
+  const tbody = $('registerBody');
+  const filtered = DASHBOARD.risks.filter(r => {
+    if (FILTER.category !== 'all' && r.category !== FILTER.category) return false;
+    if (FILTER.q) {
+      const hay = (r.title + ' ' + (r.description || '') + ' ' + (r.owner || '') + ' ' + (r.tags || []).join(' ')).toLowerCase();
+      if (!hay.includes(FILTER.q)) return false;
+    }
+    return true;
+  });
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--ink-3);font-style:italic;padding:32px;">No risks match.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(r => `
+    <tr>
+      <td>
+        <div class="row-title" data-id="${r.id}">${escapeHtml(r.title)}</div>
+        <div class="row-mini">${(r.tags || []).slice(0, 3).map(escapeHtml).join(' · ')}${r.is_overdue ? ' · ⏱ overdue' : ''}</div>
+      </td>
+      <td><span class="cat-tag">${escapeHtml(CATEGORY_LABEL[r.category] || r.category)}</span></td>
+      <td style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;color:var(--ink-2);">${escapeHtml(r.owner || '—')}</td>
+      <td><span class="score-pill" data-band="${r.inherent.band}">${r.inherent.score}</span></td>
+      <td>
+        <span class="score-pill" data-band="${r.residual.band}">${r.residual.score}</span>
+        ${r.delta > 0 ? `<span class="delta-good"> −${r.delta}</span>` : ''}
+      </td>
+      <td><span class="trend" data-t="${r.trend}" style="font-family:var(--font-mono);font-size:14px;color:${r.trend==='rising'?'var(--danger)':r.trend==='falling'?'var(--success)':'var(--ink-faint)'};">${TREND_GLYPH[r.trend]}</span></td>
+      <td style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;color:${r.is_overdue ? 'var(--danger)' : 'var(--ink-3)'};">${escapeHtml(r.next_review_due || '—')}</td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('.row-title').forEach(t => {
+    t.addEventListener('click', () => openRisk(Number(t.dataset.id)));
+  });
+}
+
+// ── Drawer: single risk detail ────────────────────────────────────
+async function openRisk(id) {
+  const res = await fetch(`/api/risk-management/risks/${id}`, { credentials: 'same-origin' });
+  if (!res.ok) return;
+  const { risk: r, history } = await res.json();
+  const inner = $('drawerInner');
+  inner.innerHTML = `
+    <div class="drawer-eyebrow">${escapeHtml(CATEGORY_LABEL[r.category] || r.category)} · ${escapeHtml(r.owner || 'unassigned')}</div>
+    <h3>${escapeHtml(r.title)}</h3>
+    <div class="drawer-grid">
+      <div class="stat"><div class="k">Inherent</div><div class="v"><span class="score-pill" data-band="${r.inherent.band}" style="font-size:11px;font-family:var(--font-mono);padding:3px 9px;">${r.inherent.score}</span> · ${r.inherent.likelihood}×${r.inherent.impact}</div></div>
+      <div class="stat"><div class="k">Residual</div><div class="v"><span class="score-pill" data-band="${r.residual.band}" style="font-size:11px;font-family:var(--font-mono);padding:3px 9px;">${r.residual.score}</span> · ${r.residual.likelihood}×${r.residual.impact}</div></div>
+      <div class="stat"><div class="k">Trend</div><div class="v">${TREND_GLYPH[r.trend]} ${r.trend}</div></div>
+      <div class="stat"><div class="k">Status</div><div class="v">${escapeHtml(r.status)}</div></div>
+    </div>
+    ${r.description ? `<div class="drawer-section"><h4>What it is</h4><p>${escapeHtml(r.description)}</p></div>` : ''}
+    ${r.mitigation ? `<div class="drawer-section"><h4>Mitigation in place</h4><p>${escapeHtml(r.mitigation)}</p></div>` : ''}
+    <div class="drawer-section">
+      <h4>Review cadence</h4>
+      <p>Every ${r.review_cadence_days} days. Last reviewed ${r.last_reviewed_at ? new Date(r.last_reviewed_at).toLocaleDateString() : '—'}. Next due ${r.next_review_due || '—'}${r.is_overdue ? ' (overdue)' : ''}.</p>
+    </div>
+    ${history && history.length > 1 ? `<div class="drawer-section"><h4>Score history</h4><p style="font-family:var(--font-mono);font-size:12px;">${history.map(h => `${h.changed_at.slice(0,10)} · ${h.residual_score}`).join(' · ')}</p></div>` : ''}
+    <div class="drawer-actions">
+      <button class="btn-primary btn" id="btnReview">Mark reviewed</button>
+      <button class="btn" id="btnEdit">Edit</button>
+      <button class="btn" id="btnClose">Close drawer</button>
+    </div>
+  `;
+  $('drawerBackdrop').classList.add('open');
+  $('btnClose').addEventListener('click', closeDrawer);
+  $('btnReview').addEventListener('click', async () => {
+    await fetch(`/api/risk-management/risks/${id}/review`, { method: 'POST', credentials: 'same-origin' });
+    closeDrawer();
+    loadDashboard();
+  });
+  $('btnEdit').addEventListener('click', () => alert('Inline edit coming next iteration. For now, edit the risk-register-seeds.js + reseed.'));
+}
+
+function openCellList(key, risks) {
+  const inner = $('drawerInner');
+  inner.innerHTML = `
+    <div class="drawer-eyebrow">Heat-map cell ${key}</div>
+    <h3>${risks.length} risk${risks.length === 1 ? '' : 's'} at L=${key.split('-')[0]} · I=${key.split('-')[1]}</h3>
+    <div class="drawer-section">
+      ${risks.map(r => `
+        <div class="top-risk-row" data-id="${r.id}" style="padding:12px 0;">
+          <span class="rank">${escapeHtml(CATEGORY_LABEL[r.category] || r.category).slice(0,3).toUpperCase()}</span>
+          <div><div class="title-line" style="font-size:15px;">${escapeHtml(r.title)}</div></div>
+          <span class="score" data-band="${r.band}">${r.score}</span>
+          <span></span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="drawer-actions"><button class="btn" id="btnClose">Close</button></div>
+  `;
+  $('drawerBackdrop').classList.add('open');
+  inner.querySelectorAll('[data-id]').forEach(el => el.addEventListener('click', () => openRisk(Number(el.dataset.id))));
+  $('btnClose').addEventListener('click', closeDrawer);
+}
+function closeDrawer() { $('drawerBackdrop').classList.remove('open'); }
+$('drawerBackdrop').addEventListener('click', (e) => { if (e.target.id === 'drawerBackdrop') closeDrawer(); });
+
+$('btnNewRisk').addEventListener('click', () => alert('New-risk form coming next iteration. For now: edit src/db/seeds/risk-register-seeds.js + restart.'));
+
+(async () => {
+  try { await loadDashboard(); }
+  catch (err) {
+    document.getElementById('registerBody').innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:32px;">Could not load risks: ${escapeHtml(err.message)}</td></tr>`;
+  }
+})();
+</script>
+</body>
+</html>
