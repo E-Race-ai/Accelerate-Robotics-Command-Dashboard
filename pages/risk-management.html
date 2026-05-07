@@ -36,21 +36,26 @@
            --band-X       = soft tint (heat-map cells, score pills)
            --band-X-ink   = readable text on soft tint
            --band-X-solid = solid traffic-light color (bars, signals)  */
-      --band-low:        #DCFCE7;     /* soft green */
-      --band-low-ink:    #166534;
-      --band-low-solid:  #16A34A;     /* signal green — "go" */
+      /* Band colors map to U.S. MUTCD highway sign palette so anyone
+         driving a car already knows what they mean. We chose the actual
+         sign hues over generic "design system" greens/yellows because
+         the whole point of this dashboard is universal "rules of the
+         road" semantics — see PR #199. */
+      --band-low:        #D6EFD9;     /* soft green tint — guide-sign */
+      --band-low-ink:    #044E2C;
+      --band-low-solid:  #006B3F;     /* MUTCD guide-sign green — "go/clear" */
 
-      --band-moderate:   #FEF3C7;     /* soft yellow */
-      --band-mod-ink:    #854D0E;
-      --band-mod-solid:  #EAB308;     /* signal yellow — "caution" */
+      --band-moderate:   #FFF7CC;     /* soft yellow tint — warning-sign */
+      --band-mod-ink:    #6B4F00;
+      --band-mod-solid:  #FCD116;     /* MUTCD warning-sign yellow — "caution" */
 
-      --band-high:       #FFE4D5;     /* soft orange */
-      --band-high-ink:   #9A3412;
-      --band-high-solid: #EA580C;     /* construction orange — "act" */
+      --band-high:       #FFE0BF;     /* soft orange tint — construction */
+      --band-high-ink:   #7A3300;
+      --band-high-solid: #FF7900;     /* MUTCD construction orange — "act" */
 
-      --band-critical:   #FECACA;     /* soft red */
-      --band-crit-ink:   #991B1B;
-      --band-crit-solid: #DC2626;     /* stop-sign red — "stop" */
+      --band-critical:   #F8C9CF;     /* soft red tint — stop-sign */
+      --band-crit-ink:   #6E0717;
+      --band-crit-solid: #C8102E;     /* MUTCD stop-sign red — "stop" */
 
       --font-display: 'Instrument Serif', 'Georgia', serif;
       --font-body:    'Inter', -apple-system, sans-serif;
@@ -105,8 +110,16 @@
     .topbar .btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
     .topbar .btn-primary:hover { background: var(--primary); border-color: var(--primary); color: var(--paper); }
 
-    /* ── Page container ──────────────────────────────────────────── */
-    .pg { max-width: 1400px; margin: 0 auto; padding: 36px 28px 80px; }
+    /* ── Page container — fluid up to 1800px so wide monitors don't
+       leave a giant empty gutter, but still centered on truly huge
+       displays (≥2000px). h1 and .lede keep their own max-widths so
+       line-length stays readable even when the container goes wide. */
+    .pg {
+      max-width: min(1800px, calc(100% - 56px));
+      margin: 0 auto;
+      padding: 36px 28px 80px;
+    }
+    @media (min-width: 2200px) { .pg { max-width: 2000px; } }
 
     /* ── Editorial hero ──────────────────────────────────────────── */
     .pg-eyebrow {
@@ -131,7 +144,306 @@
     .pg h1 em { font-style: italic; color: var(--primary); }
     .pg .lede {
       font-size: 17px; line-height: 1.55; color: var(--ink-2);
-      max-width: 64ch; margin: 0 0 28px;
+      max-width: 64ch; margin: 0 0 22px;
+    }
+
+    /* ── Board-pack hero — period framing & confidentiality tag ──── */
+    .board-meta {
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      margin-bottom: 18px;
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    }
+    .board-meta .bm-tag {
+      background: var(--ink); color: var(--paper);
+      padding: 5px 10px;
+      letter-spacing: 0.22em;
+    }
+    .board-meta .bm-period { color: var(--ink-2); }
+    .board-meta .bm-conf { color: var(--ink-3); margin-left: auto; }
+
+    /* Compact board-pack metadata block — sits between lede and stats. */
+    .board-stamps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 0;
+      border-top: 0.5px solid var(--line);
+      border-bottom: 0.5px solid var(--line);
+      padding: 14px 0;
+      margin-bottom: 26px;
+    }
+    .board-stamps > span {
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 0 18px;
+      border-right: 0.5px solid var(--line);
+    }
+    .board-stamps > span:last-child { border-right: 0; }
+    .board-stamps > span:first-child { padding-left: 0; }
+    .board-stamps .bs-k {
+      font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .board-stamps .bs-v {
+      font-family: var(--font-display);
+      font-size: 17px; font-weight: 500; letter-spacing: -0.01em;
+      color: var(--ink); line-height: 1.1;
+    }
+    .board-stamps-actions { justify-content: center; }
+    .btn-ghost {
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      padding: 9px 14px;
+      border: 0.5px solid var(--ink); background: transparent; color: var(--ink);
+      cursor: pointer; transition: all 0.12s;
+      align-self: center;
+    }
+    .btn-ghost:hover { background: var(--ink); color: var(--paper); }
+
+    /* ── Executive summary — narrative state above the numbers ───── */
+    .exec-summary {
+      background: white;
+      border: 0.5px solid var(--line);
+      border-left: 3px solid var(--ink);
+      padding: 22px 26px;
+      margin-bottom: 28px;
+      position: relative;
+    }
+    .exec-summary::before {
+      content: 'Executive summary';
+      position: absolute; top: -10px; left: 22px;
+      background: var(--paper);
+      padding: 0 8px;
+      font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 0.20em; text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .exec-summary p {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 19px; line-height: 1.5;
+      letter-spacing: -0.005em;
+      color: var(--ink);
+    }
+    .exec-summary p + p { margin-top: 10px; font-size: 15px; color: var(--ink-2); font-family: var(--font-body); line-height: 1.55; }
+    .exec-summary strong {
+      font-weight: 600; color: var(--ink);
+      background: linear-gradient(transparent 65%, rgba(255,106,61,0.18) 65%);
+      padding: 0 2px;
+    }
+    .exec-summary .es-band-crit { color: var(--band-crit-solid); font-weight: 600; }
+    .exec-summary .es-band-good { color: var(--band-low-solid); font-weight: 600; }
+
+    /* ── Color key — rules of the road, mounted at the top ───────── */
+    .color-key {
+      background: white;
+      border: 0.5px solid var(--line);
+      padding: 18px 22px 22px;
+      margin-bottom: 28px;
+      position: relative;
+    }
+    .color-key .ck-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 14px;
+    }
+    .color-key .ck-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    @media (max-width: 880px) { .color-key .ck-grid { grid-template-columns: repeat(2, 1fr); } }
+    .color-key .ck-band {
+      display: grid;
+      grid-template-columns: 60px 1fr auto;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      background: white;
+      border: 0.5px solid var(--line);
+    }
+    .color-key .ck-band[data-band="low"]      { background: linear-gradient(135deg, var(--band-low)      0%, white 80%); border-color: var(--band-low-solid); }
+    .color-key .ck-band[data-band="moderate"] { background: linear-gradient(135deg, var(--band-moderate) 0%, white 80%); border-color: var(--band-mod-solid); }
+    .color-key .ck-band[data-band="high"]     { background: linear-gradient(135deg, var(--band-high)     0%, white 80%); border-color: var(--band-high-solid); }
+    .color-key .ck-band[data-band="critical"] { background: linear-gradient(135deg, var(--band-critical) 0%, white 80%); border-color: var(--band-crit-solid); }
+
+    /* The "sign" wraps an inline SVG drawn with proper MUTCD geometry —
+       octagon for stop, diamond for caution & construction, rectangle
+       for guide. Drawing in SVG (not clip-path) keeps borders crisp,
+       prints cleanly, and avoids stroke-clipping artifacts. */
+    .color-key .ck-sign {
+      width: 60px; height: 60px;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      filter: drop-shadow(0 1.5px 3px rgba(14,20,32,0.16));
+    }
+    .color-key .ck-sign svg { width: 100%; height: 100%; display: block; }
+    .color-key .ck-name {
+      font-family: var(--font-display);
+      font-size: 17px; font-weight: 500; line-height: 1;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .color-key .ck-desc {
+      font-family: var(--font-body);
+      font-size: 12px; color: var(--ink-2); line-height: 1.35;
+    }
+    .color-key .ck-range {
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 600;
+      color: var(--ink-2);
+      letter-spacing: 0.06em;
+      padding: 4px 8px;
+      border: 0.5px solid var(--line);
+      background: white;
+    }
+
+    /* ── "What changed" period-over-period panel ─────────────────── */
+    .changed-frame {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0;
+      background: white;
+      border: 0.5px solid var(--line);
+      margin-bottom: 16px;
+    }
+    .changed-col {
+      padding: 18px 22px;
+      border-right: 0.5px solid var(--line);
+      display: flex; flex-direction: column; gap: 10px;
+      min-height: 140px;
+    }
+    .changed-col:last-child { border-right: 0; }
+    .changed-col .ch-head {
+      display: flex; align-items: baseline; gap: 8px;
+    }
+    .changed-col .ch-icon {
+      width: 14px; height: 14px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 14px; line-height: 1;
+    }
+    .changed-col .ch-icon[data-kind="up"]    { color: var(--band-crit-solid); }
+    .changed-col .ch-icon[data-kind="down"]  { color: var(--band-low-solid); }
+    .changed-col .ch-icon[data-kind="new"]   { color: var(--band-high-solid); }
+    .changed-col .ch-icon[data-kind="done"]  { color: var(--band-low-solid); }
+    .changed-col .ch-title {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .changed-col .ch-count {
+      font-family: var(--font-display);
+      font-size: 32px; font-weight: 500; line-height: 1;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+    .changed-col .ch-list {
+      display: flex; flex-direction: column; gap: 4px;
+      font-family: var(--font-body);
+      font-size: 12px; color: var(--ink-2); line-height: 1.45;
+    }
+    .changed-col .ch-list a {
+      color: inherit; text-decoration: none;
+      border-bottom: 0.5px dotted var(--ink-3);
+      cursor: pointer;
+    }
+    .changed-col .ch-list a:hover { color: var(--primary); border-bottom-color: var(--primary); }
+    .changed-col .ch-empty {
+      font-family: var(--font-mono);
+      font-size: 11px; color: var(--ink-faint); font-style: italic;
+    }
+
+    /* ── Board-pack footer ───────────────────────────────────────── */
+    .board-foot {
+      margin-top: 56px;
+      padding-top: 0;
+      font-family: var(--font-mono);
+      page-break-inside: avoid;
+    }
+    .board-foot .bf-rule {
+      height: 0.5px; background: var(--ink);
+      margin-bottom: 18px;
+    }
+    .board-foot .bf-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .board-foot .bf-k {
+      font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-3); margin-bottom: 4px;
+    }
+    .board-foot .bf-v {
+      font-family: var(--font-body);
+      font-size: 12px; color: var(--ink); letter-spacing: 0;
+    }
+    .board-foot .bf-tail {
+      font-family: var(--font-body);
+      font-size: 11px; color: var(--ink-3);
+      max-width: 76ch; line-height: 1.55;
+      padding-top: 12px;
+      border-top: 0.5px solid var(--line);
+    }
+
+    /* ── Print: board-pack handout ───────────────────────────────── */
+    @media print {
+      @page { size: Letter; margin: 0.55in 0.55in 0.7in 0.55in; }
+      body {
+        background: white !important;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .topbar, .drawer-backdrop, .register-toolbar,
+      .mit-toggle, .feeds-grid,
+      #btnNewRisk, .btn-ghost, .board-stamps-actions,
+      .topbar a, .topbar button { display: none !important; }
+      .pg { padding: 0; max-width: none; }
+      h1 { font-size: 32px !important; }
+      .pg .lede { font-size: 13px; }
+      .board-meta { font-size: 9px; }
+      .board-stamps { padding: 10px 0; margin-bottom: 16px; }
+      .board-stamps .bs-v { font-size: 13px; }
+      .exec-summary { box-shadow: none; padding: 16px 18px; margin-bottom: 18px; }
+      .exec-summary p { font-size: 14px; }
+      .exec-summary p + p { font-size: 11px; }
+      .stat-strip { gap: 0; border: 0.5px solid var(--line); }
+      .stat-card {
+        border: 0;
+        border-right: 0.5px solid var(--line);
+        padding: 12px 14px;
+      }
+      .stat-card:last-child { border-right: 0; }
+      .stat-card .v { font-size: 1.6rem; }
+      .stat-card::before { display: none; }
+      .sec-rule { margin: 22px 0 10px; page-break-after: avoid; }
+      .row-2col, .heatmap-frame, .panel,
+      .action-board, .action-col, .changed-frame, .changed-col,
+      .owner-grid, .owner-card, .mitigation-frame {
+        page-break-inside: avoid; break-inside: avoid;
+      }
+      .heatmap-frame { padding: 14px 16px; }
+      .heatmap-wrap { grid-template-rows: repeat(5, 44px) 18px; }
+      .heatmap-frame::before { display: none; }
+      table.register {
+        page-break-inside: auto; font-size: 11px;
+      }
+      table.register tr, table.register tbody, table.register thead {
+        page-break-inside: avoid; break-inside: avoid;
+      }
+      table.register thead { display: table-header-group; }
+      .row-title { font-size: 12px; }
+      .row-mini { font-size: 10px; }
+      .om-name { font-size: 11px; }
+      .score-dot { box-shadow: none !important; }
+      .board-foot { margin-top: 28px; }
+      .drawer { display: none !important; }
+      a { color: inherit !important; text-decoration: none !important; }
+      /* Page numbers in the bottom margin */
+      @page { @bottom-right { content: counter(page) ' / ' counter(pages); font-family: ui-monospace, Menlo, monospace; font-size: 9px; color: #666; } }
+      @page { @bottom-left { content: 'Accelerate Robotics · Enterprise Risk Register · Confidential'; font-family: ui-monospace, Menlo, monospace; font-size: 9px; color: #666; } }
     }
 
     /* ── Section rule with terminal mark ─────────────────────────── */
@@ -494,6 +806,176 @@
     .register .score-pill[data-band="moderate"] { background: var(--band-mod-solid);  color: var(--ink); }
     .register .score-pill[data-band="low"]      { background: var(--band-low-solid);  color: white; }
     .register .delta-good { color: var(--success); font-family: var(--font-mono); font-size: 11px; }
+
+    /* ── Visual rows: band stripe down the left edge of each row ──── */
+    /* The first cell gets a thick colored stripe so band distribution
+       is scannable from a distance. Critical band uses a hatched fill
+       so it stands out from plain red even on monochrome printers. */
+    .register tbody tr td:first-child {
+      border-left: 5px solid transparent;
+      padding-left: 14px;
+    }
+    .register tbody tr[data-band="critical"] td:first-child {
+      border-left-color: var(--band-crit-solid);
+      background-image: linear-gradient(90deg, rgba(220,38,38,0.06), transparent 64px);
+    }
+    .register tbody tr[data-band="high"]     td:first-child { border-left-color: var(--band-high-solid); background-image: linear-gradient(90deg, rgba(234,88,12,0.05), transparent 64px); }
+    .register tbody tr[data-band="moderate"] td:first-child { border-left-color: var(--band-mod-solid);  background-image: linear-gradient(90deg, rgba(202,138,4,0.05), transparent 64px); }
+    .register tbody tr[data-band="low"]      td:first-child { border-left-color: var(--band-low-solid);  background-image: linear-gradient(90deg, rgba(22,163,74,0.04), transparent 64px); }
+
+    /* ── Tinted category icon — the icon now reads as "type" at a glance.
+       Icon background uses a soft band tint so type AND severity are
+       both visible from the first cell. */
+    .register .cat-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--paper-2);
+      color: var(--ink-2);
+      transition: transform 0.12s;
+    }
+    .register .cat-icon svg { width: 19px; height: 19px; }
+    .register tbody tr[data-band="critical"] .cat-icon { background: rgba(220,38,38,0.14);  color: var(--band-crit-solid); }
+    .register tbody tr[data-band="high"]     .cat-icon { background: rgba(234,88,12,0.14);  color: var(--band-high-solid); }
+    .register tbody tr[data-band="moderate"] .cat-icon { background: rgba(202,138,4,0.14);  color: var(--band-mod-solid); }
+    .register tbody tr[data-band="low"]      .cat-icon { background: rgba(22,163,74,0.14);  color: var(--band-low-solid); }
+    .register tbody tr:hover .cat-icon { transform: scale(1.06); }
+
+    /* ── Containment bar — replaces the two-dot inherent→residual flow.
+       A 1-25 track. Faint full bar = inherent (worst case). Solid
+       colored bar = residual (current). The gap is what controls
+       are containing. Δ-saved badge sits on the right. */
+    .containment {
+      display: grid;
+      grid-template-columns: 24px 1fr 38px;
+      align-items: center;
+      gap: 10px;
+      width: 220px;
+      max-width: 100%;
+    }
+    .containment .ct-num {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--ink-3); text-align: right;
+    }
+    .containment .ct-track {
+      position: relative;
+      height: 18px;
+      background: var(--paper-2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .containment .ct-inherent {
+      position: absolute; top: 0; bottom: 0; left: 0;
+      background: rgba(14,20,32,0.10);
+      border-right: 1px dashed rgba(14,20,32,0.35);
+    }
+    .containment .ct-residual {
+      position: absolute; top: 0; bottom: 0; left: 0;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 6px;
+      font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+      color: white;
+      transition: width 0.3s;
+    }
+    .containment .ct-residual[data-band="critical"] {
+      background: var(--band-crit-solid);
+      background-image: repeating-linear-gradient(45deg, transparent 0 5px, rgba(255,255,255,0.18) 5px 6px);
+    }
+    .containment .ct-residual[data-band="high"]     { background: var(--band-high-solid); }
+    .containment .ct-residual[data-band="moderate"] { background: var(--band-mod-solid); color: var(--ink); }
+    .containment .ct-residual[data-band="low"]      { background: var(--band-low-solid); }
+    .containment .ct-delta {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--band-low-solid);
+      text-align: right;
+    }
+    .containment .ct-delta[data-zero="true"] { color: var(--ink-faint); }
+    .containment .ct-axis {
+      grid-column: 2;
+      display: flex; justify-content: space-between;
+      font-family: var(--font-mono); font-size: 8px;
+      color: var(--ink-faint);
+      letter-spacing: 0.10em; text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    /* ── Countdown bar — visual urgency on the next-review cell.
+       Bar fills toward red as the due date approaches. Overdue =
+       red striped. Plenty-of-time = green. */
+    .review-countdown {
+      display: flex; flex-direction: column; gap: 4px;
+      width: 110px;
+    }
+    .review-countdown .rc-line {
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .review-countdown .rc-date {
+      font-family: var(--font-display); font-size: 14px; color: var(--ink);
+    }
+    .review-countdown .rc-rel {
+      font-family: var(--font-mono); font-size: 9px;
+      letter-spacing: 0.10em; text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .review-countdown .rc-bar {
+      height: 4px; background: var(--paper-2); border-radius: 2px; overflow: hidden;
+    }
+    .review-countdown .rc-fill {
+      height: 100%;
+      background: var(--band-low-solid);
+    }
+    /* Color the fill by urgency bucket. Stripes for overdue. */
+    .review-countdown[data-urgency="overdue"] .rc-date,
+    .review-countdown[data-urgency="overdue"] .rc-rel { color: var(--band-crit-solid); }
+    .review-countdown[data-urgency="overdue"] .rc-fill {
+      background: var(--band-crit-solid);
+      background-image: repeating-linear-gradient(45deg, transparent 0 4px, rgba(255,255,255,0.25) 4px 5px);
+    }
+    .review-countdown[data-urgency="soon"] .rc-fill { background: var(--band-mod-solid); }
+    .review-countdown[data-urgency="soon"] .rc-rel  { color: var(--band-mod-solid); }
+    .review-countdown[data-urgency="watch"] .rc-fill { background: var(--band-high-solid); }
+
+    /* ── Mitigation cell — when actions exist, show them as a tiny
+       stack of segments (open vs done). Nothing visible when no
+       actions, so the row isn't cluttered. */
+    .mitigation-cell {
+      display: flex; flex-direction: column; gap: 5px;
+      min-width: 96px;
+    }
+    .mitigation-cell .mc-line {
+      font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.06em;
+      color: var(--ink-2);
+    }
+    .mitigation-cell .mc-line[data-overdue="true"] { color: var(--band-crit-solid); font-weight: 600; }
+    .mitigation-cell .mc-segs {
+      display: flex; gap: 2px;
+    }
+    .mitigation-cell .mc-seg {
+      flex: 1; height: 6px; border-radius: 1px;
+      background: var(--paper-2);
+    }
+    .mitigation-cell .mc-seg[data-state="open"]    { background: var(--ink-3); }
+    .mitigation-cell .mc-seg[data-state="overdue"] { background: var(--band-crit-solid); }
+    .mitigation-cell .mc-seg[data-state="done"]    { background: var(--band-low-solid); }
+    .mitigation-cell .mc-empty {
+      font-family: var(--font-mono); font-size: 10px;
+      color: var(--ink-faint); letter-spacing: 0.10em; text-transform: uppercase;
+    }
+
+    /* ── Owner cell — a tinted ring on the monogram circle showing the
+       band of THIS particular risk. Big + airy so it reads. */
+    .register .owner-mono { gap: 10px; }
+    .register .owner-mono .om-circle {
+      width: 32px; height: 32px;
+      box-shadow: 0 0 0 2px var(--paper) inset, 0 0 0 3px transparent;
+    }
+    .register tbody tr[data-band="critical"] .om-circle { box-shadow: 0 0 0 2px var(--paper) inset, 0 0 0 3px var(--band-crit-solid); }
+    .register tbody tr[data-band="high"]     .om-circle { box-shadow: 0 0 0 2px var(--paper) inset, 0 0 0 3px var(--band-high-solid); }
+    .register tbody tr[data-band="moderate"] .om-circle { box-shadow: 0 0 0 2px var(--paper) inset, 0 0 0 3px var(--band-mod-solid); }
+    .register tbody tr[data-band="low"]      .om-circle { box-shadow: 0 0 0 2px var(--paper) inset, 0 0 0 3px var(--band-low-solid); }
 
     /* ── Data feeds panel — placeholders for live wires ──────────── */
     .feeds-grid {
@@ -871,6 +1353,65 @@
     .mit-delta[data-delta="0"] { color: var(--ink-3); }
     @media (max-width: 880px) { .mit-row { grid-template-columns: 1fr; gap: 6px; } .mit-row .mit-delta { text-align: left; } }
 
+    /* ── Grouped mitigation view: each category is its own card with a
+       tinted header so the eye can scan TYPE quickly. Inside each card
+       the rows still use band colors for severity, so the reader gets
+       both axes at once: which kind of risk + how serious. */
+    .mit-groups { display: flex; flex-direction: column; gap: 14px; }
+    .mit-group {
+      background: white;
+      border: 0.5px solid var(--line);
+      border-left: 3px solid var(--mg-color, var(--ink));
+    }
+    .mit-group-head {
+      display: grid;
+      grid-template-columns: 28px 1fr auto auto;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 18px;
+      background: var(--mg-tint, var(--paper-2));
+      border-bottom: 0.5px solid var(--line);
+    }
+    .mit-group-head .mg-icon {
+      width: 28px; height: 28px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--mg-color, var(--ink));
+    }
+    .mit-group-head .mg-icon svg { width: 22px; height: 22px; }
+    .mit-group-head .mg-name {
+      font-family: var(--font-mono);
+      font-size: 11px; letter-spacing: 0.20em; text-transform: uppercase;
+      font-weight: 600;
+      color: var(--mg-color, var(--ink));
+    }
+    .mit-group-head .mg-count {
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.10em; text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .mit-group-head .mg-total {
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--success);
+      padding: 3px 8px;
+      background: white;
+      border: 0.5px solid var(--line);
+    }
+    .mit-group-head .mg-total[data-zero="true"] { color: var(--ink-3); }
+    .mit-group-rows {
+      padding: 4px 18px 10px;
+    }
+    /* Inside a group, drop the per-row bottom rule so the group itself
+       provides the separation; rows feel like related rows in a ledger. */
+    .mit-group-rows .mit-row {
+      border-bottom: 0.5px solid rgba(14,20,32,0.04);
+      padding: 9px 0;
+    }
+    .mit-group-rows .mit-row:last-child { border-bottom: 0; }
+    /* Title in a grouped row drops the cat-mini (redundant — group says it). */
+    .mit-group-rows .cat-mini { display: none; }
+
     /* ─── Owner accountability board ─────────────────────────────── */
     .owner-grid {
       display: grid;
@@ -935,6 +1476,158 @@
     .owner-card .owner-risk .or-trend {
       font-family: var(--font-mono); font-size: 14px; width: 14px; text-align: center;
     }
+
+    /* ─── Visual register row — bring the data to life ───────────
+       The register is the densest table on the page. Every cell is a
+       tiny visualization so you read the row at a glance:
+         • category icon (shape carries category, not color — color is
+           reserved for severity)
+         • owner monogram circle
+         • score "dots" sized by score (1-25 → 18-44px diameter)
+         • inherent→residual flow with arrow and Δ badge
+         • bold trend arrow + sparkline
+         • actions badge (open + done count, with progress)
+         • next-review with relative countdown */
+
+    .register td { vertical-align: middle; }
+
+    /* ── Category icon — 28px square, soft neutral bg, monochrome
+         SVG. Same color across categories so severity stays the only
+         color signal. ── */
+    .cat-icon {
+      width: 28px; height: 28px;
+      flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--paper-2);
+      border: 0.5px solid var(--hairline);
+      color: var(--ink-2);
+      border-radius: 0;
+    }
+    .cat-icon svg { width: 16px; height: 16px; }
+
+    /* Risk title block w/ leading category icon */
+    .row-title-flow {
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .row-title-flow .row-title-text { flex: 1; min-width: 0; }
+    .row-title-flow .row-title { cursor: pointer; }
+    .row-title-flow .row-title:hover { color: var(--primary); }
+
+    /* ── Owner monogram — colored circle with initials ── */
+    .owner-mono {
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .owner-mono .om-circle {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--ink); color: var(--paper);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+    .owner-mono .om-name {
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.06em; color: var(--ink-2);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    @media (max-width: 1100px) {
+      .owner-mono .om-name { display: none; }
+    }
+
+    /* ── Score DOT — area scales with score so visual weight = risk
+         weight. 18px (score 1) → 44px (score 25). White text inside,
+         band-colored fill, stripe overlay on critical. ── */
+    .score-dot {
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      font-family: var(--font-mono);
+      font-weight: 700; letter-spacing: 0;
+      color: white;
+      flex-shrink: 0;
+      box-shadow: 0 1px 2px rgba(14,20,32,0.18);
+    }
+    .score-dot[data-band="low"]      { background: var(--band-low-solid); }
+    .score-dot[data-band="moderate"] { background: var(--band-mod-solid); color: var(--ink); }
+    .score-dot[data-band="high"]     { background: var(--band-high-solid); }
+    .score-dot[data-band="critical"] {
+      background: var(--band-crit-solid);
+      background-image: repeating-linear-gradient(45deg, transparent 0 4px, rgba(255,255,255,0.20) 4px 5px);
+    }
+    .score-dot.faded { opacity: 0.42; box-shadow: none; }
+
+    /* ── Inherent → Residual flow visualization
+         Two dots with an arrow between, plus a Δ badge showing how
+         many points the controls saved. ── */
+    .score-flow {
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .score-flow .arrow {
+      font-family: var(--font-mono); font-size: 14px;
+      color: var(--ink-faint);
+    }
+    .score-flow .delta-badge {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--band-low-ink);
+      padding: 2px 6px;
+      background: var(--band-low);
+      border: 0.5px solid var(--band-low-solid);
+      margin-left: 2px;
+    }
+    .score-flow .delta-badge.zero {
+      color: var(--ink-3); background: var(--paper-2);
+      border-color: var(--hairline);
+    }
+
+    /* ── Big trend signal: arrow in band color, larger sparkline ── */
+    .trend-cell {
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .trend-cell .trend-arrow {
+      font-family: var(--font-mono);
+      font-size: 18px; font-weight: 600;
+      width: 18px; text-align: center;
+    }
+    .trend-cell .trend-arrow[data-t="rising"]  { color: var(--band-crit-solid); }
+    .trend-cell .trend-arrow[data-t="falling"] { color: var(--band-low-solid); }
+    .trend-cell .trend-arrow[data-t="stable"]  { color: var(--ink-faint); }
+    .trend-cell .spark { width: 60px; height: 22px; }
+
+    /* ── Actions badge — visible when a risk has open actions ── */
+    .actions-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      background: var(--paper-2);
+      color: var(--ink-2);
+      border: 0.5px solid var(--hairline);
+    }
+    .actions-badge[data-overdue="true"] {
+      background: rgba(229,72,77,0.12);
+      color: var(--band-crit-solid);
+      border-color: var(--band-crit-solid);
+    }
+    .actions-badge .ab-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--band-low-solid);
+    }
+    .actions-badge[data-overdue="true"] .ab-dot {
+      background: var(--band-crit-solid);
+    }
+
+    /* ── Next review with countdown ── */
+    .review-cell {
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.04em; line-height: 1.3;
+    }
+    .review-cell .rc-date { color: var(--ink-2); }
+    .review-cell .rc-rel { color: var(--ink-3); display: block; font-size: 9px; letter-spacing: 0.10em; text-transform: uppercase; margin-top: 2px; }
+    .review-cell.is-overdue .rc-date,
+    .review-cell.is-overdue .rc-rel { color: var(--band-crit-solid); }
+    .review-cell.is-soon .rc-date,
+    .review-cell.is-soon .rc-rel { color: var(--band-mod-solid); }
 
     /* ─── Sparkline (SVG inline in register rows) ────────────────── */
     .spark { display: inline-block; vertical-align: middle; width: 80px; height: 22px; }
@@ -1066,13 +1759,95 @@
   </div>
 
   <div class="pg">
-    <div class="pg-eyebrow">Living register · Last refreshed <span id="lastRefresh">—</span></div>
+    <!-- ═══ Board-pack hero — period framing, audience, as-of ════════ -->
+    <div class="board-meta">
+      <span class="bm-tag">Board Pack</span>
+      <span class="bm-period" id="bmPeriod">—</span>
+      <span class="bm-conf">Confidential · Internal use only</span>
+    </div>
     <h1>Where <em>the company</em> is exposed — and what's containing it.</h1>
     <p class="lede">
-      Every meaningful risk facing Accelerate Robotics, scored on a 5×5 matrix
-      for both inherent and residual exposure. Heat-mapped, owner-assigned,
-      and (soon) wired to the data feeds that move them in real time.
+      The full enterprise risk picture for Accelerate Robotics, scored on a 5×5
+      matrix for inherent and residual exposure. Each risk has a named owner,
+      a control narrative, and a mitigation plan with dated actions.
     </p>
+    <div class="board-stamps">
+      <span><span class="bs-k">Prepared for</span><span class="bs-v">Board of Directors</span></span>
+      <span><span class="bs-k">As of</span><span class="bs-v" id="bsAsOf">—</span></span>
+      <span><span class="bs-k">Last refresh</span><span class="bs-v" id="lastRefresh">—</span></span>
+      <span><span class="bs-k">Next review</span><span class="bs-v" id="bsNextReview">—</span></span>
+      <span class="board-stamps-actions">
+        <button class="btn-ghost" id="btnPrintPack" title="Print as a board-pack PDF">⎙ Print pack</button>
+      </span>
+    </div>
+
+    <!-- ═══ Executive summary — narrative state of the register ═════ -->
+    <div class="exec-summary" id="execSummary"></div>
+
+    <!-- ═══ Color key — rules of the road for the entire dashboard ═══
+         Each sign is drawn as inline SVG using the actual MUTCD shape:
+         green rectangle (guide), yellow diamond (warning), orange
+         diamond (construction), red octagon (stop). Crisp at all DPRs
+         and prints cleanly. ────────────────────────────────────────── -->
+    <div class="color-key" aria-label="Color key — risk band semantics">
+      <div class="ck-eyebrow">Color Key · Rules of the road</div>
+      <div class="ck-grid">
+        <div class="ck-band" data-band="low">
+          <span class="ck-sign" title="Guide sign · clear road ahead">
+            <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="2" y="14" width="56" height="32" rx="2" fill="#006B3F"/>
+              <rect x="5.5" y="17.5" width="49" height="25" rx="1" fill="none" stroke="white" stroke-width="1.4"/>
+              <text x="30" y="34" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="700" fill="white" letter-spacing="0.6">CLEAR</text>
+            </svg>
+          </span>
+          <div class="ck-text">
+            <div class="ck-name">Clear</div>
+            <div class="ck-desc">Monitor · normal cadence</div>
+          </div>
+          <div class="ck-range">1–4</div>
+        </div>
+        <div class="ck-band" data-band="moderate">
+          <span class="ck-sign" title="Warning sign · caution">
+            <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <polygon points="30,3 57,30 30,57 3,30" fill="#FCD116" stroke="#0E1420" stroke-width="2.4" stroke-linejoin="miter"/>
+              <text x="30" y="42" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="34" font-weight="900" fill="#0E1420">!</text>
+            </svg>
+          </span>
+          <div class="ck-text">
+            <div class="ck-name">Caution</div>
+            <div class="ck-desc">Mitigate · monthly review</div>
+          </div>
+          <div class="ck-range">5–9</div>
+        </div>
+        <div class="ck-band" data-band="high">
+          <span class="ck-sign" title="Construction sign · act now">
+            <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <polygon points="30,3 57,30 30,57 3,30" fill="#FF7900" stroke="#0E1420" stroke-width="2.2" stroke-linejoin="miter"/>
+              <text x="30" y="33.5" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="800" fill="#0E1420" letter-spacing="0.6">ACT</text>
+            </svg>
+          </span>
+          <div class="ck-text">
+            <div class="ck-name">Act</div>
+            <div class="ck-desc">Weekly review · controls in flight</div>
+          </div>
+          <div class="ck-range">10–15</div>
+        </div>
+        <div class="ck-band" data-band="critical">
+          <span class="ck-sign" title="Stop sign · halt and escalate">
+            <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <polygon points="18,2 42,2 58,18 58,42 42,58 18,58 2,42 2,18" fill="#C8102E"/>
+              <polygon points="18,7 42,7 53,18 53,42 42,53 18,53 7,42 7,18" fill="none" stroke="white" stroke-width="1.8"/>
+              <text x="30" y="34" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="800" fill="white" letter-spacing="0.6">STOP</text>
+            </svg>
+          </span>
+          <div class="ck-text">
+            <div class="ck-name">Stop</div>
+            <div class="ck-desc">Daily watch · escalate to board</div>
+          </div>
+          <div class="ck-range">16–25</div>
+        </div>
+      </div>
+    </div>
 
     <!-- Stat strip -->
     <div class="stat-strip" id="statStrip"></div>
@@ -1132,6 +1907,10 @@
       </div>
     </div>
 
+    <!-- ═══ What changed since last review — period-over-period ═══ -->
+    <div class="sec-rule"><span class="label">What changed since last review</span></div>
+    <div class="changed-frame" id="changedFrame"></div>
+
     <!-- ═══ Mitigation Action Board — what's actually being done ═══ -->
     <div class="sec-rule"><span class="label">Mitigation actions · what's being done</span></div>
     <div class="action-board">
@@ -1166,18 +1945,45 @@
       <thead>
         <tr>
           <th>Risk</th>
-          <th>Category</th>
           <th>Owner</th>
-          <th>Inherent</th>
-          <th>Residual</th>
+          <th>Inherent → Residual <span class="th-help">·</span> <span class="th-mute">Δ saved</span></th>
           <th>Trend</th>
+          <th>Mitigation</th>
           <th>Next review</th>
         </tr>
       </thead>
       <tbody id="registerBody">
-        <tr><td colspan="7" style="text-align:center;color:var(--ink-3);font-style:italic;padding:32px;">Loading…</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--ink-3);font-style:italic;padding:32px;">Loading…</td></tr>
       </tbody>
     </table>
+
+    <!-- ═══ Board-pack footer ═══════════════════════════════════════ -->
+    <footer class="board-foot">
+      <div class="bf-rule"></div>
+      <div class="bf-grid">
+        <div>
+          <div class="bf-k">Document</div>
+          <div class="bf-v">Enterprise Risk Register · v1</div>
+        </div>
+        <div>
+          <div class="bf-k">Cadence</div>
+          <div class="bf-v">Reviewed monthly · Re-scored quarterly</div>
+        </div>
+        <div>
+          <div class="bf-k">Source of truth</div>
+          <div class="bf-v">erm.accelerate.local / risk-management</div>
+        </div>
+        <div>
+          <div class="bf-k">Confidentiality</div>
+          <div class="bf-v">Confidential · Internal use only</div>
+        </div>
+      </div>
+      <div class="bf-tail">
+        Prepared by management for the Accelerate Robotics Board of Directors.
+        This document is the authoritative register of enterprise risks; it does
+        not replace specific compliance, security, or audit reports referenced herein.
+      </div>
+    </footer>
 
   </div>
 
@@ -1203,6 +2009,146 @@ const CATEGORY_LABEL = {
 
 const TREND_GLYPH = { rising: '↑', stable: '→', falling: '↓' };
 
+// ─── Category type-colors — distinct from the MUTCD band palette.
+// Bands convey SEVERITY (red/yellow/green/orange); categories convey
+// TYPE (indigo/teal/violet/etc). Together they let the eye decode
+// "what kind of risk" + "how serious" simultaneously without conflict.
+const CATEGORY_COLOR = {
+  strategic:   { ink: '#3730A3', tint: 'rgba(55,48,163,0.10)',  border: 'rgba(55,48,163,0.40)'  },
+  operational: { ink: '#0E7490', tint: 'rgba(14,116,144,0.10)', border: 'rgba(14,116,144,0.40)' },
+  financial:   { ink: '#92400E', tint: 'rgba(146,64,14,0.10)',  border: 'rgba(146,64,14,0.40)'  },
+  technology:  { ink: '#6D28D9', tint: 'rgba(109,40,217,0.10)', border: 'rgba(109,40,217,0.40)' },
+  regulatory:  { ink: '#475569', tint: 'rgba(71,85,105,0.10)',  border: 'rgba(71,85,105,0.40)'  },
+  people:      { ink: '#BE123C', tint: 'rgba(190,18,60,0.10)',  border: 'rgba(190,18,60,0.40)'  },
+  legal:       { ink: '#1E3A8A', tint: 'rgba(30,58,138,0.10)',  border: 'rgba(30,58,138,0.40)'  },
+  reputation:  { ink: '#A16207', tint: 'rgba(161,98,7,0.10)',   border: 'rgba(161,98,7,0.40)'   },
+};
+
+// ─── Category icons — monochrome SVG so severity color stays the
+// only color signal on the row. Each category gets a recognizable
+// symbol (pulled from Lucide-style stroke icons). ────────────────
+const CATEGORY_ICON = {
+  strategic:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>',
+  operational: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/></svg>',
+  financial:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  technology:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  regulatory:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 8l7-3 7 3"/><path d="M5 8l-2 6h6z"/><path d="M19 8l2 6h-6z"/><path d="M3 14a3 3 0 0 0 6 0"/><path d="M15 14a3 3 0 0 0 6 0"/></svg>',
+  people:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  legal:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4l5.5 5.5"/><path d="M3 21l4-4"/><path d="M5 19l8-8"/><path d="M14 6l4 4"/><path d="M9 11l4 4"/><path d="M2 22h20"/></svg>',
+  reputation:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8v18l-18-8z"/><path d="M11 11.5v6"/><path d="M3 11v3a4 4 0 0 0 4 4"/></svg>',
+};
+
+// Build a 28px category icon block.
+function catIcon(category) {
+  const svg = CATEGORY_ICON[category] || CATEGORY_ICON.strategic;
+  return `<span class="cat-icon" title="${escapeHtml(CATEGORY_LABEL[category] || category)}">${svg}</span>`;
+}
+
+// Owner monogram — circle with up to 2 initials.
+function ownerMono(owner) {
+  if (!owner) return '<span class="owner-mono"><span class="om-circle" style="background:var(--paper-2);color:var(--ink-3);">–</span><span class="om-name">unassigned</span></span>';
+  const parts = owner.trim().split(/\s+/);
+  const initials = (parts[0]?.[0] || '').toUpperCase() + (parts[1]?.[0] || '').toUpperCase();
+  return `<span class="owner-mono"><span class="om-circle">${escapeHtml(initials || owner.slice(0,1).toUpperCase())}</span><span class="om-name">${escapeHtml(owner)}</span></span>`;
+}
+
+// Score dot sized by score (1→18px, 25→44px). Visual weight = risk weight.
+function scoreDot(score, band, opts = {}) {
+  const size = Math.round(18 + (Math.min(25, Math.max(1, score)) / 25) * 26);
+  const fontSize = size >= 32 ? 14 : size >= 24 ? 12 : 10;
+  return `<span class="score-dot ${opts.faded ? 'faded' : ''}" data-band="${band}"
+    style="width:${size}px;height:${size}px;font-size:${fontSize}px;">${score}</span>`;
+}
+
+// Inherent→Residual flow: two sized dots with arrow + Δ badge.
+function scoreFlow(inh, res, delta) {
+  return `<span class="score-flow">
+    ${scoreDot(inh.score, inh.band, { faded: true })}
+    <span class="arrow">→</span>
+    ${scoreDot(res.score, res.band)}
+    <span class="delta-badge ${delta === 0 ? 'zero' : ''}" title="${delta} pts saved by controls">${delta > 0 ? '−' + delta : '0'}</span>
+  </span>`;
+}
+
+// Relative-time formatter for next-review countdowns.
+function reviewRel(dateStr) {
+  if (!dateStr) return { date: '—', rel: '', cls: '' };
+  const due = new Date(dateStr + 'T12:00:00');
+  const now = new Date();
+  const days = Math.round((due - now) / 86400000);
+  const date = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  let rel, cls = '';
+  if (days < 0)        { rel = `${Math.abs(days)}d overdue`; cls = 'is-overdue'; }
+  else if (days === 0) { rel = 'today'; cls = 'is-soon'; }
+  else if (days <= 7)  { rel = `in ${days}d`; cls = 'is-soon'; }
+  else                 { rel = `in ${days}d`; }
+  return { date, rel, cls };
+}
+
+// Containment bar — visualizes inherent vs residual on a 1-25 track.
+// Faint full bar shows the inherent (worst-case) exposure; the colored
+// solid bar shows residual (current). The empty space between them is
+// what controls are containing — the visual story of "what we saved."
+function containmentBar(inh, res, delta) {
+  const inhPct = (inh.score / 25) * 100;
+  const resPct = (res.score / 25) * 100;
+  return `
+    <div class="containment" title="Inherent ${inh.score} → residual ${res.score} (${delta>0?'−'+delta:'0'} pts saved)">
+      <span class="ct-num">${inh.score}<span style="color:var(--ink-faint);">→</span></span>
+      <div class="ct-track">
+        <div class="ct-inherent" style="width:${inhPct}%;"></div>
+        <div class="ct-residual" data-band="${res.band}" style="width:${resPct}%;">${res.score}</div>
+      </div>
+      <span class="ct-delta" data-zero="${delta === 0}">${delta > 0 ? '−' + delta : '0'}</span>
+    </div>
+  `;
+}
+
+// Next-review urgency bucket — drives the countdown bar's color and fill.
+// Buckets are intentionally coarse so the team reads them at a glance.
+function reviewUrgency(dateStr) {
+  if (!dateStr) return { urgency: 'far', fillPct: 0 };
+  const due = new Date(dateStr + 'T12:00:00');
+  const now = new Date();
+  const days = Math.round((due - now) / 86400000);
+  // The bar fills as the deadline approaches. Reference window = 60 days
+  // (a quarter-ish) so the bar is empty when due >60d out, full when ≤0d.
+  const fillPct = Math.max(0, Math.min(100, Math.round((1 - days / 60) * 100)));
+  let urgency = 'far';
+  if (days < 0)       urgency = 'overdue';
+  else if (days <= 7) urgency = 'soon';
+  else if (days <= 21) urgency = 'watch';
+  return { urgency, fillPct };
+}
+
+// Mitigation cell: tiny segment bar of action states, with a label.
+// We show up to 8 segments; rest collapses into a "+N more" tail.
+function mitigationCell(actions) {
+  const open = actions?.open || 0;
+  const overdue = actions?.overdue || 0;
+  if (open === 0 && overdue === 0) {
+    return '<div class="mitigation-cell"><span class="mc-empty">— no actions —</span></div>';
+  }
+  const total = open;
+  const segCount = Math.min(8, total);
+  const segs = [];
+  for (let i = 0; i < segCount; i++) {
+    const state = i < overdue ? 'overdue' : 'open';
+    segs.push(`<div class="mc-seg" data-state="${state}"></div>`);
+  }
+  // Pad to 8 with empty segments so the bar width is consistent across rows.
+  while (segs.length < 8) segs.push('<div class="mc-seg"></div>');
+  const label = overdue > 0
+    ? `${open} open · <strong>${overdue} overdue</strong>`
+    : `${open} open action${open === 1 ? '' : 's'}`;
+  return `
+    <div class="mitigation-cell">
+      <div class="mc-segs">${segs.join('')}</div>
+      <div class="mc-line" data-overdue="${overdue > 0}">${label}</div>
+    </div>
+  `;
+}
+
 let DASHBOARD = null;
 let FILTER = { category: 'all', status: 'open', q: '' };
 
@@ -1212,18 +2158,125 @@ async function loadDashboard() {
   const res = await fetch('/api/risk-management/dashboard', { credentials: 'same-origin' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   DASHBOARD = await res.json();
-  $('lastRefresh').textContent = new Date(DASHBOARD.generated_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const now = new Date(DASHBOARD.generated_at);
+  $('lastRefresh').textContent = now.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  renderBoardMeta(now);
+  renderExecSummary();
   renderStats();
   renderTodaysThree();
   renderMitigationBars();
   renderHeatmap();
   renderTopRisks();
   renderAlerts();
+  renderChanged();
   renderOwnerBoard();
-  renderActionBoard(); // NEW
+  renderActionBoard();
   renderFeeds();
   renderToolbar();
   renderRegister();
+}
+
+// ─── Board-pack metadata: Quarter, As-of date, Next review ────────
+function renderBoardMeta(now) {
+  const q = Math.floor(now.getMonth() / 3) + 1;
+  const yr = now.getFullYear();
+  $('bmPeriod').textContent = `Q${q} ${yr} · Reviewed monthly`;
+  $('bsAsOf').textContent = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  // Next review = soonest non-overdue review_due across the register; fallback +30d
+  const dates = (DASHBOARD.risks || [])
+    .map(r => r.next_review_due ? new Date(r.next_review_due + 'T12:00:00') : null)
+    .filter(d => d && d >= now)
+    .sort((a, b) => a - b);
+  const next = dates[0] || new Date(now.getTime() + 30 * 86400000);
+  $('bsNextReview').textContent = next.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// ─── Executive summary — narrative paragraph synthesizing the state.
+// Hand-built sentence templates that pick adjectives + framing from the
+// real numbers. The board-room reader gets a story, not a stat dump.
+function renderExecSummary() {
+  const s = DASHBOARD.stats;
+  const total = s.total;
+  const crit = s.critical;
+  const high = s.high;
+  const overdue = s.overdue;
+  const avg = Number(s.avg_score);
+  const mit = s.mitigation_value;
+
+  // Top residual exposure
+  const topRes = (DASHBOARD.top || [])[0];
+  // Biggest mitigation win (largest delta)
+  const topMit = [...(DASHBOARD.risks || [])].sort((a, b) => b.delta - a.delta)[0];
+
+  // Posture word — lead the summary with calm authority.
+  const posture = crit > 0
+    ? `<span class="es-band-crit">Active red zone</span>`
+    : (high >= 3 ? '<strong>Elevated, contained</strong>'
+       : (avg >= 8 ? '<strong>Watchful, stable</strong>'
+          : '<span class="es-band-good">Posture is healthy</span>'));
+
+  const overdueClause = overdue > 0
+    ? ` <strong>${overdue} review${overdue===1?'':'s'} ${overdue===1?'is':'are'} past due</strong>.`
+    : ' All reviews are current.';
+
+  const mitClause = (topMit && topMit.delta > 0)
+    ? ` Biggest control win: <strong>${escapeHtml(topMit.title)}</strong> (−${topMit.delta} pts inherent→residual).`
+    : '';
+
+  const topClause = topRes
+    ? ` Highest residual exposure remains <strong>${escapeHtml(topRes.title)}</strong> at ${topRes.residual.score}, owned by ${escapeHtml(topRes.owner || 'unassigned')}.`
+    : '';
+
+  const bandLine = `${crit} critical, ${high} high-band, average residual <strong>${avg.toFixed(1)}</strong> across <strong>${total}</strong> active risks. Controls in place are removing <strong>${mit} points</strong> of exposure in aggregate.`;
+
+  $('execSummary').innerHTML = `
+    <p>${posture}. ${total} risks tracked; ${crit} in the critical band, ${high} high.${overdueClause}</p>
+    <p>${bandLine}${topClause}${mitClause}</p>
+  `;
+}
+
+// ─── "What changed" — period-over-period signals from current data.
+// Pulls 4 columns: rising trend, falling trend (controls working),
+// new criticals, overdue reviews. Each links into the parent risk drawer.
+function renderChanged() {
+  const all = DASHBOARD.risks || [];
+  const rising  = all.filter(r => r.trend === 'rising');
+  const falling = all.filter(r => r.trend === 'falling');
+  const crits   = all.filter(r => r.residual.band === 'critical');
+  const overdue = all.filter(r => r.is_overdue);
+
+  const linkList = (items, max = 4) => {
+    if (!items || items.length === 0) return '<div class="ch-empty">— none —</div>';
+    return `<div class="ch-list">${
+      items.slice(0, max).map(r => `<a data-rid="${r.id}">${escapeHtml(r.title)} <span style="color:var(--ink-3);">· ${r.residual.score}</span></a>`).join('')
+    }${items.length > max ? `<span style="color:var(--ink-3);font-size:11px;">+${items.length - max} more</span>` : ''}</div>`;
+  };
+
+  $('changedFrame').innerHTML = `
+    <div class="changed-col">
+      <div class="ch-head"><span class="ch-icon" data-kind="up">↑</span><span class="ch-title">Trending up</span></div>
+      <div class="ch-count">${rising.length}</div>
+      ${linkList(rising)}
+    </div>
+    <div class="changed-col">
+      <div class="ch-head"><span class="ch-icon" data-kind="down">↓</span><span class="ch-title">Controls working</span></div>
+      <div class="ch-count">${falling.length}</div>
+      ${linkList(falling)}
+    </div>
+    <div class="changed-col">
+      <div class="ch-head"><span class="ch-icon" data-kind="new">●</span><span class="ch-title">In critical band</span></div>
+      <div class="ch-count">${crits.length}</div>
+      ${linkList(crits)}
+    </div>
+    <div class="changed-col">
+      <div class="ch-head"><span class="ch-icon" data-kind="done">⏱</span><span class="ch-title">Reviews overdue</span></div>
+      <div class="ch-count">${overdue.length}</div>
+      ${linkList(overdue)}
+    </div>
+  `;
+  $('changedFrame').querySelectorAll('.ch-list a').forEach(a => {
+    a.addEventListener('click', () => openRisk(Number(a.dataset.rid)));
+  });
 }
 
 // ─── Action Board — overdue + due-this-week cross-risk view ──────
@@ -1334,19 +2387,38 @@ function renderTodaysThree() {
 //   • inherent  — biggest underlying threat first (where to add more controls)
 function renderMitigationBars() {
   const el = $('mitBars');
-  const sorted = [...DASHBOARD.risks].sort((a, b) => {
+  const MAX = 25;
+
+  // Group by category so the eye reads TYPE first.
+  const groups = {};
+  for (const r of DASHBOARD.risks) {
+    (groups[r.category] = groups[r.category] || []).push(r);
+  }
+
+  // Sort risks WITHIN each group by the active toggle so the group's
+  // "first row" is the one that matters most under the chosen lens.
+  const rowSort = (a, b) => {
     if (MIT_SORT === 'residual') return b.residual.score - a.residual.score;
     if (MIT_SORT === 'inherent') return b.inherent.score - a.inherent.score;
     return b.delta - a.delta;
+  };
+  for (const cat of Object.keys(groups)) groups[cat].sort(rowSort);
+
+  // Order GROUPS by aggregate residual exposure descending — biggest
+  // category problem first, regardless of the within-group sort.
+  const orderedCats = Object.keys(groups).sort((a, b) => {
+    const sumRes = c => groups[c].reduce((s, r) => s + r.residual.score, 0);
+    return sumRes(b) - sumRes(a);
   });
-  // Find the max so all bars share a scale (out of 25)
-  const MAX = 25;
-  el.innerHTML = sorted.map(r => {
+
+  // Build a single bar's HTML — same as before but extracted so groups
+  // can drop it in directly.
+  const rowHTML = r => {
     const inherentPct = (r.inherent.score / MAX) * 100;
     const residualPct = (r.residual.score / MAX) * 100;
     return `
       <div class="mit-row" data-id="${r.id}">
-        <div class="mit-title">${escapeHtml(r.title)}<span class="cat-mini">${escapeHtml(CATEGORY_LABEL[r.category] || r.category)} · ${escapeHtml(r.owner || 'unassigned')}</span></div>
+        <div class="mit-title">${escapeHtml(r.title)}</div>
         <div class="mit-bar-wrap">
           <div class="mit-bar inherent" style="width:${inherentPct}%;">${r.inherent.score}</div>
           <div class="mit-bar residual" data-band="${r.residual.band}" style="width:${residualPct}%;">${r.residual.score}</div>
@@ -1354,8 +2426,29 @@ function renderMitigationBars() {
         <div class="mit-delta" data-delta="${r.delta}">${r.delta > 0 ? '−' + r.delta : '0'}</div>
       </div>
     `;
-  }).join('');
-  el.querySelectorAll('.mit-row').forEach(row => row.addEventListener('click', () => openRisk(Number(row.dataset.id))));
+  };
+
+  el.innerHTML = `<div class="mit-groups">` + orderedCats.map(cat => {
+    const rows = groups[cat];
+    const totalDelta = rows.reduce((s, r) => s + r.delta, 0);
+    const color = CATEGORY_COLOR[cat] || CATEGORY_COLOR.strategic;
+    const styleVars = `--mg-color:${color.ink}; --mg-tint:${color.tint};`;
+    return `
+      <div class="mit-group" style="${styleVars}">
+        <div class="mit-group-head">
+          <span class="mg-icon">${CATEGORY_ICON[cat] || ''}</span>
+          <span class="mg-name">${escapeHtml(CATEGORY_LABEL[cat] || cat)}</span>
+          <span class="mg-count">${rows.length} risk${rows.length === 1 ? '' : 's'}</span>
+          <span class="mg-total" data-zero="${totalDelta === 0}" title="Total inherent − residual saved by controls in this category">${totalDelta > 0 ? '−' + totalDelta : '0'} pts saved</span>
+        </div>
+        <div class="mit-group-rows">${rows.map(rowHTML).join('')}</div>
+      </div>
+    `;
+  }).join('') + `</div>`;
+
+  el.querySelectorAll('.mit-row').forEach(row =>
+    row.addEventListener('click', () => openRisk(Number(row.dataset.id)))
+  );
 }
 // Wire the sort toggle once
 document.addEventListener('click', (e) => {
@@ -1532,14 +2625,22 @@ function renderAlerts() {
 // ── Live data feeds — placeholder now, real wires later ───────────
 function renderFeeds() {
   const feeds = [
-    { k: 'Cash runway',         v: '— mo',   s: 'Plaid · monthly burn ÷ balance', soon: true },
-    { k: 'Pipeline weight',     v: '$ —',    s: 'CRM · open deals × stage prob.',  soon: true },
-    { k: 'Robot uptime · 30d',  v: '— %',    s: 'Robot Command telemetry',         soon: true },
-    { k: 'Vendor health · KEN', v: '— %',    s: 'Keenon API + ticket SLA',         soon: true },
-    { k: 'Server uptime · 30d', v: '— %',    s: 'Render + UptimeRobot',            soon: true },
-    { k: 'Customer NPS',        v: '— ',     s: 'Post-deployment survey',          soon: true },
-    { k: 'AR aging',            v: '— d',    s: 'Stripe · invoice age',            soon: true },
-    { k: 'Active deployments',  v: DASHBOARD.stats.total ? '—' : '—', s: 'Facilities · deployment status', soon: true },
+    { k: 'Cash runway',           v: '— mo',  s: 'Plaid · monthly burn ÷ balance',                soon: true },
+    { k: 'Pipeline weight',       v: '$ —',   s: 'CRM · open deals × stage prob.',                soon: true },
+    { k: 'Robot uptime · 30d',    v: '— %',   s: 'Robot Command telemetry',                       soon: true },
+    { k: 'Vendor health · KEN',   v: '— %',   s: 'Keenon API + ticket SLA',                       soon: true },
+    { k: 'Server uptime · 30d',   v: '— %',   s: 'Render + UptimeRobot',                          soon: true },
+    { k: 'Customer NPS',          v: '— ',    s: 'Post-deployment survey',                        soon: true },
+    { k: 'AR aging',              v: '— d',   s: 'Stripe · invoice age',                          soon: true },
+    { k: 'Active deployments',    v: '—',     s: 'Facilities · deployment status',                soon: true },
+    // Geopolitical / trade-policy feeds — drive the China-vendor and
+    // Pacific-shipping risks. Each one is a named query against a news
+    // search service (Reuters/Bloomberg/USTR/BIS). The "soon" tag stays
+    // until the news ingestion worker is wired up.
+    { k: 'China robotics policy', v: '—',     s: 'Reuters + Bloomberg · USTR / BIS feed',         soon: true },
+    { k: 'BIS Entity List watch', v: '—',     s: 'Federal Register · Keenon / Pudu / robotics',   soon: true },
+    { k: 'Pacific shipping',      v: '—',     s: 'Reuters · Taiwan Strait + Red Sea headlines',   soon: true },
+    { k: 'Tariff schedule · 301', v: '— %',   s: 'USTR · Section 301 robotics line items',        soon: true },
   ];
   $('feedsGrid').innerHTML = feeds.map(f => `
     <div class="feed-card">
@@ -1578,29 +2679,47 @@ function renderRegister() {
     return true;
   });
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--ink-3);font-style:italic;padding:32px;">No risks match.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-3);font-style:italic;padding:32px;">No risks match.</td></tr>`;
     return;
   }
-  tbody.innerHTML = filtered.map(r => `
-    <tr>
-      <td>
-        <div class="row-title" data-id="${r.id}">${escapeHtml(r.title)}</div>
-        <div class="row-mini">${(r.tags || []).slice(0, 3).map(escapeHtml).join(' · ')}${r.is_overdue ? ' · ⏱ overdue' : ''}</div>
-      </td>
-      <td><span class="cat-tag">${escapeHtml(CATEGORY_LABEL[r.category] || r.category)}</span></td>
-      <td style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;color:var(--ink-2);">${escapeHtml(r.owner || '—')}</td>
-      <td><span class="score-pill" data-band="${r.inherent.band}">${r.inherent.score}</span></td>
-      <td>
-        <span class="score-pill" data-band="${r.residual.band}">${r.residual.score}</span>
-        ${r.delta > 0 ? `<span class="delta-good"> −${r.delta}</span>` : ''}
-      </td>
-      <td>
-        <span class="trend" data-t="${r.trend}" style="font-family:var(--font-mono);font-size:14px;color:${r.trend==='rising'?'var(--danger)':r.trend==='falling'?'var(--success)':'var(--ink-faint)'};">${TREND_GLYPH[r.trend]}</span>
-        ${sparkline([{ residual_score: r.residual.score }])}
-      </td>
-      <td style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;color:${r.is_overdue ? 'var(--danger)' : 'var(--ink-3)'};">${escapeHtml(r.next_review_due || '—')}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = filtered.map(r => {
+    const rel = reviewRel(r.next_review_due);
+    const urg = reviewUrgency(r.next_review_due);
+    return `
+      <tr data-band="${r.residual.band}">
+        <td>
+          <div class="row-title-flow">
+            ${catIcon(r.category)}
+            <div class="row-title-text">
+              <div class="row-title" data-id="${r.id}">${escapeHtml(r.title)}</div>
+              <div class="row-mini">
+                ${escapeHtml(CATEGORY_LABEL[r.category] || r.category)}
+                ${(r.tags && r.tags.length) ? ' · ' + r.tags.slice(0, 2).map(escapeHtml).join(' · ') : ''}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td>${ownerMono(r.owner)}</td>
+        <td>${containmentBar(r.inherent, r.residual, r.delta)}</td>
+        <td>
+          <span class="trend-cell">
+            <span class="trend-arrow" data-t="${r.trend}" title="${r.trend}">${TREND_GLYPH[r.trend]}</span>
+            ${sparkline([{ residual_score: r.residual.score }])}
+          </span>
+        </td>
+        <td>${mitigationCell(r.actions)}</td>
+        <td>
+          <div class="review-countdown" data-urgency="${urg.urgency}">
+            <div class="rc-line">
+              <span class="rc-date">${escapeHtml(rel.date)}</span>
+              <span class="rc-rel">${escapeHtml(rel.rel)}</span>
+            </div>
+            <div class="rc-bar"><div class="rc-fill" style="width:${urg.fillPct}%;"></div></div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
   tbody.querySelectorAll('.row-title').forEach(t => {
     t.addEventListener('click', () => openRisk(Number(t.dataset.id)));
   });
@@ -1866,10 +2985,14 @@ $('drawerBackdrop').addEventListener('click', (e) => { if (e.target.id === 'draw
 
 $('btnNewRisk').addEventListener('click', () => alert('New-risk form coming next iteration. For now: edit src/db/seeds/risk-register-seeds.js + restart.'));
 
+// Print board pack — invokes the browser's native print dialog.
+// CSS @media print rules above turn the page into a clean handout.
+$('btnPrintPack').addEventListener('click', () => window.print());
+
 (async () => {
   try { await loadDashboard(); }
   catch (err) {
-    document.getElementById('registerBody').innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:32px;">Could not load risks: ${escapeHtml(err.message)}</td></tr>`;
+    document.getElementById('registerBody').innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:32px;">Could not load risks: ${escapeHtml(err.message)}</td></tr>`;
   }
 })();
 </script>

@@ -1118,41 +1118,78 @@ const ready = isTestEnv ? Promise.resolve() : (async () => {
     console.warn('[db] AI Fit Score v1 boot pass failed:', err.message);
   }
 
-  // ── Seed Enterprise Risk Management baseline ─────────────────────
-  // First-boot only: populate risk_register with a sensible v1 set of
-  // risks for a hospitality robotics startup. Once the table has any
-  // rows we never re-seed (so user edits stick). To reset: truncate
-  // the table manually.
+  // ── 2026-Q2 ERM audit rename migration ───────────────────────────
+  // The 2026-Q2 deep-research audit reframed six risks (changed title
+  // and/or rescored). Existing DBs still hold the old-titled rows; the
+  // idempotent seed below would skip them because the new titles are
+  // missing. Delete the obsoleted rows so the seed pass inserts the
+  // canonical versions in their place.
+  // Idempotent: only acts on rows that still match the OLD title; once
+  // they're gone the DELETE is a no-op on subsequent boots.
+  // CAUTION: this clobbers any team edits made to those six rows in
+  // the interim — the audit is the canonical source of truth here.
   try {
-    const existing = await one('SELECT COUNT(*) as n FROM risk_register');
-    if (existing && existing.n === 0) {
-      const seeds = require('./seeds/risk-register-seeds');
-      console.log(`[db] Seeding risk_register with ${seeds.length} baseline risks…`);
-      const stamp = new Date().toISOString();
-      for (const r of seeds) {
-        await run(
-          `INSERT INTO risk_register
-            (category, title, description,
-             inherent_likelihood, inherent_impact,
-             residual_likelihood, residual_impact,
-             mitigation, owner, status, trend,
-             review_cadence_days, last_reviewed_at, next_review_due,
-             linked_metrics, tags)
-           VALUES (?,?,?, ?,?, ?,?, ?,?,?,?, ?,?,?, ?,?)`,
-          [
-            r.category, r.title, r.description,
-            r.inherent_likelihood, r.inherent_impact,
-            r.residual_likelihood, r.residual_impact,
-            r.mitigation, r.owner, r.status || 'open', r.trend || 'stable',
-            r.review_cadence_days || 30,
-            stamp,
-            new Date(Date.now() + (r.review_cadence_days || 30) * 86400000).toISOString().slice(0, 10),
-            r.linked_metrics ? JSON.stringify(r.linked_metrics) : null,
-            r.tags ? JSON.stringify(r.tags) : null,
-          ],
-        );
-      }
-      console.log(`[db] Seeded ${seeds.length} risks`);
+    const obsoletedTitles = [
+      'Customer concentration — Thesis Hotel >40% of pipeline',
+      'Bear Robotics / Servi takes Miami market before we scale',
+      'Production server outage — acceleraterobotics.ai down',
+      'Customer PII exposure or breach',
+      'Hospitality union pushback on robot deployments',
+      'Negative customer review goes viral on hospitality forums',
+    ];
+    let deleted = 0;
+    for (const title of obsoletedTitles) {
+      const r = await run('DELETE FROM risk_register WHERE title = ?', [title]);
+      // libsql client returns rowsAffected on the result; tolerate either shape
+      const n = (r && (r.rowsAffected ?? r.changes ?? 0)) || 0;
+      if (n > 0) deleted += n;
+    }
+    if (deleted > 0) {
+      console.log(`[db] ERM-2026Q2: removed ${deleted} obsoleted-title risk rows; seed pass will insert canonical versions`);
+    }
+  } catch (err) {
+    console.warn('[db] ERM-2026Q2 rename migration failed:', err.message);
+  }
+
+  // ── Seed Enterprise Risk Management baseline ─────────────────────
+  // Idempotent: inserts any seed risks whose `title` is not already
+  // present, so adding new entries to the seed file picks them up on
+  // restart without overwriting risks the team has edited.
+  // WHY: existing-rows gate would have blocked new baseline risks
+  // (e.g. geopolitical China-vendor exposure added 2026-Q2) from ever
+  // appearing in already-seeded environments.
+  try {
+    const seeds = require('./seeds/risk-register-seeds');
+    const stamp = new Date().toISOString();
+    let inserted = 0;
+    for (const r of seeds) {
+      const exists = await one('SELECT id FROM risk_register WHERE title = ?', [r.title]);
+      if (exists) continue;
+      await run(
+        `INSERT INTO risk_register
+          (category, title, description,
+           inherent_likelihood, inherent_impact,
+           residual_likelihood, residual_impact,
+           mitigation, owner, status, trend,
+           review_cadence_days, last_reviewed_at, next_review_due,
+           linked_metrics, tags)
+         VALUES (?,?,?, ?,?, ?,?, ?,?,?,?, ?,?,?, ?,?)`,
+        [
+          r.category, r.title, r.description,
+          r.inherent_likelihood, r.inherent_impact,
+          r.residual_likelihood, r.residual_impact,
+          r.mitigation, r.owner, r.status || 'open', r.trend || 'stable',
+          r.review_cadence_days || 30,
+          stamp,
+          new Date(Date.now() + (r.review_cadence_days || 30) * 86400000).toISOString().slice(0, 10),
+          r.linked_metrics ? JSON.stringify(r.linked_metrics) : null,
+          r.tags ? JSON.stringify(r.tags) : null,
+        ],
+      );
+      inserted++;
+    }
+    if (inserted > 0) {
+      console.log(`[db] Seeded ${inserted} new baseline risk${inserted === 1 ? '' : 's'} (${seeds.length - inserted} already present)`);
     }
   } catch (err) {
     console.warn('[db] risk_register seed failed:', err.message);
