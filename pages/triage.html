@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hotel Triage">
+<title>Hotel Triage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+<!-- Leaflet for the per-card mini-map. ~40KB total; only paid when a card renders. -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    /* Safe-area aware */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    color: white; line-height: 1.4;
+    user-select: none; -webkit-user-select: none;
+    overscroll-behavior: contain;
+  }
+  h1, .display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+  /* ─── Player picker (first-launch / change player) ──────── */
+  .player-picker {
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; padding: 24px;
+    height: 100vh; height: 100dvh;
+  }
+  .player-picker.hidden { display: none; }
+  .player-picker .pp-emoji { font-size: 4rem; }
+  .player-picker .pp-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 1.6rem;
+    text-align: center; margin: 8px 0 4px;
+  }
+  .player-picker .pp-sub {
+    color: rgba(255,255,255,0.7); font-size: 0.95rem; text-align: center;
+    max-width: 320px; margin-bottom: 12px;
+  }
+  .player-picker .pp-options {
+    display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px;
+  }
+  .player-picker .pp-btn {
+    background: rgba(255,255,255,0.1); color: white; border: 0;
+    padding: 16px 20px; border-radius: 14px;
+    font: inherit; font-weight: 700; font-size: 1.05rem; cursor: pointer;
+    display: flex; align-items: center; gap: 12px;
+    transition: background 0.12s, transform 0.08s;
+  }
+  .player-picker .pp-btn:active { transform: scale(0.98); }
+  .player-picker .pp-btn:hover { background: rgba(255,255,255,0.2); }
+  .player-picker .pp-btn .pp-emoji-sm { font-size: 1.5rem; }
+  .player-picker .pp-input {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: white; padding: 14px 18px; border-radius: 12px;
+    font: inherit; font-size: 1rem; outline: none;
+  }
+  .player-picker .pp-input::placeholder { color: rgba(255,255,255,0.5); }
+  .player-picker .pp-input:focus { border-color: #fbbf24; }
+
+  /* ─── App layout ─────────────────────────────────────────── */
+  .app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+  .app.hidden { display: none; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    background: rgba(0,0,0,0.25);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .topbar .player-pill {
+    background: rgba(255,255,255,0.12); padding: 5px 12px; border-radius: 100px;
+    font-size: 0.84rem; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .topbar .player-pill:hover { background: rgba(255,255,255,0.22); }
+  .topbar .undo-btn {
+    background: transparent; border: 1px solid rgba(255,255,255,0.2);
+    color: white; padding: 6px 12px; border-radius: 100px;
+    font: inherit; font-size: 0.82rem; cursor: pointer;
+    margin-left: auto;
+  }
+  .topbar .undo-btn:disabled { opacity: 0.35; cursor: default; }
+  .topbar .undo-btn:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+  .topbar .leaderboard-btn {
+    background: transparent; border: 1px solid rgba(255,255,255,0.2);
+    color: white; padding: 6px 12px; border-radius: 100px;
+    font: inherit; font-size: 0.82rem; cursor: pointer;
+  }
+  .topbar .leaderboard-btn:hover { background: rgba(255,255,255,0.12); }
+  /* Advanced toggle — when on, every card auto-expands to show full data */
+  .topbar .adv-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: transparent; border: 1px solid rgba(255,255,255,0.2);
+    color: white; padding: 6px 10px; border-radius: 100px;
+    font: inherit; font-size: 0.78rem; cursor: pointer;
+  }
+  .topbar .adv-toggle.on {
+    background: rgba(251,191,36,0.2);
+    border-color: rgba(251,191,36,0.6);
+    color: #fde68a;
+  }
+  .topbar .adv-toggle .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+  }
+  .topbar .adv-toggle.on .dot { background: #fbbf24; }
+
+  .progress-row {
+    padding: 8px 16px 12px;
+    background: rgba(0,0,0,0.15);
+  }
+  .progress-bar {
+    height: 6px; background: rgba(255,255,255,0.12); border-radius: 100px;
+    overflow: hidden; margin-bottom: 6px;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, #fbbf24, #f97316);
+    border-radius: 100px; transition: width 0.3s ease;
+  }
+  .progress-text {
+    font-size: 0.78rem; color: rgba(255,255,255,0.8);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .progress-counts {
+    display: flex; gap: 6px; font-size: 0.78rem;
+  }
+  .progress-counts .pc-pill {
+    padding: 2px 7px; border-radius: 100px; font-weight: 600;
+  }
+  .progress-counts .pc-pill.yes   { background: rgba(34,197,94,0.30); }
+  .progress-counts .pc-pill.maybe { background: rgba(251,191,36,0.30); }
+  .progress-counts .pc-pill.rsch  { background: rgba(59,130,246,0.30); }
+  .progress-counts .pc-pill.no    { background: rgba(239,68,68,0.30); }
+
+  /* ─── Card stack (the main event) ────────────────────────── */
+  .stack {
+    flex: 1; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    padding: 14px;
+    overflow: hidden;
+  }
+  .card {
+    position: absolute; top: 50%; left: 50%;
+    width: calc(100% - 28px); max-width: 420px;
+    max-height: calc(100% - 28px);
+    transform: translate(-50%, -50%);
+    background: white; color: #111827;
+    border-radius: 22px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+    padding: 20px 22px;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    cursor: grab;
+    touch-action: none;
+    transition: transform 0.18s ease;
+  }
+  .card.dragging { transition: none; cursor: grabbing; }
+  .card:active { cursor: grabbing; }
+  /* Hero photo at the top of the card — full-bleed, slightly extended so the
+     edges don't show the card's white background through the rounded corners */
+  .card-photo {
+    margin: -20px -22px 14px;
+    height: 200px;
+    background-size: cover; background-position: center;
+    background-color: #e2e8f0;
+    border-top-left-radius: 22px; border-top-right-radius: 22px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .card-photo.placeholder {
+    background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
+    display: flex; align-items: center; justify-content: center;
+    color: #94a3b8; font-size: 2.4rem;
+  }
+  .card-photo .photo-credit {
+    position: absolute; bottom: 6px; right: 8px;
+    background: rgba(0,0,0,0.5); color: white;
+    font-size: 0.62rem; padding: 1px 6px; border-radius: 100px;
+    text-decoration: none;
+  }
+  .card-photo .rating-pill {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(0,0,0,0.65); color: white;
+    padding: 3px 9px; border-radius: 100px;
+    font-size: 0.78rem; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .card.simple .card-photo { margin-bottom: 18px; }
+  .card-bio {
+    font-size: 0.86rem; color: #475569; line-height: 1.45;
+    margin-bottom: 14px; font-style: italic;
+  }
+  .card.simple .card-bio { text-align: left; }
+
+  /* Mini-map — small location preview per hotel card */
+  .card-mini-map {
+    height: 130px;
+    margin: 0 -22px 12px;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f1f5f9;
+    pointer-events: none; /* swipe through the map; tap the link below for full Maps */
+  }
+  .card.simple .card-mini-map { margin-bottom: 14px; }
+
+  /* Sister-property strip + DM contact pills */
+  .card-sisters {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+    font-size: 0.74rem;
+  }
+  .card-sisters .sib-chip {
+    background: #f1f5f9; color: #475569;
+    padding: 3px 9px; border-radius: 100px;
+    font-weight: 600;
+  }
+  .card-dm-row {
+    display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px;
+  }
+  .card-dm-row a {
+    background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;
+    padding: 3px 9px; border-radius: 100px;
+    font-size: 0.7rem; font-weight: 600; text-decoration: none;
+  }
+  .card-dm-row a:hover { background: #dbeafe; }
+  .card-section-title {
+    text-transform: uppercase; letter-spacing: 0.07em;
+    font-size: 0.62rem; font-weight: 700; color: #94a3b8;
+    margin: 4px 0 6px;
+  }
+  .card.fly-yes   { animation: flyYes 0.4s ease-in forwards; }
+  .card.fly-no    { animation: flyNo 0.4s ease-in forwards; }
+  .card.fly-maybe { animation: flyMaybe 0.4s ease-in forwards; }
+  .card.fly-rsch  { animation: flyRsch 0.4s ease-in forwards; }
+  @keyframes flyYes  { to { transform: translate(80%, -50%) rotate(20deg);  opacity: 0; } }
+  @keyframes flyNo   { to { transform: translate(-180%, -50%) rotate(-20deg); opacity: 0; } }
+  @keyframes flyMaybe { to { transform: translate(-50%, -180%) rotate(8deg); opacity: 0; } }
+  @keyframes flyRsch  { to { transform: translate(-50%, 80%) rotate(-8deg);  opacity: 0; } }
+
+  /* Simple-view card: roomy hero name, big breathing space, low cognitive load */
+  .card.simple {
+    justify-content: center; align-items: center; text-align: center;
+    padding: 32px 26px;
+  }
+  .card.simple .card-name {
+    font-size: 1.9rem; margin-bottom: 10px;
+  }
+  .card.simple .card-addr {
+    font-size: 1rem; margin-bottom: 18px;
+  }
+  .card.simple .card-pills { justify-content: center; margin-bottom: 18px; }
+  .hero-tier {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 2.4rem;
+    background: linear-gradient(135deg, #fbbf24, #f97316);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 4px; line-height: 1;
+  }
+  .hero-tier-lbl {
+    font-size: 0.74rem; text-transform: uppercase;
+    letter-spacing: 0.12em; color: #6b7280; font-weight: 700;
+    margin-bottom: 16px;
+  }
+  /* When details are expanded, the hero is still here but we shrink it so the
+     real data takes the spotlight */
+  .card:not(.simple) .hero-tier { font-size: 1.5rem; margin-bottom: 0; }
+  .card:not(.simple) .hero-tier-lbl { font-size: 0.66rem; margin-bottom: 8px; }
+
+  /* AI Fit Score badge — pinned to top-right corner of the card.
+     Tier-colored ring: top=green, high=cyan, mid=amber, low=gray. The
+     reasoning chips below the name explain why the score is what it is. */
+  .fit-badge {
+    position: absolute; top: 16px; right: 16px;
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif; line-height: 1;
+    background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    z-index: 5;
+  }
+  .fit-badge .v { font-size: 1.4rem; font-weight: 800; }
+  .fit-badge .l { font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; margin-top: 2px; font-weight: 700; }
+  .fit-badge.top  { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; }
+  .fit-badge.top .l   { color: rgba(255,255,255,0.85); }
+  .fit-badge.high { background: linear-gradient(135deg, #0891b2, #06b6d4); color: white; }
+  .fit-badge.high .l  { color: rgba(255,255,255,0.85); }
+  .fit-badge.mid  { background: linear-gradient(135deg, #d97706, #f59e0b); color: white; }
+  .fit-badge.mid .l   { color: rgba(255,255,255,0.85); }
+  .fit-badge.low  { background: #f1f5f9; color: #475569; }
+
+  .fit-reasons {
+    display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px;
+    justify-content: center;
+  }
+  .fit-reason {
+    background: #f0f9ff; color: #075985;
+    border: 1px solid #bae6fd;
+    padding: 3px 9px; border-radius: 100px;
+    font-size: 0.7rem; font-weight: 600;
+  }
+  .card:not(.simple) .fit-reasons { justify-content: flex-start; }
+  .more-toggle {
+    background: transparent; border: 1px solid #e5e7eb;
+    color: #6b7280; padding: 8px 14px; border-radius: 100px;
+    font: inherit; font-weight: 600; font-size: 0.84rem; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    align-self: center;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .more-toggle:hover { background: #f9fafb; border-color: #d1d5db; }
+  .more-toggle:active { transform: scale(0.97); }
+  .card-details { display: none; width: 100%; margin-top: 16px; text-align: left; }
+  .card-details.open { display: block; }
+
+  .card-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 1.4rem; line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .card-addr { font-size: 0.86rem; color: #6b7280; margin-bottom: 12px; }
+  .card-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px;
+    background: #f8fafc; border-radius: 12px; padding: 12px 14px;
+    font-size: 0.84rem; margin-bottom: 12px;
+  }
+  .card-grid .lbl {
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 0.62rem; font-weight: 700; color: #94a3b8;
+  }
+  .card-grid .val { font-weight: 600; color: #111827; margin-top: 1px; word-break: break-word; }
+  .card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .card-pill {
+    background: #e0e7ff; color: #3730a3;
+    padding: 3px 10px; border-radius: 100px;
+    font-size: 0.72rem; font-weight: 700;
+  }
+  .card-pill.tier-XS { background: #f1f5f9; color: #475569; }
+  .card-pill.tier-S  { background: #dcfce7; color: #166534; }
+  .card-pill.tier-M  { background: #cffafe; color: #155e75; }
+  .card-pill.tier-L  { background: #ede9fe; color: #5b21b6; }
+  .card-pill.tier-XL { background: #fef3c7; color: #78350f; }
+  .card-links {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto;
+    font-size: 0.86rem;
+  }
+  .card-links a {
+    background: #fff7ed; color: #c2410c; text-decoration: none;
+    padding: 8px 12px; border-radius: 10px; font-weight: 600;
+    flex: 1 1 calc(50% - 3px); text-align: center;
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .card-links a:active { background: #ffedd5; }
+
+  /* Swipe-direction overlays — colored corner tag that grows with drag */
+  .swipe-tag {
+    position: absolute; padding: 8px 16px; border-radius: 12px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 1.6rem; opacity: 0;
+    border: 4px solid currentColor; transform: rotate(-12deg);
+    pointer-events: none; transition: opacity 0.08s;
+  }
+  .swipe-tag.yes   { top: 24px; right: 24px; color: #16a34a; transform: rotate(8deg); }
+  .swipe-tag.no    { top: 24px; left: 24px;  color: #dc2626; transform: rotate(-12deg); }
+  .swipe-tag.maybe { top: 24px; left: 50%;   color: #d97706; transform: translateX(-50%) rotate(-3deg); }
+  .swipe-tag.rsch  { bottom: 24px; left: 50%; color: #2563eb; transform: translateX(-50%) rotate(3deg); }
+
+  /* All-done celebration */
+  .done-card {
+    background: white; color: #111827; border-radius: 22px;
+    padding: 40px 28px; text-align: center;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+    width: calc(100% - 28px); max-width: 420px;
+  }
+  .done-emoji { font-size: 4rem; margin-bottom: 8px; }
+  .done-headline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 1.6rem; margin-bottom: 6px;
+  }
+  .done-body { color: #4b5563; font-size: 0.95rem; margin-bottom: 18px; }
+  .done-stats {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+    background: #f8fafc; border-radius: 12px; padding: 12px;
+    text-align: center; margin-bottom: 14px;
+  }
+  .done-stat .v {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800; font-size: 1.4rem;
+  }
+  .done-stat.yes .v   { color: #166534; }
+  .done-stat.maybe .v { color: #92400e; }
+  .done-stat.rsch .v  { color: #1e40af; }
+  .done-stat.no .v    { color: #991b1b; }
+  .done-stat .l { font-size: 0.74rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+  .done-card .pp-btn {
+    background: #d97706; color: white; border: 0;
+    padding: 14px 22px; border-radius: 12px; cursor: pointer;
+    font: inherit; font-weight: 700; width: 100%;
+  }
+
+  /* ─── Action bar (fallback to taps) ──────────────────────── */
+  .actions {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    padding: 10px 14px env(safe-area-inset-bottom);
+    background: rgba(0,0,0,0.20);
+  }
+  .action-btn {
+    background: white; border: 0; cursor: pointer;
+    border-radius: 16px; padding: 12px 8px;
+    font: inherit; font-weight: 700; font-size: 0.86rem;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20);
+    min-height: 64px;
+    transition: transform 0.08s;
+  }
+  .action-btn:active { transform: scale(0.96); }
+  .action-btn .emoji { font-size: 1.5rem; line-height: 1; margin-bottom: 2px; }
+  .action-btn .lbl   { font-size: 0.7rem; }
+  .action-btn.yes   { color: #166534; }
+  .action-btn.maybe { color: #92400e; }
+  .action-btn.rsch  { color: #1e40af; }
+  .action-btn.no    { color: #991b1b; }
+
+  /* ─── Leaderboard sheet ──────────────────────────────────── */
+  .leaderboard-sheet {
+    display: none; position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0.55);
+    align-items: flex-end; justify-content: center;
+  }
+  .leaderboard-sheet.open { display: flex; }
+  .leaderboard-inner {
+    background: #1e293b; color: white; width: 100%; max-width: 480px;
+    border-radius: 22px 22px 0 0;
+    padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+    max-height: 80vh; overflow-y: auto;
+  }
+  .leaderboard-inner h2 {
+    margin: 0 0 12px; font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.2rem; display: flex; align-items: center; gap: 6px;
+  }
+  .lb-row {
+    display: grid; grid-template-columns: 28px 1fr auto;
+    gap: 10px; align-items: center;
+    padding: 10px 12px; background: rgba(255,255,255,0.06);
+    border-radius: 10px; margin-bottom: 6px;
+  }
+  .lb-row.you { background: rgba(251,191,36,0.18); border: 1px solid rgba(251,191,36,0.4); }
+  .lb-rank { font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.05rem; text-align: center; }
+  .lb-name { font-weight: 600; }
+  .lb-name .you-tag { font-size: 0.62rem; background: #fbbf24; color: #1e293b; padding: 1px 6px; border-radius: 100px; margin-left: 6px; font-weight: 800; }
+  .lb-counts { display: flex; gap: 4px; font-size: 0.74rem; }
+  .lb-counts .lc-pill { padding: 1px 7px; border-radius: 100px; font-weight: 600; background: rgba(255,255,255,0.1); }
+  .lb-close-btn {
+    background: rgba(255,255,255,0.1); color: white; border: 0;
+    padding: 12px 16px; border-radius: 10px; cursor: pointer;
+    font: inherit; font-weight: 600; width: 100%; margin-top: 8px;
+  }
+
+  /* Confetti for the all-done moment */
+  .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+  .confetti span {
+    position: absolute; top: -20px; width: 8px; height: 14px; opacity: 0.95;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  @keyframes streakPop {
+    0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+    8%   { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    14%  { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+    85%  { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+    100% { transform: translate(-50%, -90%) scale(0.95); opacity: 0; }
+  }
+  /* Tappable / cliquey card pills — press feedback */
+  .card-pill, .fit-reason, .sib-chip, .card-dm-row a {
+    transition: transform 0.10s, box-shadow 0.10s, background 0.10s;
+    cursor: pointer;
+  }
+  .card-pill:active, .fit-reason:active, .sib-chip:active, .card-dm-row a:active {
+    transform: scale(0.95);
+  }
+  /* Stat-row hover: show that they're tappable for tooltips */
+  .card-grid > div { cursor: pointer; transition: background 0.10s; border-radius: 6px; padding: 4px; margin: -4px; }
+  .card-grid > div:hover, .card-grid > div:active { background: #eff6ff; }
+  /* Tappable score reasoning chip — gets a "+N" badge on the right */
+  .fit-reason {
+    position: relative;
+    background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%);
+  }
+  .fit-reason:hover {
+    background: linear-gradient(90deg, #dbeafe 0%, #bfdbfe 100%);
+    box-shadow: 0 2px 6px rgba(14, 165, 233, 0.25);
+  }
+  /* Sound toggle in the topbar */
+  .topbar .sound-toggle {
+    background: transparent; border: 1px solid rgba(255,255,255,0.2);
+    color: white; padding: 6px 10px; border-radius: 100px;
+    font: inherit; font-size: 0.95rem; cursor: pointer;
+    line-height: 1;
+  }
+  .topbar .sound-toggle:hover { background: rgba(255,255,255,0.12); }
+  /* Streak badge in topbar — shows when STREAK >= 2 */
+  .streak-badge {
+    display: none;
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 0.78rem;
+    box-shadow: 0 0 12px rgba(249, 115, 22, 0.55);
+    animation: streakBadgeBeat 1.5s ease-in-out infinite;
+  }
+  .streak-badge.show { display: inline-flex; align-items: center; gap: 4px; }
+  @keyframes streakBadgeBeat {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.06); }
+  }
+
+  /* Loading + error */
+  .splash {
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; height: 100dvh; padding: 20px;
+    color: rgba(255,255,255,0.7); font-size: 0.9rem; text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading splash -->
+<div class="splash" id="splash">Loading hotels…</div>
+
+<!-- Player picker -->
+<div class="player-picker hidden" id="playerPicker">
+  <div class="pp-emoji">🏨</div>
+  <div class="pp-title">Hotel Triage</div>
+  <div class="pp-sub">Sweep through Miami hotels. Yes / Maybe / More research / No. Pick your name to start.</div>
+  <div class="pp-options">
+    <button class="pp-btn" type="button" onclick="selectPlayer('Ben')">
+      <span class="pp-emoji-sm">🧑‍💼</span> I'm Ben
+    </button>
+    <button class="pp-btn" type="button" onclick="selectPlayer('Celia')">
+      <span class="pp-emoji-sm">🧑‍💼</span> I'm Celia
+    </button>
+    <input class="pp-input" id="customPlayer" type="text" placeholder="Or type your name…" maxlength="40">
+    <button class="pp-btn" type="button" onclick="selectCustomPlayer()" style="justify-content:center;">
+      <span>Start →</span>
+    </button>
+  </div>
+</div>
+
+<!-- Main app -->
+<div class="app hidden" id="app">
+  <div class="topbar">
+    <div class="player-pill" onclick="changePlayer()" id="playerPill">—</div>
+    <span class="streak-badge" id="streakBadge">🔥 <span id="streakCount">0</span></span>
+    <button class="leaderboard-btn" type="button" onclick="openLeaderboard()">🏆</button>
+    <button class="sound-toggle" type="button" id="soundToggle" onclick="toggleSound()" title="Sound on">🔊</button>
+    <button class="adv-toggle" type="button" id="advToggle" onclick="toggleAdvanced()" title="Show full hotel details on every card">
+      <span class="dot"></span><span>Advanced</span>
+    </button>
+    <button class="undo-btn" type="button" id="undoBtn" onclick="undo()" disabled>↶ Undo</button>
+  </div>
+
+  <div class="progress-row">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-text">
+      <span id="progressText">—</span>
+      <span class="progress-counts" id="progressCounts"></span>
+    </div>
+  </div>
+
+  <div class="stack" id="stack"></div>
+
+  <div class="actions">
+    <button class="action-btn no"    onclick="decide('no')"             title="Swipe left">
+      <span class="emoji">❌</span><span class="lbl">No</span>
+    </button>
+    <button class="action-btn maybe" onclick="decide('maybe')"          title="Swipe up">
+      <span class="emoji">🤔</span><span class="lbl">Maybe</span>
+    </button>
+    <button class="action-btn rsch"  onclick="decide('needs_research')" title="Swipe down">
+      <span class="emoji">🔬</span><span class="lbl">Research</span>
+    </button>
+    <button class="action-btn yes"   onclick="decide('yes')"            title="Swipe right">
+      <span class="emoji">✅</span><span class="lbl">Yes</span>
+    </button>
+  </div>
+</div>
+
+<!-- Leaderboard bottom sheet -->
+<div class="leaderboard-sheet" id="leaderboardSheet" onclick="if(event.target===this)closeLeaderboard()">
+  <div class="leaderboard-inner">
+    <h2>🏆 Leaderboard</h2>
+    <div id="leaderboardBody">Loading…</div>
+    <button class="lb-close-btn" type="button" onclick="closeLeaderboard()">Close</button>
+  </div>
+</div>
+
+<script src="/js/admin-auth.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// HOTEL TRIAGE — Tinder-style mobile sorter for BDRs
+// ═══════════════════════════════════════════════════════════════════
+const PLAYER_KEY = 'triagePlayer';
+const ADV_KEY = 'triageAdvanced'; // remember the user's view-density choice across sessions
+let PLAYER = localStorage.getItem(PLAYER_KEY) || null;
+let ADVANCED = localStorage.getItem(ADV_KEY) === '1';
+let QUEUE = [];
+let TOTALS = { total: 0, sorted: 0, yes: 0, maybe: 0, needs_research: 0, no: 0 };
+let HISTORY = [];   // [{ id, name, decision, prev_status }]
+let LOCK = false;
+let SISTERS_BY_KEY = new Map(); // chainKey → { count, avgFit, others:[{name,score}] }
+
+const TIER_LABELS = { XS: 'XS', S: 'S', M: 'M', L: 'L', XL: 'XL' };
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Generated cover photo — initials over a tier-colored gradient. Used for any
+// hotel without a real photo so every card looks complete on the swipe stack.
+function generateCoverSvgInline(h) {
+  const name = (h.name || 'Hotel').toString();
+  const initials = name.split(/\s+/)
+    .filter(w => w.length > 1 && !/^(the|of|and|at|on|by|de|la|le)$/i.test(w))
+    .slice(0, 3)
+    .map(w => (w[0] || '').toUpperCase())
+    .join('') || 'H';
+  const tier = h.ai_fit_tier || 'low';
+  const palette = {
+    top:  ['#16a34a', '#22c55e'],
+    high: ['#0891b2', '#06b6d4'],
+    mid:  ['#d97706', '#f59e0b'],
+    low:  ['#64748b', '#94a3b8'],
+  }[tier];
+  const submark = (h.submarket || '').toUpperCase().slice(0, 24);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">` +
+    `<defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">` +
+      `<stop offset="0%" stop-color="${palette[0]}"/>` +
+      `<stop offset="100%" stop-color="${palette[1]}"/>` +
+    `</linearGradient></defs>` +
+    `<rect width="400" height="200" fill="url(#g)"/>` +
+    `<text x="92%" y="92%" font-family="system-ui" font-size="48" opacity="0.18" fill="white" text-anchor="end">🏨</text>` +
+    `<text x="50%" y="56%" font-family="Space Grotesk, system-ui" font-size="${initials.length > 2 ? 64 : 80}" font-weight="800" fill="rgba(255,255,255,0.95)" text-anchor="middle">${initials}</text>` +
+    (submark ? `<text x="50%" y="82%" font-family="system-ui" font-size="13" font-weight="700" letter-spacing="2" fill="rgba(255,255,255,0.78)" text-anchor="middle">${submark.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>` : '') +
+    `</svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+// Optional haptic feedback (Android Chrome supports navigator.vibrate; iOS doesn't)
+function buzz(ms) { try { navigator.vibrate?.(ms); } catch {} }
+
+// ── Synth sound FX — Web Audio, no assets needed ──────────────────
+// Distinctive tones per decision so reps can feel the rhythm of swiping.
+let _audioCtx = null;
+function getAudio() {
+  if (_audioCtx) return _audioCtx;
+  try {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch { _audioCtx = null; }
+  return _audioCtx;
+}
+function playTone({ freq, type = 'sine', duration = 0.18, attack = 0.01, gain = 0.16, slide = 0 }) {
+  const ctx = getAudio();
+  if (!ctx || SOUND_OFF) return;
+  // Resume context if suspended (autoplay policy)
+  if (ctx.state === 'suspended') { try { ctx.resume(); } catch {} }
+  const osc = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  if (slide) {
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq + slide, ctx.currentTime + duration);
+  }
+  gainNode.gain.value = 0;
+  gainNode.gain.linearRampToValueAtTime(gain, ctx.currentTime + attack);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+  osc.connect(gainNode); gainNode.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + duration);
+}
+function playDecisionSound(decision) {
+  switch (decision) {
+    case 'yes':
+      // Bright two-note "ding" — reward
+      playTone({ freq: 660, type: 'triangle', duration: 0.10, gain: 0.18 });
+      setTimeout(() => playTone({ freq: 990, type: 'triangle', duration: 0.20, gain: 0.20 }), 80);
+      break;
+    case 'maybe':
+      // Single mid tone
+      playTone({ freq: 520, type: 'sine', duration: 0.16, gain: 0.14 });
+      break;
+    case 'needs_research':
+      // Curious upward chirp
+      playTone({ freq: 380, type: 'sine', duration: 0.22, gain: 0.14, slide: 100 });
+      break;
+    case 'no':
+      // Soft downward bump — not punishing, just decisive
+      playTone({ freq: 240, type: 'sawtooth', duration: 0.18, gain: 0.10, slide: -80 });
+      break;
+    case 'streak3': playTone({ freq: 880, type: 'triangle', duration: 0.30, gain: 0.20, slide: 200 }); break;
+    case 'streak5': // Bigger fanfare for 5-streak
+      [0, 70, 140].forEach((delay, i) => {
+        setTimeout(() => playTone({ freq: 660 + i * 220, type: 'triangle', duration: 0.18, gain: 0.20 }), delay);
+      });
+      break;
+    case 'undo':
+      playTone({ freq: 320, type: 'sine', duration: 0.10, gain: 0.10 });
+      break;
+  }
+}
+
+// Sound on/off toggle. Persisted in localStorage so reps don't have to mute every session.
+let SOUND_OFF = localStorage.getItem('triageSoundOff') === '1';
+function toggleSound() {
+  SOUND_OFF = !SOUND_OFF;
+  localStorage.setItem('triageSoundOff', SOUND_OFF ? '1' : '0');
+  syncSoundToggle();
+  if (!SOUND_OFF) playDecisionSound('yes'); // play sample
+}
+function syncSoundToggle() {
+  const btn = document.getElementById('soundToggle');
+  if (!btn) return;
+  btn.textContent = SOUND_OFF ? '🔇' : '🔊';
+  btn.title = SOUND_OFF ? 'Sound off — tap to enable' : 'Sound on — tap to mute';
+}
+
+// ── Streak tracking ────────────────────────────────────────────────
+let STREAK = 0;
+let STREAK_BEST = Number(localStorage.getItem('triageStreakBest') || 0);
+function bumpStreak(decision) {
+  if (decision === 'yes') {
+    STREAK += 1;
+    if (STREAK > STREAK_BEST) {
+      STREAK_BEST = STREAK;
+      localStorage.setItem('triageStreakBest', String(STREAK_BEST));
+    }
+    // Audio fanfare at streak milestones
+    if (STREAK === 3) playDecisionSound('streak3');
+    if (STREAK === 5 || STREAK === 10) playDecisionSound('streak5');
+    showStreakBanner();
+  } else {
+    STREAK = 0;
+  }
+  syncStreakBadge();
+}
+
+function showStreakBanner() {
+  if (STREAK < 2) return;
+  const label = STREAK >= 10 ? '🚀 ON FIRE!' : STREAK >= 5 ? '🔥🔥🔥 BLAZING!' : STREAK >= 3 ? '🔥 HOT STREAK' : '✨ Combo';
+  const colorBg = STREAK >= 10 ? '#ec4899' : STREAK >= 5 ? '#f97316' : STREAK >= 3 ? '#fbbf24' : '#22c55e';
+  const banner = document.createElement('div');
+  banner.style.cssText = `
+    position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%) scale(0.6);
+    background: ${colorBg}; color: white;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800;
+    font-size: 1.6rem; padding: 18px 28px; border-radius: 18px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+    z-index: 90; pointer-events: none;
+    animation: streakPop 2.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.28);
+    text-align: center; min-width: 220px;
+  `;
+  banner.innerHTML = `${label}<div style="font-size:0.92rem;font-weight:600;margin-top:6px;opacity:0.94">${STREAK} yes in a row${STREAK_BEST > STREAK ? ` · best: ${STREAK_BEST}` : ' · personal best 🏆'}</div>`;
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 2700);
+}
+
+// Tappable reasoning chip — shows a tooltip with WHICH weight category
+// drove this signal. Maps strings from the fit-score service to the
+// weights table. Reps tap to learn — gamified transparency.
+window._explainReason = function(anchorEl, reasonText) {
+  // Map the reason string back to its weight + category
+  const r = String(reasonText).toLowerCase();
+  let pts = '+?', why = '', cat = '';
+  if (/rooms.*xl|xl.*rooms/.test(r))        { pts = '+25'; cat = 'Property scale'; why = '300+ rooms = enterprise-grade ops, real ROI on robotics.'; }
+  else if (/rooms.*large/.test(r))           { pts = '+18'; cat = 'Property scale'; why = '150–299 rooms — meaningful labor savings, viable pilot site.'; }
+  else if (/^\d+\s+rooms\b/.test(r))         { pts = '+10'; cat = 'Property scale'; why = '75–149 rooms — solid mid-market property.'; }
+  else if (/luxury class/.test(r))           { pts = '+20'; cat = 'Brand class'; why = 'Luxury = budget for innovation + guests expect tech leadership.'; }
+  else if (/upper-upscale/.test(r))          { pts = '+17'; cat = 'Brand class'; why = 'Upper-upscale chains have the budget hierarchy to engage on enterprise software.'; }
+  else if (/upscale brand/.test(r))          { pts = '+13'; cat = 'Brand class'; why = 'Upscale tier — established sales motions for hospitality tech.'; }
+  else if (/floor tower|\d+\s+floors/.test(r)) { pts = '+15'; cat = 'Multi-floor'; why = 'Each floor multiplies the value of robot↔elevator integration.'; }
+  else if (/5★ rating|5★/.test(r))           { pts = '+10'; cat = 'Star rating'; why = '5-star property — guests expect polish, staff appreciates ops support.'; }
+  else if (/4★ rating|4★/.test(r))           { pts = '+7';  cat = 'Star rating'; why = '4-star — solid signal of investment quality.'; }
+  else if (/enterprise chain/.test(r))       { pts = '+10'; cat = 'Recognized chain'; why = 'Major chain — established enterprise sales path, GMs familiar with the conversation.'; }
+  else if (/ADR/.test(r))                    { pts = '+15'; cat = 'Revenue density'; why = 'Higher ADR = labor savings compound faster per stay.'; }
+  else if (/opened/.test(r))                 { pts = '+6';  cat = 'Recently opened'; why = 'Modern building infra — easier elevator/network integration.'; }
+  else if (/restaurant/.test(r))             { pts = '+3 each'; cat = 'F&B'; why = 'F&B-to-room runners + banquet support = robotics workflow opportunity.'; }
+  else if (/event space|sqft event/.test(r)) { pts = '+12'; cat = 'Event space'; why = 'Big event sqft = multi-vendor coordination + high deal value.'; }
+  else if (/meeting room/.test(r))           { pts = '+6';  cat = 'Meeting rooms'; why = 'Meeting setup + AV runners — recurring ops opportunity.'; }
+  else if (/ballroom/.test(r))               { pts = '+8';  cat = 'Ballroom'; why = 'High-capacity events = peak labor crunch periods.'; }
+  else if (/resort|tower|grand|plaza|boutique|beach/i.test(r)) { pts = '+4–6'; cat = 'Name signal'; why = 'Property name signals scale + service tier even when structured data is sparse.'; }
+  else                                        { pts = '+2'; cat = 'Other signal'; why = 'Captured during enrichment — small but real positive signal.'; }
+
+  // Pop a temporary tooltip near the anchor element
+  const existing = document.querySelector('.reason-tip');
+  if (existing) existing.remove();
+  const tip = document.createElement('div');
+  tip.className = 'reason-tip';
+  tip.style.cssText = `
+    position: fixed; z-index: 50;
+    background: #1e293b; color: white;
+    padding: 10px 14px; border-radius: 10px;
+    font-size: 0.78rem; line-height: 1.4;
+    max-width: 280px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    animation: streakPop 0.32s ease-out forwards;
+  `;
+  tip.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <span style="background:#16a34a;color:white;padding:1px 7px;border-radius:100px;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:0.74rem">${pts}</span>
+      <strong style="color:#7dd3fc;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em">${cat}</strong>
+    </div>
+    <div>${why}</div>`;
+  document.body.appendChild(tip);
+  // Position above anchor
+  const rect = anchorEl.getBoundingClientRect();
+  tip.style.left = Math.max(8, Math.min(window.innerWidth - 290, rect.left + rect.width / 2 - 140)) + 'px';
+  tip.style.top = Math.max(8, rect.top - tip.offsetHeight - 8) + 'px';
+  // Auto-dismiss + tap-anywhere-to-dismiss
+  setTimeout(() => tip.remove(), 4500);
+  setTimeout(() => {
+    document.addEventListener('click', () => tip.remove(), { once: true });
+  }, 100);
+};
+
+// Mini emoji confetti — lighter than fireConfetti, fires per YES.
+function miniConfetti() {
+  const emojis = ['💖', '🏆', '🔥', '✨', '💸', '🎯'];
+  const n = 14;
+  for (let i = 0; i < n; i++) {
+    const span = document.createElement('span');
+    span.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    span.style.cssText = `
+      position: fixed;
+      left: ${30 + Math.random() * 40}vw;
+      top: ${30 + Math.random() * 30}vh;
+      font-size: ${1 + Math.random() * 0.8}rem;
+      pointer-events: none;
+      z-index: 100;
+      transition: transform 0.9s ease-out, opacity 0.9s ease-out;
+      will-change: transform, opacity;
+    `;
+    document.body.appendChild(span);
+    requestAnimationFrame(() => {
+      const dx = (Math.random() - 0.5) * 240;
+      const dy = -200 - Math.random() * 200;
+      span.style.transform = `translate(${dx}px, ${dy}px) rotate(${(Math.random() - 0.5) * 720}deg)`;
+      span.style.opacity = '0';
+    });
+    setTimeout(() => span.remove(), 1000);
+  }
+}
+
+// ── Boot flow ─────────────────────────────────────────────────────
+async function boot() {
+  if (PLAYER) {
+    showApp();
+    await loadQueue();
+  } else {
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('playerPicker').classList.remove('hidden');
+  }
+}
+
+function selectPlayer(name) {
+  PLAYER = name;
+  localStorage.setItem(PLAYER_KEY, PLAYER);
+  showApp();
+  loadQueue();
+}
+
+function selectCustomPlayer() {
+  const v = document.getElementById('customPlayer').value.trim();
+  if (!v) { document.getElementById('customPlayer').focus(); return; }
+  selectPlayer(v);
+}
+
+function changePlayer() {
+  if (!confirm('Switch player? Your decisions stay tagged with the previous player.')) return;
+  localStorage.removeItem(PLAYER_KEY);
+  PLAYER = null;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('playerPicker').classList.remove('hidden');
+}
+
+function showApp() {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('playerPicker').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('playerPill').innerHTML = `🧑‍💼 ${escHtml(PLAYER)} <span style="opacity:0.6;font-size:0.74rem;margin-left:4px;">tap to switch</span>`;
+  syncAdvancedToggle();
+  syncSoundToggle();
+  syncStreakBadge();
+}
+
+function syncStreakBadge() {
+  const badge = document.getElementById('streakBadge');
+  const count = document.getElementById('streakCount');
+  if (!badge || !count) return;
+  count.textContent = STREAK;
+  badge.classList.toggle('show', STREAK >= 2);
+}
+
+function syncAdvancedToggle() {
+  const btn = document.getElementById('advToggle');
+  if (!btn) return;
+  btn.classList.toggle('on', ADVANCED);
+}
+
+function toggleAdvanced() {
+  ADVANCED = !ADVANCED;
+  localStorage.setItem(ADV_KEY, ADVANCED ? '1' : '0');
+  syncAdvancedToggle();
+  renderTopCard(); // re-render with new density
+}
+
+// ── Queue + render ───────────────────────────────────────────────
+async function loadQueue() {
+  try {
+    // Pass the player so the server filters out hotels THIS person already
+    // voted on — every player gets their own queue, votes don't collide.
+    const url = '/api/hotel-research/triage/queue' + (PLAYER ? `?player=${encodeURIComponent(PLAYER)}` : '');
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    QUEUE = data.queue || [];
+    TOTALS = data.totals || TOTALS;
+    rebuildSistersIndex();
+    renderTopCard();
+    renderProgress();
+    scheduleEnrichmentPoll();
+  } catch (err) {
+    document.getElementById('stack').innerHTML = `<div class="done-card"><div class="done-headline">Couldn't load</div><div class="done-body">${escHtml(err.message)}</div></div>`;
+  }
+}
+
+// Compute sister-property clusters from the queue. Two hotels are sisters
+// when their chainKey matches (brand/operator name, or first-significant
+// word of the name when those are missing). Render-time filters out self.
+function rebuildSistersIndex() {
+  const groups = new Map();
+  for (const h of QUEUE) {
+    const k = chainKeyFor(h);
+    if (!k) continue;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(h);
+  }
+  SISTERS_BY_KEY = new Map();
+  for (const [k, all] of groups) {
+    const fits = all.map(h => h.ai_fit_score || 0).filter(s => s > 0);
+    const avgFit = fits.length ? Math.round(fits.reduce((a, b) => a + b, 0) / fits.length) : null;
+    SISTERS_BY_KEY.set(k, {
+      count: all.length,
+      avgFit,
+      others: all.map(h => ({ id: h.id, name: h.name, score: h.ai_fit_score })),
+    });
+  }
+}
+
+// Background-enrichment poll: the server kicks off Wikipedia/OG fetches when
+// /triage/queue is hit. Those fetches take a few seconds; rather than block
+// the user, we silently re-fetch the queue every ~6s while there are
+// un-enriched rows in view. New photos + bios slot in without disrupting the
+// rep's rhythm.
+let pollTimer = null;
+function scheduleEnrichmentPoll() {
+  clearTimeout(pollTimer);
+  // Only poll if the visible queue has rows still missing enrichment
+  const needs = QUEUE.some(h => !h.enriched_at && !h.photo_url);
+  if (!needs) return;
+  pollTimer = setTimeout(refreshEnrichment, 6000);
+}
+
+async function refreshEnrichment() {
+  try {
+    const res = await fetch('/api/hotel-research/triage/queue', { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const fresh = new Map((data.queue || []).map(h => [h.id, h]));
+    let changed = false;
+    // Merge fresh enrichment fields into our in-memory queue without
+    // disturbing position. WHY: the rep is already mid-card; we don't want
+    // to pop a different hotel onto the top of the stack just because the
+    // server re-sorted (it shouldn't, but defensive).
+    QUEUE = QUEUE.map(h => {
+      const f = fresh.get(h.id);
+      if (!f) return h;
+      if (f.photo_url && !h.photo_url) changed = true;
+      if (f.description && !h.description) changed = true;
+      return { ...h, ...f };
+    });
+    if (changed) renderTopCard(); // only re-render the visible card
+    scheduleEnrichmentPoll();
+  } catch {
+    // Network blips are fine — try again on the next decision
+  }
+}
+
+function renderProgress() {
+  const total = TOTALS.total;
+  const sorted = TOTALS.sorted;
+  const pct = total > 0 ? Math.round((sorted / total) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${sorted}/${total} sorted`;
+  document.getElementById('progressCounts').innerHTML = `
+    <span class="pc-pill yes">✅ ${TOTALS.yes}</span>
+    <span class="pc-pill maybe">🤔 ${TOTALS.maybe}</span>
+    <span class="pc-pill rsch">🔬 ${TOTALS.needs_research}</span>
+    <span class="pc-pill no">❌ ${TOTALS.no}</span>
+  `;
+  document.getElementById('undoBtn').disabled = HISTORY.length === 0;
+}
+
+function tierFor(h) {
+  // Compute tier locally from rooms × ADR. Mirrors the server formula.
+  const adr = Number(h.est_adr_dollars) || 0;
+  const r = Number(h.rooms) || 0;
+  if (!adr || !r) return null;
+  const rev = r * adr * 0.7 * 365;
+  if (rev >= 50_000_000) return 'XL';
+  if (rev >= 20_000_000) return 'L';
+  if (rev >=  8_000_000) return 'M';
+  if (rev >=  3_000_000) return 'S';
+  return 'XS';
+}
+
+function renderTopCard() {
+  const stack = document.getElementById('stack');
+  stack.innerHTML = '';
+  if (QUEUE.length === 0) {
+    renderDone();
+    return;
+  }
+  const h = QUEUE[0];
+  const card = document.createElement('div');
+  card.className = 'card simple';
+  card.id = 'topCard';
+  const tier = tierFor(h);
+  const adr = h.est_adr_dollars ? '$' + h.est_adr_dollars + '/night' : '—';
+  const websiteSearch = `https://www.google.com/search?q=${encodeURIComponent([h.name, h.city, h.state, 'reviews pricing'].filter(Boolean).join(' '))}`;
+  const addr = h.address || [h.city, h.state].filter(Boolean).join(', ') || '';
+
+  // The "details" payload — full sales-intel grid + outbound links. Hidden by
+  // default in simple mode; shown when user taps "More" or has Advanced on.
+  // WHY: triage is about gut decisions on dozens of hotels in a row. Rooms,
+  // ADR, operator, etc. are useful but slow Ben/Celia down on every card.
+  const detailsHtml = `
+    <div class="card-grid">
+      <div><span class="lbl">Stars</span><div class="val">${h.stars ? '★'.repeat(h.stars) : '—'}</div></div>
+      <div><span class="lbl">Rooms</span><div class="val">${h.rooms ? (h.rooms_source === 'estimated' ? '~' + h.rooms : h.rooms) + (h.rooms_source === 'estimated' ? ' <span style="font-size:0.62rem;color:#94a3b8;font-weight:500">est.</span>' : '') : '—'}</div></div>
+      <div><span class="lbl">Est ADR</span><div class="val">${adr}</div></div>
+      <div><span class="lbl">Operator</span><div class="val">${escHtml(h.operator || '—')}</div></div>
+      ${h.year_opened ? `<div><span class="lbl">Opened</span><div class="val">${h.year_opened}</div></div>` : ''}
+      ${h.phone ? `<div><span class="lbl">Phone</span><div class="val">${escHtml(h.phone)}</div></div>` : ''}
+    </div>
+    <div class="card-links">
+      ${h.lat && h.lng ? `<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}">📍 Maps</a>` : ''}
+      <a target="_blank" rel="noopener" href="${websiteSearch}">🔎 Web</a>
+      ${h.website ? `<a target="_blank" rel="noopener" href="${escHtml(h.website)}">🌐 Site</a>` : ''}
+      ${h.phone ? `<a href="tel:${escHtml(h.phone)}">📞 Call</a>` : ''}
+    </div>
+  `;
+
+  // Hero photo: real image if enriched, fallback to a generated SVG with
+  // initials over a tier-colored gradient so every card looks complete.
+  const cover = h.photo_url || generateCoverSvgInline(h);
+  const depthBadge = h.enrichment_depth === 'deep'
+    ? `<span style="position:absolute;bottom:8px;left:8px;background:rgba(15,23,42,0.85);color:#fbbf24;padding:3px 10px;border-radius:100px;font-size:0.62rem;font-weight:800;letter-spacing:0.05em">📚 DEEP</span>`
+    : '';
+  const photoHtml = `<div class="card-photo" style="background-image:url(&quot;${cover}&quot;)">
+       ${h.rating ? `<span class="rating-pill">⭐ ${Number(h.rating).toFixed(1)}${h.review_count ? ` <span style="opacity:0.75;font-weight:500">(${h.review_count})</span>` : ''}</span>` : ''}
+       ${h.wikipedia_url ? `<a class="photo-credit" target="_blank" rel="noopener" href="${escHtml(h.wikipedia_url)}">Wikipedia</a>` : ''}
+       ${depthBadge}
+     </div>`;
+
+  const bioHtml = h.description
+    ? `<div class="card-bio">${escHtml(h.description)}</div>`
+    : '';
+
+  // AI Fit Score badge — pre-sort signal that helps reps focus on best fits
+  const fitTier = h.ai_fit_tier || (h.ai_fit_score >= 70 ? 'top' : h.ai_fit_score >= 50 ? 'high' : h.ai_fit_score >= 30 ? 'mid' : 'low');
+  const fitBadgeHtml = (h.ai_fit_score != null)
+    ? `<div class="fit-badge ${fitTier}" title="AI fit score for Accelerate Robotics — sorted best-first">
+         <div class="v">${h.ai_fit_score}</div><div class="l">FIT</div>
+       </div>`
+    : '';
+  const reasons = Array.isArray(h.ai_fit_reasoning) ? h.ai_fit_reasoning : [];
+  const reasonsHtml = reasons.length
+    ? `<div class="fit-reasons">${reasons.map(r => `<span class="fit-reason" onclick="window._explainReason(this, ${JSON.stringify(r).replace(/"/g, '&quot;')})">${escHtml(r)}</span>`).join('')}</div>`
+    : '';
+
+  // DM (decision-maker) LinkedIn shortcuts — only shown for deep-research
+  // hotels so we don't cog-load the rep on low-fit cards.
+  const dmHtml = h.enrichment_depth === 'deep' ? `
+    <div class="card-section-title">📇 Decision-makers</div>
+    <div class="card-dm-row">
+      <a target="_blank" rel="noopener" href="${linkedinSearchUrl('General Manager', h)}">GM</a>
+      <a target="_blank" rel="noopener" href="${linkedinSearchUrl('Director of Operations', h)}">Dir of Ops</a>
+      <a target="_blank" rel="noopener" href="${linkedinSearchUrl('Chief Engineer', h)}">Chief Eng.</a>
+      <a target="_blank" rel="noopener" href="${linkedinSearchUrl('Director of Housekeeping', h)}">Dir of HK</a>
+      <a target="_blank" rel="noopener" href="${linkedinSearchUrl('Front Office Manager', h)}">Front Office</a>
+    </div>` : '';
+
+  // Sister-property cluster — surfaces "this is part of a 4-property local
+  // chain" so the rep can frame the call as a portfolio play. Filter self out.
+  const sistersData = SISTERS_BY_KEY.get(chainKeyFor(h)) || null;
+  const otherSisters = sistersData ? sistersData.others.filter(o => o.id !== h.id) : [];
+  const sistersHtml = (sistersData && otherSisters.length > 0) ? `
+    <div class="card-section-title">🏢 ${otherSisters.length} sister ${otherSisters.length === 1 ? 'property' : 'properties'} in territory · avg fit ${sistersData.avgFit ?? '–'}</div>
+    <div class="card-sisters">
+      ${otherSisters.slice(0, 5).map(o => `<span class="sib-chip">${escHtml(o.name)} · ${o.score ?? '–'}</span>`).join('')}
+      ${otherSisters.length > 5 ? `<span class="sib-chip">+${otherSisters.length - 5} more</span>` : ''}
+    </div>` : '';
+
+  // Mini-map placeholder — Leaflet binds to it post-render via initCardMiniMap
+  const miniMapHtml = (h.lat && h.lng) ? `<div class="card-mini-map"></div>` : '';
+
+  card.innerHTML = `
+    <div class="swipe-tag yes">YES</div>
+    <div class="swipe-tag no">NO</div>
+    <div class="swipe-tag maybe">MAYBE</div>
+    <div class="swipe-tag rsch">RESEARCH</div>
+    ${fitBadgeHtml}
+    ${photoHtml}
+    ${tier ? `<div class="hero-tier">${tier}</div><div class="hero-tier-lbl">Tier · ${revLabel(h)}</div>` : ''}
+    <div class="card-name">${escHtml(h.name)}</div>
+    <div class="card-addr">${escHtml(addr)}</div>
+    <div class="card-pills">
+      ${h.submarket ? `<span class="card-pill">📍 ${escHtml(h.submarket)}</span>` : ''}
+      ${h.brand ? `<span class="card-pill">${escHtml(h.brand)}</span>` : ''}
+      ${(!h.submarket && h.stars) ? `<span class="card-pill">${'★'.repeat(h.stars)}</span>` : ''}
+    </div>
+    ${reasonsHtml}
+    ${miniMapHtml}
+    ${bioHtml}
+    ${dmHtml}
+    ${sistersHtml}
+    <button class="more-toggle" type="button" id="moreBtn">▼ Details</button>
+    <div class="card-details" id="cardDetails">${detailsHtml}</div>
+  `;
+  stack.appendChild(card);
+  initCardMiniMap(card, h);
+  // Tell the parent (when iframed in the bezel overlay) which hotel is on
+  // top so the desktop side panels can sync their map + insights views.
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'triage:cardActive',
+        hotel: h,
+        progress: { sorted: TOTALS.sorted, total: TOTALS.total },
+      }, '*');
+    }
+  } catch {}
+
+  // Wire up the inline expander; also auto-expand if Advanced mode is on.
+  const moreBtn = card.querySelector('#moreBtn');
+  const details = card.querySelector('#cardDetails');
+  function setOpen(open) {
+    details.classList.toggle('open', open);
+    moreBtn.textContent = open ? '▲ Hide details' : '▼ Details';
+    // When expanded, drop the centered/roomy simple layout so the grid reads top-down
+    card.classList.toggle('simple', !open);
+  }
+  if (ADVANCED) setOpen(true);
+  moreBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    setOpen(!details.classList.contains('open'));
+  });
+  // Don't let a tap on the details button start a swipe drag
+  moreBtn.addEventListener('pointerdown', e => e.stopPropagation());
+
+  attachSwipe(card);
+}
+
+// LinkedIn search URL for a given title at a given hotel — clickable cold-call
+// shortcuts the rep can open per card without leaving the swipe.
+function linkedinSearchUrl(title, hotel) {
+  const q = `"${title}" "${hotel.name}"`;
+  return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(q)}`;
+}
+
+// Detect chain key for sister-property grouping. Returns lowercased brand
+// or first-significant-word of name as a fallback.
+function chainKeyFor(h) {
+  const blob = (h.brand || h.operator || '').toLowerCase().trim();
+  if (blob) return blob;
+  // Fallback — first significant word of the name (skip "The", "Hotel", etc.)
+  const words = (h.name || '').toLowerCase().split(/\s+/).filter(w =>
+    w.length > 2 && !['the', 'and', 'hotel', 'inn', 'resort', 'suites'].includes(w));
+  return words[0] || null;
+}
+
+// Wire up a Leaflet mini-map inside the active card. Lazy — only fires once
+// per card so swipes stay snappy. Runs after the card is in the DOM.
+function initCardMiniMap(card, h) {
+  if (!h.lat || !h.lng) return;
+  const el = card.querySelector('.card-mini-map');
+  if (!el || !window.L) return;
+  // Tear down any prior map (avoids leaks if cards re-render)
+  if (el._leafletMap) { try { el._leafletMap.remove(); } catch {} el._leafletMap = null; }
+  const m = L.map(el, {
+    zoomControl: false, attributionControl: false,
+    dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
+    touchZoom: false, keyboard: false, boxZoom: false,
+    fadeAnimation: false, zoomAnimation: false,
+  }).setView([h.lat, h.lng], 14);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+  }).addTo(m);
+  // Pin for this hotel — colored by tier
+  const tier = h.ai_fit_tier || 'low';
+  const bg = tier === 'top' ? '#16a34a' : tier === 'high' ? '#0891b2' : tier === 'mid' ? '#f59e0b' : '#dc2626';
+  L.marker([h.lat, h.lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="width:22px;height:22px;border-radius:50%;background:${bg};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>`,
+      iconSize: [22, 22], iconAnchor: [11, 11],
+    }),
+  }).addTo(m);
+  el._leafletMap = m;
+  // Force layout recalc — cards open after a transition; the map renders to 0px otherwise
+  setTimeout(() => m.invalidateSize(), 60);
+}
+
+// Short revenue-potential label shown under the tier letter (e.g. "$8M+/yr")
+function revLabel(h) {
+  const adr = Number(h.est_adr_dollars) || 0;
+  const r = Number(h.rooms) || 0;
+  if (!adr || !r) return 'Revenue est. unknown';
+  const rev = r * adr * 0.7 * 365;
+  if (rev >= 1e9) return `$${(rev / 1e9).toFixed(1)}B/yr potential`;
+  if (rev >= 1e6) return `$${Math.round(rev / 1e6)}M/yr potential`;
+  return `$${Math.round(rev / 1e3)}K/yr potential`;
+}
+
+function renderDone() {
+  const stack = document.getElementById('stack');
+  stack.innerHTML = `
+    <div class="done-card">
+      <div class="done-emoji">🎉</div>
+      <div class="done-headline">All sorted!</div>
+      <div class="done-body">Every hotel has a triage decision. Here's how the territory shook out.</div>
+      <div class="done-stats">
+        <div class="done-stat yes"><div class="v">${TOTALS.yes}</div><div class="l">Yes</div></div>
+        <div class="done-stat maybe"><div class="v">${TOTALS.maybe}</div><div class="l">Maybe</div></div>
+        <div class="done-stat rsch"><div class="v">${TOTALS.needs_research}</div><div class="l">Research</div></div>
+        <div class="done-stat no"><div class="v">${TOTALS.no}</div><div class="l">No</div></div>
+      </div>
+      <button class="pp-btn" type="button" onclick="openLeaderboard()">🏆 See leaderboard</button>
+    </div>
+  `;
+  fireConfetti(120);
+}
+
+// ── Decision flow ────────────────────────────────────────────────
+async function decide(decision) {
+  if (LOCK || QUEUE.length === 0) return;
+  const h = QUEUE[0];
+  LOCK = true;
+  buzz(decision === 'yes' ? 30 : decision === 'no' ? 60 : 20);
+  playDecisionSound(decision);
+  bumpStreak(decision);
+  if (decision === 'yes') miniConfetti();
+  // Animate top card off-screen in the matching direction
+  const card = document.getElementById('topCard');
+  if (card) {
+    const flyMap = { yes: 'fly-yes', no: 'fly-no', maybe: 'fly-maybe', needs_research: 'fly-rsch' };
+    card.classList.add(flyMap[decision] || 'fly-yes');
+  }
+  // Optimistic UI update
+  TOTALS.sorted++;
+  TOTALS[decision] = (TOTALS[decision] || 0) + 1;
+  // Push to local history for undo
+  HISTORY.push({ id: h.id, name: h.name, decision });
+  if (HISTORY.length > 20) HISTORY.shift();
+  // POST to server
+  try {
+    await fetch(`/api/hotel-research/saved/${h.id}/triage`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision, player: PLAYER }),
+    });
+  } catch (err) {
+    console.warn('triage save failed', err);
+  }
+  // Pop from queue + render next after the fly animation
+  setTimeout(() => {
+    QUEUE.shift();
+    LOCK = false;
+    renderTopCard();
+    renderProgress();
+  }, 280);
+}
+
+async function undo() {
+  if (HISTORY.length === 0 || LOCK) return;
+  const last = HISTORY.pop();
+  LOCK = true;
+  // Optimistic counter rollback
+  TOTALS.sorted = Math.max(0, TOTALS.sorted - 1);
+  TOTALS[last.decision] = Math.max(0, (TOTALS[last.decision] || 1) - 1);
+  // Server-side: clear the triage on that hotel + put it back at the top of our queue
+  try {
+    await fetch(`/api/hotel-research/saved/${last.id}/triage`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision: null }),
+    });
+    // Refetch fresh data so the undone hotel comes back into the queue
+    const res = await fetch('/api/hotel-research/triage/queue', { credentials: 'same-origin' });
+    if (res.ok) {
+      const data = await res.json();
+      QUEUE = data.queue || [];
+      TOTALS = data.totals || TOTALS;
+    }
+  } catch (err) {
+    console.warn('undo failed', err);
+  }
+  LOCK = false;
+  renderTopCard();
+  renderProgress();
+}
+
+// ── Swipe gestures ───────────────────────────────────────────────
+function attachSwipe(card) {
+  let startX = 0, startY = 0, dx = 0, dy = 0, dragging = false;
+  const yesTag   = card.querySelector('.swipe-tag.yes');
+  const noTag    = card.querySelector('.swipe-tag.no');
+  const maybeTag = card.querySelector('.swipe-tag.maybe');
+  const rschTag  = card.querySelector('.swipe-tag.rsch');
+
+  function onStart(e) {
+    if (LOCK) return;
+    // Don't swipe-grab if the user tapped an interactive element (link,
+    // pill, button, or expanded details).
+    if (e.target.closest('a, button, .more-toggle, .card-details.open, .card-pill, .fit-reason, .sib-chip, .card-grid > div')) return;
+    dragging = true;
+    card.classList.add('dragging');
+    const p = e.touches ? e.touches[0] : e;
+    startX = p.clientX; startY = p.clientY;
+    dx = 0; dy = 0;
+  }
+  function onMove(e) {
+    if (!dragging) return;
+    const p = e.touches ? e.touches[0] : e;
+    dx = p.clientX - startX;
+    dy = p.clientY - startY;
+    // Limit — vertical drags shouldn't yank the card too far up/down
+    const rot = Math.max(-25, Math.min(25, dx / 12));
+    card.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg)`;
+    // Light up the matching corner tag based on drag direction.
+    // Horizontal dominates unless vertical drag is significantly larger.
+    const horiz = Math.abs(dx) > Math.abs(dy);
+    yesTag.style.opacity   = (horiz && dx > 0) ? Math.min(1, dx / 120) : 0;
+    noTag.style.opacity    = (horiz && dx < 0) ? Math.min(1, -dx / 120) : 0;
+    maybeTag.style.opacity = (!horiz && dy < 0) ? Math.min(1, -dy / 120) : 0;
+    rschTag.style.opacity  = (!horiz && dy > 0) ? Math.min(1, dy / 120) : 0;
+  }
+  function onEnd() {
+    if (!dragging) return;
+    dragging = false;
+    card.classList.remove('dragging');
+    // Threshold: ~30% of viewport width for horizontal, ~25% height for vertical
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const horizThresh = Math.min(140, w * 0.30);
+    const vertThresh  = Math.min(140, h * 0.25);
+    const horiz = Math.abs(dx) > Math.abs(dy);
+    if (horiz && dx >  horizThresh) return decide('yes');
+    if (horiz && dx < -horizThresh) return decide('no');
+    if (!horiz && dy < -vertThresh) return decide('maybe');
+    if (!horiz && dy >  vertThresh) return decide('needs_research');
+    // Snap back
+    card.style.transform = '';
+    [yesTag, noTag, maybeTag, rschTag].forEach(t => t.style.opacity = 0);
+  }
+
+  // Pointer events cover touch + mouse + pen in modern browsers.
+  card.addEventListener('pointerdown', onStart);
+  card.addEventListener('pointermove', onMove);
+  card.addEventListener('pointerup', onEnd);
+  card.addEventListener('pointercancel', onEnd);
+  card.addEventListener('pointerleave', onEnd);
+}
+
+// ── Leaderboard ──────────────────────────────────────────────────
+async function openLeaderboard() {
+  const sheet = document.getElementById('leaderboardSheet');
+  sheet.classList.add('open');
+  document.getElementById('leaderboardBody').innerHTML = 'Loading…';
+  try {
+    const res = await fetch('/api/hotel-research/triage/leaderboard', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const rows = data.leaderboard || [];
+    if (rows.length === 0) {
+      document.getElementById('leaderboardBody').innerHTML =
+        '<div style="color:rgba(255,255,255,0.6);text-align:center;padding:20px;">No decisions yet — be first!</div>';
+      return;
+    }
+    document.getElementById('leaderboardBody').innerHTML = rows.map((r, i) => {
+      const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+      const isYou = r.player === PLAYER;
+      return `
+        <div class="lb-row ${isYou ? 'you' : ''}">
+          <div class="lb-rank">${rank}</div>
+          <div class="lb-name">${escHtml(r.player)}${isYou ? '<span class="you-tag">YOU</span>' : ''}</div>
+          <div class="lb-counts">
+            <span class="lc-pill">✅${r.yes_count||0}</span>
+            <span class="lc-pill">🤔${r.maybe_count||0}</span>
+            <span class="lc-pill">🔬${r.needs_research_count||0}</span>
+            <span class="lc-pill">❌${r.no_count||0}</span>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    document.getElementById('leaderboardBody').innerHTML =
+      `<div style="color:#fca5a5;text-align:center;padding:20px;">Couldn't load: ${escHtml(err.message)}</div>`;
+  }
+}
+function closeLeaderboard() { document.getElementById('leaderboardSheet').classList.remove('open'); }
+
+// ── Confetti (lightweight) ───────────────────────────────────────
+function fireConfetti(n = 80) {
+  const colors = ['#fbbf24', '#22c55e', '#3b82f6', '#ec4899', '#a855f7', '#f97316'];
+  const root = document.createElement('div');
+  root.className = 'confetti';
+  document.body.appendChild(root);
+  for (let i = 0; i < n; i++) {
+    const span = document.createElement('span');
+    span.style.left = (Math.random() * 100) + 'vw';
+    span.style.background = colors[i % colors.length];
+    span.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+    span.style.animationDelay = (Math.random() * 0.4) + 's';
+    span.style.transform = `rotate(${Math.random() * 360}deg)`;
+    span.style.borderRadius = Math.random() < 0.5 ? '2px' : '50%';
+    root.appendChild(span);
+  }
+  setTimeout(() => root.remove(), 4000);
+}
+
+// Keyboard shortcuts (laptop fallback)
+document.addEventListener('keydown', e => {
+  if (document.getElementById('app').classList.contains('hidden')) return;
+  const map = { y: 'yes', Y: 'yes', m: 'maybe', M: 'maybe', r: 'needs_research', R: 'needs_research', n: 'no', N: 'no' };
+  if (map[e.key]) { e.preventDefault(); decide(map[e.key]); }
+  if (e.key === 'u' || e.key === 'U') { e.preventDefault(); undo(); }
+});
+
+boot();
+</script>
+</body>
+</html>

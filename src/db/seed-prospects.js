@@ -1,13 +1,12 @@
-const db = require('./database');
 const fs = require('fs');
 const path = require('path');
 
 /**
  * Seed markets and prospects tables from seed data if they are empty.
- * WHY: Idempotent — only runs when tables have no data (fresh install or reset).
- * Called from server.js on boot.
+ * Idempotent — only runs INSERTs when the prospects table is empty.
+ * db is the { client, one, all, run, transaction } helper bag from database.js.
  */
-function seedProspects() {
+async function seedProspects(db) {
   const seedPath = path.join(__dirname, '..', '..', 'data', 'seed-prospects.json');
   if (!fs.existsSync(seedPath)) {
     console.warn('[seed] No seed-prospects.json found — skipping prospect seeding');
@@ -16,43 +15,35 @@ function seedProspects() {
 
   const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
 
-  const count = db.prepare('SELECT COUNT(*) as n FROM prospects').get().n;
-  if (count === 0) {
-    const insertMarket = db.prepare(`
-      INSERT OR IGNORE INTO markets (id, name, cluster, color, lat, lng)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    const insertProspect = db.prepare(`
-      INSERT INTO prospects (market_id, status, name, address, brand, brand_class,
-        keys, floors, stars, signal, operator, portfolio, monogram, mono_color, source)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const seedAll = db.transaction(() => {
+  const countRow = await db.one('SELECT COUNT(*) as n FROM prospects');
+  const n = Number(countRow?.n ?? 0);
+  if (n === 0) {
+    await db.transaction(async (tx) => {
       for (const m of seed.markets) {
-        insertMarket.run(m.id, m.name, m.cluster, m.color, m.lat || null, m.lng || null);
-      }
-      for (const p of seed.prospects) {
-        insertProspect.run(
-          p.market_id, p.status, p.name, p.address, p.brand, p.brand_class,
-          p.keys, p.floors, p.stars, p.signal, p.operator, p.portfolio,
-          p.monogram, p.mono_color, p.source
+        await tx.run(
+          `INSERT OR IGNORE INTO markets (id, name, cluster, color, lat, lng)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [m.id, m.name, m.cluster, m.color, m.lat || null, m.lng || null],
         );
       }
-      console.log(`[seed] Inserted ${seed.markets.length} markets and ${seed.prospects.length} prospects`);
+      for (const p of seed.prospects) {
+        await tx.run(
+          `INSERT INTO prospects (market_id, status, name, address, brand, brand_class,
+             keys, floors, stars, signal, operator, portfolio, monogram, mono_color, source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [p.market_id, p.status, p.name, p.address, p.brand, p.brand_class,
+           p.keys, p.floors, p.stars, p.signal, p.operator, p.portfolio,
+           p.monogram, p.mono_color, p.source],
+        );
+      }
     });
-
-    seedAll();
+    console.log(`[seed] Inserted ${seed.markets.length} markets and ${seed.prospects.length} prospects`);
   }
 
-  // WHY: Backfill coordinates for markets seeded before lat/lng existed.
-  // Runs unconditionally — the early return above only guards INSERT, not this UPDATE.
-  // Only updates markets where lat IS NULL, so manual overrides are preserved.
-  const updateCoords = db.prepare('UPDATE markets SET lat = ?, lng = ? WHERE id = ? AND lat IS NULL');
+  // Backfill coordinates for markets seeded before lat/lng existed. Only updates where lat IS NULL.
   for (const m of seed.markets) {
     if (m.lat != null && m.lng != null) {
-      updateCoords.run(m.lat, m.lng, m.id);
+      await db.run('UPDATE markets SET lat = ?, lng = ? WHERE id = ? AND lat IS NULL', [m.lat, m.lng, m.id]);
     }
   }
 }

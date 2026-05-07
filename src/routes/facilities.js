@@ -10,7 +10,7 @@ const VALID_CHALLENGE_CATEGORIES = ['cleaning', 'delivery', 'transport', 'securi
 const VALID_CONTACT_ROLES = ['decision_maker', 'champion', 'influencer', 'end_user', 'blocker'];
 
 // ── List facilities ────────────────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const { type } = req.query;
   let sql = 'SELECT * FROM facilities';
   const params = [];
@@ -19,27 +19,29 @@ router.get('/', requireAuth, (req, res) => {
     params.push(type);
   }
   sql += ' ORDER BY updated_at DESC';
-  res.json(db.prepare(sql).all(...params));
+  res.json(await db.all(sql, params));
 });
 
 // ── Get single facility with challenges and contacts ───────────
-router.get('/:id', requireAuth, (req, res) => {
-  const facility = db.prepare('SELECT * FROM facilities WHERE id = ?').get(req.params.id);
+router.get('/:id', requireAuth, async (req, res) => {
+  const facility = await db.one('SELECT * FROM facilities WHERE id = ?', [req.params.id]);
   if (!facility) return res.status(404).json({ error: 'Facility not found' });
 
-  facility.challenges = db.prepare(
-    'SELECT * FROM operational_challenges WHERE facility_id = ? ORDER BY priority DESC'
-  ).all(req.params.id);
+  facility.challenges = await db.all(
+    'SELECT * FROM operational_challenges WHERE facility_id = ? ORDER BY priority DESC',
+    [req.params.id]
+  );
 
-  facility.contacts = db.prepare(
-    'SELECT * FROM contacts WHERE facility_id = ? ORDER BY created_at'
-  ).all(req.params.id);
+  facility.contacts = await db.all(
+    'SELECT * FROM contacts WHERE facility_id = ? ORDER BY created_at',
+    [req.params.id]
+  );
 
   res.json(facility);
 });
 
 // ── Create facility ────────────────────────────────────────────
-router.post('/', requireAuth, requireRole('admin', 'sales', 'ops'), (req, res) => {
+router.post('/', requireAuth, requireRole('admin', 'sales', 'ops'), async (req, res) => {
   const { name, type, address, city, state, country, floors, rooms_or_units, sqft_total,
     elevator_count, elevator_brand, elevator_type, surfaces, wifi_available,
     operator, brand, gm_name, gm_email, gm_phone, eng_name, eng_email, notes } = req.body;
@@ -50,25 +52,25 @@ router.post('/', requireAuth, requireRole('admin', 'sales', 'ops'), (req, res) =
   }
 
   const id = generateId();
-  db.prepare(`
+  await db.run(`
     INSERT INTO facilities (id, name, type, address, city, state, country, floors, rooms_or_units,
       sqft_total, elevator_count, elevator_brand, elevator_type, surfaces, wifi_available,
       operator, brand, gm_name, gm_email, gm_phone, eng_name, eng_email, notes)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, name, type || 'hotel', address || null, city || null, state || null,
+  `, [id, name, type || 'hotel', address || null, city || null, state || null,
     country || 'United States', floors || null, rooms_or_units || null, sqft_total || null,
     elevator_count || null, elevator_brand || null, elevator_type || null,
     surfaces ? JSON.stringify(surfaces) : null, wifi_available ?? 1,
     operator || null, brand || null, gm_name || null, gm_email || null,
-    gm_phone || null, eng_name || null, eng_email || null, notes || null);
+    gm_phone || null, eng_name || null, eng_email || null, notes || null]);
 
-  const facility = db.prepare('SELECT * FROM facilities WHERE id = ?').get(id);
+  const facility = await db.one('SELECT * FROM facilities WHERE id = ?', [id]);
   res.status(201).json(facility);
 });
 
 // ── Update facility ────────────────────────────────────────────
-router.patch('/:id', requireAuth, requireRole('admin', 'sales', 'ops'), (req, res) => {
-  const existing = db.prepare('SELECT * FROM facilities WHERE id = ?').get(req.params.id);
+router.patch('/:id', requireAuth, requireRole('admin', 'sales', 'ops'), async (req, res) => {
+  const existing = await db.one('SELECT * FROM facilities WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Facility not found' });
 
   if (req.body.type && !VALID_TYPES.includes(req.body.type)) {
@@ -97,18 +99,18 @@ router.patch('/:id', requireAuth, requireRole('admin', 'sales', 'ops'), (req, re
   updates.updated_at = new Date().toISOString();
   const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
   const values = [...Object.values(updates), req.params.id];
-  db.prepare(`UPDATE facilities SET ${setClauses} WHERE id = ?`).run(...values);
+  await db.run(`UPDATE facilities SET ${setClauses} WHERE id = ?`, values);
 
-  const updated = db.prepare('SELECT * FROM facilities WHERE id = ?').get(req.params.id);
+  const updated = await db.one('SELECT * FROM facilities WHERE id = ?', [req.params.id]);
   res.json(updated);
 });
 
 // ── Challenges CRUD (nested under facility) ────────────────────
-router.get('/:id/challenges', requireAuth, (req, res) => {
-  res.json(db.prepare('SELECT * FROM operational_challenges WHERE facility_id = ? ORDER BY priority DESC').all(req.params.id));
+router.get('/:id/challenges', requireAuth, async (req, res) => {
+  res.json(await db.all('SELECT * FROM operational_challenges WHERE facility_id = ? ORDER BY priority DESC', [req.params.id]));
 });
 
-router.post('/:id/challenges', requireAuth, requireRole('admin', 'sales', 'ops'), (req, res) => {
+router.post('/:id/challenges', requireAuth, requireRole('admin', 'sales', 'ops'), async (req, res) => {
   const { category, description, priority, current_cost_monthly, current_staff_count, area_sqft, floors_affected, schedule } = req.body;
 
   if (!category || !description) {
@@ -119,28 +121,28 @@ router.post('/:id/challenges', requireAuth, requireRole('admin', 'sales', 'ops')
   }
 
   const id = generateId();
-  db.prepare(`
+  await db.run(`
     INSERT INTO operational_challenges (id, facility_id, category, description, priority, current_cost_monthly, current_staff_count, area_sqft, floors_affected, schedule)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, req.params.id, category, description, priority || 'medium',
+  `, [id, req.params.id, category, description, priority || 'medium',
     current_cost_monthly || null, current_staff_count || null, area_sqft || null,
-    floors_affected ? JSON.stringify(floors_affected) : null, schedule || null);
+    floors_affected ? JSON.stringify(floors_affected) : null, schedule || null]);
 
-  res.status(201).json(db.prepare('SELECT * FROM operational_challenges WHERE id = ?').get(id));
+  res.status(201).json(await db.one('SELECT * FROM operational_challenges WHERE id = ?', [id]));
 });
 
-router.delete('/:facilityId/challenges/:challengeId', requireAuth, requireRole('admin', 'sales'), (req, res) => {
-  const result = db.prepare('DELETE FROM operational_challenges WHERE id = ? AND facility_id = ?').run(req.params.challengeId, req.params.facilityId);
+router.delete('/:facilityId/challenges/:challengeId', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
+  const result = await db.run('DELETE FROM operational_challenges WHERE id = ? AND facility_id = ?', [req.params.challengeId, req.params.facilityId]);
   if (result.changes === 0) return res.status(404).json({ error: 'Challenge not found' });
   res.json({ ok: true });
 });
 
 // ── Contacts CRUD (nested under facility) ──────────────────────
-router.get('/:id/contacts', requireAuth, (req, res) => {
-  res.json(db.prepare('SELECT * FROM contacts WHERE facility_id = ? ORDER BY created_at').all(req.params.id));
+router.get('/:id/contacts', requireAuth, async (req, res) => {
+  res.json(await db.all('SELECT * FROM contacts WHERE facility_id = ? ORDER BY created_at', [req.params.id]));
 });
 
-router.post('/:id/contacts', requireAuth, requireRole('admin', 'sales'), (req, res) => {
+router.post('/:id/contacts', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
   const { name, title, email, phone, role, notes } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Contact name is required' });
@@ -149,16 +151,16 @@ router.post('/:id/contacts', requireAuth, requireRole('admin', 'sales'), (req, r
   }
 
   const id = generateId();
-  db.prepare(`
+  await db.run(`
     INSERT INTO contacts (id, facility_id, name, title, email, phone, role, notes)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, req.params.id, name, title || null, email || null, phone || null, role || null, notes || null);
+  `, [id, req.params.id, name, title || null, email || null, phone || null, role || null, notes || null]);
 
-  res.status(201).json(db.prepare('SELECT * FROM contacts WHERE id = ?').get(id));
+  res.status(201).json(await db.one('SELECT * FROM contacts WHERE id = ?', [id]));
 });
 
-router.delete('/:facilityId/contacts/:contactId', requireAuth, requireRole('admin', 'sales'), (req, res) => {
-  const result = db.prepare('DELETE FROM contacts WHERE id = ? AND facility_id = ?').run(req.params.contactId, req.params.facilityId);
+router.delete('/:facilityId/contacts/:contactId', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
+  const result = await db.run('DELETE FROM contacts WHERE id = ? AND facility_id = ?', [req.params.contactId, req.params.facilityId]);
   if (result.changes === 0) return res.status(404).json({ error: 'Contact not found' });
   res.json({ ok: true });
 });
