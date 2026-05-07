@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Citizen Hotel — Executive Proposal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        /* Citizen Hotel palette — political gravitas + historic warmth */
+        --navy: #2c4a6e;              /* Deep civic navy — hero accent */
+        --navy-light: #4a7aaf;
+        --navy-deep: #1a3050;
+        --gold: #b89a6a;               /* Antique gold / Capitol dome */
+        --gold-light: #d4bc8a;
+        --gold-soft: #e8d8b8;
+        --ink: #141820;                /* Midnight ink */
+        --ink-light: #1e2430;
+        --ink-deep: #0a0e14;
+        --bone: #f5f2ec;               /* Parchment */
+        --bone-warm: #faf7f0;
+        --bone-deep: #e8e2d6;
+        --accel-blue: #0055ff;
+        --accel-cyan: #00c8ff;
+        --accel-purple: #7c3aed;
+    }
+    * { font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bone); color: #1f2937; }
+    .headline { font-family: 'Playfair Display', serif; }
+    .tech-font { font-family: 'Space Grotesk', sans-serif; font-feature-settings: 'tnum'; }
+    .navy-gradient { background: linear-gradient(135deg, var(--navy), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .accel-gradient { background: linear-gradient(135deg, var(--accel-blue), var(--accel-cyan), var(--accel-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ── Configurator panel (midnight ink background) ─────────────── */
+    .config-panel {
+        background: linear-gradient(160deg, var(--ink) 0%, var(--ink-deep) 100%);
+        color: #fff;
+        border-radius: 1.5rem;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        position: relative;
+        overflow: hidden;
+    }
+    .config-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle at 20% 0%, rgba(44, 74, 110, 0.18), transparent 40%),
+                          radial-gradient(circle at 80% 100%, rgba(184, 154, 106, 0.12), transparent 40%);
+        pointer-events: none;
+    }
+    .config-panel > * { position: relative; }
+
+    /* Slider */
+    .slider-wrap { position: relative; padding: 1.5rem 0; }
+    .slider-track {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        position: relative;
+        margin: 0 12px;
+    }
+    .slider-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: linear-gradient(90deg, var(--navy) 0%, var(--gold-light) 100%);
+        border-radius: 999px;
+        box-shadow: 0 0 20px rgba(44, 74, 110, 0.5);
+        transition: width 0.25s ease;
+    }
+    .slider-ticks {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 12px;
+        pointer-events: none;
+    }
+    .tick { width: 2px; height: 12px; background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
+    .tick.tier-marker {
+        width: 3px;
+        height: 18px;
+        background: var(--navy-light);
+        box-shadow: 0 0 8px rgba(44, 74, 110, 0.7);
+    }
+    .slider-input {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        background: transparent;
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        transform: translateY(-50%);
+        height: 40px;
+        cursor: pointer;
+        padding: 0 12px;
+    }
+    .slider-input::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--navy-light), var(--navy));
+        border: 3px solid #fff;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px rgba(44, 74, 110, 0.6), 0 0 0 1px rgba(0,0,0,0.2);
+        transition: transform 0.15s ease;
+    }
+    .slider-input::-webkit-slider-thumb:active { transform: scale(1.15); cursor: grabbing; }
+    .slider-input::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, var(--navy-light), var(--navy));
+        border: 3px solid #fff;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 4px 20px rgba(44, 74, 110, 0.6);
+    }
+
+    /* Fleet slot grid */
+    .robot-slot {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.75rem;
+        padding: 0.875rem 0.75rem;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        opacity: 0.4;
+        filter: grayscale(0.6);
+    }
+    .robot-slot.active {
+        background: linear-gradient(140deg, rgba(44, 74, 110, 0.22), rgba(44, 74, 110, 0.07));
+        border-color: rgba(44, 74, 110, 0.55);
+        opacity: 1;
+        filter: none;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    .robot-slot.active::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 10px;
+        height: 10px;
+        margin: 8px;
+        background: var(--navy-light);
+        border-radius: 50%;
+        box-shadow: 0 0 12px var(--navy-light);
+    }
+    .robot-chip-mini {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.5rem;
+        background: rgba(44, 74, 110, 0.22);
+        color: var(--navy-light);
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
+    }
+    .robot-slot.active .robot-chip-mini { background: var(--navy); color: #fff; }
+    .robot-photo {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: contain;
+        object-position: center;
+        margin-bottom: 0.5rem;
+        background:
+            radial-gradient(circle at 50% 60%, rgba(44, 74, 110, 0.14), transparent 65%),
+            linear-gradient(140deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
+        border-radius: 0.5rem;
+        padding: 0.25rem;
+        filter: grayscale(0.85) brightness(0.7);
+        transition: filter 0.5s ease, transform 0.5s ease;
+    }
+    .robot-slot.active .robot-photo { filter: grayscale(0) brightness(1); transform: scale(1.02); }
+
+    /* Stat tiles */
+    .stat-tile {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        transition: all 0.3s ease;
+    }
+    .stat-tile.accent {
+        background: linear-gradient(135deg, rgba(44, 74, 110, 0.22), rgba(44, 74, 110, 0.06));
+        border-color: rgba(44, 74, 110, 0.45);
+    }
+    .stat-tile.accent-green {
+        background: linear-gradient(135deg, rgba(44, 110, 70, 0.22), rgba(44, 110, 70, 0.08));
+        border-color: rgba(80, 160, 100, 0.4);
+    }
+
+    /* Toggle */
+    .toggle {
+        display: inline-flex;
+        align-items: center;
+        width: 52px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        flex-shrink: 0;
+    }
+    .toggle::after {
+        content: '';
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        background: #fff;
+        border-radius: 50%;
+        top: 3px;
+        left: 3px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle.on { background: var(--navy); }
+    .toggle.on::after { left: 27px; }
+
+    /* Preset chips */
+    .preset-chip {
+        padding: 0.5rem 1rem;
+        border-radius: 0.6rem;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.85);
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+    .preset-chip:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(44, 74, 110, 0.5);
+    }
+    .preset-chip.active {
+        background: var(--navy);
+        color: #fff;
+        border-color: var(--navy);
+        box-shadow: 0 4px 16px rgba(44, 74, 110, 0.4);
+    }
+
+    /* Phase timeline */
+    .phase-timeline {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.5rem;
+    }
+    .phase-card {
+        background: var(--bone-warm);
+        border: 1px solid rgba(20, 24, 32, 0.15);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
+    .phase-card.included {
+        background: #fff;
+        border-color: var(--navy);
+    }
+    .phase-card.skipped { opacity: 0.35; filter: grayscale(0.8); }
+
+    /* Service LEDs (inside dark panel) */
+    .led-indicator {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 11px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: background 0.35s ease, border-color 0.35s ease;
+    }
+    .led-indicator.on {
+        background: rgba(44, 74, 110, 0.12);
+        border-color: rgba(44, 74, 110, 0.4);
+    }
+    .led-dot {
+        flex: 0 0 auto;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #2a3040;
+        box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+        transition: background 0.35s ease, box-shadow 0.35s ease;
+    }
+    .led-indicator.on .led-dot {
+        background: #5eff88;
+        box-shadow: 0 0 9px rgba(94, 255, 136, 0.75), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.6);
+        animation: ledPulse 2.4s ease-in-out infinite;
+    }
+    .led-indicator.on:nth-child(3n)   .led-dot { animation-delay: 0.3s; }
+    .led-indicator.on:nth-child(3n+1) .led-dot { animation-delay: 0.8s; }
+    .led-indicator.on:nth-child(3n+2) .led-dot { animation-delay: 1.4s; }
+    @keyframes ledPulse {
+        0%, 100% { box-shadow: 0 0 8px rgba(94, 255, 136, 0.65), 0 0 2px #5eff88, inset 0 0 2px rgba(255,255,255,0.5); }
+        50%      { box-shadow: 0 0 14px rgba(94, 255, 136, 0.95), 0 0 4px #5eff88, inset 0 0 2px rgba(255,255,255,0.7); }
+    }
+    .led-label {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.45);
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        transition: color 0.35s ease, font-weight 0.35s ease;
+        line-height: 1.25;
+    }
+    .led-indicator.on .led-label { color: #ffffff; font-weight: 600; }
+    .led-threshold {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.3);
+        margin-left: auto;
+        letter-spacing: 0.05em;
+    }
+    .led-indicator.on .led-threshold { color: var(--gold-light); }
+
+    /* Tables */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th { background: var(--ink); color: #fff; font-weight: 700; text-align: left; padding: 0.65rem 0.85rem; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .data-table th.right { text-align: right; }
+    .data-table td { padding: 0.6rem 0.85rem; border-bottom: 1px solid #e5e7eb; background: #fff; }
+    .data-table tr:nth-child(even) td { background: var(--bone-warm); }
+    .data-table td.num { text-align: right; font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
+    .data-table tr.total td { background: var(--bone-deep) !important; font-weight: 700; border-top: 2px solid var(--navy); }
+
+    @media print {
+        /* ================================================================
+           PRINT THEME — LIGHT MODE
+           Dark backgrounds waste ink and hide content on paper. Convert
+           the entire proposal to a light, ink-friendly theme while
+           preserving brand accent colors for visual hierarchy.
+           ================================================================ */
+        @page { size: Letter; margin: 0.5in; }
+        body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            background: #fff !important;
+            color: #141820 !important;
+        }
+        .no-print, .print-only-hide { display: none !important; }
+
+        /* Kill every glow/shadow/animation that prints badly */
+        *, *::before, *::after {
+            box-shadow: none !important;
+            text-shadow: none !important;
+            animation: none !important;
+            transition: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        /* ---- Dark-to-light conversion ---- */
+
+        /* Header — dark gradient → white with accent bottom border */
+        header {
+            background: #fff !important;
+            border-bottom: 3px solid #2c4a6e !important;
+            padding-bottom: 1rem !important;
+        }
+        header > .absolute { display: none !important; }
+        header, header * { color: #141820 !important; }
+        header .text-gray-400, header .text-gray-500 { color: #6b7280 !important; }
+        header .text-\[10px\] { color: #6b7280 !important; }
+        header .text-\[\#2c4a6e\] { color: #2c4a6e !important; }
+        header .border-\[\#2c4a6e\] { border-color: #2c4a6e !important; }
+
+        /* Config panel — dark ink → white with accent border */
+        .config-panel {
+            background: #fff !important;
+            color: #141820 !important;
+            border: 2px solid #2c4a6e !important;
+            break-inside: auto;
+            padding: 0.5in 0.4in !important;
+        }
+        .config-panel::before { display: none !important; }
+        .config-panel .text-white,
+        .config-panel [class*="text-white"] { color: #141820 !important; }
+        .config-panel .text-gray-300 { color: #4b5563 !important; }
+        .config-panel .text-gray-400 { color: #6b7280 !important; }
+        .config-panel .text-gray-500 { color: #9ca3af !important; }
+        .config-panel .text-\[\#d4bc8a\] { color: #8a7040 !important; }
+        .config-panel .text-\[\#5eff88\] { color: #059669 !important; }
+
+        #fleetCount { color: #141820 !important; }
+        #tierLabel { color: #6b7280 !important; }
+
+        /* Stat tiles — transparent-on-dark → solid light fills */
+        .stat-tile {
+            background: #f5f2ec !important;
+            border: 1px solid #d1d5db !important;
+            break-inside: avoid;
+        }
+        .stat-tile.accent {
+            background: #eef3f8 !important;
+            border: 1px solid #2c4a6e !important;
+        }
+        .stat-tile.accent-green {
+            background: #f0f7f2 !important;
+            border: 1px solid #6b8f5e !important;
+        }
+        .stat-tile .text-white { color: #141820 !important; }
+        .stat-tile .text-gray-300 { color: #6b7280 !important; }
+
+        /* Intelligence Platform toggle row */
+        .config-panel .bg-white\/5 {
+            background: #f5f2ec !important;
+            border: 1px solid #d1d5db !important;
+        }
+        .config-panel .border-white\/10 { border-color: #d1d5db !important; }
+
+        /* Annual summary panel — inline dark → accent tint */
+        [style*="rgba(44, 74, 110"] {
+            background: #eef3f8 !important;
+            border: 1px solid #2c4a6e !important;
+        }
+        [style*="rgba(44, 74, 110"] .text-white { color: #141820 !important; }
+
+        /* vs. Hiring panel — transparent → light gray */
+        [style*="rgba(255, 255, 255, 0.04)"] {
+            background: #f9fafb !important;
+            border: 1px solid #d1d5db !important;
+        }
+        [style*="rgba(255, 255, 255, 0.04)"] .text-white { color: #141820 !important; }
+        [style*="rgba(255, 255, 255, 0.04)"] .text-gray-300 { color: #4b5563 !important; }
+        [style*="rgba(255, 255, 255, 0.04)"] .text-gray-400 { color: #6b7280 !important; }
+        [style*="rgba(255, 255, 255, 0.04)"] .text-gray-500 { color: #9ca3af !important; }
+        [style*="rgba(255, 255, 255, 0.04)"] .border-white\/10 { border-color: #e5e7eb !important; }
+
+        /* Service tier callout — inline dark gradient → light */
+        #serviceTierCallout {
+            background: #eef3f8 !important;
+            border: 2px solid #2c4a6e !important;
+            color: #141820 !important;
+        }
+        #serviceTierCallout .text-white { color: #141820 !important; }
+        #serviceTierCallout .text-gray-300 { color: #4b5563 !important; }
+        #serviceTierCallout .text-gray-400 { color: #6b7280 !important; }
+
+        /* Preset chips */
+        .preset-chip {
+            background: #f5f2ec !important;
+            color: #141820 !important;
+            border: 1px solid #d1d5db !important;
+        }
+        .preset-chip.active {
+            background: #2c4a6e !important;
+            color: #fff !important;
+            border: 2px solid #1a3050 !important;
+        }
+
+        /* Force filters off; all slots visible on paper */
+        .robot-slot, .robot-photo, .phase-card.skipped {
+            filter: none !important;
+            opacity: 1 !important;
+        }
+
+        /* Robot slots — dark → light */
+        .robot-slot {
+            background: #f5f2ec !important;
+            border-color: #d1d5db !important;
+            padding: 0.5rem 0.45rem !important;
+            opacity: 1 !important;
+            overflow: visible !important;
+        }
+        .robot-slot.active { border-color: #2c4a6e !important; }
+        .robot-slot .text-white { color: #141820 !important; }
+        .robot-slot .text-gray-400, .robot-slot .text-gray-500 { color: #6b7280 !important; }
+        .robot-slot .truncate {
+            overflow: visible !important;
+            text-overflow: clip !important;
+            white-space: normal !important;
+        }
+
+        /* Slider */
+        .slider-track { background: #e5e7eb !important; }
+        .slider-fill { background: #2c4a6e !important; box-shadow: none !important; }
+        .slider-input { outline: none !important; }
+        .slider-input::-webkit-slider-thumb {
+            background: #2c4a6e !important;
+            border: 2px solid #141820 !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
+        .slider-input::-moz-range-thumb {
+            background: #2c4a6e !important;
+            border: 2px solid #141820 !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
+        .tick.tier-marker { background: #2c4a6e !important; box-shadow: none !important; }
+
+        /* Service LEDs */
+        .led-dot {
+            background: #d1d5db !important;
+            border: 1px solid #6b7280 !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+        .led-indicator.on .led-dot {
+            background: #10b981 !important;
+            border: 1px solid #065f46 !important;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+        }
+        .led-indicator {
+            background: #f5f2ec !important;
+            border-color: #d1d5db !important;
+        }
+        .led-indicator.on {
+            background: #eef3f8 !important;
+            border-color: #2c4a6e !important;
+        }
+        .led-label {
+            color: #141820 !important;
+            font-weight: 600 !important;
+        }
+        .led-threshold {
+            color: #6b7280 !important;
+        }
+        .led-indicator.on .led-threshold {
+            color: #2c4a6e !important;
+        }
+
+        /* Robot-slot active accent dot */
+        .robot-slot.active::after {
+            background: #2c4a6e !important;
+            border: 1px solid #141820;
+            border-radius: 50% !important;
+            -webkit-border-radius: 50% !important;
+            overflow: hidden;
+        }
+
+        /* Phase cards — dark → light */
+        .phase-card {
+            background: #f5f2ec !important;
+            border: 1px solid #d1d5db !important;
+            break-inside: avoid;
+        }
+        .phase-card .text-white { color: #141820 !important; }
+        .phase-card .text-gray-300, .phase-card .text-gray-400 { color: #6b7280 !important; }
+
+        .solution-card {
+            background: #f5f2ec !important;
+            border: 1px solid #d1d5db !important;
+            break-inside: avoid;
+        }
+        .solution-card .text-white { color: #141820 !important; }
+
+        .stat-tile, .phase-card, .solution-card { break-inside: avoid; }
+
+        /* Tables — force light header (screen uses dark --ink background) */
+        .data-table { border-collapse: collapse; }
+        .data-table th {
+            background: #2c4a6e !important;
+            color: #fff !important;
+            border: 1px solid #1a3050 !important;
+            break-inside: avoid;
+        }
+        .data-table td {
+            break-inside: avoid;
+            border: 1px solid #d1d5db !important;
+        }
+        .data-table thead { display: table-header-group; }
+        .data-table tr { break-inside: avoid; }
+
+        /* Footer */
+        footer { border-top: 2px solid #2c4a6e !important; }
+        footer .text-gray-400, footer .text-gray-500 { color: #6b7280 !important; }
+
+        /* Gradient text → solid accent */
+        .accel-gradient {
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            -webkit-text-fill-color: #0055ff !important;
+            background-clip: unset !important;
+        }
+        .navy-gradient, .coral-gradient {
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            -webkit-text-fill-color: #2c4a6e !important;
+            background-clip: unset !important;
+        }
+
+        .print-keep {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+        }
+        .print-hero {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+        }
+        .print-part {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+        }
+        .print-hero > .mb-8 { margin-bottom: 0.75rem !important; }
+        .print-hero .mb-6 { margin-bottom: 0.5rem !important; }
+        .print-hero .mb-2 { margin-bottom: 0.25rem !important; }
+
+        section { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
+        section h2 { break-after: avoid; page-break-after: avoid; }
+        section h3 { break-after: avoid; page-break-after: avoid; }
+
+        /* Fleet grid — 4 cols for 8 robots */
+        #robotGrid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 0.5rem !important; }
+        .robot-photo { aspect-ratio: 4 / 3; margin-bottom: 0.25rem !important; }
+
+        #serviceLedGrid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+    }
+    @media (max-width: 768px) {
+        .phase-timeline { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- HEADER -->
+<!-- ================================================================ -->
+<header class="text-white px-6 md:px-8 py-10 md:py-12 relative overflow-hidden" style="background: linear-gradient(135deg, #141820 0%, #1e2430 50%, #141820 100%);">
+    <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%221%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+    <div class="max-w-6xl mx-auto relative">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-xl border-2 flex items-center justify-center" style="border-color: #b89a6a;">
+                    <span class="font-bold text-2xl headline" style="color: #b89a6a;">C</span>
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight headline">
+                        The Citizen <span style="color: #b89a6a;">Hotel</span>
+                    </h1>
+                    <p class="text-xs text-gray-400 tracking-widest uppercase mt-1">Executive Proposal &middot; Live Configurator</p>
+                </div>
+            </div>
+            <div class="flex flex-col md:items-end gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #0055ff, #00c8ff, #7c3aed);">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="20" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><circle cx="20" cy="18" r="1.5" fill="currentColor"/><line x1="12" y1="12" x2="4" y2="6"/><line x1="12" y1="12" x2="20" y2="6"/><line x1="12" y1="12" x2="4" y2="18"/><line x1="12" y1="12" x2="20" y2="18"/></svg>
+                    </div>
+                    <span class="text-sm font-bold tracking-tight accel-gradient tech-font">Accelerate Robotics</span>
+                </div>
+                <div class="text-[10px] text-gray-400 md:text-right tracking-wide">
+                    One Brain. Many Bots.<br>
+                    <span class="text-gray-500">OPP-008 &middot; April 2026</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ================================================================ -->
+<!-- INTRO -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 pt-10 pb-4">
+    <div class="max-w-3xl">
+        <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color: #2c4a6e;">Executive Proposal</p>
+        <h2 class="headline text-3xl md:text-4xl font-bold mb-4 leading-tight" style="color: #141820;">
+            A century of Sacramento&rsquo;s decisions. Now, a century-old building decides the future.
+        </h2>
+        <p class="text-gray-700 leading-relaxed">
+            Two blocks from the California State Capitol, in a building that&rsquo;s been shaping Sacramento&rsquo;s decisions for a century. Drag the slider from one robot to eight and watch the guest experience scale: which service lines come online, monthly fleet cost, hard-dollar labor savings, and how the economics compare to hiring. Toggle the Facility Intelligence Platform to see how unit economics shift.
+        </p>
+        <p class="text-xs text-gray-500 italic mt-4">
+            The Citizen Hotel is a 196-key Autograph Collection hotel in Sacramento&rsquo;s first skyscraper (1926). Owned by <strong>Cambridge Landmark</strong> (Miami). Operated by <strong>Aimbridge Hospitality</strong>. Grange Restaurant is Michelin Guide listed. Political art throughout &mdash; where California&rsquo;s legislators, lobbyists, and power brokers sleep and dine.
+        </p>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- CONFIGURATOR -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-8">
+    <div class="config-panel p-6 md:p-10">
+
+        <!-- ============ PART A — HERO: Fleet size, slider, stats, Intelligence Platform ============
+             This whole block is the high-impact moment. In print, it MUST stay on one page —
+             the slider means nothing without the stat tiles that respond to it. -->
+        <div class="print-hero">
+
+        <!-- Fleet size header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+            <div>
+                <p class="text-[11px] uppercase tracking-widest font-semibold mb-2" style="color: #d4bc8a;">Fleet Size</p>
+                <div class="flex items-baseline gap-3">
+                    <div class="text-6xl md:text-7xl font-bold tech-font text-white" id="fleetCount">3</div>
+                    <div class="text-xl text-gray-400 font-light">/ 8 robots</div>
+                </div>
+                <p class="text-sm text-gray-400 mt-1" id="tierLabel">Signature Service</p>
+            </div>
+            <div class="flex flex-wrap gap-2" id="presetChips">
+                <button class="preset-chip" data-count="1">Pilot &middot; 1</button>
+                <button class="preset-chip active" data-count="3">Signature &middot; 3</button>
+                <button class="preset-chip" data-count="5">Full-Property &middot; 5</button>
+                <button class="preset-chip" data-count="8">Citizen Autonomous &middot; 8</button>
+            </div>
+        </div>
+
+        <!-- Slider -->
+        <div class="slider-wrap mb-2">
+            <div class="slider-track">
+                <div class="slider-fill" id="sliderFill" style="width: 28.57%"></div>
+                <div class="slider-ticks" id="sliderTicks"></div>
+            </div>
+            <input type="range" min="1" max="8" value="3" step="1" class="slider-input" id="fleetSlider">
+        </div>
+        <div class="flex justify-between text-[10px] text-gray-500 uppercase tracking-wider px-3 mb-8">
+            <span>1 &middot; Pilot</span>
+            <span>&middot;</span>
+            <span>3 &middot; Signature</span>
+            <span>&middot;</span>
+            <span>5 &middot; Full-Property</span>
+            <span>&middot;</span>
+            <span>8 &middot; Autonomous</span>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Fleet Cost</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="monthlyCost">$8,550</span></p>
+                <p class="text-[11px] text-gray-500 mt-1" id="costBreakdownLine">3 robots &times; $2,850</p>
+            </div>
+            <div class="stat-tile">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Monthly Hard Savings</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font" style="color: #d4bc8a;"><span id="monthlySavings">$10,200</span></p>
+                <p class="text-[11px] text-gray-500 mt-1">Labor &amp; vendor contracts terminated</p>
+            </div>
+            <div class="stat-tile accent-green">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Net Monthly Benefit</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="netMonthly">+$1,650</span></p>
+                <p class="text-[11px] text-gray-300 mt-1"><span id="annualNet">+$19,800</span> annualized</p>
+            </div>
+            <div class="stat-tile accent">
+                <p class="text-[10px] uppercase tracking-widest text-gray-300 font-semibold mb-1">Staff Hours Returned</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font text-white"><span id="staffHours">21</span> <span class="text-base text-gray-300 font-normal">/ day</span></p>
+                <p class="text-[11px] text-gray-300 mt-1">Redirected to guest-facing moments</p>
+            </div>
+        </div>
+
+        <!-- Intelligence Platform toggle -->
+        <div class="mb-8">
+            <div class="print-keep flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="flex-1 pr-4">
+                    <p class="text-sm font-semibold text-white">Facility Intelligence Platform</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Asset sensing, BLE + UWB tags, smart-dispatch rules, ops dashboard &middot; <span style="color: #d4bc8a;">$35,000 Y1 install &middot; $8,500/yr license</span></p>
+                </div>
+                <div class="toggle" id="intelToggle"></div>
+            </div>
+        </div>
+
+        </div>
+        <!-- ============ END PART A — HERO ============ -->
+
+        <!-- ============ PART B — Fleet Composition (robot lineup) ============ -->
+        <div class="print-part">
+            <p class="text-[11px] uppercase tracking-widest font-semibold mb-3" style="color: #d4bc8a;">Fleet Composition</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5" id="robotGrid"></div>
+        </div>
+
+        <!-- ============ PART C — Service Lines (LED system status) ============ -->
+        <div class="print-part mt-8">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[11px] uppercase tracking-widest font-semibold" style="color: #d4bc8a;">Service Lines — System Status</p>
+                <p class="text-[10px] uppercase tracking-widest text-gray-400">
+                    <span class="tech-font font-bold" style="color: #5eff88;" id="serviceOnCount">3</span>
+                    <span class="text-gray-500"> / 8 online</span>
+                </p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2" id="serviceLedGrid"></div>
+        </div>
+
+        <!-- ============ PART D — Annual Summary + vs. Hiring (the ROI moment) ============ -->
+        <div class="print-part print-keep mt-8 p-5 rounded-xl" style="background: linear-gradient(135deg, rgba(44, 74, 110, 0.18), rgba(44, 74, 110, 0.05)); border: 1px solid rgba(44, 74, 110, 0.4);">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center md:text-left">
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest font-semibold mb-1" style="color: #d4bc8a;">Year 1 All-In</p>
+                    <p class="text-2xl font-bold tech-font text-white" id="year1AllIn">$102,600</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest font-semibold mb-1" style="color: #d4bc8a;">Year 2+ Steady-State</p>
+                    <p class="text-2xl font-bold tech-font text-white" id="year2SteadyState">$102,600</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest font-semibold mb-1" style="color: #d4bc8a;">Annual Net Cash Benefit</p>
+                    <p class="text-2xl font-bold tech-font" style="color: #d4bc8a;" id="annualBenefitBig">+$19,800</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- vs. Hiring -->
+        <div class="print-keep mt-6 p-6 rounded-xl" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12);">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-[11px] uppercase tracking-widest font-semibold" style="color: #d4bc8a;">vs. Hiring — Fully Loaded Labor Comparison</p>
+                <span class="text-[10px] text-gray-400 italic">Sacramento hospitality, 2026</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Your Fleet</p>
+                    <p class="text-3xl font-bold tech-font text-white"><span id="fleetCostCompare">$8,550</span><span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1">Hardware, service, Citizen Hotel wrap, installation &mdash; all-in</p>
+                </div>
+                <div class="text-center text-3xl text-gray-500 font-light hidden md:block">&rarr;</div>
+                <div class="text-center md:text-left">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Equivalent FTE Coverage</p>
+                    <p class="text-3xl font-bold tech-font text-white"><span id="fteEquivCost">$12,960</span><span class="text-base text-gray-400 font-normal">/mo</span></p>
+                    <p class="text-[11px] text-gray-500 mt-1"><span id="fteEquivCount">2.7</span> FTEs &times; $4,800/mo fully-loaded</p>
+                </div>
+            </div>
+            <div class="mt-5 pt-5 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-3">
+                <p class="text-sm text-gray-300">The fleet delivers this coverage for</p>
+                <p class="text-2xl md:text-3xl font-bold tech-font" style="color: #d4bc8a;" id="fteSavings">$4,410/mo less</p>
+                <p class="text-sm text-gray-300"><span id="fteSavingsPct">34%</span> cheaper &middot; <span id="fteSavingsAnnual">$52,920/yr</span> delta</p>
+            </div>
+            <p class="text-[10px] text-gray-500 italic mt-4 leading-relaxed">
+                Not counted: recruiting, 70&ndash;90%/yr hospitality turnover, UNITE HERE Local 49 shift premiums, legislative-session OT surges, overnight differentials, agency markup during session peaks. Typical add-on: 20&ndash;40% on top of base FTE cost.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- PHASE TIMELINE -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="max-w-3xl mb-6">
+        <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color: #2c4a6e;">Deployment Roadmap</p>
+        <h2 class="headline text-3xl font-bold mb-3 leading-tight" style="color: #141820;">Phases included at your fleet size</h2>
+        <p class="text-gray-700 leading-relaxed">
+            Each phase is success-gated &mdash; Aimbridge Hospitality operations and Accelerate agree on measurable criteria before moving forward. Rolling back a phase costs nothing more than de-installing the added robots.
+        </p>
+    </div>
+    <div class="phase-timeline" id="phaseTimeline"></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- WHAT GUESTS NOTICE -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <div class="flex items-end justify-between mb-6 flex-wrap gap-4">
+        <div>
+            <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color: #2c4a6e;">What Guests Notice</p>
+            <h2 class="headline text-3xl font-bold mb-1" style="color: #141820;">Guest experience at this fleet size</h2>
+            <p class="text-gray-700 text-sm">The Autograph Collection service floor scales with the robots deployed &mdash; each slot unlocks something guests, reviewers, and Aimbridge ops can see.</p>
+        </div>
+    </div>
+
+    <div id="serviceTierCallout" class="print-keep p-6 md:p-8 rounded-2xl mb-6 text-white" style="background: linear-gradient(135deg, #141820 0%, #1e2430 100%); border: 1px solid rgba(44, 74, 110, 0.45);">
+        <div class="flex items-start justify-between flex-wrap gap-4 mb-3">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest font-semibold mb-2" style="color: #d4bc8a;">At <span id="tierFleetCount">3</span> robots, the guest experience is:</p>
+                <h3 class="headline text-3xl md:text-4xl font-bold"><span id="tierName">Signature Service</span></h3>
+                <p class="text-[11px] uppercase tracking-widest mt-1" style="color: #d4bc8a;" id="tierTag">Guest-facing automation</p>
+            </div>
+            <div class="tech-font text-5xl font-bold tracking-tighter" style="color: rgba(44, 74, 110, 0.4);" id="tierBadge">II</div>
+        </div>
+        <p class="text-gray-300 leading-relaxed max-w-3xl" id="tierDescription">Three robots running in concert: Grange room service via W3, guest-floor corridor care, and Scandal Lounge + Metropolitan Terrace service via T8. The story Sacramento Magazine writes about.</p>
+    </div>
+
+    <p class="text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-3">Active Capabilities</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8" id="unlockGrid"></div>
+
+    <div id="lockedPreview">
+        <p class="text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-3">Next To Unlock</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="lockedGrid"></div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- HARD SAVINGS BREAKDOWN -->
+<!-- ================================================================ -->
+<section class="max-w-6xl mx-auto px-6 md:px-8 py-12">
+    <p class="text-sm uppercase tracking-widest font-semibold mb-3" style="color: #2c4a6e;">Hard-Dollar Savings Breakdown</p>
+    <h2 class="headline text-3xl font-bold mb-3 leading-tight" style="color: #141820;">Labor &amp; vendor contracts actually eliminated</h2>
+    <p class="text-gray-700 mb-6 max-w-3xl text-sm leading-relaxed">
+        Hard-dollar savings are cash that stops leaving the P&amp;L once the fleet is running. &ldquo;Hours redirected to higher-value guest-facing work&rdquo; is shown separately &mdash; it&rsquo;s real value, but it isn&rsquo;t cash.
+    </p>
+
+    <div class="print-keep overflow-x-auto rounded-xl border border-gray-200">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Capability unlocked at this slot</th>
+                    <th>What the robot replaces</th>
+                    <th class="right">Monthly savings</th>
+                </tr>
+            </thead>
+            <tbody id="savingsTable"></tbody>
+            <tfoot>
+                <tr class="total">
+                    <td colspan="2">Monthly Hard Savings</td>
+                    <td class="num" id="savingsTotal">$10,200</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <p class="text-xs text-gray-500 italic mt-3">
+        Baselined jointly with the Citizen Hotel controller and Aimbridge regional ops during Phase 1. Monthly operational reviews reconcile actual vs. committed; material misses are diagnosed and fixed together in good faith.
+    </p>
+</section>
+
+<!-- ================================================================ -->
+<!-- FOOTER -->
+<!-- ================================================================ -->
+<footer class="max-w-6xl mx-auto px-6 md:px-8 py-10 border-t border-gray-200 mt-12">
+    <div class="flex flex-col md:flex-row justify-between items-start gap-6">
+        <div>
+            <p class="text-sm text-gray-700 leading-relaxed max-w-2xl">
+                This is the <strong>Executive Proposal</strong> &mdash; a one-page read of the deal. The <strong>Full Proposal</strong> has every robot&rsquo;s spec sheet, Grange room-service choreography, the 14-floor elevator integration plan, the Facility Intelligence Platform detail, UNITE HERE union compliance, deployment roadmap, and signature block.
+            </p>
+        </div>
+        <div class="text-xs text-gray-500 md:text-right">
+            <p><strong style="color: #141820;">Eric Race</strong></p>
+            <p>Founder &amp; CEO, Accelerate Robotics</p>
+            <p class="mt-2 italic">OPP-008 &middot; The Citizen Hotel, Sacramento &middot; April 2026</p>
+        </div>
+    </div>
+</footer>
+
+<!-- ================================================================ -->
+<!-- DATA + LOGIC -->
+<!-- ================================================================ -->
+<script>
+/* ──────────────────────────────────────────────────────────────────
+   ROBOT LADDER — order of addition by marginal ROI
+   Slots 1-3 → Signature Service (Grange + corridor + Scandal Lounge)
+   Slots 1-5 → Full-Property Service (all guest surfaces)
+   Slots 1-8 → Citizen Autonomous (24/7 + events)
+   Per-slot savings reconcile to Option totals.
+   ────────────────────────────────────────────────────────────────── */
+const ROBOTS = [
+    // Signature Service (slots 1-3)
+    { code: 'W3',   label: 'W3 · Grange room service',
+      role: 'Michelin-kitchen delivery from Grange to 196 rooms across 14 floors',
+      photo: '../assets/robots/photos/keenon-w3.png',
+      savings: 3600, hours: 7, fte: 1.0,
+      captures: 'Room-service runner shifts + bellhop OT during legislative session peaks',
+      unlock: 'Dinner from a Michelin-listed kitchen arrives by robot at 10:47 PM — the kind of story legislators tell colleagues.',
+      category: 'Delivery' },
+
+    { code: 'C40',  label: 'C40 · Guest-floor corridor care',
+      role: 'Overnight vacuum on floors 3-14 historic hallways',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 3800, hours: 8, fte: 1.1,
+      captures: 'Overnight housekeeping vacuum shifts across 12 guest floors',
+      unlock: 'Century-old corridors reset silently between 2-5 AM — guests never hear a vacuum in a 1926 building.',
+      category: 'Cleaning' },
+
+    { code: 'T8',   label: 'T8 · Scandal Lounge + event service',
+      role: 'Open-tray runner, mezzanine cocktails, Metropolitan Terrace',
+      photo: '../assets/robots/photos/keenon-s100-luxury-cart-hero.png',
+      savings: 2800, hours: 6, fte: 0.8,
+      captures: 'Lounge runner shifts + event-setup labor for Capitol-view terrace',
+      unlock: 'Capitol-view cocktails on the Metropolitan Terrace — delivered while the city lights glow below.',
+      category: 'Delivery' },
+
+    // Full-Property delta (slots 4-5)
+    { code: 'C30',  label: 'C30 · Lobby + Grange AM reset',
+      role: 'Historic marble lobby + restaurant floor before 7 AM',
+      photo: '../assets/robots/photos/keenon-c30-white.png',
+      savings: 2600, hours: 5, fte: 0.7,
+      captures: 'Lobby nightly scrub + Grange AM porter',
+      unlock: 'The marble lobby that greeted Cal-West executives in 1926 greets today\'s guests just as polished.',
+      category: 'Cleaning' },
+
+    { code: 'S300', label: 'S300 · Linen logistics',
+      role: 'Heavy tray for linens across 14 floors + housekeeping supplies',
+      photo: '../assets/robots/photos/keenon-s300-linen-bin.png',
+      savings: 3200, hours: 7, fte: 0.9,
+      captures: 'Linen-handler shifts + elevator wait for housekeeping',
+      unlock: 'Linens move continuously between laundry and 14 floors — housekeepers serve guests, not elevators.',
+      category: 'Logistics' },
+
+    // Citizen Autonomous delta (slots 6-8)
+    { code: 'W3',   label: 'W3 · Peak delivery + 24/7 amenity',
+      role: 'Second delivery for session-peak room service + overnight',
+      photo: '../assets/robots/photos/keenon-w3.png',
+      savings: 2400, hours: 5, fte: 0.7,
+      captures: 'Peak-night runner OT + overnight amenity coverage',
+      unlock: 'Extra pillows at midnight, a forgotten charger at 3 AM — fulfilled in minutes during session week.',
+      category: 'Delivery' },
+
+    { code: 'C40',  label: 'C40 · Ballroom + meeting floor',
+      role: 'Second vacuum for Plaza Park Ballroom + Quorum Room',
+      photo: '../assets/robots/photos/keenon-c40-cleaning.png',
+      savings: 2200, hours: 5, fte: 0.7,
+      captures: 'Meeting-room cleaning between political events and conferences',
+      unlock: 'The Yea Room and Nay Room reset between sessions — back-to-back political events see fresh floors.',
+      category: 'Cleaning' },
+
+    { code: 'S300', label: 'S300 · Event strike + Oakville restock',
+      role: 'Event turnover + grab-and-go market resupply',
+      photo: '../assets/robots/photos/keenon-s300-linen-bin.png',
+      savings: 2000, hours: 5, fte: 0.6,
+      captures: 'Event-turnover temps + Oakville Grocery restock labor',
+      unlock: 'Metropolitan Terrace receptions strike in under an hour; Oakville stays stocked around the clock.',
+      category: 'Logistics' },
+];
+
+// Flat monthly RaaS rate — Sacramento boutique/luxury tier
+const RAAS_PER_ROBOT = 2850;
+
+// One-time capex — sensing + dashboard install for 196 rooms, 14 floors
+const INTEL_Y1_INSTALL = 35000;
+
+// Annual software license after Y1
+const INTEL_Y2_LICENSE = 8500;
+
+// Blended fully-loaded FTE monthly cost — Sacramento hospitality, 2026.
+// Wages + FICA + benefits + PTO + uniforms + training burden for
+// hospitality labor (housekeeping, F&B runner, night porter blend).
+// UNITE HERE Local 49 wage floor raises this above national average.
+const FTE_MONTHLY_COST = 4800;
+
+// Service tier narratives — what guests experience at each fleet size
+const SERVICE_TIERS = [
+    { min: 1,  max: 1,  name: 'Pilot Mode',
+      tag: 'Proof of concept',
+      description: 'One W3 running Grange room service. Thirty-day pilot, union-friendly framing with UNITE HERE Local 49. See how autonomous service lands with the Citizen Hotel guest before committing further.' },
+    { min: 2,  max: 2,  name: 'Essential Service',
+      tag: 'Two service lines',
+      description: 'Grange room service + overnight corridor carpet care. Guests stop hearing vacuums in the 1926 hallways. Guest-satisfaction scores on cleanliness and responsiveness shift first.' },
+    { min: 3,  max: 4,  name: 'Signature Service',
+      tag: 'Guest-facing automation',
+      description: 'Three robots running in concert: Grange room service via W3, guest-floor corridor care, and Scandal Lounge + Metropolitan Terrace service via T8. The tier that Sacramento Magazine writes about.' },
+    { min: 5,  max: 6,  name: 'Full-Property Service',
+      tag: 'Every guest surface covered',
+      description: 'Marble lobby, Grange, room service peaks, Capitol-view terrace, corridor carpet, linen logistics. Every guest-facing surface is reset by the fleet. Aimbridge corporate sees the utilization data that justifies portfolio rollout.' },
+    { min: 7,  max: 8,  name: 'Citizen Autonomous',
+      tag: '24/7 autonomous + events',
+      description: 'Event strike/reset, Oakville Grocery resupply, ballroom and meeting-floor care fully absorbed. The 100th anniversary of Sacramento\'s first skyscraper arrives with a fully autonomous hotel — and a press story that writes itself.' },
+];
+
+function currentServiceTier(n) {
+    return SERVICE_TIERS.find(t => n >= t.min && n <= t.max) || SERVICE_TIERS[0];
+}
+
+// Service lines — illuminate as the fleet crosses each threshold
+const SERVICE_LINES = [
+    { id: 'roomservice',  label: 'Grange Room Service',          activateAt: 1 },
+    { id: 'corridor',     label: 'Guest-Floor Corridor',         activateAt: 2 },
+    { id: 'scandal',      label: 'Scandal Lounge + Events',      activateAt: 3 },
+    { id: 'lobby',        label: 'Historic Lobby Reset',         activateAt: 4 },
+    { id: 'linens',       label: 'Linen Logistics',              activateAt: 5 },
+    { id: 'peakdelivery', label: 'Peak Delivery + 24/7',         activateAt: 6 },
+    { id: 'ballroom',     label: 'Ballroom + Meeting Floor',     activateAt: 7 },
+    { id: 'events',       label: 'Event Strike + Restock',       activateAt: 8 },
+];
+
+// Fleet phase mapping — how many phases get activated at each fleet size
+const TIERS = {
+    1:  { name: 'Pilot Mode',                    phases: 1 },
+    2:  { name: 'Essential Service',             phases: 2 },
+    3:  { name: 'Signature Service',             phases: 2 },
+    4:  { name: 'Signature + Lobby',             phases: 3 },
+    5:  { name: 'Full-Property Service',         phases: 3 },
+    6:  { name: 'Full-Property + 24/7',          phases: 4 },
+    7:  { name: 'Citizen Autonomous',            phases: 4 },
+    8:  { name: 'Citizen Autonomous (Complete)', phases: 5 },
+};
+
+/* STATE ─────────────────────────────────────────────────────────── */
+let state = { count: 3, intel: false };
+
+const $ = (id) => document.getElementById(id);
+
+/* RENDER: Robot grid ──────────────────────────────────────────── */
+function renderRobotGrid() {
+    const grid = $('robotGrid');
+    grid.innerHTML = '';
+    ROBOTS.forEach((r, i) => {
+        const active = i < state.count;
+        const slot = document.createElement('div');
+        slot.className = 'robot-slot' + (active ? ' active' : '');
+        slot.innerHTML = `
+            <img class="robot-photo" src="${r.photo}" alt="${r.code}" loading="lazy" onerror="this.style.visibility='hidden'">
+            <div class="flex items-start gap-2.5">
+                <div class="robot-chip-mini">${r.code}</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[11px] font-semibold text-white leading-snug truncate">${r.label}</p>
+                    <p class="text-[10px] text-gray-400 leading-snug mt-0.5 truncate">${r.role}</p>
+                </div>
+            </div>
+        `;
+        grid.appendChild(slot);
+    });
+}
+
+/* RENDER: Savings table ───────────────────────────────────────── */
+function renderSavingsTable() {
+    const tbody = $('savingsTable');
+    tbody.innerHTML = '';
+    let total = 0;
+    for (let i = 0; i < state.count; i++) {
+        const r = ROBOTS[i];
+        total += r.savings;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${r.label}</strong></td>
+            <td>${r.captures}</td>
+            <td class="num">$${r.savings.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    }
+    $('savingsTotal').textContent = '$' + total.toLocaleString();
+}
+
+/* RENDER: Phase timeline ──────────────────────────────────────── */
+function renderPhases() {
+    const tier = TIERS[state.count];
+    const phaseCount = tier.phases;
+    const timeline = $('phaseTimeline');
+    timeline.innerHTML = '';
+
+    const phaseDefs = [
+        { n: 1, name: 'Pilot',                  time: 'Month 1',
+          detail: 'One W3 on Grange room service. 30-day pilot, success criteria signed jointly with Aimbridge regional. Union-friendly framing per UNITE HERE Local 49. If missed, both parties walk.' },
+        { n: 2, name: 'Signature Service',       time: 'Months 2-3',
+          detail: 'C40 corridor care deployed on guest floors 3-14. T8 running Scandal Lounge + Metropolitan Terrace events with Capitol views. Political press begins.' },
+        { n: 3, name: 'Full-Property',           time: 'Months 3-5',
+          detail: 'C30 on marble lobby + Grange AM reset. S300 linen logistics across 14 floors. Elevator integration on all 14 floors validated. Housekeepers fully freed from elevator wait.' },
+        { n: 4, name: 'Autonomous Expansion',    time: 'Months 5-7',
+          detail: 'Second W3 for session-week peak delivery + 24/7 amenity. C40 ballroom + Quorum Room. S300 event strike + Oakville Grocery restock. Legislative-session stress test.' },
+        { n: 5, name: 'Intelligence',            time: 'Months 7-9',
+          detail: 'Facility Intelligence Platform: BLE + UWB asset sensing, smart-dispatch rules, Aimbridge ops dashboard. 100th anniversary of Sacramento\'s first skyscraper — autonomous hotel press story.' },
+    ];
+
+    phaseDefs.forEach((p) => {
+        const included = p.n <= phaseCount;
+        const intel = (p.n === 5);
+        const card = document.createElement('div');
+        card.className = 'phase-card' + (included ? ' included' : ' skipped');
+        if (intel && !state.intel) card.classList.add('skipped');
+        card.innerHTML = `
+            <div class="flex items-center gap-2 mb-2">
+                <div class="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold tech-font" style="background: #2c4a6e;">${p.n}</div>
+                <p class="text-[10px] uppercase tracking-widest font-semibold" style="color: #141820;">${p.time}</p>
+            </div>
+            <p class="font-bold mb-1 text-sm" style="color: #141820;">${p.name}</p>
+            <p class="text-xs text-gray-600 leading-snug">${p.detail}</p>
+            ${intel && !state.intel ? '<p class="text-[10px] mt-2 text-gray-500 italic">Requires Intelligence Platform add-on</p>' : ''}
+        `;
+        timeline.appendChild(card);
+    });
+}
+
+/* RENDER: Stats ─────────────────────────────────────────────── */
+function renderStats() {
+    const n = state.count;
+    const activeRobots = ROBOTS.slice(0, n);
+
+    const fleetCost = n * RAAS_PER_ROBOT;
+    const laborSavings = activeRobots.reduce((s, r) => s + r.savings, 0);
+    const staffHours = activeRobots.reduce((s, r) => s + r.hours, 0);
+
+    const monthlyCost = fleetCost;
+    const netMonthly = laborSavings - monthlyCost;
+    const annualNet = netMonthly * 12;
+
+    // Intelligence Platform add-ons
+    const intelY1 = state.intel ? INTEL_Y1_INSTALL : 0;
+    const intelY2 = state.intel ? INTEL_Y2_LICENSE : 0;
+    const year1AllIn = monthlyCost * 12 + intelY1;
+    const year2SteadyState = monthlyCost * 12 + intelY2;
+
+    // FTE equivalence
+    const fteCount = activeRobots.reduce((s, r) => s + r.fte, 0);
+    const fteEquivCost = Math.round(fteCount * FTE_MONTHLY_COST);
+    const fteSavings = fteEquivCost - monthlyCost;
+    const fteSavingsPct = fteEquivCost > 0 ? Math.round((fteSavings / fteEquivCost) * 100) : 0;
+
+    const tier = TIERS[n];
+
+    $('fleetCount').textContent = n;
+    $('tierLabel').textContent = tier.name;
+    $('monthlyCost').textContent = '$' + monthlyCost.toLocaleString();
+    $('fleetCostCompare').textContent = '$' + monthlyCost.toLocaleString();
+    $('fteEquivCost').textContent = '$' + fteEquivCost.toLocaleString();
+    $('fteEquivCount').textContent = fteCount.toFixed(1);
+    $('fteSavings').textContent = (fteSavings >= 0 ? '$' : '\u2212$') + Math.abs(fteSavings).toLocaleString() + '/mo ' + (fteSavings >= 0 ? 'less' : 'more');
+    $('fteSavingsPct').textContent = Math.abs(fteSavingsPct) + '%';
+    $('fteSavingsAnnual').textContent = (fteSavings >= 0 ? '$' : '\u2212$') + Math.abs(fteSavings * 12).toLocaleString() + '/yr';
+
+    const robotWord = n === 1 ? 'robot' : 'robots';
+    $('costBreakdownLine').textContent = `${n} ${robotWord} \u00d7 $${RAAS_PER_ROBOT.toLocaleString()}`;
+
+    $('monthlySavings').textContent = '$' + laborSavings.toLocaleString();
+    $('netMonthly').textContent = (netMonthly >= 0 ? '+$' : '\u2212$') + Math.abs(netMonthly).toLocaleString();
+    $('annualNet').textContent = (annualNet >= 0 ? '+$' : '\u2212$') + Math.abs(annualNet).toLocaleString();
+    $('staffHours').textContent = staffHours;
+    $('year1AllIn').textContent = '$' + year1AllIn.toLocaleString();
+    $('year2SteadyState').textContent = '$' + year2SteadyState.toLocaleString();
+    $('annualBenefitBig').textContent = (annualNet >= 0 ? '+$' : '\u2212$') + Math.abs(annualNet).toLocaleString();
+
+    // Slider fill — 7 steps between 1 and 8
+    const pct = ((n - 1) / 7) * 100;
+    $('sliderFill').style.width = pct + '%';
+    $('fleetSlider').value = n;
+
+    // Preset chips
+    document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+        chip.classList.toggle('active', parseInt(chip.dataset.count) === n);
+    });
+}
+
+/* RENDER: Slider ticks (markers at 1, 3, 5, 8) ───────────── */
+function renderTicks() {
+    const ticks = $('sliderTicks');
+    ticks.innerHTML = '';
+    for (let i = 1; i <= 8; i++) {
+        const tick = document.createElement('div');
+        tick.className = 'tick' + ([1, 3, 5, 8].includes(i) ? ' tier-marker' : '');
+        ticks.appendChild(tick);
+    }
+}
+
+/* RENDER: Service LEDs ─────────────────────────────────────── */
+function renderServiceLines() {
+    const n = state.count;
+    const grid = $('serviceLedGrid');
+    grid.innerHTML = '';
+    let onCount = 0;
+    SERVICE_LINES.forEach((svc) => {
+        const on = n >= svc.activateAt;
+        if (on) onCount++;
+        const row = document.createElement('div');
+        row.className = 'led-indicator' + (on ? ' on' : '');
+        row.innerHTML = `
+            <span class="led-dot"></span>
+            <span class="led-label">${svc.label}</span>
+            <span class="led-threshold">${svc.activateAt}+</span>
+        `;
+        grid.appendChild(row);
+    });
+    $('serviceOnCount').textContent = onCount;
+}
+
+/* RENDER: Service unlock cards ─────────────────────────────── */
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+const CATEGORY_COLOR = {
+    Cleaning:   '#2c5f2e',   /* WHY: muted green for cleaning — distinct from navy delivery */
+    Delivery:   '#2c4a6e',   /* WHY: civic navy — primary brand color for Citizen Hotel */
+    Logistics:  '#5a6b7a',   /* WHY: steel gray — neutral for support/logistics category */
+};
+
+function renderUnlocks() {
+    const n = state.count;
+    const tier = currentServiceTier(n);
+    const tierIdx = SERVICE_TIERS.indexOf(tier) + 1;
+
+    $('tierFleetCount').textContent = n;
+    $('tierName').textContent = tier.name;
+    $('tierTag').textContent = tier.tag;
+    $('tierDescription').textContent = tier.description;
+    $('tierBadge').textContent = ROMAN[tierIdx] || '';
+
+    const unlockGrid = $('unlockGrid');
+    unlockGrid.innerHTML = '';
+    ROBOTS.slice(0, n).forEach((r) => {
+        const color = CATEGORY_COLOR[r.category] || '#2c4a6e';
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-lg';
+        card.style.cssText = `background: white; border: 1px solid rgba(20, 24, 32, 0.08); border-left: 3px solid ${color};`;
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-3 mb-2">
+                <span class="tech-font text-[10px] uppercase tracking-widest font-bold" style="color: ${color};">${r.category}</span>
+                <span class="tech-font text-[10px] text-gray-400">${r.code}</span>
+            </div>
+            <p class="text-sm leading-snug" style="color: #141820;">${r.unlock}</p>
+        `;
+        unlockGrid.appendChild(card);
+    });
+
+    const lockedPreview = $('lockedPreview');
+    const lockedGrid = $('lockedGrid');
+    const remaining = ROBOTS.slice(n, n + 3);
+    if (remaining.length === 0) {
+        lockedPreview.style.display = 'none';
+    } else {
+        lockedPreview.style.display = '';
+        lockedGrid.innerHTML = '';
+        remaining.forEach((r, i) => {
+            const card = document.createElement('div');
+            card.className = 'p-4 rounded-lg';
+            card.style.cssText = 'background: rgba(20, 24, 32, 0.03); border: 1px dashed rgba(20, 24, 32, 0.15); opacity: 0.75;';
+            card.innerHTML = `
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <span class="tech-font text-[10px] uppercase tracking-widest font-bold text-gray-400">+${n + i + 1}th robot</span>
+                    <span class="tech-font text-[10px] text-gray-400">${r.code}</span>
+                </div>
+                <p class="text-sm text-gray-500 leading-snug">${r.unlock}</p>
+            `;
+            lockedGrid.appendChild(card);
+        });
+    }
+}
+
+/* RENDER ALL ─────────────────────────────────────────────── */
+function render() {
+    renderStats();
+    renderRobotGrid();
+    renderSavingsTable();
+    renderPhases();
+    renderServiceLines();
+    renderUnlocks();
+}
+
+/* EVENTS ──────────────────────────────────────────────────── */
+$('fleetSlider').addEventListener('input', (e) => {
+    state.count = parseInt(e.target.value);
+    render();
+});
+
+document.querySelectorAll('#presetChips .preset-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        state.count = parseInt(chip.dataset.count);
+        render();
+    });
+});
+
+$('intelToggle').addEventListener('click', () => {
+    state.intel = !state.intel;
+    $('intelToggle').classList.toggle('on', state.intel);
+    render();
+});
+
+/* INIT ──────────────────────────────────────────────────── */
+renderTicks();
+render();
+</script>
+
+</body>
+</html>

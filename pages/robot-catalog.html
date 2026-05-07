@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Robotics — Robot Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/brand.css">
+<style>
+/* WHY: Page-specific tokens supplement brand.css — card glass effects and colors not in the shared palette */
+:root {
+    --card: rgba(255,255,255,0.75); --card-hover: rgba(255,255,255,0.95);
+    --muted: #64748b; /* WHY: Alias for --text-dim — used extensively in page-specific card/filter CSS */
+    --red: #dc2626; --pink: #db2777;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family:'Inter',system-ui,sans-serif; color:var(--text); min-height:100vh;
+    background:
+        radial-gradient(ellipse 80% 60% at 20% 30%, rgba(0,200,255,0.10), transparent),
+        radial-gradient(ellipse 60% 50% at 70% 20%, rgba(124,58,237,0.07), transparent),
+        radial-gradient(ellipse 50% 40% at 50% 80%, rgba(0,85,255,0.06), transparent),
+        linear-gradient(180deg, #eef2ff 0%, #f7f8fc 100%);
+    background-attachment:fixed;
+}
+h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
+.mono { font-family:'JetBrains Mono',monospace; }
+
+/* ── Navigator Panel ────────────────── */
+/* WHY: Sticky below the 56px brand-nav so filters stay visible while scrolling */
+.navigator {
+    position:sticky; top:56px; z-index:40;
+    border-bottom:1px solid var(--border);
+    box-shadow:0 2px 12px rgba(0,0,0,0.04);
+}
+.nav-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 32px 0; gap:12px;
+}
+.nav-title {
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.82rem;
+    color:var(--text); display:flex; align-items:center; gap:8px;
+}
+.nav-title .nav-icon {
+    width:24px; height:24px; border-radius:6px;
+    background:linear-gradient(135deg, var(--blue), var(--cyan));
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; color:white;
+}
+.nav-count {
+    font-family:'JetBrains Mono',monospace; font-size:0.72rem; font-weight:600;
+    color:var(--blue); background:rgba(0,85,255,0.06); padding:3px 10px;
+    border-radius:6px;
+}
+.nav-actions { display:flex; align-items:center; gap:6px; }
+.nav-fleet-link {
+    padding:5px 12px; border-radius:7px; font-size:0.65rem; font-weight:700;
+    background:linear-gradient(135deg, var(--blue), var(--cyan)); color:white;
+    text-decoration:none; transition:all 0.15s; white-space:nowrap;
+}
+.nav-fleet-link:hover { transform:translateY(-1px); box-shadow:0 2px 8px rgba(0,85,255,0.25); }
+.nav-reset {
+    padding:5px 12px; border-radius:7px; border:1px solid var(--border);
+    background:transparent; color:var(--muted); font-size:0.65rem;
+    font-weight:600; cursor:pointer; transition:all 0.15s; display:none;
+}
+.nav-reset:hover { background:rgba(220,38,38,0.06); color:var(--red); border-color:rgba(220,38,38,0.3); }
+.nav-reset.visible { display:inline-flex; }
+
+/* View toggle */
+.vt { display:flex; gap:0; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.vb { padding:5px 12px; background:rgba(255,255,255,0.4); border:none; cursor:pointer; font-size:0.72rem; color:var(--muted); font-weight:500; transition:all 0.15s; }
+.vb:not(:last-child) { border-right:1px solid var(--border); }
+.vb:hover { background:rgba(0,85,255,0.04); }
+.vb.active { background:var(--blue); color:white; font-weight:600; }
+
+/* Search row */
+.nav-search-row {
+    display:flex; gap:10px; padding:8px 32px; align-items:center;
+}
+.search-box {
+    flex:1; min-width:200px; padding:9px 14px 9px 36px; border-radius:10px;
+    border:1px solid var(--border); background:rgba(255,255,255,0.7);
+    color:var(--text); font-size:0.82rem; font-family:inherit; outline:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2364748b' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:12px center;
+}
+.search-box:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(0,85,255,0.08); }
+
+/* Filter groups */
+.nav-filters {
+    display:flex; gap:6px; padding:0 32px 8px; flex-wrap:wrap; align-items:center;
+}
+.filter-group {
+    display:flex; align-items:center; gap:4px;
+}
+.filter-group .fg-label {
+    font-size:0.55rem; color:var(--muted); text-transform:uppercase;
+    letter-spacing:1px; font-weight:700; white-space:nowrap;
+}
+select.fsel {
+    padding:6px 26px 6px 10px; border-radius:7px; border:1px solid var(--border);
+    background:rgba(255,255,255,0.6); color:var(--text); font-size:0.72rem;
+    font-family:inherit; cursor:pointer; outline:none; appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2364748b' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 8px center;
+    transition:all 0.15s;
+}
+select.fsel:focus { border-color:var(--blue); }
+select.fsel.filtered { border-color:var(--blue); background:rgba(0,85,255,0.04); font-weight:600; }
+.nav-sep { width:1px; height:24px; background:var(--border); margin:0 6px; }
+.fbtn {
+    padding:6px 12px; border-radius:7px; border:1px solid var(--border);
+    background:rgba(255,255,255,0.5); color:var(--muted); font-size:0.66rem;
+    font-weight:600; cursor:pointer; transition:all 0.15s; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:4px;
+}
+.fbtn:hover { background:rgba(255,255,255,0.9); color:var(--text); }
+.fbtn.active { border-color:var(--blue); color:var(--blue); background:rgba(0,85,255,0.06); }
+
+/* ── Quick Sort Buttons ────────────────── */
+.qs-wrap {
+    padding:2px 32px 6px;
+}
+.qs-section {
+    margin-bottom:4px;
+}
+.qs-section-label {
+    font-size:0.5rem; color:var(--muted); text-transform:uppercase;
+    letter-spacing:1.5px; font-weight:700; margin-bottom:4px; display:flex;
+    align-items:center; gap:6px;
+}
+.qs-section-label::after {
+    content:''; flex:1; height:1px; background:var(--border);
+}
+.qs-row {
+    display:flex; gap:5px; flex-wrap:wrap;
+}
+.qs-btn {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:4px 10px; border-radius:7px; border:1px solid var(--border);
+    background:rgba(255,255,255,0.5); color:var(--text); font-size:0.66rem;
+    font-weight:600; cursor:pointer; transition:all 0.18s; white-space:nowrap;
+    font-family:inherit;
+}
+.qs-btn:hover { background:rgba(0,85,255,0.06); border-color:rgba(0,85,255,0.25); color:var(--blue); }
+.qs-btn.active { background:rgba(0,85,255,0.08); border-color:var(--blue); color:var(--blue); box-shadow:0 0 0 2px rgba(0,85,255,0.08); }
+.qs-btn .qs-icon { font-size:0.8rem; line-height:1; }
+.qs-btn .qs-ct {
+    font-family:'JetBrains Mono',monospace; font-size:0.55rem;
+    color:var(--muted); background:rgba(0,0,0,0.04); padding:1px 5px;
+    border-radius:4px; font-weight:500;
+}
+.qs-btn.active .qs-ct { background:rgba(0,85,255,0.08); color:var(--blue); }
+
+/* Color accents for different sections */
+.qs-btn[data-section="surface"]:hover, .qs-btn[data-section="surface"].active { border-color:var(--green); color:var(--green); background:rgba(22,163,74,0.06); }
+.qs-btn[data-section="surface"].active .qs-ct { background:rgba(22,163,74,0.1); color:var(--green); }
+.qs-btn[data-section="function"]:hover, .qs-btn[data-section="function"].active { border-color:var(--blue); color:var(--blue); background:rgba(0,85,255,0.06); }
+.qs-btn[data-section="tech"]:hover, .qs-btn[data-section="tech"].active { border-color:var(--purple); color:var(--purple); background:rgba(124,58,237,0.06); }
+.qs-btn[data-section="tech"].active .qs-ct { background:rgba(124,58,237,0.1); color:var(--purple); }
+.qs-btn[data-section="origin"]:hover, .qs-btn[data-section="origin"].active { border-color:var(--amber); color:var(--amber); background:rgba(217,119,6,0.06); }
+.qs-btn[data-section="origin"].active .qs-ct { background:rgba(217,119,6,0.1); color:var(--amber); }
+.qs-btn[data-section="form"]:hover, .qs-btn[data-section="form"].active { border-color:var(--pink); color:var(--pink); background:rgba(219,39,119,0.06); }
+.qs-btn[data-section="form"].active .qs-ct { background:rgba(219,39,119,0.1); color:var(--pink); }
+
+/* Analysis strip — live stats for current filtered set */
+.nav-analysis {
+    display:flex; gap:1px; padding:0 32px 8px; overflow-x:auto;
+}
+.analysis-chip {
+    display:flex; align-items:center; gap:6px; padding:6px 14px;
+    background:rgba(0,0,0,0.02); border-radius:8px; white-space:nowrap;
+    border:1px solid var(--border); flex-shrink:0;
+}
+.analysis-chip .ac-val {
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.82rem;
+}
+.analysis-chip .ac-label {
+    font-size:0.58rem; color:var(--muted); text-transform:uppercase;
+    letter-spacing:0.8px; font-weight:600;
+}
+.analysis-chip .ac-bar {
+    width:40px; height:4px; border-radius:2px; background:rgba(0,0,0,0.06); overflow:hidden;
+}
+.analysis-chip .ac-bar-fill { height:100%; border-radius:2px; transition:width 0.4s ease; }
+
+.main { padding:16px 32px 60px; }
+.clabel { font-size:0.72rem; color:var(--muted); margin-bottom:14px; font-weight:500; }
+
+/* ── Card Grid ────────────────── */
+.rg { display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr)); gap:16px; }
+.rc {
+    background:var(--card); backdrop-filter:blur(20px);
+    border:1px solid var(--border); border-radius:14px;
+    overflow:hidden; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+    display:flex; flex-direction:column;
+}
+/* WHY: Hover transform handled by brand-deal-card class from brand.css */
+.rc:hover { background:var(--card-hover); }
+
+.ca { height:3px; width:100%; flex-shrink:0; }
+.ca.delivery { background:linear-gradient(90deg, var(--blue), var(--cyan)); }
+.ca.cleaning { background:linear-gradient(90deg, var(--green), var(--teal)); }
+.ca.humanoid { background:linear-gradient(90deg, var(--purple), var(--pink)); }
+.ca.industrial { background:linear-gradient(90deg, var(--amber), #f59e0b); }
+.ca.hospital { background:linear-gradient(90deg, var(--red), var(--pink)); }
+.ca.mobility { background:linear-gradient(90deg, var(--teal), var(--cyan)); }
+.ca.disinfection { background:linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.ca.outdoor { background:linear-gradient(90deg, #059669, #34d399); }
+.ca.other { background:linear-gradient(90deg, var(--muted), #94a3b8); }
+
+.card-top { display:flex; gap:14px; padding:14px 16px 0; }
+.robot-img-wrap {
+    width:100px; height:100px; flex-shrink:0; border-radius:10px;
+    background:rgba(0,0,0,0.03); display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+}
+.robot-img { width:100%; height:100%; object-fit:contain; }
+.robot-img-placeholder {
+    font-size:2rem; color:rgba(0,0,0,0.12);
+}
+.card-info { flex:1; min-width:0; }
+.card-hdr { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.card-title { font-family:'Space Grotesk'; font-weight:700; font-size:1rem; line-height:1.2; }
+.card-title a { color:inherit; text-decoration:none; }
+.card-title a:hover { color:var(--blue); }
+.card-company {
+    display:flex; align-items:center; gap:6px; font-size:0.7rem; color:var(--muted);
+    font-weight:500; margin-top:2px;
+}
+.card-company img { width:16px; height:16px; border-radius:3px; }
+.card-company a { color:inherit; text-decoration:none; }
+.card-company a:hover { color:var(--blue); text-decoration:underline; }
+.card-country { font-size:0.8rem; color:var(--text); margin-top:3px; font-weight:500; display:flex; align-items:center; gap:4px; }
+.card-country .flag { font-size:1.4rem; line-height:1; }
+.cs {
+    font-size:0.58rem; font-weight:700; padding:2px 7px; border-radius:5px;
+    text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap; flex-shrink:0;
+}
+.cs.available { background:rgba(22,163,74,0.1); color:var(--green); }
+.cs.limited { background:rgba(217,119,6,0.1); color:var(--amber); }
+.cs.early { background:rgba(124,58,237,0.1); color:var(--purple); }
+.cs.announced { background:rgba(0,85,255,0.08); color:var(--blue); }
+.cs.discontinued { background:rgba(220,38,38,0.1); color:var(--red); }
+.cs.research { background:rgba(100,116,139,0.1); color:var(--muted); }
+
+.card-body { padding:10px 16px 14px; flex:1; display:flex; flex-direction:column; }
+.cc {
+    display:inline-block; font-size:0.58rem; font-weight:600; padding:2px 7px;
+    border-radius:4px; background:rgba(0,0,0,0.04); color:var(--muted);
+    text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px; align-self:flex-start;
+}
+
+.sg { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px 12px; margin-bottom:8px; }
+.si { display:flex; flex-direction:column; }
+.si .sl { font-size:0.5rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; font-weight:600; }
+.si .sv { font-size:0.78rem; font-weight:600; }
+.sv.yes { color:var(--green); font-weight:700; }
+.sv.no { color:#cbd5e1; }
+
+.use-cases { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:6px; }
+.uc {
+    font-size:0.55rem; padding:2px 6px; border-radius:4px;
+    background:rgba(0,85,255,0.05); color:var(--blue); font-weight:500;
+}
+.badges { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:6px; }
+.badge {
+    display:inline-flex; align-items:center; gap:3px; font-size:0.58rem;
+    font-weight:600; padding:2px 7px; border-radius:5px;
+}
+.badge.elev { background:rgba(22,163,74,0.1); color:var(--green); }
+.badge.fleet { background:rgba(0,85,255,0.06); color:var(--blue); }
+.badge.outdoor { background:rgba(217,119,6,0.08); color:var(--amber); }
+.badge.ip { background:rgba(124,58,237,0.08); color:var(--purple); }
+
+.risk-bar {
+    margin:8px 0; padding:8px 10px; border-radius:8px; display:flex; align-items:center; gap:10px;
+    background:rgba(0,0,0,0.02); border:1px solid var(--border);
+}
+.risk-score {
+    width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk'; font-weight:800; font-size:0.85rem; color:white; flex-shrink:0;
+}
+.risk-score.r-none { background:#16a34a; }
+.risk-score.r-negligible { background:#22c55e; }
+.risk-score.r-minimal { background:#65a30d; }
+.risk-score.r-low { background:#84cc16; color:#1a2e05; }
+.risk-score.r-low-mod { background:#eab308; color:#422006; }
+.risk-score.r-moderate { background:#f59e0b; color:#422006; }
+.risk-score.r-mod-high { background:#f97316; color:white; }
+.risk-score.r-high { background:#ef4444; }
+.risk-score.r-extreme { background:#991b1b; }
+.risk-info { flex:1; min-width:0; }
+.risk-label { font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; }
+.risk-label.r-none { color:#16a34a; }
+.risk-label.r-negligible { color:#22c55e; }
+.risk-label.r-minimal { color:#65a30d; }
+.risk-label.r-low { color:#84cc16; }
+.risk-label.r-low-mod { color:#eab308; }
+.risk-label.r-moderate { color:#f59e0b; }
+.risk-label.r-mod-high { color:#f97316; }
+.risk-label.r-high { color:#ef4444; }
+.risk-label.r-extreme { color:#991b1b; }
+.risk-detail { font-size:0.62rem; color:var(--muted); line-height:1.3; margin-top:1px; }
+.risk-tariff { font-family:'JetBrains Mono'; font-size:0.62rem; font-weight:600; white-space:nowrap; flex-shrink:0; }
+
+.card-note { font-size:0.68rem; color:var(--muted); line-height:1.35; margin-top:auto; padding-top:6px; }
+.card-price {
+    margin-top:8px; padding-top:8px; border-top:1px solid var(--border);
+    display:flex; justify-content:space-between; align-items:center;
+}
+.pv { font-family:'Space Grotesk'; font-weight:700; font-size:0.85rem; }
+.pl { font-size:0.55rem; color:var(--muted); text-transform:uppercase; }
+.card-link {
+    display:inline-block; margin-top:6px; font-size:0.68rem; color:var(--blue);
+    text-decoration:none; font-weight:500;
+}
+.card-link:hover { text-decoration:underline; }
+
+/* ── Table View ────────────────── */
+.tw { overflow-x:auto; display:none; }
+table.rt {
+    width:100%; border-collapse:collapse; font-size:0.75rem;
+    background:rgba(255,255,255,0.7); border-radius:12px; overflow:hidden;
+    box-shadow:0 4px 24px rgba(0,0,0,0.04);
+}
+table.rt th {
+    background:rgba(0,0,0,0.03); padding:9px 10px; text-align:left;
+    font-size:0.58rem; text-transform:uppercase; letter-spacing:0.8px;
+    color:var(--muted); font-weight:700; border-bottom:2px solid var(--border);
+    cursor:pointer; user-select:none; white-space:nowrap; position:sticky; top:0;
+}
+table.rt th:hover { color:var(--blue); }
+table.rt td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+table.rt tr:hover td { background:rgba(0,85,255,0.02); }
+table.rt .timg { width:40px; height:40px; object-fit:contain; border-radius:6px; background:rgba(0,0,0,0.02); }
+table.rt a { color:var(--blue); text-decoration:none; }
+table.rt a:hover { text-decoration:underline; }
+
+.empty { text-align:center; padding:60px 20px; color:var(--muted); }
+.empty h3 { font-size:1rem; margin-bottom:6px; }
+
+@media (max-width:768px) {
+    .rg { grid-template-columns:1fr; }
+    .stats-row { flex-wrap:wrap; }
+    .stat-card { min-width:30%; }
+    .nav-search-row,.nav-filters,.nav-analysis,.nav-header,.main { padding-left:14px; padding-right:14px; }
+    .sg { grid-template-columns:1fr 1fr; }
+    .card-top { flex-direction:column; }
+    .robot-img-wrap { width:100%; height:140px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Branded Nav ────────────────────────────────────────── -->
+<nav class="brand-nav">
+  <div class="brand-nav-logo">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white" stroke="white" stroke-width="1.5"/></svg>
+  </div>
+  <div class="brand-nav-identity">
+    <div class="brand-nav-name">Accelerate <span>Robotics</span></div>
+    <div class="brand-nav-tagline">One Brain. Many Bots.</div>
+  </div>
+  <div class="brand-nav-links">
+    <a href="/admin">Command Center</a>
+    <a href="/admin/deals">Deals</a>
+    <a href="/pages/pipeline-prospects.html">Prospects</a>
+    <a href="/pages/assessments.html">Assessments</a>
+    <a href="/pages/robot-catalog.html" class="active">Catalog</a>
+    <a href="/pages/fleet-designer.html">Fleet</a>
+        <a href="/admin/deals?stage=won&amp;stage=deploying&amp;stage=active">Deploy</a>
+  </div>
+  <div style="margin-left:16px;display:flex;align-items:center;gap:12px;">
+    <a href="/" style="font-size:0.78rem;color:var(--text-dim);text-decoration:none;">View Site</a>
+  </div>
+</nav>
+<!-- ── Compact Page Header ───────────────────────────────── -->
+<div class="brand-reveal" style="max-width:1400px;margin:0 auto;padding:24px 28px 0;">
+  <h1 class="brand-headline gradient-text" style="font-size:1.6rem;font-weight:800;">Robot Intelligence Platform</h1>
+  <p style="color:var(--text-dim);font-size:0.88rem;"><span id="hk-products">—</span> robots across <span id="hk-companies">—</span> companies — live database</p>
+</div>
+
+<!-- WHY: Hidden stat IDs kept so existing JS render() still updates them without errors -->
+<div style="display:none;">
+    <span id="st-t">0</span><span id="st-a">0</span><span id="st-e">0</span>
+    <span id="st-p">0</span><span id="st-o">0</span><span id="st-i">0</span>
+</div>
+
+<!-- ── Navigator Panel ────────────────────────────── -->
+<div class="navigator brand-glass brand-reveal" data-delay="0.1">
+    <div class="nav-header">
+        <div class="nav-title">
+            <span class="nav-icon">&#x2699;</span>
+            Robot Navigator
+        </div>
+        <div class="nav-actions">
+            <a href="fleet-designer.html" class="nav-fleet-link" title="Design a custom robot fleet">⚡ Fleet Designer</a>
+            <span class="nav-count" id="cl">Loading...</span>
+            <button class="nav-reset" id="nav-reset" title="Clear all filters">&#x2715; Reset</button>
+            <div class="vt">
+                <button class="vb active" data-v="grid">&#9638; Cards</button>
+                <button class="vb" data-v="table">&#9776; Table</button>
+            </div>
+        </div>
+    </div>
+    <div class="nav-search-row">
+        <input type="text" class="search-box" id="q" placeholder="Search by name, company, use case, sensor, feature...">
+    </div>
+    <div class="qs-wrap" id="qs-wrap"></div>
+    <div class="nav-filters">
+        <div class="filter-group">
+            <span class="fg-label">Type</span>
+            <select class="fsel" id="fc"><option value="all">All Categories</option></select>
+        </div>
+        <div class="filter-group">
+            <span class="fg-label">Maker</span>
+            <select class="fsel" id="fo"><option value="all">All Companies</option></select>
+        </div>
+        <div class="filter-group">
+            <span class="fg-label">Origin</span>
+            <select class="fsel" id="fy"><option value="all">All Countries</option></select>
+        </div>
+        <div class="filter-group">
+            <span class="fg-label">Status</span>
+            <select class="fsel" id="fs"><option value="all">All Statuses</option></select>
+        </div>
+        <div class="nav-sep"></div>
+        <button class="fbtn" id="fe">&#x2B06; Elevator</button>
+        <button class="fbtn" id="fp">&#x1F4B2; Priced</button>
+        <button class="fbtn" id="fw">&#x2600; Outdoor</button>
+    </div>
+    <div class="nav-analysis" id="nav-analysis"></div>
+</div>
+
+<div class="main brand-reveal" data-delay="0.2">
+    <div class="rg" id="gv"></div>
+    <div class="tw" id="tv">
+        <table class="rt">
+            <thead><tr>
+                <th></th>
+                <th data-s="company">Company</th>
+                <th data-s="model_name">Model</th>
+                <th data-s="primary_category">Category</th>
+                <th data-s="country">Country</th>
+                <th data-s="import_risk_score">Risk</th>
+                <th data-s="payload_kg">Payload</th>
+                <th data-s="runtime_hours">Runtime</th>
+                <th data-s="max_speed_mps">Speed</th>
+                <th>Nav</th>
+                <th data-s="elevator_integration">Elevator</th>
+                <th>Fleet</th>
+                <th data-s="public_price">Price</th>
+                <th>Use Cases</th>
+                <th data-s="status">Status</th>
+            </tr></thead>
+            <tbody id="tb"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+fetch('./data/robots.json')
+  .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+  .then(R => {
+  const FLAGS={"China":"🇨🇳","USA":"🇺🇸","United States":"🇺🇸","Canada":"🇨🇦","South Korea":"🇰🇷","Japan":"🇯🇵","Germany":"🇩🇪","Norway":"🇳🇴","Switzerland":"🇨🇭","Denmark":"🇩🇰","Austria":"🇦🇹","Singapore":"🇸🇬","Israel":"🇮🇱","Taiwan":"🇹🇼","France":"🇫🇷","United Kingdom":"🇬🇧","Australia":"🇦🇺","India":"🇮🇳","Sweden":"🇸🇪","Finland":"🇫🇮","Netherlands":"🇳🇱","Italy":"🇮🇹"};
+  
+  function f(v,s){return v!=null?v+(s||''):'\u2014';}
+  function fc(c){return c.replace(/_/g,' ').replace(/\bamr\b/gi,'AMR').replace(/\b\w/g,l=>l.toUpperCase());}
+  function ac(c){
+      if(c.includes('delivery')&&!c.includes('outdoor'))return'delivery';
+      if(c.includes('cleaning'))return'cleaning';
+      if(c.includes('humanoid')||c.includes('quadruped'))return'humanoid';
+      if(c.includes('industrial')||c.includes('collaborative')||c.includes('warehouse'))return'industrial';
+      if(c.includes('hospital'))return'hospital';
+      if(c.includes('mobility')||c.includes('wheelchair')||c.includes('telepresence'))return'mobility';
+      if(c.includes('disinfection'))return'disinfection';
+      if(c.includes('outdoor'))return'outdoor';
+      return'other';
+  }
+  function sc(s){
+      if(s==='commercially_available')return'available';
+      if(s==='discontinued')return'discontinued';
+      if(s.includes('early')||s.includes('limited'))return'early';
+      if(s.includes('announced'))return'announced';
+      if(s==='research'||s==='internal_only')return'research';
+      return'limited';
+  }
+  function sl(s){return s.replace(/_/g,' ').replace(/commercially /,'').replace(/\b\w/g,l=>l.toUpperCase());}
+  function rc(score){
+      if(score===0)return'r-none';
+      if(score<=0.5)return'r-negligible';
+      if(score<=1.5)return'r-minimal';
+      if(score<=2)return'r-low';
+      if(score<=2.5)return'r-low-mod';
+      if(score<=3.5)return'r-moderate';
+      if(score<=5)return'r-mod-high';
+      if(score<=7)return'r-high';
+      return'r-extreme';
+  }
+  
+  // Populate filters
+  const cats=[...new Set(R.map(r=>r.primary_category))].sort();
+  const comps=[...new Set(R.map(r=>r.company))].sort();
+  const countries=[...new Set(R.map(r=>r.country))].sort();
+  const stats=[...new Set(R.map(r=>r.status))].sort();
+  const fcEl=document.getElementById('fc');
+  cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=fc(c);fcEl.appendChild(o);});
+  const foEl=document.getElementById('fo');
+  comps.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;foEl.appendChild(o);});
+  const fyEl=document.getElementById('fy');
+  countries.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=(FLAGS[c]||'')+' '+c;fyEl.appendChild(o);});
+  const fsEl=document.getElementById('fs');
+  stats.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=sl(s);fsEl.appendChild(o);});
+  
+  // Stats
+  document.getElementById('st-a').textContent=R.filter(r=>r.status==='commercially_available').length;
+  document.getElementById('st-e').textContent=R.filter(r=>r.elevator_integration===true).length;
+  document.getElementById('st-p').textContent=R.filter(r=>r.public_price&&r.public_price!=='null').length;
+  document.getElementById('st-o').textContent=R.filter(r=>r.outdoor_capable).length;
+  document.getElementById('st-i').textContent=R.filter(r=>r.image_url).length;
+  
+  let fElev=false,fPrice=false,fOut=false,view='grid',sCol='company',sAsc=true;
+  
+  function getF(){
+      const q=document.getElementById('q').value.toLowerCase();
+      return R.filter(r=>{
+          if(fcEl.value!=='all'&&r.primary_category!==fcEl.value)return false;
+          if(foEl.value!=='all'&&r.company!==foEl.value)return false;
+          if(fyEl.value!=='all'&&r.country!==fyEl.value)return false;
+          if(fsEl.value!=='all'&&r.status!==fsEl.value)return false;
+          if(fElev&&r.elevator_integration!==true)return false;
+          if(fPrice&&(!r.public_price||r.public_price==='null'))return false;
+          if(fOut&&!r.outdoor_capable)return false;
+          if(q){
+              const b=[r.company,r.model_name,r.primary_category,r.navigation_method,
+                  r.notes,r.fleet_management,r.sensors,r.connectivity,r.country,r.hq_city,
+                  ...(r.primary_use_cases||[]),...(r.key_differentiators||[]),
+                  ...(r.target_industries||[])].filter(Boolean).join(' ').toLowerCase();
+              return b.includes(q);
+          }
+          return true;
+      });
+  }
+  
+  // WHY: Map robot category to brand stripe gradient color for left-side card stripes
+  const STRIPE_COLORS = {
+      cleaning: 'linear-gradient(180deg, var(--teal), #06b6d4)',
+      delivery: 'linear-gradient(180deg, var(--blue), var(--cyan))',
+      humanoid: 'linear-gradient(180deg, var(--purple), #a78bfa)',
+      quadruped: 'linear-gradient(180deg, var(--amber), #fbbf24)',
+      security: 'linear-gradient(180deg, var(--green), #4ade80)',
+  };
+
+  function renderCards(rs){
+      const g=document.getElementById('gv');
+      if(!rs.length){g.innerHTML='<div class="empty"><h3>No robots match</h3><p>Adjust filters or search</p></div>';return;}
+      g.innerHTML=rs.map(r=>{
+          const el=r.elevator_integration===true;
+          const hp=r.public_price&&r.public_price!=='null';
+          const uc=(r.primary_use_cases||[]).slice(0,4);
+          const fl=FLAGS[r.country]||'';
+          const imgHtml=r.image_url
+              ?`<img class="robot-img" src="${r.image_url}" alt="${r.model_name}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=robot-img-placeholder>\U0001F916</div>'">`
+              :'<div class="robot-img-placeholder">\U0001F916</div>';
+          const titleLink=r.product_url?`<a href="${r.product_url}" target="_blank" rel="noopener">${r.model_name}</a>`:r.model_name;
+          const compLink=r.company_website?`<a href="${r.company_website}" target="_blank" rel="noopener">${r.company}</a>`:r.company;
+          const logoHtml=r.logo_url?`<img src="${r.logo_url}" alt="" style="width:16px;height:16px;border-radius:3px">`:''
+          const stripeGrad = STRIPE_COLORS[ac(r.primary_category)] || 'linear-gradient(180deg, var(--blue), var(--cyan))';
+          return `
+          <div class="rc brand-deal-card">
+              <div class="brand-deal-stripe" style="background:${stripeGrad}"></div>
+              <div class="ca ${ac(r.primary_category)}"></div>
+              <div class="card-top">
+                  <div class="robot-img-wrap">${imgHtml}</div>
+                  <div class="card-info">
+                      <div class="card-hdr">
+                          <div>
+                              <div class="card-title">${titleLink}</div>
+                              <div class="card-company">${logoHtml} ${compLink}</div>
+                              <div class="card-country"><span class="flag">${fl}</span> ${r.country} &middot; ${r.hq_city||''}</div>
+                          </div>
+                          <span class="cs ${sc(r.status)}">${sl(r.status)}</span>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-body">
+                  <span class="cc">${fc(r.primary_category)}</span>
+                  <div class="sg">
+                      <div class="si"><span class="sl">Payload</span><span class="sv brand-headline">${f(r.payload_kg,' kg')}</span></div>
+                      <div class="si"><span class="sl">Runtime</span><span class="sv brand-headline">${f(r.runtime_hours,'h')}</span></div>
+                      <div class="si"><span class="sl">Speed</span><span class="sv brand-headline">${f(r.max_speed_mps,' m/s')}</span></div>
+                      <div class="si"><span class="sl">Weight</span><span class="sv brand-headline">${f(r.weight_kg,' kg')}</span></div>
+                      <div class="si"><span class="sl">Elevator</span><span class="sv ${el?'yes':'no'}">${el?'\u2713 Yes':'No'}</span></div>
+                      <div class="si"><span class="sl">Nav</span><span class="sv" style="font-size:0.68rem">${r.navigation_method||'\u2014'}</span></div>
+                  </div>
+                  ${uc.length?'<div class="use-cases">'+uc.map(u=>'<span class="uc">'+u+'</span>').join('')+'</div>':''}
+                  <div class="badges">
+                      ${el?'<span class="badge elev">\u2B06 Elevator</span>':''}
+                      ${r.fleet_management?'<span class="badge fleet">\u26A1 '+r.fleet_management+'</span>':''}
+                      ${r.outdoor_capable?'<span class="badge outdoor">\u2600 Outdoor</span>':''}
+                      ${r.ip_rating?'<span class="badge ip">\U0001F6E1 '+r.ip_rating+'</span>':''}
+                  </div>
+                  ${r.import_risk_score!=null?`<div class="risk-bar">
+                      <div class="risk-score ${rc(r.import_risk_score)}">${r.import_risk_score}</div>
+                      <div class="risk-info">
+                          <div class="risk-label ${rc(r.import_risk_score)}">Import Risk: ${r.import_risk_level||''}</div>
+                          <div class="risk-detail">${r.import_risk_summary||''}</div>
+                      </div>
+                      <div class="risk-tariff">${r.import_tariff_rate||''}</div>
+                  </div>`:''}
+                  ${r.notes?'<div class="card-note">'+r.notes+'</div>':''}
+                  ${hp?'<div class="card-price"><div><div class="pl">Price</div><div class="pv">'+r.public_price+'</div></div></div>':''}
+                  ${r.product_url?'<a class="card-link" href="'+r.product_url+'" target="_blank" rel="noopener">View product page \u2192</a>':''}
+              </div>
+          </div>`;
+      }).join('');
+  }
+  
+  function renderTable(rs){
+      const tb=document.getElementById('tb');
+      if(!rs.length){tb.innerHTML='<tr><td colspan="15" style="text-align:center;padding:40px;color:var(--muted)">No robots match</td></tr>';return;}
+      const sorted=[...rs].sort((a,b)=>{
+          let va=a[sCol],vb=b[sCol];
+          if(va==null)va='';if(vb==null)vb='';
+          if(typeof va==='boolean'){va=va?1:0;vb=vb?1:0;}
+          if(typeof va==='number'&&typeof vb==='number')return sAsc?va-vb:vb-va;
+          return sAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+      });
+      tb.innerHTML=sorted.map(r=>{
+          const el=r.elevator_integration===true;
+          const fl=FLAGS[r.country]||'';
+          const img=r.image_url?`<img class="timg" src="${r.image_url}" loading="lazy" onerror="this.style.display='none'">`:'';
+          const model=r.product_url?`<a href="${r.product_url}" target="_blank">${r.model_name}</a>`:r.model_name;
+          const comp=r.company_website?`<a href="${r.company_website}" target="_blank">${r.company}</a>`:r.company;
+          const uc=(r.primary_use_cases||[]).slice(0,2).join(', ');
+          return `<tr>
+              <td>${img}</td>
+              <td style="font-weight:500">${comp}</td>
+              <td style="font-weight:600">${model}</td>
+              <td style="font-size:0.68rem">${fc(r.primary_category)}</td>
+              <td style="font-size:1.1rem"><span style="font-size:1.4rem">${fl}</span> ${r.country}</td>
+              <td><span class="risk-score ${rc(r.import_risk_score!=null?r.import_risk_score:0)}" style="width:28px;height:28px;font-size:0.7rem;display:inline-flex">${r.import_risk_score!=null?r.import_risk_score:'—'}</span></td>
+              <td>${f(r.payload_kg,' kg')}</td>
+              <td>${f(r.runtime_hours,'h')}</td>
+              <td>${f(r.max_speed_mps,' m/s')}</td>
+              <td style="font-size:0.65rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.navigation_method||''}">${r.navigation_method||'\u2014'}</td>
+              <td style="color:${el?'var(--green)':'#cbd5e1'};font-weight:${el?700:400}">${el?'\u2713 Yes':'\u2014'}</td>
+              <td style="font-size:0.65rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.fleet_management||'\u2014'}</td>
+              <td class="mono" style="font-size:0.68rem">${r.public_price&&r.public_price!=='null'?r.public_price:'\u2014'}</td>
+              <td style="font-size:0.65rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${uc}">${uc||'\u2014'}</td>
+              <td><span class="cs ${sc(r.status)}" style="font-size:0.55rem">${sl(r.status)}</span></td>
+          </tr>`;
+      }).join('');
+  }
+  
+  function renderAnalysis(filtered){
+      const el=document.getElementById('nav-analysis');
+      if(!el)return;
+      const totalElev=filtered.filter(r=>r.elevator_integration===true).length;
+      const totalPriced=filtered.filter(r=>r.public_price&&r.public_price!=='null').length;
+      const totalOutdoor=filtered.filter(r=>r.outdoor_capable).length;
+      const totalImg=filtered.filter(r=>r.image_url).length;
+      const companies=[...new Set(filtered.map(r=>r.company))].length;
+      // WHY: Normalize "USA" and "United States" to one entry for accurate country count
+      const countries=[...new Set(filtered.map(r=>r.country==='United States'?'USA':r.country))].length;
+      const n=filtered.length||1;
+  
+      function bar(val,total,color){
+          const pct=Math.round((val/total)*100);
+          return `<div class="ac-bar"><div class="ac-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+      }
+  
+      const riskBuckets={low:0,med:0,high:0};
+      filtered.forEach(r=>{
+          const s=r.import_risk_score;
+          if(s==null)return;
+          if(s<=3)riskBuckets.low++;else if(s<=6.5)riskBuckets.med++;else riskBuckets.high++;
+      });
+  
+      el.innerHTML=`
+          <div class="analysis-chip">
+              <span class="ac-val" style="color:var(--blue)">${filtered.length}</span>
+              <span class="ac-label">Matched</span>
+              ${bar(filtered.length,R.length,'var(--blue)')}
+          </div>
+          <div class="analysis-chip">
+              <span class="ac-val">${companies}</span>
+              <span class="ac-label">Companies</span>
+          </div>
+          <div class="analysis-chip">
+              <span class="ac-val">${countries}</span>
+              <span class="ac-label">Countries</span>
+          </div>
+          <div class="analysis-chip">
+              <span class="ac-val" style="color:var(--green)">${totalElev}</span>
+              <span class="ac-label">Elevator</span>
+              ${bar(totalElev,n,'var(--green)')}
+          </div>
+          <div class="analysis-chip">
+              <span class="ac-val" style="color:var(--amber)">${totalPriced}</span>
+              <span class="ac-label">Priced</span>
+              ${bar(totalPriced,n,'var(--amber)')}
+          </div>
+          <div class="analysis-chip">
+              <span class="ac-val" style="color:var(--teal)">${totalOutdoor}</span>
+              <span class="ac-label">Outdoor</span>
+              ${bar(totalOutdoor,n,'var(--teal)')}
+          </div>
+          <div class="analysis-chip">
+              <span class="ac-val" style="color:#16a34a">${riskBuckets.low}</span>
+              <span class="ac-label">Low Risk</span>
+              ${bar(riskBuckets.low,n,'#16a34a')}
+          </div>
+          <div class="analysis-chip">
+              <span class="ac-val" style="color:#f59e0b">${riskBuckets.med}</span>
+              <span class="ac-label">Med Risk</span>
+              ${bar(riskBuckets.med,n,'#f59e0b')}
+          </div>
+          <div class="analysis-chip">
+              <span class="ac-val" style="color:#ef4444">${riskBuckets.high}</span>
+              <span class="ac-label">High Risk</span>
+              ${bar(riskBuckets.high,n,'#ef4444')}
+          </div>
+      `;
+  }
+  
+  function isFiltered(){
+      return fcEl.value!=='all'||foEl.value!=='all'||fyEl.value!=='all'||fsEl.value!=='all'||
+             fElev||fPrice||fOut||document.getElementById('q').value!==''||activeQS!==null;
+  }
+  
+  function updateFilterStyles(){
+      // WHY: Highlight active dropdowns so user sees which filters are on
+      [fcEl,foEl,fyEl,fsEl].forEach(sel=>{
+          sel.classList.toggle('filtered',sel.value!=='all');
+      });
+      const resetBtn=document.getElementById('nav-reset');
+      if(resetBtn) resetBtn.classList.toggle('visible',isFiltered());
+  }
+  
+  function render(){
+      const filtered=getF();
+      document.getElementById('cl').textContent=`${filtered.length} of ${R.length} robots`;
+      document.getElementById('st-t').textContent=filtered.length;
+      updateFilterStyles();
+      renderAnalysis(filtered);
+      renderCards(filtered);
+      renderTable(filtered);
+  }
+  
+  // Events
+  document.getElementById('q').addEventListener('input',render);
+  [fcEl,foEl,fyEl,fsEl].forEach(el=>el.addEventListener('change',render));
+  document.getElementById('fe').addEventListener('click',function(){fElev=!fElev;this.classList.toggle('active',fElev);render();});
+  document.getElementById('fp').addEventListener('click',function(){fPrice=!fPrice;this.classList.toggle('active',fPrice);render();});
+  document.getElementById('fw').addEventListener('click',function(){fOut=!fOut;this.classList.toggle('active',fOut);render();});
+  
+  // WHY: Reset button clears all filters, search, AND quick-sort in one click
+  document.getElementById('nav-reset').addEventListener('click',function(){
+      document.getElementById('q').value='';
+      fcEl.value='all'; foEl.value='all'; fyEl.value='all'; fsEl.value='all';
+      fElev=false; fPrice=false; fOut=false;
+      activeQS=null;
+      document.getElementById('fe').classList.remove('active');
+      document.getElementById('fp').classList.remove('active');
+      document.getElementById('fw').classList.remove('active');
+      document.querySelectorAll('.qs-btn').forEach(b=>b.classList.remove('active'));
+      render();
+  });
+  
+  document.querySelectorAll('.vb').forEach(b=>{
+      b.addEventListener('click',function(){
+          view=this.dataset.v;
+          document.querySelectorAll('.vb').forEach(x=>x.classList.remove('active'));
+          this.classList.add('active');
+          document.getElementById('gv').style.display=view==='grid'?'':'none';
+          document.getElementById('tv').style.display=view==='table'?'':'none';
+      });
+  });
+  document.querySelectorAll('th[data-s]').forEach(th=>{
+      th.addEventListener('click',function(){
+          const col=this.dataset.s;
+          if(sCol===col)sAsc=!sAsc;else{sCol=col;sAsc=true;}
+          render();
+      });
+  });
+  
+  // ── Compact header dynamic stats ─────────────────────────
+  (function populateHeader(){
+      const companies = [...new Set(R.map(r=>r.company))];
+      document.getElementById('hk-products').textContent = R.length;
+      document.getElementById('hk-companies').textContent = companies.length;
+  })();
+  
+  // ── Quick Sort Buttons ─────────────────────────
+  // WHY: Pre-configured filter combos that answer the most common "show me..." questions instantly
+  const QUICK_SORTS = [
+    { section:'surface', label:'Carpet Bots', icon:'\u{1F9F9}', filter:r=>{
+      const b=[...(r.primary_use_cases||[]),...(r.key_differentiators||[]),r.notes||''].join(' ').toLowerCase();
+      return b.includes('carpet');
+    }},
+    { section:'surface', label:'Hard Floor', icon:'\u{1FA63}', filter:r=>{
+      const b=[...(r.primary_use_cases||[]),...(r.key_differentiators||[]),r.notes||'',r.primary_category||''].join(' ').toLowerCase();
+      return (b.includes('scrub')||b.includes('mop')||b.includes('hard floor')||b.includes('tile'))&&!b.includes('pool')&&!b.includes('lawn');
+    }},
+    { section:'surface', label:'Pool Cleaning', icon:'\u{1F3CA}', filter:r=>r.primary_category==='pool_cleaning_robot' },
+    { section:'surface', label:'Lawn & Turf', icon:'\u{1F33F}', filter:r=>{
+      return r.primary_category==='autonomous_lawn_mower'||(r.primary_use_cases||[]).some(u=>u.toLowerCase().includes('lawn')||u.toLowerCase().includes('turf'));
+    }},
+    { section:'surface', label:'Outdoor Fleet', icon:'\u2600\uFE0F', filter:r=>r.outdoor_capable===true },
+    { section:'surface', label:'Street & Parking', icon:'\u{1F6E3}\uFE0F', filter:r=>{
+      const b=[...(r.primary_use_cases||[]),r.notes||''].join(' ').toLowerCase();
+      return b.includes('street')||b.includes('parking')||b.includes('sidewalk')||r.primary_category==='outdoor_cleaning_robot';
+    }},
+  
+    { section:'function', label:'Room Delivery', icon:'\u{1F6CE}\uFE0F', filter:r=>{
+      const b=[...(r.primary_use_cases||[]),r.notes||'',r.primary_category||''].join(' ').toLowerCase();
+      return b.includes('room service')||b.includes('room delivery')||r.primary_category==='hotel_delivery_robot';
+    }},
+    { section:'function', label:'Food Runners', icon:'\u{1F35D}', filter:r=>{
+      const b=[...(r.primary_use_cases||[]),r.primary_category||''].join(' ').toLowerCase();
+      return b.includes('food delivery')||b.includes('restaurant')||b.includes('tray');
+    }},
+    { section:'function', label:'Heavy Haulers', icon:'\u{1F4E6}', filter:r=>r.payload_kg>=100 },
+    { section:'function', label:'UV Disinfection', icon:'\u2622\uFE0F', filter:r=>{
+      return r.primary_category==='disinfection_robot'||(r.notes||'').toLowerCase().includes('uv-c');
+    }},
+    { section:'function', label:'Shelf Scanners', icon:'\u{1F4CB}', filter:r=>{
+      const b=[...(r.primary_use_cases||[]),r.primary_category||'',r.notes||''].join(' ').toLowerCase();
+      return b.includes('inventory')||b.includes('shelf scan')||b.includes('rfid');
+    }},
+    { section:'function', label:'Concierge & Greeting', icon:'\u{1F44B}', filter:r=>{
+      const b=[...(r.primary_use_cases||[]),r.notes||'',r.primary_category||''].join(' ').toLowerCase();
+      return b.includes('greeting')||b.includes('concierge')||b.includes('reception')||b.includes('wayfinding')||r.primary_category==='service_robot';
+    }},
+    { section:'function', label:'Material Transport', icon:'\u{1F6D2}', filter:r=>{
+      const b=[...(r.primary_use_cases||[]),r.primary_category||''].join(' ').toLowerCase();
+      return b.includes('material transport')||b.includes('warehouse')||r.primary_category==='industrial_amr'||r.primary_category==='warehouse_robot';
+    }},
+    { section:'function', label:'Hospital Grade', icon:'\u{1F3E5}', filter:r=>{
+      const b=[...(r.primary_use_cases||[]),...(r.target_industries||[]),r.primary_category||'',r.notes||''].join(' ').toLowerCase();
+      return b.includes('hospital')||b.includes('healthcare')||b.includes('pharmacy')||r.primary_category==='hospital_logistics_robot';
+    }},
+  
+    { section:'tech', label:'Elevator Ready', icon:'\u{1F6D7}', filter:r=>r.elevator_integration===true },
+    { section:'tech', label:'Waterproof', icon:'\u{1F4A7}', filter:r=>!!r.ip_rating },
+    { section:'tech', label:'LiDAR Navigation', icon:'\u{1F4E1}', filter:r=>{
+      return (r.sensors||'').toLowerCase().includes('lidar')||(r.navigation_method||'').toLowerCase().includes('lidar');
+    }},
+    { section:'tech', label:'Camera Vision', icon:'\u{1F4F7}', filter:r=>{
+      const s=(r.sensors||'').toLowerCase()+(r.navigation_method||'').toLowerCase();
+      return s.includes('vslam')||s.includes('camera')||s.includes('vision')||s.includes('stereo');
+    }},
+    { section:'tech', label:'Fleet Managed', icon:'\u{1F5A7}', filter:r=>{
+      return r.fleet_management&&r.fleet_management!=='N/A'&&!r.fleet_management.includes('not applicable')&&!r.fleet_management.includes('N/A');
+    }},
+    { section:'tech', label:'Has Pricing', icon:'\u{1F4B2}', filter:r=>r.public_price&&r.public_price!=='null' },
+    { section:'tech', label:'VDA 5050', icon:'\u{1F517}', filter:r=>{
+      const b=[...(r.key_differentiators||[]),r.fleet_management||'',r.notes||''].join(' ').toLowerCase();
+      return b.includes('vda 5050')||b.includes('vda5050');
+    }},
+  
+    { section:'origin', label:'Made in USA', icon:'\u{1F1FA}\u{1F1F8}', filter:r=>r.country==='USA'||r.country==='United States' },
+    { section:'origin', label:'Made in China', icon:'\u{1F1E8}\u{1F1F3}', filter:r=>r.country==='China' },
+    { section:'origin', label:'Made in Japan', icon:'\u{1F1EF}\u{1F1F5}', filter:r=>r.country==='Japan' },
+    { section:'origin', label:'Made in Germany', icon:'\u{1F1E9}\u{1F1EA}', filter:r=>r.country==='Germany' },
+    { section:'origin', label:'European Made', icon:'\u{1F1EA}\u{1F1FA}', filter:r=>{
+      return ['Germany','Denmark','Norway','Switzerland','Sweden','Finland','Netherlands','France'].includes(r.country);
+    }},
+    { section:'origin', label:'Low Import Risk', icon:'\u2705', filter:r=>r.import_risk_score!=null&&r.import_risk_score<=3 },
+    { section:'origin', label:'High Import Risk', icon:'\u26A0\uFE0F', filter:r=>r.import_risk_score!=null&&r.import_risk_score>6.5 },
+    { section:'origin', label:'Tariff-Free', icon:'\u{1F6C2}', filter:r=>{
+      return r.import_risk_score!=null&&r.import_risk_score<=1;
+    }},
+  
+    { section:'form', label:'Humanoids', icon:'\u{1F9CD}', filter:r=>r.primary_category==='humanoid_robot' },
+    { section:'form', label:'Quadrupeds', icon:'\u{1F415}', filter:r=>r.primary_category==='quadruped_robot' },
+    { section:'form', label:'Robot Arms', icon:'\u{1F9BE}', filter:r=>r.primary_category==='collaborative_arm'||r.primary_category==='cobot_arm' },
+    { section:'form', label:'Mobility Devices', icon:'\u267F', filter:r=>r.primary_category==='mobility_device'||r.primary_category==='autonomous_wheelchair' },
+    { section:'form', label:'Interactive/AV', icon:'\u{1F3AE}', filter:r=>{
+      return r.primary_category.includes('interactive')||r.primary_category.includes('audiovisual');
+    }},
+  ];
+  
+  const SECTION_LABELS = {
+    surface: 'Surface & Environment',
+    function: 'Use Case',
+    tech: 'Tech & Specs',
+    origin: 'Origin & Risk',
+    form: 'Form Factor',
+  };
+  
+  let activeQS = null; // track which quick-sort is active
+  
+  // WHY: Compute match counts once at init so buttons show how many robots each filter finds
+  function buildQuickSortButtons(){
+    const wrap = document.getElementById('qs-wrap');
+    if(!wrap) return;
+  
+    const sections = {};
+    QUICK_SORTS.forEach(qs => {
+      if(!sections[qs.section]) sections[qs.section] = [];
+      qs.count = R.filter(qs.filter).length;
+      sections[qs.section].push(qs);
+    });
+  
+    let html = '';
+    Object.entries(sections).forEach(([key, items]) => {
+      html += `<div class="qs-section">
+        <div class="qs-section-label">${SECTION_LABELS[key]||key}</div>
+        <div class="qs-row">
+          ${items.map((qs, i) => `<button class="qs-btn" data-section="${key}" data-idx="${QUICK_SORTS.indexOf(qs)}">
+            <span class="qs-icon">${qs.icon}</span>${qs.label}<span class="qs-ct">${qs.count}</span>
+          </button>`).join('')}
+        </div>
+      </div>`;
+    });
+    wrap.innerHTML = html;
+  
+    // WHY: Quick-sort is a one-click answer — it clears all other filters so results
+    // aren't silently narrowed by a stale dropdown selection (e.g. "UV Disinfection"
+    // returning 0 because TYPE was still set to "Industrial AMR")
+    wrap.querySelectorAll('.qs-btn').forEach(btn => {
+      btn.addEventListener('click', function(){
+        const idx = parseInt(this.dataset.idx);
+        if(activeQS === idx) {
+          activeQS = null;
+          this.classList.remove('active');
+        } else {
+          // Clear all other filters so quick-sort is the sole active filter
+          document.getElementById('q').value='';
+          fcEl.value='all'; foEl.value='all'; fyEl.value='all'; fsEl.value='all';
+          fElev=false; fPrice=false; fOut=false;
+          document.getElementById('fe').classList.remove('active');
+          document.getElementById('fp').classList.remove('active');
+          document.getElementById('fw').classList.remove('active');
+          wrap.querySelectorAll('.qs-btn').forEach(b => b.classList.remove('active'));
+          activeQS = idx;
+          this.classList.add('active');
+        }
+        render();
+      });
+    });
+  }
+  
+  // Patch getF to include quick-sort filter
+  const originalGetF = getF;
+  getF = function(){
+    let results = originalGetF();
+    if(activeQS !== null) {
+      results = results.filter(QUICK_SORTS[activeQS].filter);
+    }
+    return results;
+  };
+  
+  buildQuickSortButtons();
+  
+  render();
+  })
+  .catch(err => {
+    document.getElementById('gv').innerHTML =
+      '<div class="empty"><h3>Failed to load robot data</h3><p>' + err.message + '</p></div>';
+  });
+</script>
+<script src="/js/brand.js"></script>
+</body>
+</html>

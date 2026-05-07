@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deal Pipeline — Accelerate Robotics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/brand.css">
+  <!-- WHY: Leaflet for the interactive deal map view — loaded from unpkg (allowed in CSP) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    h1, h2, h3, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+    /* ── Stats row ─────────────────────────────────────────── */
+    #deal-stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Kanban ────────────────────────────────────────────── */
+    #deal-kanban {
+      display: grid;
+      /* WHY: 6 pipeline stages in kanban; minmax ensures columns compress gracefully on smaller screens */
+      grid-template-columns: repeat(6, minmax(170px, 1fr));
+      gap: 14px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .kanban-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .kanban-header {
+      background: white;
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .kanban-count {
+      background: #f3f4f6;
+      color: #6b7280;
+      border-radius: 20px;
+      padding: 1px 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .kanban-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 48px;
+    }
+    /* WHY: deal-owner kept for kanban card owner line — other deal-card styles replaced by brand-deal-card */
+    .deal-owner {
+      font-size: 0.68rem;
+      color: var(--text-faint);
+      font-weight: 500;
+      margin-top: 6px;
+    }
+
+    /* ── Card action bar ──────────────────────────────────── */
+    .card-actions {
+      display: flex;
+      gap: 2px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #f3f4f6;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .deal-card:hover .card-actions { opacity: 1; }
+    .card-action {
+      flex: 1;
+      padding: 5px 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: #f9fafb;
+      color: #6b7280;
+      transition: background 0.1s, color 0.1s;
+      text-align: center;
+    }
+    .card-action:hover { background: #f0f5ff; color: #2563eb; }
+    .card-action.danger:hover { background: #fef2f2; color: #dc2626; }
+    .card-move-select {
+      flex: 1.5;
+      padding: 4px 4px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: #6b7280;
+      background: #f9fafb;
+      cursor: pointer;
+      outline: none;
+    }
+    .card-move-select:focus { border-color: #2563eb; }
+
+    /* ── Inline stage dropdown ────────────────────────────── */
+    .stage-select {
+      appearance: none;
+      -webkit-appearance: none;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 3px 24px 3px 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      /* WHY: Right-pad for the custom arrow icon */
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 6px center;
+    }
+    .stage-select:hover {
+      border-color: #d1d5db;
+    }
+    .stage-select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+    }
+
+    /* ── Activity snippet ─────────────────────────────────── */
+    .activity-snippet {
+      max-width: 220px;
+    }
+    .activity-snippet .actor {
+      font-weight: 600;
+      color: #374151;
+    }
+    .activity-snippet .action {
+      color: #6b7280;
+    }
+    .activity-snippet .when {
+      color: #9ca3af;
+      font-size: 0.68rem;
+    }
+
+    /* ── Leaflet popup overrides ──────────────────────────── */
+    .leaflet-popup-content-wrapper {
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+      padding: 0;
+    }
+    .leaflet-popup-content {
+      margin: 0;
+      min-width: 220px;
+    }
+    .map-popup {
+      padding: 16px 18px;
+    }
+    .map-popup .popup-name {
+      font-family: 'Space Grotesk', 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 6px;
+    }
+    .map-popup .popup-meta {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    .map-popup .popup-stage {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+    .map-popup .popup-link {
+      display: block;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #2563eb;
+      text-decoration: none;
+      border-top: 1px solid #f3f4f6;
+      margin: 8px -18px -16px -18px;
+      padding: 10px 18px;
+      border-radius: 0 0 14px 14px;
+      transition: background 0.15s;
+    }
+    .map-popup .popup-link:hover {
+      background: #f0f5ff;
+    }
+    /* WHY: Override default Leaflet marker styles — remove white box around custom SVG icons */
+    .deal-marker {
+      background: none !important;
+      border: none !important;
+    }
+  </style>
+</head>
+<body class="bg-[#f7f8fc] min-h-screen">
+
+  <!-- Loading state -->
+  <div id="loading" class="flex items-center justify-center min-h-screen">
+    <p class="text-gray-400">Loading...</p>
+  </div>
+
+  <!-- Dashboard (hidden until auth verified) -->
+  <div id="dashboard" class="hidden">
+
+    <!-- Branded Nav -->
+    <nav class="brand-nav">
+      <div class="brand-nav-logo">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="white" stroke="white" stroke-width="1.5"/></svg>
+      </div>
+      <div class="brand-nav-identity">
+        <div class="brand-nav-name">Accelerate <span>Robotics</span></div>
+        <div class="brand-nav-tagline">One Brain. Many Bots.</div>
+      </div>
+      <div class="brand-nav-links">
+        <a href="/admin">Command Center</a>
+        <a href="/admin/deals" class="active">Deals</a>
+        <a href="/pages/pipeline-prospects.html">Prospects</a>
+        <a href="/pages/assessments.html">Assessments</a>
+        <a href="/pages/robot-catalog.html">Catalog</a>
+        <a href="/pages/fleet-designer.html">Fleet</a>
+        <a href="/admin/deals?stage=won&amp;stage=deploying&amp;stage=active">Deploy</a>
+      </div>
+      <div style="margin-left:16px;display:flex;align-items:center;gap:12px;">
+        <span id="adminEmail" style="font-size:0.78rem;color:var(--text-faint);"></span>
+        <a href="/" style="font-size:0.78rem;color:var(--text-dim);text-decoration:none;">View Site</a>
+        <button onclick="logout()" style="font-size:0.78rem;color:var(--text-dim);background:none;border:none;cursor:pointer;">Sign Out</button>
+      </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+
+      <!-- Page heading -->
+      <div class="mb-6 brand-reveal" data-delay="0">
+        <h1 class="headline text-2xl font-bold text-gray-900">Deal Pipeline</h1>
+        <p class="text-gray-400 text-sm mt-1">Track opportunities from first contact to active deployment</p>
+      </div>
+
+      <!-- Stats row -->
+      <div id="deal-stats" class="mb-8 brand-reveal" data-delay="0.1"></div>
+
+      <!-- Controls: view toggle + search + new deal -->
+      <div class="flex flex-wrap items-center gap-3 mb-6 brand-reveal" data-delay="0.2">
+        <!-- View toggle -->
+        <div class="flex rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+          <button id="view-kanban"
+                  class="px-4 py-2 text-sm font-semibold transition bg-blue-600 text-white">
+            Kanban
+          </button>
+          <button id="view-table"
+                  class="px-4 py-2 text-sm font-semibold transition text-gray-500 hover:bg-gray-50">
+            Table
+          </button>
+          <button id="view-map"
+                  class="px-4 py-2 text-sm font-semibold transition text-gray-500 hover:bg-gray-50">
+            Map
+          </button>
+        </div>
+
+        <!-- Search -->
+        <div class="relative flex-1 min-w-48 max-w-sm">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input id="deal-search" type="text" placeholder="Search deals, facilities, cities…"
+                 class="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
+        </div>
+
+        <!-- New Deal button -->
+        <button onclick="openNewDealModal()"
+                class="ml-auto px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-md transition">
+          + New Deal
+        </button>
+      </div>
+
+      <!-- Kanban view -->
+      <div id="deal-kanban" class="brand-reveal" data-delay="0.3"></div>
+
+      <!-- Map view (hidden by default) -->
+      <div id="deal-map-wrap" class="hidden">
+        <div class="rounded-2xl shadow-lg overflow-hidden" style="height: 600px; background: #f0f1f3;">
+          <div id="deal-map" style="height: 100%; width: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- Table view (hidden by default) -->
+      <div id="deal-table-wrap" class="hidden">
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                <th class="px-4 py-3 text-left">ID</th>
+                <th class="px-4 py-3 text-left">Name</th>
+                <th class="px-4 py-3 text-left">Stage</th>
+                <th class="px-4 py-3 text-left">Location</th>
+                <th class="px-4 py-3 text-left">Owner</th>
+                <th class="px-4 py-3 text-left">Last Activity</th>
+                <th class="px-4 py-3 text-left">Updated</th>
+                <th class="px-4 py-3 text-left"></th>
+              </tr>
+            </thead>
+            <tbody id="deal-table-body"></tbody>
+          </table>
+          <p id="deal-table-empty" class="text-gray-400 text-center py-10 hidden">No deals found.</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── New Deal Modal ─────────────────────────────────────────── -->
+  <div id="new-deal-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="headline text-lg font-bold text-gray-900">New Deal</h2>
+        <button onclick="closeNewDealModal()" class="text-gray-300 hover:text-gray-500 transition">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="new-deal-form" class="px-6 py-5 space-y-4">
+        <!-- Deal name (required) -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Deal Name <span class="text-red-400">*</span></label>
+          <input type="text" name="name" required placeholder="e.g. Marriott San Ramon"
+                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <!-- Source -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Source</label>
+          <select name="source"
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white">
+            <option value="">— Select source —</option>
+            <option value="inbound">Inbound</option>
+            <option value="referral">Referral</option>
+            <option value="outbound">Outbound</option>
+            <option value="event">Event</option>
+          </select>
+        </div>
+        <!-- Owner -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Owner</label>
+          <input type="text" name="owner" placeholder="e.g. Eric Race"
+                 class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        </div>
+        <!-- Notes -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notes</label>
+          <textarea name="notes" rows="3" placeholder="Any context worth capturing…"
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"></textarea>
+        </div>
+        <!-- Actions -->
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeNewDealModal()"
+                  class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md transition">
+            Create Deal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- WHY: Confetti canvas for Closed Won celebration — fixed overlay, no pointer events -->
+  <canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:9999;"></canvas>
+
+  <script src="/js/admin-auth.js"></script>
+  <script src="/js/deals.js"></script>
+  <script src="/js/brand.js"></script>
+</body>
+</html>
