@@ -3,11 +3,30 @@
 // required for GET or POST) so the team can track request status together.
 
 const express = require('express');
+const multer = require('multer');
 const db = require('../db/database');
 const { requireAuth } = require('../middleware/auth');
 const { generateId } = require('../services/id-generator');
 
 const router = express.Router();
+
+// WHY: 8MB per file — matches feedback screenshot limit. Generous enough for
+// high-DPI screenshots and short audio clips, bounded enough to prevent abuse.
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_FILES = 6;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_BYTES, files: MAX_FILES },
+});
+
+// WHY: Allow images for screenshots + audio for voice clarifications + common
+// document types. Anything outside this set is rejected to avoid abuse.
+const ALLOWED_MIME = new Set([
+  'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+  'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/webm', 'audio/ogg',
+  'application/pdf',
+]);
 
 const ALLOWED_CATEGORY = new Set(['ui', 'workflow', 'performance', 'integration', 'documentation', 'other']);
 const ALLOWED_PRIORITY = new Set(['low', 'medium', 'high', 'critical']);
@@ -176,6 +195,188 @@ router.delete('/:id', requireAuth, async (req, res) => {
   } catch (e) {
     console.error('[improvement] delete failed:', e);
     res.status(500).json({ error: 'Failed to delete request' });
+  }
+});
+
+// ── GET /:id/comments — List comments for a request ─────────
+router.get('/:id/comments', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+
+  try {
+    const comments = await db.all(
+      `SELECT c.id, c.request_id, c.author_name, c.author_email, c.body,
+              c.is_admin, c.created_at,
+              (SELECT COUNT(*) FROM ir_attachments a WHERE a.comment_id = c.id) AS attachment_count
+       FROM ir_comments c
+       WHERE c.request_id = ?
+       ORDER BY c.created_at ASC`,
+      [id],
+    );
+    // Also fetch request-level attachments (comment_id IS NULL)
+    const requestAttachments = await db.all(
+      `SELECT id, filename, mime, bytes, created_at
+       FROM ir_attachments
+       WHERE request_id = ? AND comment_id IS NULL
+       ORDER BY id`,
+      [id],
+    );
+    res.json({ comments, attachments: requestAttachments });
+  } catch (e) {
+    console.error('[improvement] list comments failed:', e);
+    res.status(500).json({ error: 'Failed to load comments' });
+  }
+});
+
+// ── POST /:id/comments — Add a comment (public, rate-limited upstream) ──
+router.post('/:id/comments', upload.array('attachments', MAX_FILES), async (req, res) => {
+  const requestId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(requestId)) return res.status(400).json({ error: 'invalid id' });
+
+  const { body: commentBody, author_name, author_email } = req.body || {};
+  if (!commentBody || !String(commentBody).trim()) {
+    return res.status(400).json({ error: 'comment body is required' });
+  }
+  if (String(commentBody).length > 5000) {
+    return res.status(400).json({ error: 'comment too long (max 5000 chars)' });
+  }
+
+  // Verify the request exists
+  const request = await db.one('SELECT id FROM improvement_requests WHERE id = ?', [requestId]);
+  if (!request) return res.status(404).json({ error: 'request not found' });
+
+  // Validate uploaded files
+  const files = (req.files || []).filter(f => ALLOWED_MIME.has(f.mimetype));
+  if ((req.files || []).length !== files.length) {
+    return res.status(400).json({ error: 'Unsupported file type. Allowed: images, audio, PDF.' });
+  }
+
+  // WHY: Detect admin status from JWT cookie if present — admins get a visual
+  // badge on their comments so users know the response is official.
+  let isAdmin = 0;
+  try {
+    const jwt = require('jsonwebtoken');
+    const token = req.cookies && req.cookies.token;
+    if (token) {
+      jwt.verify(token, process.env.JWT_SECRET);
+      isAdmin = 1;
+    }
+  } catch (_) { /* not logged in — that's fine, public endpoint */ }
+
+  try {
+    const result = await db.run(
+      `INSERT INTO ir_comments (request_id, author_name, author_email, body, is_admin)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        requestId,
+        author_name ? String(author_name).slice(0, 100) : null,
+        author_email ? String(author_email).slice(0, 200) : null,
+        String(commentBody).trim(),
+        isAdmin,
+      ],
+    );
+
+    const commentId = result.lastInsertRowid;
+
+    // Save attachments linked to this comment
+    for (const f of files) {
+      await db.run(
+        `INSERT INTO ir_attachments (request_id, comment_id, filename, mime, bytes, data)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [requestId, commentId, f.originalname || null, f.mimetype, f.size, f.buffer],
+      );
+    }
+
+    await logActivity(
+      (author_name && String(author_name).trim()) || 'anonymous',
+      'ir_comment_added',
+      { request_id: requestId, comment_id: commentId, attachments: files.length },
+    );
+
+    res.status(201).json({ ok: true, comment_id: commentId });
+  } catch (e) {
+    console.error('[improvement] add comment failed:', e);
+    res.status(500).json({ error: 'Failed to save comment' });
+  }
+});
+
+// ── POST /:id/attachments — Upload files directly to a request ──
+router.post('/:id/attachments', upload.array('files', MAX_FILES), async (req, res) => {
+  const requestId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(requestId)) return res.status(400).json({ error: 'invalid id' });
+
+  const request = await db.one('SELECT id FROM improvement_requests WHERE id = ?', [requestId]);
+  if (!request) return res.status(404).json({ error: 'request not found' });
+
+  const files = (req.files || []).filter(f => ALLOWED_MIME.has(f.mimetype));
+  if (!files.length) {
+    return res.status(400).json({ error: 'No valid files. Allowed: images, audio, PDF.' });
+  }
+  if ((req.files || []).length !== files.length) {
+    return res.status(400).json({ error: 'Some files have unsupported types.' });
+  }
+
+  try {
+    const ids = [];
+    for (const f of files) {
+      const r = await db.run(
+        `INSERT INTO ir_attachments (request_id, comment_id, filename, mime, bytes, data)
+         VALUES (?, NULL, ?, ?, ?, ?)`,
+        [requestId, f.originalname || null, f.mimetype, f.size, f.buffer],
+      );
+      ids.push(r.lastInsertRowid);
+    }
+    res.status(201).json({ ok: true, attachment_ids: ids });
+  } catch (e) {
+    console.error('[improvement] upload attachments failed:', e);
+    res.status(500).json({ error: 'Failed to save attachments' });
+  }
+});
+
+// ── GET /:id/attachments/:attachmentId — Serve a single attachment ──
+router.get('/:id/attachments/:attachmentId', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const attId = parseInt(req.params.attachmentId, 10);
+  if (!Number.isFinite(id) || !Number.isFinite(attId)) {
+    return res.status(400).json({ error: 'invalid id' });
+  }
+  try {
+    const row = await db.one(
+      'SELECT filename, mime, data FROM ir_attachments WHERE id = ? AND request_id = ?',
+      [attId, id],
+    );
+    if (!row) return res.status(404).json({ error: 'not found' });
+    res.setHeader('Content-Type', row.mime);
+    if (row.filename) {
+      res.setHeader('Content-Disposition', `inline; filename="${row.filename}"`);
+    }
+    // WHY: libsql may return BLOBs as Uint8Array — normalize to Buffer
+    const buf = row.data instanceof Buffer ? row.data : Buffer.from(row.data);
+    res.end(buf);
+  } catch (e) {
+    console.error('[improvement] serve attachment failed:', e);
+    res.status(500).json({ error: 'Failed to load attachment' });
+  }
+});
+
+// ── GET /:id/comments/:commentId/attachments — List comment attachments ──
+router.get('/:id/comments/:commentId/attachments', async (req, res) => {
+  const requestId = parseInt(req.params.id, 10);
+  const commentId = parseInt(req.params.commentId, 10);
+  if (!Number.isFinite(requestId) || !Number.isFinite(commentId)) {
+    return res.status(400).json({ error: 'invalid id' });
+  }
+  try {
+    const rows = await db.all(
+      `SELECT id, filename, mime, bytes, created_at
+       FROM ir_attachments
+       WHERE request_id = ? AND comment_id = ?
+       ORDER BY id`,
+      [requestId, commentId],
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load attachments' });
   }
 });
 
