@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db/database');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth, requirePermission } = require('../middleware/auth');
 const { generateDealId, generateId } = require('../services/id-generator');
 
 const router = express.Router();
@@ -62,7 +62,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 // ── Create deal ────────────────────────────────────────────────
-router.post('/', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
+router.post('/', requireAuth, requirePermission('deals', 'edit'), async (req, res) => {
   const { name, facility_id, source, owner, value_monthly, value_total, close_probability, notes } = req.body;
 
   if (!name) {
@@ -90,7 +90,7 @@ router.post('/', requireAuth, requireRole('admin', 'sales'), async (req, res) =>
 });
 
 // ── Update deal ────────────────────────────────────────────────
-router.patch('/:id', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
+router.patch('/:id', requireAuth, requirePermission('deals', 'edit'), async (req, res) => {
   const existing = await db.one('SELECT * FROM deals WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Deal not found' });
 
@@ -144,7 +144,7 @@ router.patch('/:id', requireAuth, requireRole('admin', 'sales'), async (req, res
 });
 
 // ── Delete deal ────────────────────────────────────────────────
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/:id', requireAuth, requirePermission('deals', 'edit'), async (req, res) => {
   const existing = await db.one('SELECT id FROM deals WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Deal not found' });
 
