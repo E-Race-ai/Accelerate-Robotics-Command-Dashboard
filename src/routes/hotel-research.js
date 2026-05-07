@@ -918,12 +918,18 @@ router.post('/routes', requireAuth, async (req, res) => {
       ],
     );
     const routeId = r.lastInsertRowid;
-    // Bulk insert initial stops if provided.
+    // WHY: Only yes-triaged hotels belong on a schedule — prevents untriaged or rejected hotels from sneaking in
     if (Array.isArray(hotel_ids) && hotel_ids.length > 0) {
+      const placeholders = hotel_ids.map(() => '?').join(',');
+      const qualified = await db.all(
+        `SELECT id FROM hotels_saved WHERE id IN (${placeholders}) AND triage = 'yes'`,
+        hotel_ids.map(Number),
+      );
+      const qualifiedIds = new Set(qualified.map(r => r.id));
       let ord = 0;
       for (const hid of hotel_ids) {
         const n = Number(hid);
-        if (!Number.isInteger(n)) continue;
+        if (!Number.isInteger(n) || !qualifiedIds.has(n)) continue;
         await db.run(
           `INSERT INTO bdr_route_stops (route_id, hotel_saved_id, sort_order) VALUES (?, ?, ?)`,
           [routeId, n, ord++],
@@ -1023,10 +1029,20 @@ router.post('/routes/:id/stops', requireAuth, async (req, res) => {
   const ids = Array.isArray(req.body?.hotel_ids) ? req.body.hotel_ids.map(Number).filter(Number.isInteger) : [];
   if (!ids.length) return res.status(400).json({ error: 'hotel_ids required' });
   try {
+    // WHY: Only yes-triaged hotels belong on a schedule — silently skip any that haven't been approved
+    const placeholders = ids.map(() => '?').join(',');
+    const qualified = await db.all(
+      `SELECT id FROM hotels_saved WHERE id IN (${placeholders}) AND triage = 'yes'`,
+      ids,
+    );
+    const qualifiedIds = new Set(qualified.map(r => r.id));
+    const filteredIds = ids.filter(hid => qualifiedIds.has(hid));
+    if (!filteredIds.length) return res.status(400).json({ error: 'No yes-triaged hotels in the list' });
+
     const max = await db.one('SELECT COALESCE(MAX(sort_order), -1) AS m FROM bdr_route_stops WHERE route_id = ?', [id]);
     let ord = (max?.m ?? -1) + 1;
     const newIds = [];
-    for (const hid of ids) {
+    for (const hid of filteredIds) {
       const r = await db.run(
         `INSERT INTO bdr_route_stops (route_id, hotel_saved_id, sort_order) VALUES (?, ?, ?)`,
         [id, hid, ord++],
