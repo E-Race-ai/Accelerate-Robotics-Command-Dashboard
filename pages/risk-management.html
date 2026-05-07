@@ -36,21 +36,26 @@
            --band-X       = soft tint (heat-map cells, score pills)
            --band-X-ink   = readable text on soft tint
            --band-X-solid = solid traffic-light color (bars, signals)  */
-      --band-low:        #DCFCE7;     /* soft green */
-      --band-low-ink:    #166534;
-      --band-low-solid:  #16A34A;     /* signal green — "go" */
+      /* Band colors map to U.S. MUTCD highway sign palette so anyone
+         driving a car already knows what they mean. We chose the actual
+         sign hues over generic "design system" greens/yellows because
+         the whole point of this dashboard is universal "rules of the
+         road" semantics — see PR #199. */
+      --band-low:        #D6EFD9;     /* soft green tint — guide-sign */
+      --band-low-ink:    #044E2C;
+      --band-low-solid:  #006B3F;     /* MUTCD guide-sign green — "go/clear" */
 
-      --band-moderate:   #FEF3C7;     /* soft yellow */
-      --band-mod-ink:    #854D0E;
-      --band-mod-solid:  #EAB308;     /* signal yellow — "caution" */
+      --band-moderate:   #FFF7CC;     /* soft yellow tint — warning-sign */
+      --band-mod-ink:    #6B4F00;
+      --band-mod-solid:  #FCD116;     /* MUTCD warning-sign yellow — "caution" */
 
-      --band-high:       #FFE4D5;     /* soft orange */
-      --band-high-ink:   #9A3412;
-      --band-high-solid: #EA580C;     /* construction orange — "act" */
+      --band-high:       #FFE0BF;     /* soft orange tint — construction */
+      --band-high-ink:   #7A3300;
+      --band-high-solid: #FF7900;     /* MUTCD construction orange — "act" */
 
-      --band-critical:   #FECACA;     /* soft red */
-      --band-crit-ink:   #991B1B;
-      --band-crit-solid: #DC2626;     /* stop-sign red — "stop" */
+      --band-critical:   #F8C9CF;     /* soft red tint — stop-sign */
+      --band-crit-ink:   #6E0717;
+      --band-crit-solid: #C8102E;     /* MUTCD stop-sign red — "stop" */
 
       --font-display: 'Instrument Serif', 'Georgia', serif;
       --font-body:    'Inter', -apple-system, sans-serif;
@@ -221,6 +226,99 @@
     }
     .exec-summary .es-band-crit { color: var(--band-crit-solid); font-weight: 600; }
     .exec-summary .es-band-good { color: var(--band-low-solid); font-weight: 600; }
+
+    /* ── Color key — rules of the road, mounted at the top ───────── */
+    .color-key {
+      background: white;
+      border: 0.5px solid var(--line);
+      padding: 18px 22px 22px;
+      margin-bottom: 28px;
+      position: relative;
+    }
+    .color-key .ck-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 14px;
+    }
+    .color-key .ck-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    @media (max-width: 880px) { .color-key .ck-grid { grid-template-columns: repeat(2, 1fr); } }
+    .color-key .ck-band {
+      display: grid;
+      grid-template-columns: 56px 1fr auto;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      background: white;
+      border: 0.5px solid var(--line);
+    }
+    .color-key .ck-band[data-band="low"]      { background: linear-gradient(135deg, var(--band-low)      0%, white 80%); border-color: var(--band-low-solid); }
+    .color-key .ck-band[data-band="moderate"] { background: linear-gradient(135deg, var(--band-moderate) 0%, white 80%); border-color: var(--band-mod-solid); }
+    .color-key .ck-band[data-band="high"]     { background: linear-gradient(135deg, var(--band-high)     0%, white 80%); border-color: var(--band-high-solid); }
+    .color-key .ck-band[data-band="critical"] { background: linear-gradient(135deg, var(--band-critical) 0%, white 80%); border-color: var(--band-crit-solid); }
+
+    /* The "sign" — emulates the actual MUTCD sign shape so it reads as
+       a real road sign, not just a color swatch. Octagon for stop, triangle
+       for warning, rectangle for guide, diamond for construction. We use
+       clip-path to get the silhouette, then mount the band color on top. */
+    .color-key .ck-sign {
+      width: 56px; height: 56px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.04em;
+      color: white;
+      text-align: center; line-height: 1;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.10));
+    }
+    /* Stop — octagon with white border ring */
+    .color-key .ck-sign[data-shape="stop"] {
+      background: var(--band-crit-solid);
+      clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+      box-shadow: inset 0 0 0 3px white, inset 0 0 0 4px var(--band-crit-solid);
+    }
+    /* Construction — orange diamond */
+    .color-key .ck-sign[data-shape="construction"] {
+      background: var(--band-high-solid);
+      clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+      box-shadow: inset 0 0 0 3px white;
+    }
+    /* Warning — yellow diamond, dark text */
+    .color-key .ck-sign[data-shape="warning"] {
+      background: var(--band-mod-solid);
+      color: var(--ink);
+      font-size: 28px; font-weight: 800;
+      clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+      box-shadow: inset 0 0 0 3px var(--ink);
+    }
+    /* Guide — green rectangle */
+    .color-key .ck-sign[data-shape="guide"] {
+      background: var(--band-low-solid);
+      box-shadow: inset 0 0 0 2px white, inset 0 0 0 3px var(--band-low-solid);
+    }
+    .color-key .ck-name {
+      font-family: var(--font-display);
+      font-size: 17px; font-weight: 500; line-height: 1;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .color-key .ck-desc {
+      font-family: var(--font-body);
+      font-size: 12px; color: var(--ink-2); line-height: 1.35;
+    }
+    .color-key .ck-range {
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 600;
+      color: var(--ink-2);
+      letter-spacing: 0.06em;
+      padding: 4px 8px;
+      border: 0.5px solid var(--line);
+      background: white;
+    }
 
     /* ── "What changed" period-over-period panel ─────────────────── */
     .changed-frame {
@@ -1646,6 +1744,45 @@
 
     <!-- ═══ Executive summary — narrative state of the register ═════ -->
     <div class="exec-summary" id="execSummary"></div>
+
+    <!-- ═══ Color key — rules of the road for the entire dashboard ═══ -->
+    <div class="color-key" aria-label="Color key — risk band semantics">
+      <div class="ck-eyebrow">Color Key · Rules of the road</div>
+      <div class="ck-grid">
+        <div class="ck-band" data-band="low">
+          <span class="ck-sign" data-shape="guide" title="Guide sign">CLEAR</span>
+          <div class="ck-text">
+            <div class="ck-name">Clear</div>
+            <div class="ck-desc">Monitor · normal cadence</div>
+          </div>
+          <div class="ck-range">1–4</div>
+        </div>
+        <div class="ck-band" data-band="moderate">
+          <span class="ck-sign" data-shape="warning" title="Warning sign">!</span>
+          <div class="ck-text">
+            <div class="ck-name">Caution</div>
+            <div class="ck-desc">Mitigate · monthly review</div>
+          </div>
+          <div class="ck-range">5–9</div>
+        </div>
+        <div class="ck-band" data-band="high">
+          <span class="ck-sign" data-shape="construction" title="Construction zone">ACT</span>
+          <div class="ck-text">
+            <div class="ck-name">Act</div>
+            <div class="ck-desc">Weekly review · controls in flight</div>
+          </div>
+          <div class="ck-range">10–15</div>
+        </div>
+        <div class="ck-band" data-band="critical">
+          <span class="ck-sign" data-shape="stop" title="Stop">STOP</span>
+          <div class="ck-text">
+            <div class="ck-name">Stop</div>
+            <div class="ck-desc">Daily watch · escalate to board</div>
+          </div>
+          <div class="ck-range">16–25</div>
+        </div>
+      </div>
+    </div>
 
     <!-- Stat strip -->
     <div class="stat-strip" id="statStrip"></div>
