@@ -249,7 +249,7 @@
     @media (max-width: 880px) { .color-key .ck-grid { grid-template-columns: repeat(2, 1fr); } }
     .color-key .ck-band {
       display: grid;
-      grid-template-columns: 56px 1fr auto;
+      grid-template-columns: 60px 1fr auto;
       align-items: center;
       gap: 14px;
       padding: 12px 14px;
@@ -261,45 +261,17 @@
     .color-key .ck-band[data-band="high"]     { background: linear-gradient(135deg, var(--band-high)     0%, white 80%); border-color: var(--band-high-solid); }
     .color-key .ck-band[data-band="critical"] { background: linear-gradient(135deg, var(--band-critical) 0%, white 80%); border-color: var(--band-crit-solid); }
 
-    /* The "sign" — emulates the actual MUTCD sign shape so it reads as
-       a real road sign, not just a color swatch. Octagon for stop, triangle
-       for warning, rectangle for guide, diamond for construction. We use
-       clip-path to get the silhouette, then mount the band color on top. */
+    /* The "sign" wraps an inline SVG drawn with proper MUTCD geometry —
+       octagon for stop, diamond for caution & construction, rectangle
+       for guide. Drawing in SVG (not clip-path) keeps borders crisp,
+       prints cleanly, and avoids stroke-clipping artifacts. */
     .color-key .ck-sign {
-      width: 56px; height: 56px;
+      width: 60px; height: 60px;
       display: inline-flex; align-items: center; justify-content: center;
-      font-family: var(--font-mono);
-      font-size: 11px; font-weight: 700;
-      letter-spacing: 0.04em;
-      color: white;
-      text-align: center; line-height: 1;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.10));
+      flex-shrink: 0;
+      filter: drop-shadow(0 1.5px 3px rgba(14,20,32,0.16));
     }
-    /* Stop — octagon with white border ring */
-    .color-key .ck-sign[data-shape="stop"] {
-      background: var(--band-crit-solid);
-      clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
-      box-shadow: inset 0 0 0 3px white, inset 0 0 0 4px var(--band-crit-solid);
-    }
-    /* Construction — orange diamond */
-    .color-key .ck-sign[data-shape="construction"] {
-      background: var(--band-high-solid);
-      clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-      box-shadow: inset 0 0 0 3px white;
-    }
-    /* Warning — yellow diamond, dark text */
-    .color-key .ck-sign[data-shape="warning"] {
-      background: var(--band-mod-solid);
-      color: var(--ink);
-      font-size: 28px; font-weight: 800;
-      clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-      box-shadow: inset 0 0 0 3px var(--ink);
-    }
-    /* Guide — green rectangle */
-    .color-key .ck-sign[data-shape="guide"] {
-      background: var(--band-low-solid);
-      box-shadow: inset 0 0 0 2px white, inset 0 0 0 3px var(--band-low-solid);
-    }
+    .color-key .ck-sign svg { width: 100%; height: 100%; display: block; }
     .color-key .ck-name {
       font-family: var(--font-display);
       font-size: 17px; font-weight: 500; line-height: 1;
@@ -1745,12 +1717,22 @@
     <!-- ═══ Executive summary — narrative state of the register ═════ -->
     <div class="exec-summary" id="execSummary"></div>
 
-    <!-- ═══ Color key — rules of the road for the entire dashboard ═══ -->
+    <!-- ═══ Color key — rules of the road for the entire dashboard ═══
+         Each sign is drawn as inline SVG using the actual MUTCD shape:
+         green rectangle (guide), yellow diamond (warning), orange
+         diamond (construction), red octagon (stop). Crisp at all DPRs
+         and prints cleanly. ────────────────────────────────────────── -->
     <div class="color-key" aria-label="Color key — risk band semantics">
       <div class="ck-eyebrow">Color Key · Rules of the road</div>
       <div class="ck-grid">
         <div class="ck-band" data-band="low">
-          <span class="ck-sign" data-shape="guide" title="Guide sign">CLEAR</span>
+          <span class="ck-sign" title="Guide sign · clear road ahead">
+            <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="2" y="14" width="56" height="32" rx="2" fill="#006B3F"/>
+              <rect x="5.5" y="17.5" width="49" height="25" rx="1" fill="none" stroke="white" stroke-width="1.4"/>
+              <text x="30" y="34" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="700" fill="white" letter-spacing="0.6">CLEAR</text>
+            </svg>
+          </span>
           <div class="ck-text">
             <div class="ck-name">Clear</div>
             <div class="ck-desc">Monitor · normal cadence</div>
@@ -1758,7 +1740,12 @@
           <div class="ck-range">1–4</div>
         </div>
         <div class="ck-band" data-band="moderate">
-          <span class="ck-sign" data-shape="warning" title="Warning sign">!</span>
+          <span class="ck-sign" title="Warning sign · caution">
+            <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <polygon points="30,3 57,30 30,57 3,30" fill="#FCD116" stroke="#0E1420" stroke-width="2.4" stroke-linejoin="miter"/>
+              <text x="30" y="42" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="34" font-weight="900" fill="#0E1420">!</text>
+            </svg>
+          </span>
           <div class="ck-text">
             <div class="ck-name">Caution</div>
             <div class="ck-desc">Mitigate · monthly review</div>
@@ -1766,7 +1753,12 @@
           <div class="ck-range">5–9</div>
         </div>
         <div class="ck-band" data-band="high">
-          <span class="ck-sign" data-shape="construction" title="Construction zone">ACT</span>
+          <span class="ck-sign" title="Construction sign · act now">
+            <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <polygon points="30,3 57,30 30,57 3,30" fill="#FF7900" stroke="#0E1420" stroke-width="2.2" stroke-linejoin="miter"/>
+              <text x="30" y="33.5" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="800" fill="#0E1420" letter-spacing="0.6">ACT</text>
+            </svg>
+          </span>
           <div class="ck-text">
             <div class="ck-name">Act</div>
             <div class="ck-desc">Weekly review · controls in flight</div>
@@ -1774,7 +1766,13 @@
           <div class="ck-range">10–15</div>
         </div>
         <div class="ck-band" data-band="critical">
-          <span class="ck-sign" data-shape="stop" title="Stop">STOP</span>
+          <span class="ck-sign" title="Stop sign · halt and escalate">
+            <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <polygon points="18,2 42,2 58,18 58,42 42,58 18,58 2,42 2,18" fill="#C8102E"/>
+              <polygon points="18,7 42,7 53,18 53,42 42,53 18,53 7,42 7,18" fill="none" stroke="white" stroke-width="1.8"/>
+              <text x="30" y="34" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="800" fill="white" letter-spacing="0.6">STOP</text>
+            </svg>
+          </span>
           <div class="ck-text">
             <div class="ck-name">Stop</div>
             <div class="ck-desc">Daily watch · escalate to board</div>
