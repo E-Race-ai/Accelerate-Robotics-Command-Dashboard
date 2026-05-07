@@ -597,6 +597,120 @@ async function initSchema() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_glossary_user_points ON glossary_user_progress(total_points DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_glossary_activities_user ON glossary_activities(user_email, created_at DESC)`,
+
+    // ── Customer Portals (deal rooms) ───────────────────────────────
+    // WHY: Branded customer-facing spaces that replace ShowPad Shared Spaces.
+    // Internal admins curate content; external customers authenticate via
+    // magic link and view/comment/upload. All portal_* tables share an
+    // explicit portal_id FK so tenant isolation can be enforced at the
+    // query layer regardless of URL-supplied slug.
+    `CREATE TABLE IF NOT EXISTS portal_spaces (
+      id                          TEXT PRIMARY KEY,
+      slug                        TEXT NOT NULL UNIQUE,
+      name                        TEXT NOT NULL,
+      customer_name               TEXT NOT NULL,
+      customer_logo_path          TEXT,
+      status                      TEXT NOT NULL DEFAULT 'draft',
+      deal_id                     TEXT,
+      allow_external_uploads      INTEGER NOT NULL DEFAULT 1,
+      allow_external_downloads    INTEGER NOT NULL DEFAULT 1,
+      allow_external_invites      INTEGER NOT NULL DEFAULT 0,
+      welcome_message             TEXT NOT NULL DEFAULT '',
+      theme_primary_color         TEXT NOT NULL DEFAULT '#1F4E79',
+      theme_accent_color          TEXT NOT NULL DEFAULT '#2E86C1',
+      owner_user_id               TEXT NOT NULL,
+      created_at                  TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at                  TEXT NOT NULL DEFAULT (datetime('now')),
+      archived_at                 TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_slug    ON portal_spaces(slug)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_status  ON portal_spaces(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_owner   ON portal_spaces(owner_user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_deal    ON portal_spaces(deal_id)`,
+
+    // External participants authenticate via magic link; internal admins
+    // appear here too so the team-tab listing reflects the full roster.
+    `CREATE TABLE IF NOT EXISTS portal_participants (
+      id              TEXT PRIMARY KEY,
+      portal_id       TEXT NOT NULL REFERENCES portal_spaces(id) ON DELETE CASCADE,
+      email           TEXT NOT NULL,
+      full_name       TEXT,
+      role            TEXT NOT NULL,
+      status          TEXT NOT NULL DEFAULT 'invited',
+      invited_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      invited_by      TEXT NOT NULL,
+      last_seen_at    TEXT,
+      UNIQUE (portal_id, email)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_participants_portal ON portal_participants(portal_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_participants_email  ON portal_participants(email)`,
+
+    // Folders have kind='folder' and no file_path; files have kind='file'
+    // or 'published_snapshot'. parent_folder_id is self-referential for
+    // 1-level-deep folder hierarchy in v1.
+    `CREATE TABLE IF NOT EXISTS portal_content (
+      id                   TEXT PRIMARY KEY,
+      portal_id            TEXT NOT NULL REFERENCES portal_spaces(id) ON DELETE CASCADE,
+      parent_folder_id     TEXT REFERENCES portal_content(id) ON DELETE CASCADE,
+      kind                 TEXT NOT NULL,
+      title                TEXT NOT NULL,
+      description          TEXT NOT NULL DEFAULT '',
+      file_path            TEXT,
+      file_type            TEXT,
+      file_size_bytes      INTEGER,
+      source_tool          TEXT,
+      source_record_id     TEXT,
+      uploaded_by_email    TEXT NOT NULL,
+      sort_order           INTEGER NOT NULL DEFAULT 0,
+      is_pinned            INTEGER NOT NULL DEFAULT 0,
+      created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_content_portal ON portal_content(portal_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_content_parent ON portal_content(parent_folder_id)`,
+
+    `CREATE TABLE IF NOT EXISTS portal_comments (
+      id                   TEXT PRIMARY KEY,
+      portal_id            TEXT NOT NULL REFERENCES portal_spaces(id) ON DELETE CASCADE,
+      content_item_id      TEXT NOT NULL REFERENCES portal_content(id) ON DELETE CASCADE,
+      parent_comment_id    TEXT REFERENCES portal_comments(id) ON DELETE CASCADE,
+      author_email         TEXT NOT NULL,
+      body                 TEXT NOT NULL,
+      created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_comments_portal  ON portal_comments(portal_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_comments_content ON portal_comments(content_item_id)`,
+
+    // Append-only event log. Drives the engagement dashboard and digest emails.
+    // event_type values are constants in src/services/portals/db.js EVENT_TYPES.
+    `CREATE TABLE IF NOT EXISTS portal_activity (
+      id                   TEXT PRIMARY KEY,
+      portal_id            TEXT NOT NULL REFERENCES portal_spaces(id) ON DELETE CASCADE,
+      participant_email    TEXT,
+      event_type           TEXT NOT NULL,
+      target_type          TEXT,
+      target_id            TEXT,
+      metadata_json        TEXT NOT NULL DEFAULT '{}',
+      ip_address           TEXT,
+      user_agent           TEXT,
+      occurred_at          TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_activity_portal      ON portal_activity(portal_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_activity_occurred    ON portal_activity(occurred_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_activity_participant ON portal_activity(portal_id, participant_email)`,
+
+    // Single-use, time-limited tokens for external auth.
+    // token_hash is sha256 of the raw token; raw token only exists in the email link.
+    `CREATE TABLE IF NOT EXISTS portal_magic_tokens (
+      id              TEXT PRIMARY KEY,
+      participant_id  TEXT NOT NULL REFERENCES portal_participants(id) ON DELETE CASCADE,
+      token_hash      TEXT NOT NULL UNIQUE,
+      expires_at      TEXT NOT NULL,
+      consumed_at     TEXT,
+      created_ip      TEXT,
+      created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_magic_tokens_hash ON portal_magic_tokens(token_hash)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_magic_tokens_participant ON portal_magic_tokens(participant_id)`,
   ];
 
   for (const sql of statements) {

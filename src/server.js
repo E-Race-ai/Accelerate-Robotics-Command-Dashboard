@@ -9,7 +9,7 @@ const path = require('path');
 // The libsql-based db module exports a `ready` promise that server.js awaits before listen().
 const db = require('./db/database');
 
-const { requireAuthPage } = require('./middleware/auth');
+const { requireAuth, requireAuthPage } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const inquiryRoutes = require('./routes/inquiries');
 const recipientRoutes = require('./routes/recipients');
@@ -34,6 +34,8 @@ const whatsappRoutes = require('./routes/whatsapp');
 const hotelResearchRoutes = require('./routes/hotel-research');
 const glossaryGameRoutes = require('./routes/glossary-game');
 const systemSettingsRoutes = require('./routes/system-settings');
+const portalsRouter = require('./routes/portals');
+const portalPublicRouter = require('./routes/portal-public');
 const { creativeLabsProxy } = require('./routes/creative-labs-proxy');
 
 const app = express();
@@ -123,6 +125,20 @@ for (const page of PROTECTED_PUBLIC_PAGES) {
     res.sendFile(path.join(__dirname, '..', 'public', page));
   });
 }
+
+// ── Customer portal pages (public, slug-routed) ────────────────
+// WHY: /portal/:slug/ has no matching file, so we explicitly serve
+// public/portal/index.html and read the slug from window.location in JS.
+// Registered before express.static so the catch-all routes win.
+app.get('/portal/:slug', (req, res) => {
+  res.redirect(`/portal/${encodeURIComponent(req.params.slug)}/`);
+});
+app.get('/portal/:slug/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'portal', 'index.html'));
+});
+app.get('/portal/:slug/sign-in.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'portal', 'sign-in.html'));
+});
 
 // ── Static files ────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
