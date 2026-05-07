@@ -888,9 +888,12 @@ async function seedRolePermissions() {
   if (existing && Number(existing.c) > 0) return;
 
   const modules = require('../services/permissions').ALL_MODULES;
-  // Defaults per design spec: admin edits everything; viewer sees everything read-only; module_owner gets per-assignment overrides.
+  // Defaults per design spec: admin edits everything; sales edits deals/prospects, views the rest;
+  // viewer sees everything read-only; module_owner gets per-assignment overrides.
+  const SALES_EDIT_MODULES = ['deals', 'prospects'];
   const matrix = {
     admin:        modules.reduce((acc, m) => ({ ...acc, [m]: 'edit' }), {}),
+    sales:        modules.reduce((acc, m) => ({ ...acc, [m]: SALES_EDIT_MODULES.includes(m) ? 'edit' : (m === 'settings' ? 'none' : 'view') }), {}),
     viewer:       modules.reduce((acc, m) => ({ ...acc, [m]: m === 'settings' ? 'none' : 'view' }), {}),
     module_owner: modules.reduce((acc, m) => ({ ...acc, [m]: m === 'settings' ? 'none' : 'view' }), {}),
   };
@@ -908,6 +911,25 @@ async function seedRolePermissions() {
   console.log('[db] Seeded default role_permissions matrix');
 }
 
+// WHY: sales role was missing from the original seed — backfill existing DBs that already have rows
+async function backfillSalesPermissions() {
+  const hasSales = await one("SELECT COUNT(*) as c FROM role_permissions WHERE role = 'sales'");
+  if (hasSales && Number(hasSales.c) > 0) return;
+
+  const modules = require('../services/permissions').ALL_MODULES;
+  const SALES_EDIT_MODULES = ['deals', 'prospects'];
+  await transaction(async (tx) => {
+    for (const mod of modules) {
+      const perm = SALES_EDIT_MODULES.includes(mod) ? 'edit' : (mod === 'settings' ? 'none' : 'view');
+      await tx.run(
+        'INSERT OR IGNORE INTO role_permissions (role, module, permission) VALUES (?, ?, ?)',
+        ['sales', mod, perm],
+      );
+    }
+  });
+  console.log('[db] Backfilled sales role permissions');
+}
+
 // ── Bootstrap on import ─────────────────────────────────────────
 // WHY: server.js must `await require('./db/database').ready` before app.listen() so that
 // routes never race schema init / seeds.
@@ -922,6 +944,7 @@ const ready = isTestEnv ? Promise.resolve() : (async () => {
   await seedAdmin();
   await bootstrapAdminRoles();
   await seedRolePermissions();
+  await backfillSalesPermissions();
 
   try {
     const { seedDeals } = require('./seed-deals');
