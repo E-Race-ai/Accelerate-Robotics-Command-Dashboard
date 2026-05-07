@@ -21,13 +21,23 @@ const db = require('../db/database');
 const { requireAuth } = require('../middleware/auth');
 const {
   estimateAdr, normLocation, distanceMiles, shapeHotel, brandClass,
-  revenuePotential, dealSizeTier,
+  revenuePotential, dealSizeTier, estimatedRobotCount, RAAS_MONTHLY_PER_BOT_USD,
 } = require('../services/hotel-research-utils');
 const { findOrCreateFacility } = require('../services/facility-master');
+const { enrichHotel, deepEnrichHotel } = require('../services/hotel-enrichment');
+const { getAllChargersInBbox } = require('../services/charger-discovery');
+const { fitScoreFor } = require('../services/fit-score');
 
 const router = express.Router();
 
 const ALLOWED_STATUS = new Set(['lead', 'contacted', 'qualified', 'proposed', 'won', 'lost', 'archived']);
+const ALLOWED_TRIAGE = new Set(['yes', 'no', 'maybe', 'needs_research']);
+
+// Best-effort JSON.parse that returns null on bad data instead of throwing.
+// Used when re-hydrating fields stored as JSON strings (ai_fit_reasoning).
+function safeJson(str) {
+  try { return JSON.parse(str); } catch { return null; }
+}
 
 // User-Agent identifies us to OSM ops per their tile/api policy. Plain string
 // (no PII) so the operators can reach us if our usage gets noisy.
@@ -52,19 +62,35 @@ const PRESET_MARKETS = {
   'miami-dade': {
     label: 'Miami-Dade',
     submarkets: [
-      // Radii are tight — these are dense urban submarkets. 1mi captures the
-      // walkable core; Kendall and Aventura get a touch more for spread.
-      { submarket: 'Brickell',         location: 'Brickell, Miami, FL',         radius_miles: 1   },
-      { submarket: 'Downtown Miami',   location: 'Downtown Miami, FL',          radius_miles: 1   },
-      { submarket: 'Midtown Miami',    location: 'Midtown Miami, FL',           radius_miles: 1   },
-      { submarket: 'Coconut Grove',    location: 'Coconut Grove, Miami, FL',    radius_miles: 1.5 },
-      { submarket: 'Coral Gables',     location: 'Coral Gables, FL',            radius_miles: 2   },
-      { submarket: 'Kendall',          location: 'Kendall, FL',                 radius_miles: 3   },
-      { submarket: 'Bal Harbour',      location: 'Bal Harbour, FL',             radius_miles: 1   },
-      { submarket: 'Surfside',         location: 'Surfside, FL',                radius_miles: 1   },
-      { submarket: 'North Beach',      location: 'North Beach, Miami Beach, FL', radius_miles: 1   },
-      { submarket: 'South Beach',      location: 'South Beach, Miami Beach, FL', radius_miles: 1.5 },
-      { submarket: 'Aventura',         location: 'Aventura, FL',                radius_miles: 2   },
+      // Radii expanded to catch the full submarket plus halos that contain
+      // adjacent hotel clusters. The original 1mi values missed >60% of
+      // Miami-Dade's actual hotel inventory — a 1mi circle on Brickell
+      // doesn't even reach the river. Targeted overlap is fine since the
+      // run-all dedupes by osm_id.
+      { submarket: 'Brickell',           location: 'Brickell, Miami, FL',           radius_miles: 2   },
+      { submarket: 'Downtown Miami',     location: 'Downtown Miami, FL',            radius_miles: 2   },
+      { submarket: 'Midtown / Wynwood',  location: 'Wynwood, Miami, FL',            radius_miles: 2   },
+      { submarket: 'Edgewater',          location: 'Edgewater, Miami, FL',          radius_miles: 1.5 },
+      { submarket: 'Little Havana',      location: 'Little Havana, Miami, FL',      radius_miles: 1.5 },
+      { submarket: 'Coconut Grove',      location: 'Coconut Grove, Miami, FL',      radius_miles: 2   },
+      { submarket: 'Coral Gables',       location: 'Coral Gables, FL',              radius_miles: 3   },
+      { submarket: 'Kendall',            location: 'Kendall, FL',                   radius_miles: 4   },
+      { submarket: 'Doral',              location: 'Doral, FL',                     radius_miles: 3   },
+      { submarket: 'MIA Airport',        location: 'Miami International Airport, FL', radius_miles: 3 },
+      { submarket: 'Hialeah',            location: 'Hialeah, FL',                   radius_miles: 3   },
+      { submarket: 'South Beach',        location: 'South Beach, Miami Beach, FL',  radius_miles: 2.5 },
+      { submarket: 'Mid-Beach',          location: 'Mid-Beach, Miami Beach, FL',    radius_miles: 1.5 },
+      { submarket: 'North Beach',        location: 'North Beach, Miami Beach, FL',  radius_miles: 1.5 },
+      { submarket: 'Surfside',           location: 'Surfside, FL',                  radius_miles: 1.5 },
+      { submarket: 'Bal Harbour',        location: 'Bal Harbour, FL',               radius_miles: 1.5 },
+      { submarket: 'Sunny Isles Beach',  location: 'Sunny Isles Beach, FL',         radius_miles: 1.5 },
+      { submarket: 'Aventura',           location: 'Aventura, FL',                  radius_miles: 2.5 },
+      { submarket: 'Key Biscayne',       location: 'Key Biscayne, FL',              radius_miles: 1.5 },
+      { submarket: 'Homestead',          location: 'Homestead, FL',                 radius_miles: 4   },
+      // County-wide sweep at the maximum radius — catches anything the
+      // submarket cuts miss (private resorts, isolated motels). Run last so
+      // the submarket tagging on prior cuts stays authoritative for dedupe.
+      { submarket: 'Miami-Dade (full county)', location: 'Miami, FL',               radius_miles: 25  },
     ],
   },
 };
@@ -155,6 +181,90 @@ async function fetchHotels(lat, lng, radiusMi) {
   return hotels;
 }
 
+// ─── EV charger discovery (Tesla + everything else) ──────────────
+//
+// Overpass query for amenity=charging_station within a bounding box. Tesla
+// stations are tagged with operator/network/brand=Tesla; we surface that as
+// is_tesla so the frontend can color them red. The rest are general EV.
+//
+// Uses a separate cache from hotel search since charger placement evolves
+// faster (new sites added quarterly). 12h TTL is plenty for a sales tool.
+const CHARGER_TTL_MS = 12 * 60 * 60 * 1000;
+const chargerCache = new Map(); // bbox key → { chargers, at }
+
+function buildChargerQuery(south, west, north, east) {
+  // WHY `out;` instead of `out tags;`: the bare `out` (alias for `out body`)
+  // emits both geometry (lat/lon) and tags for nodes. `out tags` strips
+  // geometry, which silently breaks downstream — every charger ends up with
+  // null coords and gets filtered out.
+  return `[out:json][timeout:25];
+(
+  node["amenity"="charging_station"](${south},${west},${north},${east});
+);
+out;`;
+}
+
+function isTeslaCharger(tags) {
+  if (!tags) return false;
+  const fields = ['brand', 'operator', 'network', 'name'];
+  for (const f of fields) {
+    const v = tags[f];
+    if (v && /tesla/i.test(v)) return true;
+  }
+  return false;
+}
+
+function shapeCharger(el) {
+  if (el.lat == null || el.lon == null) return null;
+  const t = el.tags || {};
+  const tesla = isTeslaCharger(t);
+  // Capacity: OSM tags vary. capacity is the count of stalls; socket:* are
+  // per-socket-type counts. We surface what's available.
+  const capacity = parseInt(t.capacity, 10) || null;
+  const fastCount =
+    parseInt(t['socket:tesla_supercharger'], 10) ||
+    parseInt(t['socket:type2_combo'], 10) ||
+    parseInt(t['socket:chademo'], 10) ||
+    null;
+  return {
+    id: el.id,
+    lat: el.lat,
+    lng: el.lon,
+    name: t.name || (tesla ? 'Tesla Supercharger' : 'EV charger'),
+    operator: t.operator || t.brand || t.network || null,
+    is_tesla: tesla,
+    capacity: capacity || fastCount || null,
+    network: t.network || null,
+    fee: t.fee || null,
+    access: t.access || null,
+    opening_hours: t.opening_hours || null,
+  };
+}
+
+async function fetchChargersInBbox(south, west, north, east) {
+  // Round bbox to 2dp to dedupe near-identical viewport requests
+  const key = `${south.toFixed(2)},${west.toFixed(2)},${north.toFixed(2)},${east.toFixed(2)}`;
+  const hit = chargerCache.get(key);
+  if (hit && Date.now() - hit.at < CHARGER_TTL_MS) return hit.chargers;
+
+  const query = buildChargerQuery(south, west, north, east);
+  const res = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    headers: {
+      'User-Agent': OSM_USER_AGENT,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    },
+    body: 'data=' + encodeURIComponent(query),
+  });
+  if (!res.ok) throw new Error(`overpass HTTP ${res.status}`);
+  const data = await res.json();
+  const elements = Array.isArray(data.elements) ? data.elements : [];
+  const chargers = elements.map(shapeCharger).filter(Boolean);
+  chargerCache.set(key, { chargers, at: Date.now() });
+  return chargers;
+}
+
 // ─── Routes ───────────────────────────────────────────────────────
 
 // GET /presets — list available preset markets (Miami-Dade, etc.)
@@ -162,6 +272,34 @@ async function fetchHotels(lat, lng, radiusMi) {
 // remember exact submarket names or radii.
 router.get('/presets', requireAuth, (_req, res) => {
   res.json({ markets: PRESET_MARKETS });
+});
+
+// GET /chargers?bbox=south,west,north,east — Tesla + general EV chargers
+// inside the box. Bbox is required (caps the query size — Overpass globally
+// is expensive). Returns shaped charger records with is_tesla so the
+// frontend can pick the right icon.
+router.get('/chargers', requireAuth, async (req, res) => {
+  const bbox = String(req.query.bbox || '').split(',').map(Number);
+  if (bbox.length !== 4 || bbox.some(n => !Number.isFinite(n))) {
+    return res.status(400).json({ error: 'bbox=south,west,north,east required' });
+  }
+  const [south, west, north, east] = bbox;
+  if (south >= north || west >= east) {
+    return res.status(400).json({ error: 'invalid bbox order' });
+  }
+  // WHY 2.5° cap: protects the upstream sources (NREL DEMO_KEY rate limit,
+  // Overpass public servers) from a pathological "Boston to LA" request.
+  // 2.5° latitude ≈ 175 mi — comfortably bigger than any city view.
+  if ((north - south) > 2.5 || (east - west) > 2.5) {
+    return res.status(400).json({ error: 'bbox too large — zoom in' });
+  }
+  try {
+    const result = await getAllChargersInBbox(south, west, north, east);
+    res.json(result);
+  } catch (err) {
+    console.error('[hotel-research] chargers failed:', err);
+    res.status(503).json({ error: 'Charger lookup busy or unreachable.' });
+  }
 });
 
 // POST /search — body: { location: "Boston, MA" | "02108", radius_miles?: 5 }
@@ -277,11 +415,17 @@ router.get('/saved', requireAuth, async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT h.id, h.name, h.address, h.city, h.state, h.zip, h.country, h.lat, h.lng,
-              h.brand, h.stars, h.rooms, h.phone, h.website, h.osm_id, h.submarket,
+              h.brand, h.stars, h.rooms, h.rooms_source, h.phone, h.website, h.osm_id, h.submarket,
               h.est_adr_dollars, h.status, h.notes, h.saved_by, h.prospect_id,
               h.operator, h.ownership, h.year_opened, h.total_floors, h.amenities,
               h.tags, h.dm_name, h.dm_title, h.dm_email, h.dm_phone, h.dm_linkedin,
-              h.existing_vendor, h.opportunity_score, h.photo_url, h.facility_id,
+              h.existing_vendor, h.opportunity_score, h.photo_url, h.facility_id, h.triage,
+              h.ai_fit_score, h.ai_fit_tier, h.ai_fit_reasoning,
+              h.enrichment_depth, h.chain_description, h.chain_url,
+              h.description, h.wikipedia_url,
+              h.restaurant_count, h.bar_count, h.event_sqft,
+              h.meeting_room_count, h.ballroom_capacity,
+              h.spa_count, h.pool_count,
               h.created_at, h.updated_at,
               (SELECT COUNT(*) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) AS visit_count,
               (SELECT MAX(visit_date) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) AS last_visit_date
@@ -300,7 +444,15 @@ router.get('/saved', requireAuth, async (req, res) => {
       const adrForRev = (Number.isFinite(adrStored) && adrStored > 0)
         ? adrStored
         : estimateAdr({ brand: r.brand, stars: r.stars });
-      const rev = revenuePotential({ rooms: r.rooms, est_adr_dollars: adrForRev });
+      const sizingArgs = {
+        rooms: r.rooms,
+        stars: r.stars,
+        restaurant_count: r.restaurant_count,
+        event_sqft: r.event_sqft,
+        ballroom_capacity: r.ballroom_capacity,
+      };
+      const bots = estimatedRobotCount(sizingArgs);
+      const rev = revenuePotential(sizingArgs);
       let amenities = null, tags = null;
       try { if (r.amenities) amenities = JSON.parse(r.amenities); } catch {}
       try { if (r.tags) { const t = JSON.parse(r.tags); if (Array.isArray(t)) tags = t; } } catch {}
@@ -308,6 +460,12 @@ router.get('/saved', requireAuth, async (req, res) => {
         ...r,
         brand_class: brandClass({ brand: r.brand, stars: r.stars, est_adr: r.est_adr_dollars }),
         revenue_potential_annual: rev,
+        est_bot_count: bots,
+        raas_monthly_per_bot: RAAS_MONTHLY_PER_BOT_USD,
+        // Keep ADR fallback exposed so the card can show the Goldilocks-derived ADR
+        // even when the rep hasn't captured one. WHY: pre-call briefings need a
+        // price point even on a freshly-saved hotel.
+        est_adr_dollars: r.est_adr_dollars ?? adrForRev,
         deal_size_tier: dealSizeTier(rev),
         amenities,
         tags: tags || [],
@@ -356,6 +514,8 @@ router.patch('/saved/:id', requireAuth, async (req, res) => {
     operator: 200, ownership: 200,
     dm_name: 200, dm_title: 200, dm_email: 200, dm_phone: 100, dm_linkedin: 500,
     existing_vendor: 200, photo_url: 1000,
+    rooms_source: 20,        // 'osm' | 'website' | 'wikidata' | 'estimated' | 'manual'
+    description: 2000, wikipedia_url: 1000, // permit clearing/replacing the wiki match
   };
   for (const [field, max] of Object.entries(STR_FIELDS)) {
     if (b[field] !== undefined) {
@@ -363,7 +523,14 @@ router.patch('/saved/:id', requireAuth, async (req, res) => {
       args.push(b[field] ? String(b[field]).slice(0, max) : null);
     }
   }
-  const INT_FIELDS = ['year_opened', 'total_floors', 'opportunity_score'];
+  const INT_FIELDS = [
+    'year_opened', 'total_floors', 'opportunity_score',
+    // F&B + event-space intel — manually captured by reps
+    'restaurant_count', 'bar_count', 'event_sqft',
+    'meeting_room_count', 'ballroom_capacity',
+    'spa_count', 'pool_count',
+    // Allow clearing/updating description + photo from the rail edit form
+  ];
   for (const f of INT_FIELDS) {
     if (b[f] !== undefined) {
       const v = b[f];
@@ -378,6 +545,11 @@ router.patch('/saved/:id', requireAuth, async (req, res) => {
   }
   // Tags: array of short strings, stored as JSON. Caps array length and
   // each tag length so a runaway client can't blow up the column.
+  if (b.triage !== undefined) {
+    if (b.triage === null || b.triage === '') { fields.push('triage = ?'); args.push(null); }
+    else if (ALLOWED_TRIAGE.has(b.triage))    { fields.push('triage = ?'); args.push(b.triage); }
+    else return res.status(400).json({ error: 'triage must be yes / no / maybe / needs_research / null' });
+  }
   if (b.tags !== undefined) {
     if (b.tags === null) { fields.push('tags = ?'); args.push(null); }
     else if (Array.isArray(b.tags)) {
@@ -565,6 +737,15 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
 
   // market_id is optional; the prospects UI lets an admin assign it later.
   const marketId = req.body?.market_id ? String(req.body.market_id).slice(0, 80) : null;
+  // package_tier is set in the graduate modal — one of the four named
+  // packages: Starter / Integration / Service Augmentation / Facility
+  // Automation. Stored on the prospect's `signal` field so it surfaces
+  // on the deal card without a schema change. Field name is still
+  // `pilot_tier` for backward compat with any older clients in flight.
+  const packageTier = req.body?.package_tier || req.body?.pilot_tier || null;
+  const packageStr = packageTier ? String(packageTier).slice(0, 80) : null;
+  const signalParts = [hotel.submarket, packageStr ? `${packageStr} package` : null].filter(Boolean);
+  const signalStr = signalParts.length ? signalParts.join(' · ') : null;
 
   // Master-record link: ensure this hotel has a facility row, then carry the
   // facility_id onto the prospect so the deal pipeline picks up where research
@@ -584,9 +765,9 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
   try {
     const r = await db.run(
       `INSERT INTO prospects (
-         market_id, status, name, address, brand, brand_class, keys, stars,
-         signal, source, research_date, facility_id
-       ) VALUES (?, 'staged', ?, ?, ?, ?, ?, ?, ?, 'ai_research', datetime('now'), ?)`,
+         market_id, status, name, address, brand, brand_class, keys, floors, stars,
+         signal, operator, source, research_date, facility_id
+       ) VALUES (?, 'staged', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ai_research', datetime('now'), ?)`,
       [
         marketId,
         hotel.name,
@@ -594,8 +775,10 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
         hotel.brand,
         brandClass,
         hotel.rooms,
+        hotel.total_floors,              // populates the "Floors" stat on the prospects card
         hotel.stars,
-        hotel.submarket || null,        // signal field — repurposed for our submarket tag
+        signalStr,                       // signal field — repurposed for submarket + pilot tier
+        hotel.operator,                  // operator (HEI Hotels, Highgate, etc.) shows on prospect card
         facilityId,
       ],
     );
@@ -608,6 +791,33 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
   }
 });
 
+// POST /saved/:id/ungraduate — reverse a graduation, removing the prospect
+// and unlinking the hotel. WHY: reps occasionally graduate a hotel too early
+// (before the site walk is complete, or they pick the wrong one). This lets
+// them undo without asking an admin to edit the database.
+router.post('/saved/:id/ungraduate', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+
+  const hotel = await db.one('SELECT id, prospect_id, status FROM hotels_saved WHERE id = ?', [id]);
+  if (!hotel) return res.status(404).json({ error: 'saved hotel not found' });
+  if (!hotel.prospect_id) return res.status(409).json({ error: 'hotel is not graduated' });
+
+  try {
+    // Remove the prospect row
+    await db.run('DELETE FROM prospects WHERE id = ?', [hotel.prospect_id]);
+    // Unlink the hotel and revert status to 'lead'
+    await db.run(
+      "UPDATE hotels_saved SET prospect_id = NULL, status = 'lead', updated_at = datetime('now') WHERE id = ?",
+      [id],
+    );
+    res.json({ ok: true, reverted_prospect_id: hotel.prospect_id });
+  } catch (err) {
+    console.error('[hotel-research] ungraduate failed:', err);
+    res.status(500).json({ error: 'Failed to undo graduation — ' + err.message });
+  }
+});
+
 // ─── BDR Schedule — saved + dated routes ────────────────────────
 //
 // A `bdr_route` is either a saved template (no date) OR a planned day
@@ -617,9 +827,16 @@ router.post('/saved/:id/graduate', requireAuth, async (req, res) => {
 // drive sequence — and a `done` flag they tick off in the field.
 
 // GET /routes — list, optionally filter by date range
-// Query: ?from=YYYY-MM-DD&to=YYYY-MM-DD&undated_too=1
+// Query: ?from=YYYY-MM-DD&to=YYYY-MM-DD&undated_too=1&owner=mine|all
+//
+// Per-user by default: each rep sees ONLY routes they created. Eric can plan
+// a Brickell day for Monday while Ben plans Coconut Grove for the same day,
+// and they don't trample each other's schedules. Pass ?owner=all to see the
+// full team's routes (useful for ops oversight).
 router.get('/routes', requireAuth, async (req, res) => {
   const { from, to, undated_too } = req.query;
+  const owner = String(req.query.owner || 'mine').toLowerCase();
+  const myEmail = (req.admin?.email || '').toLowerCase();
   const where = [];
   const args = [];
   if (from) { where.push('(scheduled_date IS NULL OR scheduled_date >= ?)'); args.push(from); }
@@ -627,6 +844,11 @@ router.get('/routes', requireAuth, async (req, res) => {
   if (!undated_too && from) {
     // If a date range is specified and we don't want undated, drop the IS NULL clauses
     where[where.length - 1] = where[where.length - 1].replace('scheduled_date IS NULL OR ', '');
+  }
+  // Per-user filter — default to "mine" so every BDR has their own clean view
+  if (owner !== 'all' && myEmail) {
+    where.push('(LOWER(created_by) = ? OR created_by IS NULL)');
+    args.push(myEmail);
   }
   try {
     const routes = await db.all(
@@ -638,7 +860,7 @@ router.get('/routes', requireAuth, async (req, res) => {
        ORDER BY scheduled_date IS NULL, scheduled_date ASC, r.id DESC`,
       args,
     );
-    res.json({ routes });
+    res.json({ routes, owner_filter: owner });
   } catch (err) {
     console.error('[hotel-research] /routes list failed:', err);
     res.status(500).json({ error: 'Failed to load routes' });
@@ -660,7 +882,17 @@ router.get('/routes/:id', requireAuth, async (req, res) => {
        WHERE s.route_id = ? ORDER BY s.sort_order ASC, s.id ASC`,
       [id],
     );
-    res.json({ route, stops });
+    // Anchor hotel — the place Ben stays overnight on this region day
+    let anchor = null;
+    if (route.anchor_hotel_id) {
+      anchor = await db.one(
+        `SELECT id, name, address, city, state, zip, phone, website, brand,
+                stars, rooms, est_adr_dollars, ai_fit_score, ai_fit_tier, photo_url
+         FROM hotels_saved WHERE id = ?`,
+        [route.anchor_hotel_id],
+      );
+    }
+    res.json({ route, stops, anchor });
   } catch (err) {
     console.error('[hotel-research] /routes/:id failed:', err);
     res.status(500).json({ error: 'Failed to load route' });
@@ -735,6 +967,36 @@ router.patch('/routes/:id', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[hotel-research] /routes update failed:', err);
     res.status(500).json({ error: 'Failed to update route' });
+  }
+});
+
+// DELETE /routes/all — bulk-delete every route. MUST be registered before
+// /routes/:id or Express matches it as id='all' and 400s. Cascade deletes
+// route stops via FK.
+// Per-user by default — clears only the caller's routes. ?owner=all wipes
+// everyone's (admin operation).
+router.delete('/routes/all', requireAuth, async (req, res) => {
+  const owner = String(req.query.owner || 'mine').toLowerCase();
+  const myEmail = (req.admin?.email || '').toLowerCase();
+  try {
+    let count, deleted;
+    if (owner === 'all') {
+      count = await db.one(`SELECT COUNT(*) AS n FROM bdr_routes`);
+      await db.run(`DELETE FROM bdr_routes`);
+    } else {
+      count = await db.one(
+        `SELECT COUNT(*) AS n FROM bdr_routes WHERE LOWER(created_by) = ? OR created_by IS NULL`,
+        [myEmail],
+      );
+      await db.run(
+        `DELETE FROM bdr_routes WHERE LOWER(created_by) = ? OR created_by IS NULL`,
+        [myEmail],
+      );
+    }
+    res.json({ ok: true, deleted: Number(count?.n || 0), scope: owner });
+  } catch (err) {
+    console.error('[hotel-research] delete all routes failed:', err);
+    res.status(500).json({ error: 'Failed to delete routes' });
   }
 });
 
@@ -822,6 +1084,116 @@ router.delete('/routes/:id/stops/:stopId', requireAuth, async (req, res) => {
 });
 
 // POST /routes/:id/reorder — body: { stop_ids: [in new order] }
+// POST /routes/:id/auto-anchor — pick a high-fit + reasonably-priced hotel
+// from this route's stops as the anchor (where Ben stays overnight). The
+// chosen hotel becomes the recon HQ for the day; on the night shift Ben
+// runs a deep facility assessment, then drops the report at the front
+// desk in the morning before checking out.
+//
+// Selection criteria:
+//   • Already a stop on this route (so it's in the right submarket)
+//   • ai_fit_score >= 30 (real prospect, not a filler)
+//   • est_adr_dollars between $100 and $400 (bookable on a sales budget)
+//   • Has a phone (for booking confirmation) AND a website
+//   • Triage != 'no'
+// Sort: AI fit DESC, then ADR ASC (lower price wins ties — sales budget)
+router.post('/routes/:id/auto-anchor', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  // Optional: client can pass a specific hotel_id to override auto-pick
+  const explicitHotelId = req.body?.hotel_id ? Number(req.body.hotel_id) : null;
+  // Optional: ADR budget (defaults $400, can be tightened)
+  const budgetMax = Math.max(80, Math.min(800, Number(req.body?.budget_max) || 400));
+  const budgetMin = Math.max(50, Math.min(300, Number(req.body?.budget_min) || 100));
+  try {
+    const route = await db.one('SELECT * FROM bdr_routes WHERE id = ?', [id]);
+    if (!route) return res.status(404).json({ error: 'route not found' });
+
+    let anchorId = explicitHotelId;
+    if (!anchorId) {
+      const candidates = await db.all(
+        `SELECT h.id, h.ai_fit_score, h.est_adr_dollars
+         FROM bdr_route_stops s
+         JOIN hotels_saved h ON h.id = s.hotel_saved_id
+         WHERE s.route_id = ?
+           AND COALESCE(h.ai_fit_score, 0) >= 30
+           AND h.est_adr_dollars IS NOT NULL
+           AND h.est_adr_dollars BETWEEN ? AND ?
+           AND h.phone IS NOT NULL AND h.phone != ''
+           AND h.triage = 'yes'
+         ORDER BY h.ai_fit_score DESC, h.est_adr_dollars ASC, h.id ASC
+         LIMIT 1`,
+        [id, budgetMin, budgetMax],
+      );
+      if (!candidates.length) {
+        // Fallback: drop the price ceiling, accept any fit ≥ 20
+        const fallback = await db.all(
+          `SELECT h.id, h.ai_fit_score, h.est_adr_dollars
+           FROM bdr_route_stops s
+           JOIN hotels_saved h ON h.id = s.hotel_saved_id
+           WHERE s.route_id = ?
+             AND COALESCE(h.ai_fit_score, 0) >= 20
+             AND h.triage = 'yes'
+           ORDER BY h.ai_fit_score DESC, h.est_adr_dollars ASC, h.id ASC
+           LIMIT 1`,
+          [id],
+        );
+        if (!fallback.length) {
+          return res.status(404).json({ error: 'no eligible anchor candidate found in this route' });
+        }
+        anchorId = fallback[0].id;
+      } else {
+        anchorId = candidates[0].id;
+      }
+    }
+    await db.run(
+      `UPDATE bdr_routes SET anchor_hotel_id = ?, assessment_status = COALESCE(assessment_status, 'planned') WHERE id = ?`,
+      [anchorId, id],
+    );
+    const anchor = await db.one(
+      `SELECT id, name, address, city, state, zip, phone, website, brand,
+              stars, rooms, est_adr_dollars, ai_fit_score, ai_fit_tier, photo_url
+       FROM hotels_saved WHERE id = ?`,
+      [anchorId],
+    );
+    res.json({ ok: true, anchor });
+  } catch (err) {
+    console.error('[hotel-research] auto-anchor failed:', err);
+    res.status(500).json({ error: 'Failed to set anchor: ' + err.message });
+  }
+});
+
+// PATCH /routes/:id/assessment — update the assessment_status / notes for
+// the anchor-stay recon ('planned' | 'completed' | 'dropped_off').
+router.patch('/routes/:id/assessment', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  const fields = [];
+  const args = [];
+  const ALLOWED_ASSESSMENT_STATUS = new Set(['planned', 'completed', 'dropped_off']);
+  if (req.body?.assessment_status !== undefined) {
+    const s = req.body.assessment_status;
+    if (s !== null && !ALLOWED_ASSESSMENT_STATUS.has(s)) {
+      return res.status(400).json({ error: 'assessment_status must be planned / completed / dropped_off / null' });
+    }
+    fields.push('assessment_status = ?'); args.push(s || null);
+  }
+  if (req.body?.assessment_notes !== undefined) {
+    fields.push('assessment_notes = ?');
+    args.push(req.body.assessment_notes ? String(req.body.assessment_notes).slice(0, 8000) : null);
+  }
+  if (!fields.length) return res.status(400).json({ error: 'no fields to update' });
+  args.push(id);
+  try {
+    const r = await db.run(`UPDATE bdr_routes SET ${fields.join(', ')} WHERE id = ?`, args);
+    if (!r.changes) return res.status(404).json({ error: 'route not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[hotel-research] assessment patch failed:', err);
+    res.status(500).json({ error: 'Failed to update assessment' });
+  }
+});
+
 router.post('/routes/:id/reorder', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
@@ -857,14 +1229,26 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
       const zone = String(cfg?.zone || '').trim();
       if (!zone) continue;
       const cap = Math.max(1, Math.min(15, Number(cfg?.cap) || 8));
-      // Pull untouched hotels (no visits yet) in this zone with coords. Default
-      // ordering: most recently saved first — close enough until we have
-      // smarter scoring.
+
+      // ── Dedupe: nuke any prior route for this exact (date, zone) before
+      // creating a new one. Without this, repeated wizard clicks pile up
+      // duplicate Mon/Tue cards in the schedule view (the visual mess Eric
+      // saw — 3x Coral Gables, 3x Coconut Grove, etc.).
+      await db.run(
+        `DELETE FROM bdr_routes WHERE scheduled_date = ? AND zone = ?`,
+        [date, zone],
+      );
+
+      // Pick by AI fit score DESC (best targets first) instead of recency
+      // (which surfaces junky motels that happened to be saved last).
+      // Untouched-only — already-visited hotels stay in their own funnel.
       const candidates = await db.all(
-        `SELECT h.id, h.lat, h.lng FROM hotels_saved h
+        `SELECT h.id, h.lat, h.lng, h.ai_fit_score FROM hotels_saved h
          WHERE h.submarket = ? AND h.lat IS NOT NULL AND h.lng IS NOT NULL
            AND (SELECT COUNT(*) FROM hotel_visits v WHERE v.hotel_saved_id = h.id) = 0
-         ORDER BY h.id DESC LIMIT ?`,
+           AND h.triage = 'yes'
+         ORDER BY (h.ai_fit_score IS NULL) ASC, h.ai_fit_score DESC, h.id ASC
+         LIMIT ?`,
         [zone, cap],
       );
       if (!candidates.length) {
@@ -891,6 +1275,713 @@ router.post('/routes/auto-week', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[hotel-research] auto-week failed:', err);
     res.status(500).json({ error: 'Failed to build week — ' + err.message });
+  }
+});
+
+// POST /routes/dedupe — keep one route per (scheduled_date, zone), delete
+// the rest. Non-destructive of intent: existing routes that aren't dupes
+// stay. The "winner" per group is the route with the most stops (or, on
+// tie, the most recent ID — assumes the latest auto-plan run had the
+// best data). Cascade-deletes route stops via FK.
+// Per-user by default — only dedupes the caller's routes.
+router.post('/routes/dedupe', requireAuth, async (req, res) => {
+  const owner = String(req.query.owner || 'mine').toLowerCase();
+  const myEmail = (req.admin?.email || '').toLowerCase();
+  try {
+    const ownerWhere = owner === 'all'
+      ? ''
+      : ` AND (LOWER(created_by) = ? OR created_by IS NULL)`;
+    const ownerArgs = owner === 'all' ? [] : [myEmail];
+    const groups = await db.all(
+      `SELECT scheduled_date, zone, COUNT(*) AS n
+       FROM bdr_routes
+       WHERE scheduled_date IS NOT NULL AND zone IS NOT NULL ${ownerWhere}
+       GROUP BY scheduled_date, zone
+       HAVING COUNT(*) > 1`,
+      ownerArgs,
+    );
+    let deleted = 0;
+    for (const g of groups) {
+      const candidates = await db.all(
+        `SELECT r.id,
+                (SELECT COUNT(*) FROM bdr_route_stops s WHERE s.route_id = r.id) AS stop_count
+         FROM bdr_routes r
+         WHERE r.scheduled_date = ? AND r.zone = ? ${ownerWhere}
+         ORDER BY stop_count DESC, r.id DESC`,
+        [g.scheduled_date, g.zone, ...ownerArgs],
+      );
+      const losers = candidates.slice(1).map(c => c.id);
+      for (const id of losers) {
+        await db.run('DELETE FROM bdr_routes WHERE id = ?', [id]);
+        deleted++;
+      }
+    }
+    res.json({ ok: true, deleted, groups_collapsed: groups.length, scope: owner });
+  } catch (err) {
+    console.error('[hotel-research] dedupe routes failed:', err);
+    res.status(500).json({ error: 'Failed to dedupe routes' });
+  }
+});
+
+// ─── Multi-day visit plan — pre-build a saved itinerary ───────────────
+//
+// Body:
+//   { name?: 'Ben May 11-14',
+//     days: [
+//       { date: '2026-05-11', label: 'Day 1 — Brickell + Downtown',
+//         submarkets: [{key:'Brickell', cap:6}, {key:'Downtown Miami', cap:6}],
+//         mode: 'driving' },
+//       { date: '2026-05-12', label: 'Day 2 — South Beach walking tour',
+//         submarkets: [{key:'South Beach', cap:22}],
+//         mode: 'walking' },
+//       …
+//     ]
+//   }
+//
+// For each day, picks top-N hotels per submarket by AI fit (excluding
+// triage='no'), orders them with a simple nearest-neighbor TSP starting
+// from the southernmost point (walking) or easternmost (driving — closer
+// to highway access on the Florida east coast). Saves one bdr_route per
+// day, persistent across reloads.
+//
+// WHY a dedicated endpoint instead of repeated /routes calls: lets us
+// idempotently rebuild a named tour (e.g. wipe + rebuild "Ben May 11-14"
+// when fit scores or triage decisions change) and ensures the whole plan
+// shows up as one coherent set of routes in the schedule panel.
+router.post('/routes/visit-plan', requireAuth, async (req, res) => {
+  const planName = String(req.body?.name || 'Visit plan').slice(0, 80);
+  const days = Array.isArray(req.body?.days) ? req.body.days : [];
+  if (!days.length) return res.status(400).json({ error: 'days array required' });
+  if (days.length > 14) return res.status(400).json({ error: 'max 14 days per plan' });
+  // Optional: ?wipe=1 deletes any existing routes that match this plan's
+  // name prefix before rebuilding (idempotent re-runs)
+  const wipe = req.query.wipe === '1' || req.body?.wipe === true;
+
+  try {
+    if (wipe) {
+      await db.run(
+        `DELETE FROM bdr_routes WHERE name LIKE ?`,
+        [`${planName}%`],
+      );
+    }
+
+    const created = [];
+    for (const day of days) {
+      const date = String(day.date || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      const label = String(day.label || `Day · ${date}`).slice(0, 100);
+      const mode = day.mode === 'walking' ? 'walking' : 'driving';
+      const submarkets = Array.isArray(day.submarkets) ? day.submarkets : [];
+      if (!submarkets.length) {
+        created.push({ date, label, route_id: null, stops_added: 0, note: 'no submarkets given' });
+        continue;
+      }
+
+      // Gather candidates per submarket — top-N by AI fit, excluding
+      // hotels the rep already triaged as a hard 'no' or that have been
+      // graduated to prospects (already in funnel, no need to drop in).
+      const allCandidates = [];
+      for (const sm of submarkets) {
+        const key = String(sm?.key || '').trim();
+        if (!key) continue;
+        const cap = Math.max(1, Math.min(30, Number(sm?.cap) || 6));
+        const rows = await db.all(
+          `SELECT h.id, h.name, h.lat, h.lng, h.submarket, h.ai_fit_score
+           FROM hotels_saved h
+           WHERE h.submarket = ?
+             AND h.lat IS NOT NULL AND h.lng IS NOT NULL
+             AND h.triage = 'yes'
+             AND h.prospect_id IS NULL
+           ORDER BY h.ai_fit_score DESC NULLS LAST, h.id ASC
+           LIMIT ?`,
+          [key, cap],
+        );
+        for (const r of rows) allCandidates.push(r);
+      }
+
+      if (!allCandidates.length) {
+        created.push({ date, label, route_id: null, stops_added: 0, note: 'no candidates' });
+        continue;
+      }
+
+      // Order optimization. Walking: anchor at the southernmost stop and
+      // greedily march north (linear corridor — good for South Beach where
+      // hotels line a ~3mi strip on Collins Ave). Driving: anchor at the
+      // easternmost (closer to I-95 onramps for next-day reposition) and
+      // run nearest-neighbor TSP.
+      const orderedIds = optimizeRouteStops(allCandidates, mode);
+
+      const r = await db.run(
+        `INSERT INTO bdr_routes (name, scheduled_date, zone, notes, mode, created_by)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [`${planName} · ${label}`, date, submarkets.map(s => s.key).join(' + '),
+         `Auto-generated. ${allCandidates.length} stops, mode=${mode}.`,
+         mode, req.admin?.email || null],
+      );
+      const routeId = r.lastInsertRowid ?? r.lastID ?? null;
+      let ord = 0;
+      for (const hid of orderedIds) {
+        await db.run(
+          `INSERT INTO bdr_route_stops (route_id, hotel_saved_id, sort_order) VALUES (?, ?, ?)`,
+          [routeId, hid, ord++],
+        );
+      }
+      created.push({ date, label, route_id: routeId, stops_added: orderedIds.length, mode });
+    }
+
+    res.status(201).json({ ok: true, plan_name: planName, days: created });
+  } catch (err) {
+    console.error('[hotel-research] visit-plan failed:', err);
+    res.status(500).json({ error: 'Failed to build visit plan — ' + err.message });
+  }
+});
+
+// Tiny haversine + greedy nearest-neighbor — keeps the route close to
+// optimal for short multi-stop runs without pulling in an OR-Tools dep.
+function haversineMi(lat1, lng1, lat2, lng2) {
+  const R = 3958.8;
+  const toRad = d => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+function optimizeRouteStops(stops, mode) {
+  if (stops.length <= 1) return stops.map(s => s.id);
+  // Anchor pick: walking → southernmost; driving → easternmost
+  const anchor = mode === 'walking'
+    ? stops.reduce((a, b) => (a.lat < b.lat ? a : b))
+    : stops.reduce((a, b) => (a.lng > b.lng ? a : b));
+  const remaining = stops.filter(s => s.id !== anchor.id);
+  const ordered = [anchor];
+  let current = anchor;
+  while (remaining.length) {
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < remaining.length; i++) {
+      const d = haversineMi(current.lat, current.lng, remaining[i].lat, remaining[i].lng);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    current = remaining.splice(bestIdx, 1)[0];
+    ordered.push(current);
+  }
+  return ordered.map(s => s.id);
+}
+
+// ─── Triage — one-tap BDR decision (the game-mode endpoint) ─────────────
+// POST /saved/:id/triage  body: { decision: 'yes'|'no'|'maybe'|'needs_research' }
+// Single-purpose endpoint optimized for fast clicks. Optionally also flips
+// the status field so a "no" triage moves the card to 'lost' / 'archived',
+// keeping the rest of the funnel honest.
+router.post('/saved/:id/triage', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  const decision = req.body?.decision;
+  if (!ALLOWED_TRIAGE.has(decision) && decision !== null && decision !== '') {
+    return res.status(400).json({ error: 'decision must be yes / no / maybe / needs_research / null' });
+  }
+  const triageVal = (decision === null || decision === '') ? null : decision;
+  const player = req.body?.player ? String(req.body.player).slice(0, 40).trim() : null;
+
+  // Status auto-mapping. Aggressive but reversible — the rep can always
+  // flip the status manually in the edit modal if they want a different
+  // funnel placement.
+  const statusForTriage = {
+    yes:            'qualified',
+    maybe:          'lead',
+    needs_research: 'lead',
+    no:             'archived',
+  };
+  const newStatus = triageVal ? statusForTriage[triageVal] : null;
+
+  try {
+    if (triageVal === null) {
+      // Undo: clear everything triage-related, leave status alone.
+      await db.run(
+        "UPDATE hotels_saved SET triage = NULL, triage_by = NULL, triage_player = NULL, triage_at = NULL, updated_at = datetime('now') WHERE id = ?",
+        [id],
+      );
+      // Also remove this player's vote from the master per-user log when
+      // they undo. Other players' votes stay intact.
+      if (player) {
+        await db.run(
+          `DELETE FROM hotel_triage_votes WHERE hotel_saved_id = ? AND player = ?`,
+          [id, player],
+        );
+      }
+    } else if (newStatus) {
+      await db.run(
+        `UPDATE hotels_saved
+         SET triage = ?, status = ?, triage_by = ?, triage_player = ?, triage_at = datetime('now'), updated_at = datetime('now')
+         WHERE id = ?`,
+        [triageVal, newStatus, req.admin?.email || null, player, id],
+      );
+    } else {
+      await db.run(
+        `UPDATE hotels_saved
+         SET triage = ?, triage_by = ?, triage_player = ?, triage_at = datetime('now'), updated_at = datetime('now')
+         WHERE id = ?`,
+        [triageVal, req.admin?.email || null, player, id],
+      );
+    }
+    // Also record the per-player vote in the master log so two players
+    // voting differently on the same hotel are both preserved (UPSERT
+    // pattern: INSERT ... ON CONFLICT DO UPDATE).
+    if (player && triageVal) {
+      await db.run(
+        `INSERT INTO hotel_triage_votes (hotel_saved_id, player, decision, voted_by_email, voted_at)
+         VALUES (?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(hotel_saved_id, player) DO UPDATE SET
+           decision = excluded.decision,
+           voted_by_email = excluded.voted_by_email,
+           voted_at = excluded.voted_at`,
+        [id, player, triageVal, req.admin?.email || null],
+      );
+    }
+    res.json({ ok: true, triage: triageVal, status: newStatus, player });
+  } catch (err) {
+    console.error('[hotel-research] triage failed:', err);
+    res.status(500).json({ error: 'Failed to set triage' });
+  }
+});
+
+// GET /triage/leaderboard — per-player tally for the mobile app
+router.get('/triage/leaderboard', requireAuth, async (_req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT COALESCE(triage_player, '(no player)') AS player,
+              COUNT(*) AS total,
+              SUM(CASE WHEN triage = 'yes' THEN 1 ELSE 0 END) AS yes_count,
+              SUM(CASE WHEN triage = 'maybe' THEN 1 ELSE 0 END) AS maybe_count,
+              SUM(CASE WHEN triage = 'needs_research' THEN 1 ELSE 0 END) AS needs_research_count,
+              SUM(CASE WHEN triage = 'no' THEN 1 ELSE 0 END) AS no_count,
+              MAX(triage_at) AS last_at
+       FROM hotels_saved
+       WHERE triage IS NOT NULL
+       GROUP BY COALESCE(triage_player, '(no player)')
+       ORDER BY total DESC`,
+      [],
+    );
+    res.json({ leaderboard: rows });
+  } catch (err) {
+    console.error('[hotel-research] leaderboard failed:', err);
+    res.status(500).json({ error: 'Failed to load leaderboard' });
+  }
+});
+
+// GET /triage/alignment — Ben + Celia + Eric all-vote summary.
+// Shows how many hotels each player has voted on, where they agree, and
+// the contested hotels for review-together sessions.
+router.get('/triage/alignment', requireAuth, async (_req, res) => {
+  try {
+    // Per-player vote counts
+    const players = await db.all(
+      `SELECT player, COUNT(*) AS total,
+              SUM(CASE WHEN decision = 'yes'            THEN 1 ELSE 0 END) AS yes_count,
+              SUM(CASE WHEN decision = 'maybe'          THEN 1 ELSE 0 END) AS maybe_count,
+              SUM(CASE WHEN decision = 'needs_research' THEN 1 ELSE 0 END) AS needs_research_count,
+              SUM(CASE WHEN decision = 'no'             THEN 1 ELSE 0 END) AS no_count,
+              MAX(voted_at) AS last_at
+       FROM hotel_triage_votes
+       GROUP BY player
+       ORDER BY total DESC`,
+      [],
+    );
+    // Hotels that 2+ players voted on
+    const multiVoted = await db.all(
+      `SELECT v.hotel_saved_id AS hotel_id, h.name, h.submarket, h.ai_fit_score,
+              h.ai_fit_tier, h.brand, h.rooms, h.est_adr_dollars,
+              GROUP_CONCAT(v.player || ':' || v.decision, '|') AS votes,
+              COUNT(*) AS vote_count,
+              COUNT(DISTINCT v.decision) AS distinct_decisions
+       FROM hotel_triage_votes v
+       JOIN hotels_saved h ON h.id = v.hotel_saved_id
+       GROUP BY v.hotel_saved_id
+       HAVING vote_count >= 2
+       ORDER BY distinct_decisions DESC, h.ai_fit_score DESC, h.id ASC`,
+      [],
+    );
+    // Split into agreements vs. disagreements
+    const agreements = [];
+    const disagreements = [];
+    for (const r of multiVoted) {
+      const votes = (r.votes || '').split('|').filter(Boolean).map(s => {
+        const [player, decision] = s.split(':');
+        return { player, decision };
+      });
+      const decisions = new Set(votes.map(v => v.decision));
+      const entry = { ...r, votes };
+      delete entry.distinct_decisions; delete entry.vote_count;
+      if (decisions.size === 1) agreements.push(entry);
+      else disagreements.push(entry);
+    }
+    // Total saved for the "% covered" stat
+    const total = await db.one('SELECT COUNT(*) AS n FROM hotels_saved');
+    res.json({
+      total_hotels: Number(total?.n || 0),
+      players,
+      agreements,
+      disagreements,
+      summary: {
+        agreed:    agreements.length,
+        disagreed: disagreements.length,
+        total_multi_voted: multiVoted.length,
+      },
+    });
+  } catch (err) {
+    console.error('[hotel-research] alignment failed:', err);
+    res.status(500).json({ error: 'Failed to compute alignment' });
+  }
+});
+
+// GET /triage/queue — returns saved hotels with no triage decision yet,
+// sorted submarket-then-id so reps can sweep zone-by-zone. Powers the
+// game-mode card-stack UI.
+router.get('/triage/queue', requireAuth, async (req, res) => {
+  // Multi-rater alignment: each player swipes through their own queue
+  // independently. The same hotel can be voted on by Ben AND Celia AND
+  // Eric — we filter out hotels THIS player has already voted on, not
+  // hotels anyone has voted on. The legacy h.triage column still drives
+  // the "first vote wins" funnel placement, but the queue is per-player.
+  const player = req.query.player ? String(req.query.player).slice(0, 40).trim() : null;
+  try {
+    let rows;
+    if (player) {
+      rows = await db.all(
+        `SELECT h.id, h.name, h.address, h.city, h.state, h.brand, h.stars, h.rooms, h.rooms_source,
+                h.phone, h.website, h.submarket, h.est_adr_dollars,
+                h.operator, h.year_opened, h.total_floors, h.lat, h.lng, h.notes,
+                h.photo_url, h.description, h.rating, h.review_count, h.wikipedia_url,
+                h.enriched_at,
+                h.ai_fit_score, h.ai_fit_reasoning, h.ai_fit_tier,
+                h.enrichment_depth, h.chain_description, h.chain_url
+         FROM hotels_saved h
+         WHERE NOT EXISTS (
+           SELECT 1 FROM hotel_triage_votes v
+           WHERE v.hotel_saved_id = h.id AND v.player = ?
+         )
+         ORDER BY (h.ai_fit_score IS NULL) ASC,
+                  h.ai_fit_score DESC,
+                  h.submarket ASC,
+                  h.id ASC`,
+        [player],
+      );
+    } else {
+      // No player — fall back to the legacy queue ("hotels nobody voted on")
+      rows = await db.all(
+        `SELECT h.id, h.name, h.address, h.city, h.state, h.brand, h.stars, h.rooms, h.rooms_source,
+                h.phone, h.website, h.submarket, h.est_adr_dollars,
+                h.operator, h.year_opened, h.total_floors, h.lat, h.lng, h.notes,
+                h.photo_url, h.description, h.rating, h.review_count, h.wikipedia_url,
+                h.enriched_at,
+                h.ai_fit_score, h.ai_fit_reasoning, h.ai_fit_tier,
+                h.enrichment_depth, h.chain_description, h.chain_url
+         FROM hotels_saved h
+         WHERE h.triage IS NULL
+         ORDER BY (h.ai_fit_score IS NULL) ASC,
+                  h.ai_fit_score DESC,
+                  h.submarket ASC,
+                  h.id ASC`,
+        [],
+      );
+    }
+    // Tally totals for the progress bar — independent query to be cheap.
+    const totals = await db.one(
+      `SELECT
+         COUNT(*) AS total,
+         SUM(CASE WHEN triage IS NOT NULL THEN 1 ELSE 0 END) AS sorted,
+         SUM(CASE WHEN triage = 'yes' THEN 1 ELSE 0 END) AS yes_count,
+         SUM(CASE WHEN triage = 'maybe' THEN 1 ELSE 0 END) AS maybe_count,
+         SUM(CASE WHEN triage = 'needs_research' THEN 1 ELSE 0 END) AS needs_research_count,
+         SUM(CASE WHEN triage = 'no' THEN 1 ELSE 0 END) AS no_count
+       FROM hotels_saved`, [],
+    );
+    // Parse the stored JSON reasoning so the client gets an array, not a string
+    const queue = rows.map(r => ({
+      ...r,
+      ai_fit_reasoning: r.ai_fit_reasoning ? safeJson(r.ai_fit_reasoning) : null,
+    }));
+    res.json({
+      queue,
+      totals: {
+        total:               Number(totals?.total || 0),
+        sorted:              Number(totals?.sorted || 0),
+        yes:                 Number(totals?.yes_count || 0),
+        maybe:               Number(totals?.maybe_count || 0),
+        needs_research:      Number(totals?.needs_research_count || 0),
+        no:                  Number(totals?.no_count || 0),
+      },
+    });
+    // Fire-and-forget: enrich the first 20 unenriched rows in the background
+    // while the rep sorts the first card. Rate-limited internally by the
+    // serial loop in enrichBatchInBackground.
+    enrichBatchInBackground(rows).catch(err =>
+      console.warn('[enrich] background sweep failed:', err.message),
+    );
+  } catch (err) {
+    console.error('[hotel-research] triage queue failed:', err);
+    res.status(500).json({ error: 'Failed to load triage queue' });
+  }
+});
+
+// Serial background enrichment of unenriched queue rows. Caps at 20 per call
+// so we don't hammer Wikipedia / hotel sites if the queue is huge — repeated
+// queue loads will keep chipping away until everyone's enriched.
+let backgroundEnrichRunning = false;
+async function enrichBatchInBackground(queueRows) {
+  if (backgroundEnrichRunning) return; // single concurrent sweep
+  const targets = queueRows.filter(r => !r.enriched_at).slice(0, 20);
+  if (targets.length === 0) return;
+  backgroundEnrichRunning = true;
+  try {
+    for (const h of targets) {
+      try {
+        const patch = await enrichHotel(h);
+        await applyEnrichment(h.id, h, patch);
+      } catch (err) {
+        console.warn(`[enrich] bg row ${h.id} failed:`, err.message);
+      }
+    }
+    console.log(`[enrich] background sweep enriched ${targets.length} hotels`);
+  } finally {
+    backgroundEnrichRunning = false;
+  }
+}
+
+// ─── Enrichment — pull photo + description from Wikipedia / website OG ──
+//
+// Why: BDRs need a real card with a picture and a short bio, not OSM bones.
+// findHotel runs through the enrichment service and writes back any field
+// that came back populated. Existing values aren't overwritten — call PATCH
+// /saved/:id with explicit fields if you need to edit.
+router.post('/saved/:id/enrich', requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const h = await db.one('SELECT * FROM hotels_saved WHERE id = ?', [id]);
+    if (!h) return res.status(404).json({ error: 'not found' });
+    const enrich = await enrichHotel(h);
+    await applyEnrichment(id, h, enrich);
+    const updated = await db.one(
+      `SELECT id, photo_url, description, rating, review_count, wikipedia_url, enriched_at
+       FROM hotels_saved WHERE id = ?`, [id]);
+    res.json({ id, enrichment: enrich, hotel: updated });
+  } catch (err) {
+    console.error('[hotel-research] enrich one failed:', err);
+    res.status(500).json({ error: 'Failed to enrich hotel' });
+  }
+});
+
+// Bulk enrich — walks every saved hotel that hasn't been enriched yet (or
+// missing a photo) and runs them serially. Serial keeps us polite to
+// Wikipedia + the websites we hit. Returns a summary so the operator can see
+// what stitched.
+router.post('/enrich/all', requireAuth, async (req, res) => {
+  // Optional: ?force=1 to re-enrich everything (e.g. after a parser change)
+  const force = req.query.force === '1' || req.body?.force === true;
+  // Cap one pass at 100 — keeps long-running requests bounded. Re-run for more.
+  const LIMIT = Math.min(parseInt(req.query.limit, 10) || 100, 200);
+  try {
+    const rows = await db.all(
+      force
+        ? 'SELECT * FROM hotels_saved ORDER BY id ASC LIMIT ?'
+        : 'SELECT * FROM hotels_saved WHERE enriched_at IS NULL OR photo_url IS NULL ORDER BY id ASC LIMIT ?',
+      [LIMIT],
+    );
+    const summary = { scanned: 0, enriched: 0, photo_added: 0, desc_added: 0, errors: 0, ids: [] };
+    for (const h of rows) {
+      summary.scanned++;
+      try {
+        const enrich = await enrichHotel(h);
+        const had = await applyEnrichment(h.id, h, enrich);
+        if (had.wrote_any) {
+          summary.enriched++;
+          if (had.wrote_photo) summary.photo_added++;
+          if (had.wrote_desc)  summary.desc_added++;
+          summary.ids.push(h.id);
+        }
+      } catch (err) {
+        summary.errors++;
+        console.warn(`[enrich] row ${h.id} (${h.name}) failed:`, err.message);
+      }
+    }
+    res.json(summary);
+  } catch (err) {
+    console.error('[hotel-research] enrich all failed:', err);
+    res.status(500).json({ error: 'Failed to bulk enrich' });
+  }
+});
+
+// Apply an enrichment patch — only writes fields that came back populated and
+// where the hotel didn't already have a value. Returns flags so callers know
+// what changed (used for the bulk summary).
+async function applyEnrichment(id, current, patch, opts = {}) {
+  const sets = [];
+  const params = [];
+  const out = { wrote_any: false, wrote_photo: false, wrote_desc: false };
+  if (patch.photo_url && !current.photo_url) {
+    sets.push('photo_url = ?'); params.push(patch.photo_url); out.wrote_photo = true;
+  }
+  if (patch.description && !current.description) {
+    sets.push('description = ?'); params.push(patch.description); out.wrote_desc = true;
+  }
+  if (patch.wikipedia_url && !current.wikipedia_url) {
+    sets.push('wikipedia_url = ?'); params.push(patch.wikipedia_url);
+  }
+  // Deep-only fields — chain context only meaningful for properties of a
+  // recognized chain
+  if (patch.chain_description && !current.chain_description) {
+    sets.push('chain_description = ?'); params.push(patch.chain_description);
+  }
+  if (patch.chain_url && !current.chain_url) {
+    sets.push('chain_url = ?'); params.push(patch.chain_url);
+  }
+  if (opts.depth) {
+    sets.push('enrichment_depth = ?'); params.push(opts.depth);
+  }
+  // Always stamp enriched_at so we can skip already-tried rows on the next sweep
+  sets.push('enriched_at = ?'); params.push(new Date().toISOString());
+  params.push(id);
+  await db.run(`UPDATE hotels_saved SET ${sets.join(', ')} WHERE id = ?`, params);
+  out.wrote_any = sets.length > 1;
+  return out;
+}
+
+// ── Tiered deep-sweep — top fit-score hotels get the full treatment ──
+//
+// Top 100 (or ?n=...) by ai_fit_score get deepEnrichHotel: Wikipedia
+// summary + brand/chain Wikipedia article + OG tags. Standard tier
+// (101–300) gets the cheaper enrichHotel. Below that we skip — those
+// hotels aren't priority targets and shouldn't burn tokens / API calls.
+//
+// WHY a separate endpoint: Eric explicitly wants the depth gated by fit
+// score so reps + tokens spend on the right cohort. Pure /enrich/all is
+// a flat sweep; this is the targeted version.
+router.post('/enrich/deep-sweep', requireAuth, async (req, res) => {
+  const TOP_N      = parseInt(req.query.top || req.body?.top || 100, 10);
+  const STANDARD_N = parseInt(req.query.standard || req.body?.standard || 200, 10);
+  try {
+    // Top-N hotels by fit score (skipping ones already deep-enriched
+    // unless ?force=1)
+    const force = req.query.force === '1' || req.body?.force === true;
+    const topRows = await db.all(
+      force
+        ? `SELECT * FROM hotels_saved WHERE ai_fit_score IS NOT NULL ORDER BY ai_fit_score DESC LIMIT ?`
+        : `SELECT * FROM hotels_saved WHERE ai_fit_score IS NOT NULL AND (enrichment_depth IS NULL OR enrichment_depth != 'deep') ORDER BY ai_fit_score DESC LIMIT ?`,
+      [TOP_N],
+    );
+    const standardRows = await db.all(
+      force
+        ? `SELECT * FROM hotels_saved WHERE ai_fit_score IS NOT NULL ORDER BY ai_fit_score DESC LIMIT ? OFFSET ?`
+        : `SELECT * FROM hotels_saved WHERE ai_fit_score IS NOT NULL AND enrichment_depth IS NULL ORDER BY ai_fit_score DESC LIMIT ? OFFSET ?`,
+      [STANDARD_N, TOP_N],
+    );
+
+    const summary = {
+      deep:     { scanned: 0, enriched: 0, photo_added: 0, desc_added: 0, errors: 0 },
+      standard: { scanned: 0, enriched: 0, photo_added: 0, desc_added: 0, errors: 0 },
+    };
+
+    // Pass 1: deep enrichment on top tier
+    for (const h of topRows) {
+      summary.deep.scanned++;
+      try {
+        const patch = await deepEnrichHotel(h);
+        const r = await applyEnrichment(h.id, h, patch, { depth: 'deep' });
+        if (r.wrote_any) summary.deep.enriched++;
+        if (r.wrote_photo) summary.deep.photo_added++;
+        if (r.wrote_desc) summary.deep.desc_added++;
+      } catch (err) {
+        summary.deep.errors++;
+        console.warn(`[deep-sweep] row ${h.id} failed:`, err.message);
+      }
+    }
+
+    // Pass 2: standard enrichment on the next tier
+    for (const h of standardRows) {
+      summary.standard.scanned++;
+      try {
+        const patch = await enrichHotel(h);
+        const r = await applyEnrichment(h.id, h, patch, { depth: 'standard' });
+        if (r.wrote_any) summary.standard.enriched++;
+        if (r.wrote_photo) summary.standard.photo_added++;
+        if (r.wrote_desc) summary.standard.desc_added++;
+      } catch (err) {
+        summary.standard.errors++;
+        console.warn(`[std-sweep] row ${h.id} failed:`, err.message);
+      }
+    }
+
+    // Mark everyone else as 'shallow' so the UI knows not to surface them
+    // in deep-research-only views. One UPDATE for the whole tail.
+    await db.run(
+      `UPDATE hotels_saved SET enrichment_depth = 'shallow'
+       WHERE enrichment_depth IS NULL`,
+      [],
+    );
+
+    res.json(summary);
+  } catch (err) {
+    console.error('[hotel-research] deep-sweep failed:', err);
+    res.status(500).json({ error: 'Deep sweep failed' });
+  }
+});
+
+// ─── AI Fit Score — pre-sort triage by best-fit-first ────────────────
+//
+// Recomputes ai_fit_score for every saved hotel using the deterministic
+// scorer in src/services/fit-score.js. Cheap (no network) so re-running is
+// fine. Pass ?force=1 to re-score even rows that already have a score.
+router.post('/score-all', requireAuth, async (req, res) => {
+  const force = req.query.force === '1' || req.body?.force === true;
+  try {
+    const rows = await db.all(
+      force
+        ? 'SELECT * FROM hotels_saved'
+        : 'SELECT * FROM hotels_saved WHERE ai_fit_score IS NULL',
+      [],
+    );
+    let scored = 0;
+    const tierCounts = { top: 0, high: 0, mid: 0, low: 0 };
+    const now = new Date().toISOString();
+    for (const h of rows) {
+      const { score, reasoning, tier } = fitScoreFor(h);
+      await db.run(
+        `UPDATE hotels_saved
+         SET ai_fit_score = ?, ai_fit_reasoning = ?, ai_fit_tier = ?, ai_fit_scored_at = ?
+         WHERE id = ?`,
+        [score, JSON.stringify(reasoning), tier, now, h.id],
+      );
+      scored++;
+      tierCounts[tier] = (tierCounts[tier] || 0) + 1;
+    }
+    res.json({ scored, tier_counts: tierCounts });
+  } catch (err) {
+    console.error('[hotel-research] score-all failed:', err);
+    res.status(500).json({ error: 'Failed to score hotels' });
+  }
+});
+
+// Recompute one row's score — used after a manual edit (visit, intel update,
+// status bump) so the triage queue picks up changes without a full sweep.
+router.post('/saved/:id/score', requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const h = await db.one('SELECT * FROM hotels_saved WHERE id = ?', [id]);
+    if (!h) return res.status(404).json({ error: 'not found' });
+    const { score, reasoning, tier } = fitScoreFor(h);
+    await db.run(
+      `UPDATE hotels_saved
+       SET ai_fit_score = ?, ai_fit_reasoning = ?, ai_fit_tier = ?, ai_fit_scored_at = ?
+       WHERE id = ?`,
+      [score, JSON.stringify(reasoning), tier, new Date().toISOString(), id],
+    );
+    res.json({ id, score, reasoning, tier });
+  } catch (err) {
+    console.error('[hotel-research] score one failed:', err);
+    res.status(500).json({ error: 'Failed to score hotel' });
   }
 });
 
@@ -944,6 +2035,174 @@ router.post('/backfill-facilities', requireAuth, async (_req, res) => {
 // ─── Facility master view — GET /facility/:id ─────────────────────────────
 //
 // Returns the unified record: facility row + all linked artifacts (saved
+// ─── Phone exports — vCard + ICS for the road kit ─────────────────
+//
+// The iPhone + iPad riding along on the Miami tour need (a) every saved
+// hotel as a real Contact card with phone, website, address; (b) the
+// Atlas team as Contacts; (c) Ben's May 11-14 tour as Calendar events
+// that auto-sync via Apple Calendar / Google Calendar / Outlook.
+//
+// vCard 3.0 + ICS RFC 5545 — both plain text, no library needed,
+// supported natively by every iPhone. Once imported they live offline +
+// work in CarPlay.
+
+function vcardEscape(s) {
+  return String(s ?? '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+}
+function icsEscape(s) {
+  return String(s ?? '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+}
+function icsFormatDate(d) {
+  const yr = d.getUTCFullYear();
+  const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const da = String(d.getUTCDate()).padStart(2, '0');
+  return `${yr}${mo}${da}`;
+}
+function icsTimestamp(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+}
+
+// GET /vcard — every saved hotel as one .vcf file. Open on iPhone →
+// "Add All N Contacts." Use ?fit_min=50 to restrict to top fits.
+router.get('/vcard', requireAuth, async (req, res) => {
+  const fitMin = Number(req.query.fit_min) || 0;
+  const submarket = String(req.query.submarket || '').trim();
+  try {
+    const where = ['1=1'];
+    const args = [];
+    if (fitMin > 0)   { where.push('ai_fit_score >= ?'); args.push(fitMin); }
+    if (submarket)    { where.push('submarket = ?'); args.push(submarket); }
+    const rows = await db.all(
+      `SELECT name, address, city, state, zip, phone, website, brand,
+              submarket, ai_fit_score, ai_fit_tier, rooms
+       FROM hotels_saved
+       WHERE ${where.join(' AND ')}
+       ORDER BY ai_fit_score DESC, name ASC`,
+      args,
+    );
+    const lines = [];
+    for (const h of rows) {
+      lines.push('BEGIN:VCARD');
+      lines.push('VERSION:3.0');
+      // FN prefixed with fit score so reps can sort Contacts and see the
+      // best opportunities first.
+      const fitPrefix = h.ai_fit_score != null ? `[${h.ai_fit_score}] ` : '';
+      lines.push(`FN:${vcardEscape(fitPrefix + h.name)}`);
+      lines.push(`N:${vcardEscape(h.name)};;;;`);
+      if (h.brand) lines.push(`ORG:${vcardEscape(h.brand)}`);
+      if (h.phone) lines.push(`TEL;TYPE=WORK,VOICE:${vcardEscape(h.phone)}`);
+      if (h.website) lines.push(`URL:${vcardEscape(h.website)}`);
+      lines.push(`ADR;TYPE=WORK:;;${vcardEscape(h.address || '')};${vcardEscape(h.city || '')};${vcardEscape(h.state || '')};${vcardEscape(h.zip || '')};US`);
+      const notes = [
+        h.submarket ? `📍 ${h.submarket}` : null,
+        h.rooms ? `${h.rooms} rooms` : null,
+        h.ai_fit_score != null ? `AI fit: ${h.ai_fit_score} (${h.ai_fit_tier || '-'})` : null,
+        'via Accelerate Robotics Hotel Research',
+      ].filter(Boolean).join(' · ');
+      lines.push(`NOTE:${vcardEscape(notes)}`);
+      const cats = ['Hotel Prospect'];
+      if (h.submarket) cats.push(h.submarket);
+      lines.push(`CATEGORIES:${cats.map(vcardEscape).join(',')}`);
+      lines.push('END:VCARD');
+    }
+    res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="hotel-prospects-${rows.length}.vcf"`);
+    res.send(lines.join('\r\n'));
+  } catch (err) {
+    console.error('[hotel-research] vcard failed:', err);
+    res.status(500).json({ error: 'Failed to build vCards' });
+  }
+});
+
+// GET /atlas-vcard — Atlas teammates as Contacts. AirDrop into the road kit.
+router.get('/atlas-vcard', requireAuth, async (_req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT email, name, role FROM admin_users
+       WHERE status IS NULL OR status != 'archived'
+       ORDER BY name ASC, email ASC`,
+      [],
+    );
+    const lines = [];
+    for (const u of rows) {
+      const display = u.name || u.email.split('@')[0];
+      lines.push('BEGIN:VCARD');
+      lines.push('VERSION:3.0');
+      lines.push(`FN:${vcardEscape(display)}`);
+      lines.push(`N:${vcardEscape(display)};;;;`);
+      lines.push('ORG:Accelerate Robotics');
+      if (u.role) lines.push(`TITLE:${vcardEscape(u.role)}`);
+      if (u.email) lines.push(`EMAIL;TYPE=WORK:${vcardEscape(u.email)}`);
+      lines.push('CATEGORIES:Atlas Team');
+      lines.push('END:VCARD');
+    }
+    res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="atlas-team-${rows.length}.vcf"`);
+    res.send(lines.join('\r\n'));
+  } catch (err) {
+    console.error('[hotel-research] atlas-vcard failed:', err);
+    res.status(500).json({ error: 'Failed to build atlas vCards' });
+  }
+});
+
+// GET /calendar.ics — every dated route as a calendar event. Subscribe
+// from Apple Calendar / Google Calendar to keep the iPhone + iPad in
+// sync as routes are re-built.
+router.get('/calendar.ics', requireAuth, async (_req, res) => {
+  try {
+    const routes = await db.all(
+      `SELECT id, name, scheduled_date, zone, notes, mode FROM bdr_routes
+       WHERE scheduled_date IS NOT NULL ORDER BY scheduled_date ASC`,
+      [],
+    );
+    const stopCounts = await db.all(
+      `SELECT route_id, COUNT(*) AS n FROM bdr_route_stops GROUP BY route_id`,
+      [],
+    );
+    const countMap = new Map(stopCounts.map(r => [r.route_id, Number(r.n)]));
+
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Accelerate Robotics//Hotel Research//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:Hotel Research Routes',
+      'X-WR-CALDESC:BDR sales routes — Accelerate Robotics',
+    ];
+    const stamp = icsTimestamp(new Date());
+    for (const r of routes) {
+      const start = new Date(r.scheduled_date + 'T12:00:00Z');
+      const end = new Date(start); end.setUTCDate(end.getUTCDate() + 1);
+      const stopN = countMap.get(r.id) || 0;
+      const summary = `${r.mode === 'walking' ? '🚶' : '🚗'} ${r.name}${stopN ? ` · ${stopN} stops` : ''}`;
+      const description = [
+        r.zone ? `Submarket(s): ${r.zone}` : null,
+        r.mode === 'walking' ? 'Walking tour' : 'Driving tour',
+        r.notes || null,
+        `Open in app: https://acceleraterobotics.ai/admin?tool=/hotel-research`,
+      ].filter(Boolean).join('\\n');
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:route-${r.id}@acceleraterobotics.ai`);
+      lines.push(`DTSTAMP:${stamp}`);
+      lines.push(`DTSTART;VALUE=DATE:${icsFormatDate(start)}`);
+      lines.push(`DTEND;VALUE=DATE:${icsFormatDate(end)}`);
+      lines.push(`SUMMARY:${icsEscape(summary)}`);
+      lines.push(`DESCRIPTION:${icsEscape(description)}`);
+      if (r.zone) lines.push(`LOCATION:${icsEscape(r.zone)}, Miami-Dade, FL`);
+      lines.push('END:VEVENT');
+    }
+    lines.push('END:VCALENDAR');
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="hotel-routes.ics"`);
+    res.send(lines.join('\r\n'));
+  } catch (err) {
+    console.error('[hotel-research] calendar.ics failed:', err);
+    res.status(500).json({ error: 'Failed to build calendar' });
+  }
+});
+
 // hotel research, visits, prospects, deals, assessments) so the UI can
 // render a single cohesive "opportunity card."
 router.get('/facility/:id', requireAuth, async (req, res) => {

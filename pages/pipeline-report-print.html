@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Robotics — Deal Pipeline Report</title>
+<style>
+  @page { size: Letter; margin: 0.6in 0.7in; }
+  :root {
+    --ink: #1a1a1a;
+    --dim: #555;
+    --light: #888;
+    --accent: #0055ff;
+    --green: #15803d;
+    --border: #d4d4d4;
+    --bg: #ffffff;
+    --surface: #f8f8f8;
+    --header-bg: #0a0a14;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.5;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Header ── */
+  .report-header {
+    background: var(--header-bg);
+    color: #fff;
+    padding: 32px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .report-header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .report-header h1 span { color: #00d4ff; }
+  .report-header .meta {
+    text-align: right;
+    font-size: 0.8rem;
+    color: #aaa;
+    line-height: 1.6;
+  }
+  .report-header .meta strong { color: #fff; }
+  .report-header .confidential {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  /* ── Container ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 0 40px; }
+
+  /* ── KPI Bar ── */
+  .kpi-bar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 24px 40px;
+  }
+  .kpi-item {
+    text-align: center;
+    padding: 16px 8px;
+    border-right: 1px solid var(--border);
+  }
+  .kpi-item:last-child { border-right: none; }
+  .kpi-item .value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+  }
+  .kpi-item .value.accent { color: var(--accent); }
+  .kpi-item .value.green { color: var(--green); }
+  .kpi-item .label {
+    font-size: 0.65rem;
+    color: var(--light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  /* ── Section Headers ── */
+  .section-header {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--light);
+    margin: 32px 40px 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── Market Header ── */
+  .market-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 28px 40px 8px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .market-header h2 {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .market-header .market-tag {
+    font-size: 0.7rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .market-header .market-total {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--dim);
+  }
+  .market-header .market-total strong { color: var(--ink); }
+
+  /* ── Deal Table ── */
+  .deal-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 40px;
+    max-width: calc(100% - 80px);
+    font-size: 0.85rem;
+  }
+  .deal-table th {
+    background: var(--surface);
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--dim);
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .deal-table th.right, .deal-table td.right { text-align: right; }
+  .deal-table th.center, .deal-table td.center { text-align: center; }
+  .deal-table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+  }
+  .deal-table tr:last-child td { border-bottom: 1px solid var(--border); }
+  .deal-table .hotel-name {
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .deal-table .hotel-detail {
+    font-size: 0.75rem;
+    color: var(--dim);
+    margin-top: 1px;
+  }
+  .deal-table .opp-id {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--light);
+    letter-spacing: 0.5px;
+  }
+  .deal-table .color-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .deal-table .note {
+    font-size: 0.7rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .deal-table .flag {
+    font-size: 0.7rem;
+    color: #dc2626;
+    font-weight: 600;
+  }
+
+  /* ── Subtotal Row ── */
+  .deal-table .subtotal td {
+    background: var(--surface);
+    font-weight: 700;
+    border-bottom: 2px solid var(--border);
+    padding: 8px 10px;
+  }
+
+  /* ── Grand Total ── */
+  .grand-total {
+    margin: 24px 40px;
+    padding: 16px 20px;
+    background: var(--header-bg);
+    color: #fff;
+    border-radius: 6px;
+    display: grid;
+    grid-template-columns: 1fr repeat(4, auto);
+    gap: 32px;
+    align-items: center;
+  }
+  .grand-total .gt-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .grand-total .gt-stat {
+    text-align: center;
+  }
+  .grand-total .gt-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+  .grand-total .gt-desc {
+    font-size: 0.6rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  /* ── Strategic Connections ── */
+  .connections {
+    margin: 12px 40px 0;
+    columns: 2;
+    column-gap: 20px;
+  }
+  .connection {
+    break-inside: avoid;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    border-radius: 0 4px 4px 0;
+  }
+  .connection h4 {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .connection p {
+    font-size: 0.75rem;
+    color: var(--dim);
+    line-height: 1.4;
+  }
+
+  /* ── Footer ── */
+  .report-footer {
+    margin: 32px 40px 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--light);
+  }
+
+  /* ── Print ── */
+  @media print {
+    body { font-size: 10pt; }
+    .report-header, .grand-total {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .kpi-bar { break-inside: avoid; }
+    .deal-table { break-inside: auto; }
+    .deal-table tr { break-inside: avoid; }
+    .market-header { break-after: avoid; }
+    .connections { break-inside: avoid; }
+    .connection { break-inside: avoid; }
+    .color-dot {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      border-radius: 50% !important;
+      -webkit-border-radius: 50% !important;
+    }
+    .no-print { display: none !important; }
+    .page-break { break-before: page; }
+  }
+
+  /* ── Screen-only print button ── */
+  .print-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--header-bg);
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 100;
+  }
+  .print-btn:hover { background: #1a1a2e; }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Print / Save PDF</button>
+
+<!-- ── Header ── -->
+<div class="report-header">
+  <div>
+    <h1>Accelerate Robotics <span>Deal Pipeline</span></h1>
+  </div>
+  <div class="meta">
+    <strong>Pipeline Report</strong> &mdash; April 2026<br>
+    Prepared by Eric Race, Founder & CEO<br>
+    <div class="confidential">Confidential</div>
+  </div>
+</div>
+
+<!-- ── KPI Bar ── -->
+<div class="kpi-bar">
+  <div class="kpi-item">
+    <div class="value">9</div>
+    <div class="label">Active Deals</div>
+  </div>
+  <div class="kpi-item">
+    <div class="value">1,747</div>
+    <div class="label">Total Keys</div>
+  </div>
+  <div class="kpi-item">
+    <div class="value">88</div>
+    <div class="label">Robots Proposed</div>
+  </div>
+  <div class="kpi-item">
+    <div class="value green">$234,800</div>
+    <div class="label">Monthly RaaS</div>
+  </div>
+  <div class="kpi-item">
+    <div class="value accent">$2,817,600</div>
+    <div class="label">Annualized</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- FLORIDA -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="market-header">
+  <h2>Florida</h2>
+  <span class="market-tag">Home Market</span>
+  <span class="market-total"><strong>3</strong> deals &middot; <strong>420</strong> keys &middot; <strong>32</strong> robots &middot; <strong>$89,200</strong>/mo</span>
+</div>
+<table class="deal-table">
+  <thead>
+    <tr>
+      <th>Deal</th>
+      <th>Property</th>
+      <th class="center">Keys</th>
+      <th class="center">Floors</th>
+      <th class="center">Robots</th>
+      <th class="right">Rate</th>
+      <th class="right">Monthly RaaS</th>
+      <th class="right">Annualized</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="opp-id">OPP-001</span></td>
+      <td>
+        <span class="color-dot" style="background:#d4a040;"></span>
+        <span class="hotel-name">Thesis Hotel Miami</span>
+        <div class="hotel-detail">Curio Collection by Hilton &middot; Owner: Brent Reynolds</div>
+      </td>
+      <td class="center">245</td>
+      <td class="center">10</td>
+      <td class="center">14</td>
+      <td class="right">$2,850</td>
+      <td class="right"><strong>$39,900</strong></td>
+      <td class="right">$478,800</td>
+    </tr>
+    <tr>
+      <td><span class="opp-id">OPP-002</span></td>
+      <td>
+        <span class="color-dot" style="background:#3a3025;"></span>
+        <span class="hotel-name">The Moore &mdash; Design District</span>
+        <div class="hotel-detail">Independent Members' Club &middot; Michelin Key 2025 &middot; F&B: Torno Subito (Bottura)</div>
+      </td>
+      <td class="center">13</td>
+      <td class="center">4</td>
+      <td class="center">10</td>
+      <td class="right">$2,850</td>
+      <td class="right"><strong>$28,500</strong></td>
+      <td class="right">$342,000</td>
+    </tr>
+    <tr>
+      <td><span class="opp-id">OPP-003</span></td>
+      <td>
+        <span class="color-dot" style="background:#c4654a;"></span>
+        <span class="hotel-name">Art Ovation Hotel</span>
+        <div class="hotel-detail">Autograph Collection (Marriott) &middot; Operator: Shaner Hotels (75+ properties)</div>
+      </td>
+      <td class="center">162</td>
+      <td class="center">6</td>
+      <td class="center">8</td>
+      <td class="right">$2,600</td>
+      <td class="right"><strong>$20,800</strong></td>
+      <td class="right">$249,600</td>
+    </tr>
+    <tr class="subtotal">
+      <td colspan="4">Florida Subtotal</td>
+      <td class="center">32</td>
+      <td class="right">&mdash;</td>
+      <td class="right"><strong>$89,200</strong></td>
+      <td class="right"><strong>$1,070,400</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- EAST BAY -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="market-header">
+  <h2>East Bay, California</h2>
+  <span class="market-tag">Cluster Strategy &mdash; 3 properties within 25 miles</span>
+  <span class="market-total"><strong>3</strong> deals &middot; <strong>780</strong> keys &middot; <strong>33</strong> robots &middot; <strong>$85,800</strong>/mo</span>
+</div>
+<table class="deal-table">
+  <thead>
+    <tr>
+      <th>Deal</th>
+      <th>Property</th>
+      <th class="center">Keys</th>
+      <th class="center">Floors</th>
+      <th class="center">Robots</th>
+      <th class="right">Rate</th>
+      <th class="right">Monthly RaaS</th>
+      <th class="right">Annualized</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="opp-id">OPP-004</span></td>
+      <td>
+        <span class="color-dot" style="background:#3a6fa0;"></span>
+        <span class="hotel-name">San Ramon Marriott</span>
+        <div class="hotel-detail">Marriott &middot; Bishop Ranch / Silicon Valley corridor &middot; Operator: HEI Hotels</div>
+      </td>
+      <td class="center">368</td>
+      <td class="center">6</td>
+      <td class="center">12</td>
+      <td class="right">$2,600</td>
+      <td class="right"><strong>$31,200</strong></td>
+      <td class="right">$374,400</td>
+    </tr>
+    <tr>
+      <td><span class="opp-id">OPP-005</span></td>
+      <td>
+        <span class="color-dot" style="background:#b08d57;"></span>
+        <span class="hotel-name">Lafayette Park Hotel & Spa</span>
+        <div class="hotel-detail">Independent &middot; AAA Four Diamond 25 yrs &middot; Owner: Woodside Hospitality (7+ NorCal properties)</div>
+        <div class="note">Recommended 1st target &mdash; portfolio multiplier</div>
+      </td>
+      <td class="center">136</td>
+      <td class="center">4</td>
+      <td class="center">7</td>
+      <td class="right">$2,600</td>
+      <td class="right"><strong>$18,200</strong></td>
+      <td class="right">$218,400</td>
+    </tr>
+    <tr>
+      <td><span class="opp-id">OPP-006</span></td>
+      <td>
+        <span class="color-dot" style="background:#2e7d6a;"></span>
+        <span class="hotel-name">Claremont Resort & Club</span>
+        <div class="hotel-detail">Independent (ex-Fairmont) &middot; Owner: Ohana Real Estate &middot; Operator: HEI Hotels</div>
+        <div class="flag">Elevator survey required (30" door width)</div>
+      </td>
+      <td class="center">276</td>
+      <td class="center">10</td>
+      <td class="center">14</td>
+      <td class="right">$2,600</td>
+      <td class="right"><strong>$36,400</strong></td>
+      <td class="right">$436,800</td>
+    </tr>
+    <tr class="subtotal">
+      <td colspan="4">East Bay Subtotal</td>
+      <td class="center">33</td>
+      <td class="right">&mdash;</td>
+      <td class="right"><strong>$85,800</strong></td>
+      <td class="right"><strong>$1,029,600</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SACRAMENTO — page break before this section -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="market-header page-break">
+  <h2>Sacramento, California</h2>
+  <span class="market-tag">HHM bridge to East Bay</span>
+  <span class="market-total"><strong>3</strong> deals &middot; <strong>547</strong> keys &middot; <strong>23</strong> robots &middot; <strong>$59,800</strong>/mo</span>
+</div>
+<table class="deal-table">
+  <thead>
+    <tr>
+      <th>Deal</th>
+      <th>Property</th>
+      <th class="center">Keys</th>
+      <th class="center">Floors</th>
+      <th class="center">Robots</th>
+      <th class="right">Rate</th>
+      <th class="right">Monthly RaaS</th>
+      <th class="right">Annualized</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="opp-id">OPP-007</span></td>
+      <td>
+        <span class="color-dot" style="background:#c96b3c;"></span>
+        <span class="hotel-name">Kimpton Sawyer Hotel</span>
+        <div class="hotel-detail">IHG / Kimpton &middot; Golden 1 Center arena hotel &middot; Owner: JMA + Mohari</div>
+      </td>
+      <td class="center">250</td>
+      <td class="center">16</td>
+      <td class="center">10</td>
+      <td class="right">$2,600</td>
+      <td class="right"><strong>$26,000</strong></td>
+      <td class="right">$312,000</td>
+    </tr>
+    <tr>
+      <td><span class="opp-id">OPP-008</span></td>
+      <td>
+        <span class="color-dot" style="background:#2c4a6e;"></span>
+        <span class="hotel-name">The Citizen Hotel</span>
+        <div class="hotel-detail">Autograph Collection (Marriott) &middot; Grange (Michelin Guide) &middot; Owner: Cambridge Landmark (Miami PE)</div>
+      </td>
+      <td class="center">196</td>
+      <td class="center">14</td>
+      <td class="center">8</td>
+      <td class="right">$2,600</td>
+      <td class="right"><strong>$20,800</strong></td>
+      <td class="right">$249,600</td>
+    </tr>
+    <tr>
+      <td><span class="opp-id">OPP-009</span></td>
+      <td>
+        <span class="color-dot" style="background:#5a8f6e;"></span>
+        <span class="hotel-name">Westin Sacramento Riverfront</span>
+        <div class="hotel-detail">Marriott / Westin &middot; Non-union &middot; 2024 renovation &middot; Operator: HHM Hotels</div>
+        <div class="note">Recommended Sacramento beachhead</div>
+      </td>
+      <td class="center">101</td>
+      <td class="center">3</td>
+      <td class="center">5</td>
+      <td class="right">$2,600</td>
+      <td class="right"><strong>$13,000</strong></td>
+      <td class="right">$156,000</td>
+    </tr>
+    <tr class="subtotal">
+      <td colspan="4">Sacramento Subtotal</td>
+      <td class="center">23</td>
+      <td class="right">&mdash;</td>
+      <td class="right"><strong>$59,800</strong></td>
+      <td class="right"><strong>$717,600</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ── Grand Total ── -->
+<div class="grand-total">
+  <div class="gt-label">Pipeline Total</div>
+  <div class="gt-stat">
+    <div class="gt-value">1,747</div>
+    <div class="gt-desc">Keys</div>
+  </div>
+  <div class="gt-stat">
+    <div class="gt-value">88</div>
+    <div class="gt-desc">Robots</div>
+  </div>
+  <div class="gt-stat">
+    <div class="gt-value" style="color:#00e676;">$234,800</div>
+    <div class="gt-desc">Monthly</div>
+  </div>
+  <div class="gt-stat">
+    <div class="gt-value" style="color:#00d4ff;">$2,817,600</div>
+    <div class="gt-desc">Annualized</div>
+  </div>
+</div>
+
+<!-- ── Strategic Connections ── -->
+<div class="section-header">Strategic Connections</div>
+<div class="connections">
+  <div class="connection">
+    <h4>HHM Hotels Bridge</h4>
+    <p>HHM operates Westin Sacramento (OPP-009) and San Ramon Marriott (OPP-004). One relationship opens two markets.</p>
+  </div>
+  <div class="connection">
+    <h4>HEI Hotels Pair</h4>
+    <p>HEI manages San Ramon Marriott (OPP-004) and Claremont Resort (OPP-006). One operations team, two properties.</p>
+  </div>
+  <div class="connection">
+    <h4>Woodside Portfolio (7+ Properties)</h4>
+    <p>Lafayette Park's owner operates Monterey Plaza, Stanford Park, Napa Valley Lodge, Hotel Drisco, Harvest Inn, Lodge at Bodega Bay. One deal unlocks the portfolio.</p>
+  </div>
+  <div class="connection">
+    <h4>Shaner Hotels Portfolio (75+ Properties)</h4>
+    <p>Art Ovation's operator manages 75+ hotels. A clean Sarasota deployment is the reference for the entire fleet.</p>
+  </div>
+  <div class="connection">
+    <h4>Cambridge Landmark (Miami PE)</h4>
+    <p>The Citizen Hotel's owner is Miami-based. Same city as Accelerate HQ — in-person pitch advantage.</p>
+  </div>
+  <div class="connection">
+    <h4>Aimbridge Cross-Sell</h4>
+    <p>Aimbridge operates The Citizen and Hyatt Centric Sacramento. Second property, same operator, same city.</p>
+  </div>
+</div>
+
+<!-- ── Footer ── -->
+<div class="report-footer">
+  <div><strong>Accelerate Robotics</strong> &middot; Miami, Florida &middot; acceleraterobotics.com</div>
+  <div>April 2026 &middot; Confidential</div>
+</div>
+
+</body>
+</html>

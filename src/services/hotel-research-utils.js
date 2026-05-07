@@ -174,25 +174,124 @@ function shapeHotel(el, centerLat, centerLng) {
   };
 }
 
-// Revenue + deal-size sizing — quick BDR triage. Annual room revenue =
-// ADR × rooms × 0.70 (industry-rough U.S. urban occupancy) × 365.
-// Service spend potential is roughly 1-3% of room revenue for high-touch
-// guest services (cleaning, turn-down, lobby). Tier banding is intentionally
-// coarse: XS → independent / motel-tier; XL → flagship metro luxury.
-function revenuePotential({ rooms, est_adr_dollars }) {
+// ── Accelerate Robotics RaaS revenue model ──────────────────────────
+// $/month per mid-grade robot. We charge $1500-$2500/month per bot
+// depending on tier; $2000 is the midpoint we use for sizing the pipeline
+// so reps see one consistent number across the funnel. The actual deal
+// price is set per-property at proposal time.
+const RAAS_MONTHLY_PER_BOT_USD = 2000;
+
+// Robot count scales with property size + service complexity. Mapped
+// to four named packages for forecasting clarity:
+//   • Starter Package (S)            → 1-3 bots,  ≤$75k/yr
+//   • Integration Package (M)        → 4-6 bots,  $75-150k/yr
+//   • Service Augmentation Layer (L) → 7-12 bots, $150-300k/yr
+//   • Facility Automation (XL)       → 13+ bots,  $300k+/yr
+// Rooms drives the base count; luxury (more service touchpoints), F&B
+// outlets, and large event space each add 1-2 bots. The final number
+// stays bounded so a Fontainebleau-class property doesn't price itself
+// out of believability.
+function estimatedRobotCount({
+  rooms, stars, restaurant_count, event_sqft, ballroom_capacity,
+}) {
   const r = Number(rooms);
-  const adr = Number(est_adr_dollars);
-  if (!Number.isFinite(r) || !Number.isFinite(adr) || r <= 0 || adr <= 0) return null;
-  return Math.round(r * adr * 0.70 * 365);
+  if (!Number.isFinite(r) || r <= 0) return null;
+  let bots;
+  if (r >= 1000)      bots = 30;
+  else if (r >= 500)  bots = 16;
+  else if (r >= 300)  bots = 10;  // anchor: full-deployment threshold
+  else if (r >= 150)  bots = 6;   // anchor: bigger-pilot threshold
+  else if (r >= 50)   bots = 3;   // anchor: pilot threshold
+  else if (r >= 20)   bots = 2;
+  else                bots = 1;
+  // Luxury bump: 5★ properties run more high-touch service flows
+  // (turn-down, in-room dining at 11pm, lobby valet runner).
+  const s = Number(stars) || 0;
+  if (s >= 5) bots = Math.round(bots * 1.3);
+  // F&B outlets add food-runner use cases; event space adds banquet
+  // setup runners. Caps prevent stacking from blowing the count up.
+  const restaurants = Number(restaurant_count) || 0;
+  if (restaurants >= 3)      bots += 2;
+  else if (restaurants >= 1) bots += 1;
+  const events = Number(event_sqft) || 0;
+  if (events >= 50_000)      bots += 3;
+  else if (events >= 20_000) bots += 2;
+  else if (events >= 5_000)  bots += 1;
+  const ballroom = Number(ballroom_capacity) || 0;
+  if (ballroom >= 1000) bots += 1;
+  // Floor + sanity ceiling — don't promise a 50-bot deployment to a
+  // 12-room boutique because it has 3 restaurants.
+  return Math.max(1, Math.min(bots, 40));
 }
 
+// Annual revenue for the deal in our pipeline = bots × monthly × 12.
+// Returns null when we don't have enough info (no rooms data) so the UI
+// can hide the field rather than show a fake number.
+function revenuePotential({
+  rooms, stars, restaurant_count, event_sqft, ballroom_capacity,
+}) {
+  const bots = estimatedRobotCount({ rooms, stars, restaurant_count, event_sqft, ballroom_capacity });
+  if (!bots) return null;
+  return bots * RAAS_MONTHLY_PER_BOT_USD * 12;
+}
+
+// Deal-size tier — banded against the RaaS-based revenue. Each band
+// maps to a named package the team uses in proposals + forecasts:
+//   S   ≤   $75k   — Starter Package          (1-3 bots, single dept pilot)
+//   M   $75-150k   — Integration Package      (4-6 bots, multi-dept rollout)
+//   L   $150-300k  — Service Augmentation     (7-12 bots, full-floor coverage)
+//   XL  $300k+     — Facility Automation      (13+ bots, end-to-end ops)
+//
+// Anything below ~$30k still rolls up to "S/Starter" — we don't surface
+// a sub-Starter band because there's no separate product offering for
+// it. The only exception is `null` (no rooms data → no estimate).
 function dealSizeTier(rev) {
   if (!Number.isFinite(rev) || rev <= 0) return null;
-  if (rev >= 50_000_000) return 'XL';
-  if (rev >= 20_000_000) return 'L';
-  if (rev >=  8_000_000) return 'M';
-  if (rev >=  3_000_000) return 'S';
-  return 'XS';
+  if (rev >= 300_000) return 'XL';
+  if (rev >= 150_000) return 'L';
+  if (rev >=  75_000) return 'M';
+  return 'S';
+}
+
+// Tier code → package name for display. Storage stays the letter code
+// (compact, sortable, indexable) and the display layer maps to the
+// reader-friendly package name. WHY: changing the package name in the
+// future shouldn't require a DB migration.
+const PACKAGE_NAME = {
+  S:  'Starter Package',
+  M:  'Integration Package',
+  L:  'Service Augmentation Layer',
+  XL: 'Facility Automation',
+};
+const PACKAGE_SHORT = {
+  S:  'Starter',
+  M:  'Integration',
+  L:  'Service Aug',
+  XL: 'Facility Auto',
+};
+const PACKAGE_SIZE_LABEL = {
+  S:  'Small',
+  M:  'Medium',
+  L:  'Large',
+  XL: 'X-Large',
+};
+// Range labels for the graduate-modal chips — show the rep what each
+// package roughly covers in bots + ARR so they pick the right one.
+const PACKAGE_RANGE = {
+  S:  '1–3 bots · ≤$75k/yr',
+  M:  '4–6 bots · $75–150k/yr',
+  L:  '7–12 bots · $150–300k/yr',
+  XL: '13+ bots · $300k+/yr',
+};
+
+// Map a bot count to its package tier. Pure derivation — used by the
+// graduate modal to pre-select the right chip when the rep opens it.
+function packageForBots(bots) {
+  const n = Number(bots) || 0;
+  if (n >= 13) return 'XL';
+  if (n >= 7)  return 'L';
+  if (n >= 4)  return 'M';
+  return 'S';
 }
 
 function fmtRevenue(rev) {
@@ -257,6 +356,13 @@ module.exports = {
   shapeHotel,
   brandClass,
   BRAND_CLASS_LABELS,
+  RAAS_MONTHLY_PER_BOT_USD,
+  estimatedRobotCount,
+  PACKAGE_NAME,
+  PACKAGE_SHORT,
+  PACKAGE_SIZE_LABEL,
+  PACKAGE_RANGE,
+  packageForBots,
   revenuePotential,
   dealSizeTier,
   fmtRevenue,

@@ -7,6 +7,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **B10 Patient Position Monitor** (2026-05-05): the working Python BLE scanner + live web dashboard from the Atlas LTC Monitor R&D project is now bundled inside Sensor Lab at `repos/b10-playground/app/`. New "B10 Patient Position Monitor" card on the Sensor Lab home links to `app/index.html`, which documents the application, lists every Python source file (`b10_web.py`, `scan_b10.py`, `parse_b10.py`, `find_b10.py`, `b10_live.py`, GATT helpers), the BLE-frame map, and the body-position classification model. Excluded from the bundle: `.venv/`, `data/` (recorded sessions), and `__pycache__`.
 - Structured `docs/` knowledge base covering strategy, architecture, integrations, deployments, and operations.
 - `.claude/` configuration: rules, skill stubs, agent definitions, commands.
 - Initial ADRs documenting SQLite, no-frontend-build-step, JWT-in-httponly-cookie, Miami anchor, button-emulator vs OEM API.

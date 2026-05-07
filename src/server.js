@@ -74,7 +74,10 @@ app.use(helmet({
 }));
 
 // ── Middleware ───────────────────────────────────────────────────
-app.use(express.json());
+// Body limit bumped from default 100kb to 10mb so photo uploads
+// (base64 data URLs from phone cameras run 2-6mb) reach the print-label
+// endpoint. The route does its own per-payload validation.
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 // WHY: Trust Railway's reverse proxy so rate-limit sees real client IPs, not the proxy's
@@ -141,9 +144,20 @@ app.get('/portal/:slug/sign-in.html', (req, res) => {
 app.use(express.static(path.join(__dirname, '..', 'public')));
 // WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
 // WHY: requireAuthPage ensures these toolkit pages are only accessible to logged-in users
-// WHY: no-cache ensures dev changes are always picked up — browser still validates with the server
+// WHY: no-store on .html so the browser never serves a cached page —
+// dev changes (and prod deploys) are immediately picked up. Other static
+// assets keep no-cache (revalidate on each request) since they rarely
+// change during a session and revalidation is fast.
 app.use('/pages', requireAuthPage, express.static(path.join(__dirname, '..', 'pages'), {
-  setHeaders: (res) => { res.setHeader('Cache-Control', 'no-cache'); }
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
 }));
 
 // WHY: Serve only .json files from data/ — the directory also contains the SQLite
@@ -262,12 +276,13 @@ app.use('/api/glossary-game', glossaryGameRoutes);
 
 app.use('/api/system-settings', systemSettingsRoutes);
 
-// Customer portals (deal rooms).
-// /api/portal-public/* — magic-link auth via its own portal_session cookie; no admin JWT.
-// /api/portals/* — admin API; requireAuth populates req.admin before the router runs.
-// Order matters: portal-public must NOT be behind requireAuth.
-app.use('/api/portal-public', portalPublicRouter);
-app.use('/api/portals', requireAuth, portalsRouter);
+// Direct-to-printer label rendering (Chrome headless → PDF → lp).
+// WHY a server route instead of window.print(): the OS print dialog adds
+// a click the rep doesn't need every time. Same machine = the server
+// can lp the PDF straight at the JADENS without the dialog.
+// Body limit bumped to 5mb so the rep's photo data URL (typically
+// 100–500kb base64) fits in the POST body.
+app.use('/api/print-label', express.json({ limit: '5mb' }), require('./routes/print-label'));
 
 // WHY: Proxy /cl/* to the tunnel URL stored in system_settings.creative_labs_url.
 // This serves home-dashboard (running on Eric's MacBook on localhost:3100) to
@@ -275,6 +290,35 @@ app.use('/api/portals', requireAuth, portalsRouter);
 // blocks *.trycloudflare.com. requireAuthPage gates browser access so the
 // proxy isn't a public window into home-dashboard.
 app.use('/cl', requireAuthPage, creativeLabsProxy);
+
+// ── Deploy version endpoint (no auth — used by client banner) ──
+// Tells the dashboard exactly which commit is running. Falls back through:
+//   1. RENDER_GIT_COMMIT — set by Render on every deploy
+//   2. .git/HEAD lookup — works in any git checkout (dev, manual hosts)
+//   3. unknown — last resort if neither is available
+let _versionCache = null;
+app.get('/api/version', (_req, res) => {
+  if (_versionCache) return res.json(_versionCache);
+  let commit = process.env.RENDER_GIT_COMMIT || null;
+  let branch = process.env.RENDER_GIT_BRANCH || null;
+  if (!commit) {
+    try {
+      const { execFileSync } = require('child_process');
+      const repoRoot = path.resolve(__dirname, '..');
+      commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf-8' }).trim();
+      branch = branch || execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: repoRoot, encoding: 'utf-8' }).trim();
+    } catch { /* not a git checkout — leave commit null */ }
+  }
+  // Cache for the lifetime of the process — version doesn't change after boot.
+  _versionCache = {
+    commit: commit ? commit.slice(0, 40) : null,
+    short: commit ? commit.slice(0, 7) : null,
+    branch: branch || null,
+    started_at: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+    uptime_s: Math.round(process.uptime()),
+  };
+  res.json(_versionCache);
+});
 
 // ── Diagnostic: check Resend config (temporary, no auth, no email sent) ──
 // WHY: Removed auth requirement temporarily so we can diagnose the API key issue.
@@ -303,6 +347,13 @@ app.get('/api/debug/resend-check', async (req, res) => {
 // WHY: /admin is the master command center — unified dashboard for all tools
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin-command-center.html'));
+});
+
+// WHY: Friendly URL for the standalone Hotel Triage mobile app. Eric and
+// Ben/Celia can navigate to /triage directly on a phone, or it's iframed
+// inside the iPhone bezel on the desktop /hotel-research page.
+app.get('/triage', requireAuthPage, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'pages', 'triage.html'));
 });
 // WHY: Old admin dashboard (inquiries + recipients) moved to /admin/inquiries
 app.get('/admin/inquiries', (req, res) => {

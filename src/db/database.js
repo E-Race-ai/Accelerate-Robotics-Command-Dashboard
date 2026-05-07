@@ -137,7 +137,15 @@ async function initSchema() {
       notes TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
-      closed_at TEXT
+      closed_at TEXT,
+      -- WHY: 'dormant' is a soft-pause flag that keeps the deal in its current
+      -- stage but signals "we're not actively pushing this right now." Different
+      -- from 'lost' (which is terminal). Default 0 so existing rows are active.
+      is_dormant INTEGER NOT NULL DEFAULT 0,
+      -- WHY: ISO-8601 timestamp of the next scheduled meeting / follow-up. Powers
+      -- the per-card scheduler chip and a future "today's meetings" digest.
+      next_meeting_at TEXT,
+      next_meeting_note TEXT
     )`,
     `CREATE TABLE IF NOT EXISTS contacts (
       id TEXT PRIMARY KEY,
@@ -787,6 +795,13 @@ async function initSchema() {
   // sweep find tickets with no activity in N days.
   await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN archived_at TEXT");
   await additiveAlterIfMissing("ALTER TABLE collab_requests ADD COLUMN updated_at TEXT");
+  // WHY: Soft-pause flag for deals — distinct from 'lost'. Lets sales park a
+  // deal that's not progressing without losing it from the pipeline view.
+  await additiveAlterIfMissing("ALTER TABLE deals ADD COLUMN is_dormant INTEGER NOT NULL DEFAULT 0");
+  // WHY: Next meeting / follow-up scheduler. Surfaced on the kanban card and
+  // queryable for "today's meetings" digests.
+  await additiveAlterIfMissing("ALTER TABLE deals ADD COLUMN next_meeting_at TEXT");
+  await additiveAlterIfMissing("ALTER TABLE deals ADD COLUMN next_meeting_note TEXT");
 
   // WHY: Hotel Research preset markets (Miami-Dade submarkets, etc.) tag each saved
   // hotel with which submarket it came from so the rep can filter "show me only Brickell."
@@ -824,6 +839,72 @@ async function initSchema() {
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN opportunity_score INTEGER");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN photo_url TEXT");
 
+  // WHY F&B + event-space intel: BDRs sort prospects by deal size, and a
+  // hotel with 4 restaurants + 50,000 sqft of event space is a meaningfully
+  // bigger software opportunity than a 200-key limited-service property
+  // with no F&B. Captured manually by reps as they research; surfaced as
+  // first-class sort/filter dimensions on the map + saved list.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN restaurant_count INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN bar_count INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN event_sqft INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN meeting_room_count INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ballroom_capacity INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN spa_count INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN pool_count INTEGER");
+
+  // WHY enrichment columns: critical-market BDRs (Miami-Dade) need a richer
+  // hotel snapshot than OSM alone provides — photo, brief description, public
+  // rating, review count, and a Wikipedia link when one exists. Pulled by
+  // src/services/hotel-enrichment.js from Wikipedia REST + the hotel website's
+  // OpenGraph tags. enriched_at is a timestamp the enrichment service stamps
+  // on success so we don't repeat work for the same row.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN description TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN rating REAL");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN review_count INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN wikipedia_url TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN enriched_at TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_enriched_at ON hotels_saved(enriched_at)");
+
+  // WHY ai_fit columns: pre-sort the triage queue by best-fit-first so reps
+  // spend their first hour on the highest-value targets. Score is a 0-100
+  // integer set by src/services/fit-score.js. Reasoning is a JSON array of
+  // short strings shown on the triage card. scored_at lets us re-run the
+  // scorer on demand without redoing already-scored rows.
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ai_fit_score INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ai_fit_reasoning TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ai_fit_tier TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN ai_fit_scored_at TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_fit_score ON hotels_saved(ai_fit_score DESC)");
+
+  // WHY enrichment_depth: token + API budget gate. Top-fit hotels (top 100)
+  // get deep research treatment; mid-fit get standard; low-fit get only the
+  // basic OSM data we already saved. Reps shouldn't waste research time on
+  // hotels they likely won't target. chain_description holds the brand-level
+  // summary (pulled from Wikipedia of the chain) so independent properties
+  // of a known chain still get useful context even when their own page
+  // doesn't exist.
+  // WHY: routes can be driven (Tesla / car) or walked (e.g. South Beach
+  // hotel-row tours). The mode flag changes the optimizer + the icon shown
+  // in the schedule panel + how stops are ordered (linear-along-corridor
+  // for walking vs nearest-neighbor TSP for driving).
+  await additiveAlterIfMissing("ALTER TABLE bdr_routes ADD COLUMN mode TEXT DEFAULT 'driving'");
+
+  // WHY anchor hotel: per region/day, Ben picks a high-AI-fit hotel where he
+  // STAYS overnight. He runs a deep facility assessment on the night shift,
+  // then drops the report at the front desk in the morning before checking
+  // out. anchor_hotel_id captures which hotel serves as the recon HQ;
+  // assessment_status tracks 'planned' → 'completed' → 'dropped_off';
+  // assessment_notes holds the structured recon write-up.
+  await additiveAlterIfMissing("ALTER TABLE bdr_routes ADD COLUMN anchor_hotel_id INTEGER");
+  await additiveAlterIfMissing("ALTER TABLE bdr_routes ADD COLUMN assessment_status TEXT");
+  await additiveAlterIfMissing("ALTER TABLE bdr_routes ADD COLUMN assessment_notes TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_bdr_routes_anchor ON bdr_routes(anchor_hotel_id)");
+
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN enrichment_depth TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN chain_description TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN chain_url TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_depth ON hotels_saved(enrichment_depth)");
+
   // ── Facility master record — the unified record per real-world property ─
   // WHY: BDR research, prospect graduation, deals, assessments, and CRM
   // activity all describe the same physical hotel — but until now lived in
@@ -851,6 +932,43 @@ async function initSchema() {
 
   await additiveAlterIfMissing("ALTER TABLE prospects ADD COLUMN facility_id TEXT");
   await client.execute("CREATE INDEX IF NOT EXISTS idx_prospects_facility ON prospects(facility_id)");
+
+  // WHY triage: BDR fast-pass over a search-result list. One-click pills
+  // (yes / no / maybe / needs_research) so Ben can sweep 346 cards in a
+  // morning. Validation happens in the route layer — SQLite ALTER TABLE
+  // can't add a CHECK constraint mid-stream.
+  // Per-player triage votes — Ben + Celia + Eric all swipe on the same
+  // deals; we want to see WHERE THEY DISAGREE, not just one consensus
+  // vote. Each (hotel_saved_id, player) is unique. The legacy `triage`
+  // column on hotels_saved still tracks the most-recent vote for queue
+  // sorting; this table is the master record per user.
+  await client.execute(
+    `CREATE TABLE IF NOT EXISTS hotel_triage_votes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      hotel_saved_id INTEGER NOT NULL REFERENCES hotels_saved(id) ON DELETE CASCADE,
+      player TEXT NOT NULL,
+      decision TEXT NOT NULL CHECK(decision IN ('yes', 'no', 'maybe', 'needs_research')),
+      voted_at TEXT NOT NULL DEFAULT (datetime('now')),
+      voted_by_email TEXT,
+      UNIQUE(hotel_saved_id, player)
+    )`,
+  );
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_triage_votes_hotel ON hotel_triage_votes(hotel_saved_id)`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_triage_votes_player ON hotel_triage_votes(player)`);
+
+  // WHY rooms_source: distinguishes verified room counts (from OSM tag,
+  // hotel website, Wikidata) from brand-median estimates we infer when
+  // structured data is missing. The UI uses this to hedge inferred
+  // numbers ("~250 rooms" vs "248 rooms"). Values: osm | website |
+  // wikidata | estimated | manual | null (unknown).
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN rooms_source TEXT");
+
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage_by TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage_player TEXT");
+  await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN triage_at TEXT");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_triage ON hotels_saved(triage)");
+  await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_triage_player ON hotels_saved(triage_player)");
 }
 
 // ── Seeds ───────────────────────────────────────────────────────
@@ -953,6 +1071,79 @@ const ready = isTestEnv ? Promise.resolve() : (async () => {
     await seedTracker({ client, one, all, run, transaction });
   } catch (e) {
     if (!e.message.includes('Cannot find module')) throw e;
+  }
+
+  // ─── AI Fit Score v1 + rooms estimator — auto-populate on every boot ──
+  // Eric: every card was a gray circle on prod because rows had NULL
+  // ai_fit_score. Both passes are deterministic + fast (no API calls), so
+  // we run them on boot for any rows that need data. Order matters:
+  // estimate rooms FIRST so the scorer sees the new room counts and can
+  // upgrade those hotels' tiers from low → mid/high.
+  try {
+    // Pass A — rooms estimator (fills NULL rooms via brand medians)
+    const { estimateRoomsForHotel } = require('../services/rooms-estimator');
+    const noRooms = await all(
+      `SELECT id, name, brand, operator FROM hotels_saved WHERE rooms IS NULL`,
+      [],
+    );
+    if (noRooms.length > 0) {
+      let est = 0;
+      for (const h of noRooms) {
+        const guess = estimateRoomsForHotel(h);
+        if (!guess) continue;
+        await run(
+          `UPDATE hotels_saved SET rooms = ?, rooms_source = 'estimated' WHERE id = ?`,
+          [guess.rooms, h.id],
+        );
+        est++;
+      }
+      if (est > 0) console.log(`[db] Rooms estimator — filled ${est}/${noRooms.length} hotels`);
+    }
+
+    // Pass B — fit score. Two passes:
+    //   1) Score any rows where ai_fit_score IS NULL (new saves)
+    //   2) RE-score every row whose score predates the most recent
+    //      logic change (FIT_SCORE_LOGIC_CUTOFF). This is what makes
+    //      a scoring-curve change (e.g. Goldilocks) actually take effect
+    //      against existing data — without it, the team keeps seeing
+    //      stale scores until they manually delete them.
+    //
+    // To bump the cutoff: edit the timestamp constant when shipping a
+    // fit-score logic change. Anyone scored *before* the cutoff gets
+    // rescored on next boot.
+    const FIT_SCORE_LOGIC_CUTOFF = '2026-05-05T15:00:00Z'; // Goldilocks curve shipped in #130
+    const { fitScoreFor } = require('../services/fit-score');
+    const stale = await all(
+      `SELECT id, name, brand, operator, stars, rooms, total_floors, est_adr_dollars,
+              year_opened, restaurant_count, event_sqft, meeting_room_count,
+              ballroom_capacity, spa_count, pool_count, status
+       FROM hotels_saved
+       WHERE ai_fit_score IS NULL
+          OR ai_fit_scored_at IS NULL
+          OR ai_fit_scored_at < ?
+       LIMIT 5000`,
+      [FIT_SCORE_LOGIC_CUTOFF],
+    );
+    if (stale.length > 0) {
+      console.log(`[db] AI Fit Score — (re)scoring ${stale.length} hotels with current logic…`);
+      const stamp = new Date().toISOString();
+      let scored = 0;
+      for (const h of stale) {
+        const { score, reasoning, tier } = fitScoreFor(h);
+        await run(
+          `UPDATE hotels_saved
+           SET ai_fit_score = ?, ai_fit_reasoning = ?, ai_fit_tier = ?, ai_fit_scored_at = ?
+           WHERE id = ?`,
+          [score, JSON.stringify(reasoning), tier, stamp, h.id],
+        );
+        scored++;
+      }
+      console.log(`[db] AI Fit Score — (re)scored ${scored} hotels`);
+    }
+  } catch (err) {
+    // Non-fatal — server boots even if scoring trips. Eric can re-run via
+    // POST /api/hotel-research/score-all anytime.
+    console.warn('[db] AI Fit Score v1 boot pass failed:', err.message);
   }
 })().catch((err) => {
   console.error('[db] Initialization failed:', err);
