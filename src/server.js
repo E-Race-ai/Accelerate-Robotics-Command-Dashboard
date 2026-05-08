@@ -60,7 +60,7 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       // WHY: Proposal pages embed robot product images from manufacturer CDNs and Google favicons
       // WHY: https: already covers OSM tiles, but explicit entry documents the dependency
-      imgSrc: ["'self'", "data:", "https://img.youtube.com", "https:", "http:", "https://tile.openstreetmap.org"],
+      imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https:", "http:", "https://tile.openstreetmap.org"],
       // WHY: localhost:3100 + *.trycloudflare.com for the Creative Labs embed pages.
       // The cloudflared quick tunnel (rotates URL when it restarts) lives on
       // *.trycloudflare.com; localhost:3100 is the fallback for when an admin

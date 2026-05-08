@@ -183,7 +183,24 @@ function App() {
       }
 
       const slug = (t.name || "card").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      pdf.save(`accelerate-business-card-${slug}.pdf`);
+      const filename = `accelerate-business-card-${slug}.pdf`;
+
+      // WHY: pdf.save() uses internal blob + click which some CSP/sandbox configs block.
+      // Fall back to opening the PDF in a new tab if the download link approach fails.
+      try {
+        const blob = pdf.output("blob");
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+      } catch (_dlErr) {
+        // Fallback: open PDF in new tab so the user can save manually
+        const dataUri = pdf.output("datauristring");
+        window.open(dataUri, "_blank");
+      }
     } catch (err) {
       console.error("[business-card] PDF export failed:", err);
       alert("PDF export failed: " + err.message);
