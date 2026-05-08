@@ -264,6 +264,14 @@ app.use('/api/glossary-game', glossaryGameRoutes);
 
 app.use('/api/system-settings', systemSettingsRoutes);
 
+// MDM (Mobile Device Management) — Android Management API integration.
+// Manages two fleets via Google's AMAPI: Keenon-style robot tablets and
+// Atlas-owned staff devices. All methods require auth; gated inside the
+// route module via requireAuth.
+// See docs/30-integrations/mdm-android.md for setup + the Workspace
+// gotcha that determined the EMM-identity choice.
+app.use('/api/mdm', require('./routes/mdm'));
+
 // Direct-to-printer label rendering (Chrome headless → PDF → lp).
 // WHY a server route instead of window.print(): the OS print dialog adds
 // a click the rep doesn't need every time. Same machine = the server
