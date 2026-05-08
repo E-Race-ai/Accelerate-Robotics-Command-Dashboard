@@ -108,78 +108,86 @@ function App() {
   // Print-shop-ready PDF: 3.5x2 in trim + 0.125 in bleed = 3.75x2.25 in pages.
   // Front on page 1, back on page 2 — matches Staples' upload spec.
   const exportPdf = async () => {
-    const { jsPDF } = window.jspdf || {};
-    if (!window.htmlToImage || !jsPDF) {
-      alert("PDF libraries failed to load. Refresh and try again.");
-      return;
-    }
-
-    // Wait for webfonts so Fraunces / Inter / JetBrains Mono actually
-    // render — without this, the rasteriser captures fallback fonts mid-swap
-    // and glyph metrics shift, producing overlapping text.
-    if (document.fonts && document.fonts.ready) {
-      try { await document.fonts.ready; } catch (_) { /* ignore */ }
-    }
-
-    const cards = document.querySelectorAll(".stage .card");
-    if (cards.length < 2) return;
-
-    // Fetch all @font-face rules from the page once, so each card capture
-    // embeds Fraunces/Inter/JetBrains Mono into its SVG instead of falling
-    // back to system serif/mono (whose metrics break the lockup layout).
-    let fontEmbedCSS = "";
     try {
-      fontEmbedCSS = await window.htmlToImage.getFontEmbedCSS(cards[0]);
-    } catch (_) { /* ignore — capture still works, fonts may fall back */ }
+      const { jsPDF } = window.jspdf || {};
+      if (!window.htmlToImage || !jsPDF) {
+        alert("PDF libraries failed to load. Refresh and try again.");
+        return;
+      }
 
-    const TRIM_W = 3.5, TRIM_H = 2.0;
-    const BLEED = 0.125;
-    const PAGE_W = TRIM_W + BLEED * 2;   // 3.75
-    const PAGE_H = TRIM_H + BLEED * 2;   // 2.25
+      // Wait for webfonts so Fraunces / Inter / JetBrains Mono actually
+      // render — without this, the rasteriser captures fallback fonts mid-swap
+      // and glyph metrics shift, producing overlapping text.
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (_) { /* ignore */ }
+      }
 
-    const pdf = new jsPDF({
-      unit: "in",
-      format: [PAGE_W, PAGE_H],
-      orientation: "landscape",
-      compress: true,
-    });
+      const cards = document.querySelectorAll(".stage .card");
+      if (cards.length < 2) {
+        alert("Cards not found on page — try refreshing.");
+        return;
+      }
 
-    for (let i = 0; i < 2; i++) {
-      const card = cards[i];
-      const variant = (i === 0 ? t.frontVariant : t.backVariant);
-      const bg = variant === "ink" ? "#1A1814" : "#F4F0E8";
+      // Fetch all @font-face rules from the page once, so each card capture
+      // embeds Fraunces/Inter/JetBrains Mono into its SVG instead of falling
+      // back to system serif/mono (whose metrics break the lockup layout).
+      let fontEmbedCSS = "";
+      try {
+        fontEmbedCSS = await window.htmlToImage.getFontEmbedCSS(cards[0]);
+      } catch (_) { /* ignore — capture still works, fonts may fall back */ }
 
-      // Pin capture dimensions to the live card's exact pixel size so the
-      // foreignObject layout matches what the user is seeing — not a
-      // re-flowed copy that wraps "Accelerate Robotics" onto two lines.
-      const rect = card.getBoundingClientRect();
+      const TRIM_W = 3.5, TRIM_H = 2.0;
+      const BLEED = 0.125;
+      const PAGE_W = TRIM_W + BLEED * 2;   // 3.75
+      const PAGE_H = TRIM_H + BLEED * 2;   // 2.25
 
-      // ~384 DPI = browser default 96 DPI * 4. Plenty for offset print.
-      const dataUrl = await window.htmlToImage.toPng(card, {
-        pixelRatio: 4,
-        backgroundColor: bg,
-        width: rect.width,
-        height: rect.height,
-        canvasWidth: rect.width,
-        canvasHeight: rect.height,
-        fontEmbedCSS,
-        cacheBust: true,
-        style: { transform: "none", margin: "0" },
+      const pdf = new jsPDF({
+        unit: "in",
+        format: [PAGE_W, PAGE_H],
+        orientation: "landscape",
+        compress: true,
       });
 
-      if (i > 0) pdf.addPage([PAGE_W, PAGE_H], "landscape");
+      for (let i = 0; i < 2; i++) {
+        const card = cards[i];
+        const variant = (i === 0 ? t.frontVariant : t.backVariant);
+        const bg = variant === "ink" ? "#1A1814" : "#F4F0E8";
 
-      // Fill the bleed area with the card's background color so the trim line
-      // can land anywhere within 0.125 in of the edge without exposing white.
-      pdf.setFillColor(bg);
-      pdf.rect(0, 0, PAGE_W, PAGE_H, "F");
+        // Pin capture dimensions to the live card's exact pixel size so the
+        // foreignObject layout matches what the user is seeing — not a
+        // re-flowed copy that wraps "Accelerate Robotics" onto two lines.
+        const rect = card.getBoundingClientRect();
 
-      // Place the captured card at the trim position (centered on the page).
-      pdf.addImage(dataUrl, "PNG", BLEED, BLEED, TRIM_W, TRIM_H, undefined, "FAST");
+        // ~384 DPI = browser default 96 DPI * 4. Plenty for offset print.
+        const dataUrl = await window.htmlToImage.toPng(card, {
+          pixelRatio: 4,
+          backgroundColor: bg,
+          width: rect.width,
+          height: rect.height,
+          canvasWidth: rect.width,
+          canvasHeight: rect.height,
+          fontEmbedCSS,
+          cacheBust: true,
+          style: { transform: "none", margin: "0" },
+        });
+
+        if (i > 0) pdf.addPage([PAGE_W, PAGE_H], "landscape");
+
+        // Fill the bleed area with the card's background color so the trim line
+        // can land anywhere within 0.125 in of the edge without exposing white.
+        pdf.setFillColor(bg);
+        pdf.rect(0, 0, PAGE_W, PAGE_H, "F");
+
+        // Place the captured card at the trim position (centered on the page).
+        pdf.addImage(dataUrl, "PNG", BLEED, BLEED, TRIM_W, TRIM_H, undefined, "FAST");
+      }
+
+      const slug = (t.name || "card").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      pdf.save(`accelerate-business-card-${slug}.pdf`);
+    } catch (err) {
+      console.error("[business-card] PDF export failed:", err);
+      alert("PDF export failed: " + err.message);
     }
-
-    const slug = (t.name || "card").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    pdf.save(`accelerate-business-card-${slug}.pdf`);
   };
 
   return (
