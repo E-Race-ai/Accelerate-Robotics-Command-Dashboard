@@ -70,8 +70,9 @@ app.use(helmet({
       // them in the SVG capture. Without this, fetch() is blocked by CSP and
       // the export falls back to Times instead of Fraunces.
       connectSrc: ["'self'", "http://localhost:3100", "https://*.trycloudflare.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
-      // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) + Creative Labs robot command embed
-      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com", "http://localhost:3100", "https://*.trycloudflare.com"],
+      // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) + Creative Labs robot command embed +
+      // WiFi Vision Extreme (port 8765, the netscan/avcast Python backend that an IT admin runs locally)
+      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com", "http://localhost:3100", "https://*.trycloudflare.com", "http://127.0.0.1:8765", "http://localhost:8765"],
       // WHY: Helmet defaults script-src-attr to 'none', which blocks ALL inline event
       // handlers (onclick, onchange, etc.) even when script-src allows 'unsafe-inline'.
       // Our admin pages use onclick handlers extensively — allow them.
