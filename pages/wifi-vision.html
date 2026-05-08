@@ -4,23 +4,235 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>WiFi Vision Extreme · Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  /* WHY: The embedded A/V Cast / WiFi Audit views (port 8765) already provide
-     their own command bar with tabs and a theme switch. Wrapping them in
-     another header here just adds a duplicate row, so the page is intentionally
-     a bare iframe — A/V Cast is the default landing view, and switching to
-     WiFi Audit happens via the embedded page's own tab pill. */
-  html, body { margin: 0; padding: 0; height: 100%; background: #f4f6fb; }
-  iframe {
-    display: block;
+  /* WHY: A/V Cast + WiFi Audit run on a local Python backend the IT admin
+     starts themselves (port 8765). When the dashboard is served over HTTPS
+     in production (acceleraterobotics.ai), browsers block any HTTP iframe
+     (mixed content), so this page can't simply embed http://127.0.0.1:8765.
+     Top-level navigation to HTTP is still allowed, so we render a launcher
+     with two buttons that open the backend in a new tab.
+
+     On plain-HTTP local dev (npm run dev → http://localhost:3000), the
+     same-protocol embed works — the JS at the bottom swaps in an iframe
+     so the experience stays inline. */
+  :root {
+    --brand: #0055ff;
+    --brand-2: #6c3fc7;
+    --bg: #f4f6fb;
+    --bg-card: #ffffff;
+    --ink: #1a1f36;
+    --ink-dim: #5a6580;
+    --line: #d7dfee;
+    --shadow: 0 10px 40px rgba(0, 85, 255, .08), 0 1px 0 rgba(255, 255, 255, .6) inset;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 15% 0%, rgba(0, 85, 255, .06), transparent 60%),
+      radial-gradient(1000px 500px at 85% 10%, rgba(108, 63, 199, .06), transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--ink);
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 40px 20px;
+  }
+
+  .launcher { width: 100%; max-width: 720px; }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    padding: 40px 44px;
+  }
+  .mark-row { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+  .mark {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: grid; place-items: center;
+    color: var(--brand);
+    background: linear-gradient(135deg, rgba(0,85,255,.12), rgba(108,63,199,.12));
+    border: 1px solid rgba(0, 85, 255, .25);
+  }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand-text .main {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px; font-weight: 700; letter-spacing: 2.5px; color: var(--ink);
+  }
+  .brand-text .sub {
+    font-size: 10px; font-weight: 600; letter-spacing: 2.5px;
+    color: var(--ink-dim); text-transform: uppercase; margin-top: 3px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800; letter-spacing: -.5px;
+    margin: 0 0 8px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lede {
+    color: var(--ink-dim);
+    font-size: 14.5px; line-height: 1.55;
+    margin: 0 0 28px;
+  }
+
+  .buttons { display: grid; gap: 12px; margin-bottom: 22px; }
+  .btn {
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 16px 20px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--bg-card);
+    color: var(--ink);
+    text-decoration: none;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .15s ease, background .18s ease;
+  }
+  .btn:hover {
+    border-color: var(--brand);
+    box-shadow: 0 6px 24px rgba(0, 85, 255, .16);
+    transform: translateY(-1px);
+  }
+  .btn:active { transform: translateY(0); }
+  .btn .icon {
+    width: 44px; height: 44px;
+    border-radius: 11px;
+    display: grid; place-items: center;
+    background: rgba(0, 85, 255, .08);
+    color: var(--brand);
+  }
+  .btn.primary .icon {
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    color: #fff;
+  }
+  .btn .copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .btn .label { font-weight: 700; font-size: 14px; }
+  .btn .sub { color: var(--ink-dim); font-size: 12.5px; }
+  .btn .arrow { color: var(--ink-dim); font-size: 18px; transition: transform .2s ease, color .18s ease; }
+  .btn:hover .arrow { color: var(--brand); transform: translateX(3px); }
+
+  .hint {
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+  }
+  .hint summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--ink);
+    list-style: none;
+  }
+  .hint summary::before { content: "▸ "; color: var(--brand); }
+  .hint[open] summary::before { content: "▾ "; }
+  .hint p { margin: 10px 0 0; line-height: 1.55; }
+  .hint code {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    background: var(--bg);
+    padding: 2px 7px;
+    border-radius: 5px;
+    color: var(--brand);
+  }
+
+  /* When the JS detects an HTTP origin, this iframe takes over the viewport. */
+  iframe.embed {
+    position: fixed; inset: 0;
     width: 100%; height: 100%;
     border: 0;
-    background: #f4f6fb;
+    background: var(--bg);
+    z-index: 10;
   }
 </style>
 </head>
 <body>
-<iframe id="wifi-vision-frame" title="WiFi Vision Extreme"
-        src="http://127.0.0.1:8765/" loading="eager"></iframe>
+
+<div class="launcher" id="launcher">
+  <div class="card">
+    <div class="mark-row">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="26" height="26">
+          <circle cx="16" cy="23" r="2.5" fill="currentColor"/>
+          <path d="M10 17 Q16 13 22 17" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M7 12 Q16 6.5 25 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
+          <path d="M4 7 Q16 0 28 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.4"/>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <span class="main">WIFI VISION EXTREME</span>
+        <span class="sub">Accelerate Robotics &middot; I.T.</span>
+      </div>
+    </div>
+
+    <h1>Launch a control surface</h1>
+    <p class="lede">
+      A/V Cast and WiFi Audit run on your machine on port&nbsp;<code style="font-family:'SF Mono',Menlo,monospace;font-size:13px;background:var(--bg);padding:1px 6px;border-radius:4px;color:var(--brand);">8765</code>.
+      They scan the live network, so they have to live where you do — pick one to open it in a new tab.
+    </p>
+
+    <div class="buttons">
+      <a href="http://127.0.0.1:8765/" target="_blank" rel="noopener" class="btn primary">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9 L3 15 L7 15 L13 20 L13 4 L7 9 Z"/>
+            <path d="M16 8 Q19 12 16 16"/>
+            <path d="M19 5 Q24 12 19 19"/>
+          </svg>
+        </span>
+        <span class="copy">
+          <span class="label">A/V Cast Command Center</span>
+          <span class="sub">Unified A/V fleet control · live</span>
+        </span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </a>
+
+      <a href="http://127.0.0.1:8765/report.html" target="_blank" rel="noopener" class="btn">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2 L4 6 V12 Q4 17 12 22 Q20 17 20 12 V6 Z"/>
+            <path d="M9 12 L11 14 L15 10"/>
+          </svg>
+        </span>
+        <span class="copy">
+          <span class="label">WiFi Audit Command Center</span>
+          <span class="sub">Internal network assessment</span>
+        </span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </a>
+    </div>
+
+    <details class="hint">
+      <summary>Backend not running?</summary>
+      <p>
+        Open Terminal, switch to your <code>netscan/avcast</code> directory, and run <code>./start.sh</code>.
+        The backend listens on <code>http://127.0.0.1:8765</code>. Then click a button above.
+      </p>
+    </details>
+  </div>
+</div>
+
+<script>
+  // WHY: On plain-HTTP origins (local dev) the cross-origin iframe to the
+  // local backend is allowed by the browser, so we transparently swap to
+  // the embedded experience. On HTTPS (production) we keep the launcher
+  // because mixed-content blocks the iframe with no recoverable error.
+  if (location.protocol === 'http:') {
+    const f = document.createElement('iframe');
+    f.className = 'embed';
+    f.title = 'WiFi Vision Extreme';
+    f.src = 'http://127.0.0.1:8765/';
+    document.body.appendChild(f);
+    document.getElementById('launcher').remove();
+  }
+</script>
+
 </body>
 </html>
