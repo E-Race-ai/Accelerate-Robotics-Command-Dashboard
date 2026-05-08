@@ -48,8 +48,13 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      // WHY: Proposal pages use GSAP, Lenis, Tailwind, and inline scripts for interactivity
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
+      // WHY: Proposal pages use GSAP, Lenis, Tailwind, and inline scripts for interactivity.
+      // 'unsafe-eval' is required by the MDM page (pages/mdm.html) — Alpine.js and the
+      // Tailwind CDN both rely on the Function() constructor at runtime to evaluate
+      // x-bind directives and compile utility classes. The dashboard already runs with
+      // 'unsafe-inline' globally so the marginal risk delta from adding 'unsafe-eval'
+      // is small — both flags weaken the same XSS-defense layer.
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
       // WHY: unpkg.com added for Leaflet CSS (deal map view)
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
@@ -263,6 +268,14 @@ app.use('/api/hotel-research', hotelResearchRoutes);
 app.use('/api/glossary-game', glossaryGameRoutes);
 
 app.use('/api/system-settings', systemSettingsRoutes);
+
+// MDM (Mobile Device Management) — Android Management API integration.
+// Manages two fleets via Google's AMAPI: Keenon-style robot tablets and
+// Atlas-owned staff devices. All methods require auth; gated inside the
+// route module via requireAuth.
+// See docs/30-integrations/mdm-android.md for setup + the Workspace
+// gotcha that determined the EMM-identity choice.
+app.use('/api/mdm', require('./routes/mdm'));
 
 // Direct-to-printer label rendering (Chrome headless → PDF → lp).
 // WHY a server route instead of window.print(): the OS print dialog adds

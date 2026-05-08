@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Accelerate Robotics MDM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          brand: {
+            50:'#e6efff',100:'#cce0ff',200:'#99c0ff',300:'#66a0ff',
+            400:'#3380ff',500:'#0055ff',600:'#0044cc',700:'#003399',
+            800:'#001f66',900:'#0a1628',
+          }
+        },
+        fontFamily: {
+          sans: ['Inter','system-ui','-apple-system','Segoe UI','Roboto','sans-serif'],
+          display: ['Space Grotesk','Inter','system-ui','sans-serif'],
+        }
+      }
+    }
+  }
+</script>
+<style>
+  [x-cloak] { display: none !important; }
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  h1, h2, h3, h4, .headline { font-family: 'Space Grotesk', 'Inter', sans-serif; letter-spacing: -0.01em; }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb { background: #475569; }
+  .map-bg {
+    background-image:
+      linear-gradient(to right, rgba(148,163,184,0.15) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(148,163,184,0.15) 1px, transparent 1px),
+      radial-gradient(ellipse at 30% 40%, rgba(0,85,255,0.08), transparent 60%),
+      radial-gradient(ellipse at 70% 60%, rgba(52,211,153,0.08), transparent 60%);
+    background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%;
+  }
+  .dark .map-bg {
+    background-image:
+      linear-gradient(to right, rgba(148,163,184,0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(148,163,184,0.08) 1px, transparent 1px),
+      radial-gradient(ellipse at 30% 40%, rgba(0,85,255,0.15), transparent 60%),
+      radial-gradient(ellipse at 70% 60%, rgba(52,211,153,0.12), transparent 60%);
+  }
+  kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.7rem; padding: 1px 5px; border: 1px solid currentColor; border-radius: 4px; opacity: 0.6; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
+
+<div x-data="mdmApp()" x-cloak :class="dark ? 'dark' : ''" class="min-h-screen" @keydown.window.meta.k.prevent="commandOpen = true" @keydown.window.ctrl.k.prevent="commandOpen = true">
+
+  <!-- LOGIN screen removed — this page is served behind requireAuthPage,
+       so by the time it renders the visitor is already authenticated as
+       a Dashboard admin. Auth state is the dashboard JWT cookie, which
+       is sent automatically with every same-origin /api/mdm/* fetch. -->
+
+  <!-- ============ MAIN APP ============ -->
+  <template x-if="authed">
+    <div class="flex min-h-screen">
+
+      <!-- Sidebar -->
+      <aside class="w-60 bg-brand-900 text-slate-100 flex flex-col flex-shrink-0">
+        <div class="px-5 py-5 flex items-center gap-3 border-b border-white/10">
+          <div class="w-9 h-9 rounded-lg bg-brand-500 flex items-center justify-center text-white font-bold headline">A</div>
+          <div>
+            <div class="font-bold headline leading-tight">Accelerate Robotics</div>
+            <div class="text-xs text-brand-100/70">MDM · One brain. Many bots.</div>
+          </div>
+        </div>
+        <nav class="flex-1 px-3 py-4 space-y-1 text-sm overflow-y-auto scrollbar-thin">
+          <template x-for="section in navSections">
+            <div class="mb-3">
+              <div class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-brand-100/50" x-text="section.label"></div>
+              <template x-for="item in section.items">
+                <button @click="view = item.id; deviceDetailTab = 'overview'"
+                        :class="view === item.id ? 'bg-white/10 text-white' : 'text-brand-100/80 hover:bg-white/5 hover:text-white'"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition text-left">
+                  <span x-html="item.icon" class="w-5 h-5 flex-shrink-0"></span>
+                  <span x-text="item.label" class="flex-1"></span>
+                  <span x-show="item.badge" x-text="item.badge" class="text-xs bg-brand-500 text-white px-2 rounded-full"></span>
+                  <span x-show="item.dynamicBadge && navBadgeValue(item.dynamicBadge) > 0" x-text="navBadgeValue(item.dynamicBadge)" class="text-xs bg-brand-500 text-white px-2 rounded-full"></span>
+                </button>
+              </template>
+            </div>
+          </template>
+        </nav>
+        <div class="px-3 py-3 border-t border-white/10 space-y-1 text-sm">
+          <button @click="view='settings'" :class="view==='settings' ? 'bg-white/10 text-white' : 'text-brand-100/80 hover:bg-white/5 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Settings
+          </button>
+          <a href="/admin-command-center.html" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-brand-100/80 hover:bg-white/5 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            Back to Command Center
+          </a>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <main class="flex-1 overflow-hidden flex flex-col">
+        <!-- Top bar -->
+        <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center gap-4">
+          <div class="flex-1">
+            <h1 class="text-lg font-bold capitalize" x-text="viewTitle()"></h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400" x-text="viewSubtitle()"></p>
+          </div>
+          <button @click="commandOpen = true" class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 w-72">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <span class="flex-1 text-left">Search devices, users, apps...</span>
+            <kbd>⌘K</kbd>
+          </button>
+          <button @click="dark = !dark" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400">
+            <svg x-show="!dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            <svg x-show="dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          </button>
+          <button @click="notifOpen = !notifOpen" class="relative p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
+          </button>
+          <div class="flex items-center gap-3 pl-3 border-l border-slate-200 dark:border-slate-800">
+            <div class="text-right">
+              <div class="text-sm font-medium">Kaylie Murphey</div>
+              <div class="text-xs text-slate-500">Owner</div>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center font-bold text-sm">KM</div>
+          </div>
+        </div>
+
+        <!-- Views -->
+        <div class="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950">
+
+          <!-- Mockup-data banner: shown on views that aren't yet wired to real backend -->
+          <div x-show="!isViewWired(view)" class="mb-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg px-4 py-2.5 flex items-center gap-3 text-sm">
+            <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <div class="flex-1 text-amber-900 dark:text-amber-100">
+              <strong>Mockup data.</strong> This view is wireframe-only — the numbers, lists, and buttons here are placeholders. Wiring planned for next sprint. Real, live data is on <button @click="view='devices'" class="underline">Devices</button>, <button @click="view='enroll'" class="underline">Enroll</button>, and <button @click="view='onboarding'" class="underline">Onboarding</button>.
+            </div>
+          </div>
+
+
+          <!-- ===== DASHBOARD ===== -->
+          <div x-show="view === 'dashboard'">
+            <div class="grid grid-cols-4 gap-4 mb-6">
+              <template x-for="stat in stats">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                  <div class="text-xs text-slate-500 uppercase tracking-wide flex items-center justify-between">
+                    <span x-text="stat.label"></span>
+                    <span x-html="stat.icon" class="w-4 h-4 text-slate-400"></span>
+                  </div>
+                  <div class="text-3xl font-bold mt-2" x-text="stat.value"></div>
+                  <div :class="stat.trend === 'up' ? 'text-emerald-600' : stat.trend === 'down' ? 'text-rose-600' : 'text-slate-500'" class="text-xs mt-1" x-text="stat.change"></div>
+                </div>
+              </template>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 mb-6">
+              <div class="col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h2 class="font-bold">Enrollment trend</h2>
+                  <div class="flex text-xs">
+                    <button class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">7d</button>
+                    <button class="px-2 py-0.5 text-slate-500">30d</button>
+                    <button class="px-2 py-0.5 text-slate-500">90d</button>
+                  </div>
+                </div>
+                <svg viewBox="0 0 400 120" class="w-full h-32">
+                  <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d6bff" stop-opacity="0.3"/><stop offset="1" stop-color="#3d6bff" stop-opacity="0"/></linearGradient></defs>
+                  <path d="M 0,90 L 50,75 L 100,80 L 150,60 L 200,55 L 250,40 L 300,35 L 350,25 L 400,20 L 400,120 L 0,120 Z" fill="url(#g1)"/>
+                  <path d="M 0,90 L 50,75 L 100,80 L 150,60 L 200,55 L 250,40 L 300,35 L 350,25 L 400,20" fill="none" stroke="#3d6bff" stroke-width="2"/>
+                  <template x-for="(pt, i) in [[0,90],[50,75],[100,80],[150,60],[200,55],[250,40],[300,35],[350,25],[400,20]]">
+                    <circle :cx="pt[0]" :cy="pt[1]" r="3" fill="#3d6bff"/>
+                  </template>
+                </svg>
+                <div class="flex justify-between text-xs text-slate-500 mt-2"><span>Apr 16</span><span>Apr 18</span><span>Apr 20</span><span>Apr 22</span></div>
+              </div>
+
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h2 class="font-bold mb-4">Compliance</h2>
+                <div class="space-y-4">
+                  <div>
+                    <div class="flex justify-between text-sm mb-1"><span>Compliant</span><span class="font-medium">22 / 24</span></div>
+                    <div class="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width: 91.6%"></div></div>
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-sm mb-1"><span>Encrypted</span><span class="font-medium">24 / 24</span></div>
+                    <div class="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width: 100%"></div></div>
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-sm mb-1"><span>Latest OS</span><span class="font-medium">19 / 24</span></div>
+                    <div class="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-amber-500" style="width: 79%"></div></div>
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-sm mb-1"><span>Policy applied</span><span class="font-medium">23 / 24</span></div>
+                    <div class="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width: 95.8%"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 mb-6">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h2 class="font-bold mb-4">Battery health</h2>
+                <div class="space-y-2 text-sm">
+                  <div class="flex items-center gap-2"><span class="w-16 text-slate-500 text-xs">81–100%</span><div class="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width:54%"></div></div><span class="w-8 text-right font-mono text-xs">13</span></div>
+                  <div class="flex items-center gap-2"><span class="w-16 text-slate-500 text-xs">61–80%</span><div class="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width:29%"></div></div><span class="w-8 text-right font-mono text-xs">7</span></div>
+                  <div class="flex items-center gap-2"><span class="w-16 text-slate-500 text-xs">41–60%</span><div class="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-amber-500" style="width:12%"></div></div><span class="w-8 text-right font-mono text-xs">3</span></div>
+                  <div class="flex items-center gap-2"><span class="w-16 text-slate-500 text-xs">0–40%</span><div class="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-rose-500" style="width:5%"></div></div><span class="w-8 text-right font-mono text-xs">1</span></div>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h2 class="font-bold mb-4">OS distribution</h2>
+                <div class="space-y-2 text-sm">
+                  <div class="flex items-center gap-2"><span class="w-20 text-slate-500 text-xs">Android 13</span><div class="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-brand-500" style="width:42%"></div></div><span class="w-8 text-right font-mono text-xs">10</span></div>
+                  <div class="flex items-center gap-2"><span class="w-20 text-slate-500 text-xs">Android 12</span><div class="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-brand-500" style="width:33%"></div></div><span class="w-8 text-right font-mono text-xs">8</span></div>
+                  <div class="flex items-center gap-2"><span class="w-20 text-slate-500 text-xs">Android 11</span><div class="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-brand-500" style="width:17%"></div></div><span class="w-8 text-right font-mono text-xs">4</span></div>
+                  <div class="flex items-center gap-2"><span class="w-20 text-slate-500 text-xs">Android 10</span><div class="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-amber-500" style="width:8%"></div></div><span class="w-8 text-right font-mono text-xs">2</span></div>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h2 class="font-bold mb-4">Command queue</h2>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between items-center"><span>Delivered (24h)</span><span class="font-bold text-emerald-600">142</span></div>
+                  <div class="flex justify-between items-center"><span>Pending</span><span class="font-bold">3</span></div>
+                  <div class="flex justify-between items-center"><span>Failed (24h)</span><span class="font-bold text-rose-600">1</span></div>
+                  <div class="flex justify-between items-center"><span>Avg delivery</span><span class="font-mono text-xs text-slate-500">4.2s</span></div>
+                </div>
+                <button @click="view='activity'" class="mt-4 text-xs text-brand-600 hover:text-brand-700 font-medium">View all →</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h2 class="font-bold mb-4">Recent activity</h2>
+                <div class="space-y-3">
+                  <template x-for="event in activity.slice(0,6)">
+                    <div class="flex items-start gap-3 pb-3 border-b border-slate-100 dark:border-slate-800 last:border-0 last:pb-0">
+                      <div :class="eventColor(event.type)" class="w-2 h-2 rounded-full mt-1.5"></div>
+                      <div class="flex-1">
+                        <div class="text-sm"><span class="font-medium" x-text="event.device"></span> <span x-text="event.action"></span></div>
+                        <div class="text-xs text-slate-500 mt-0.5" x-text="event.time"></div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h2 class="font-bold mb-4">Open alerts</h2>
+                <div class="space-y-3">
+                  <template x-for="alert in openAlerts">
+                    <div class="flex items-start gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                      <div :class="alert.level === 'high' ? 'bg-rose-100 text-rose-600' : alert.level === 'med' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'" class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate" x-text="alert.title"></div>
+                        <div class="text-xs text-slate-500" x-text="alert.time"></div>
+                      </div>
+                      <button class="text-xs text-brand-600 hover:text-brand-700">Dismiss</button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== DEVICES ===== -->
+          <div x-show="view === 'devices'">
+            <div class="flex items-center gap-2 mb-5">
+              <input x-model="deviceFilter" placeholder="Search devices..." class="border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm w-64 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              <select x-model="deviceStatusFilter" class="border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900">
+                <option value="">All statuses</option><option>Compliant</option><option>Non-compliant</option><option>Offline</option>
+              </select>
+              <select x-model="deviceGroupFilter" class="border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900">
+                <option value="">All groups</option>
+                <template x-for="g in groups"><option x-text="g.name" :value="g.name"></option></template>
+              </select>
+              <div class="flex-1"></div>
+              <button @click="loadDevices()" :disabled="devicesLoading" class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60">
+                <span x-show="!devicesLoading">Refresh</span>
+                <span x-show="devicesLoading">Loading…</span>
+              </button>
+              <button @click="view = 'enroll'" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Enroll device</button>
+            </div>
+
+            <div x-show="devicesError" x-text="devicesError" class="bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-lg px-4 py-3 mb-4"></div>
+
+            <div x-show="!devicesError && devices.length === 0 && !devicesLoading" class="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-12 text-center mb-4">
+              <div class="text-slate-400 mb-2">
+                <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              </div>
+              <div class="text-sm text-slate-600 dark:text-slate-300 font-medium">No devices enrolled yet</div>
+              <div class="text-xs text-slate-500 mt-1">Once a tablet enrolls via QR, it will show up here.</div>
+              <button @click="view = 'enroll'" class="mt-4 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Enroll a device</button>
+            </div>
+
+            <!-- Bulk action bar -->
+            <div x-show="selected.length > 0" x-transition class="bg-brand-600 text-white rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
+              <div class="text-sm"><span class="font-bold" x-text="selected.length"></span> selected</div>
+              <div class="flex gap-2">
+                <button @click="bulkLock()" class="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded text-sm">Lock all</button>
+                <button @click="selected = []" class="px-3 py-1.5 rounded text-sm">Clear</button>
+              </div>
+            </div>
+
+            <div x-show="devices.length > 0" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+                  <tr class="text-left text-xs uppercase text-slate-500 tracking-wide">
+                    <th class="px-4 py-3"><input type="checkbox" @change="toggleAll($event.target.checked)" /></th>
+                    <th class="px-4 py-3 font-medium">Device</th>
+                    <th class="px-4 py-3 font-medium">Model</th>
+                    <th class="px-4 py-3 font-medium">Policy</th>
+                    <th class="px-4 py-3 font-medium">OS</th>
+                    <th class="px-4 py-3 font-medium">Mgmt mode</th>
+                    <th class="px-4 py-3 font-medium">Status</th>
+                    <th class="px-4 py-3 font-medium">Last seen</th>
+                    <th class="px-4 py-3 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="d in filteredDevices()" :key="d.id">
+                    <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <td class="px-4 py-3"><input type="checkbox" :checked="selected.includes(d.id)" @change="toggleSelect(d.id)" @click.stop /></td>
+                      <td class="px-4 py-3 cursor-pointer" @click="selectedDevice = d; deviceDetailTab='overview'">
+                        <div class="flex items-center gap-3">
+                          <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                          </div>
+                          <div>
+                            <div class="font-medium" x-text="d.name"></div>
+                            <div class="text-xs text-slate-500 font-mono" x-text="d.serial"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3 text-slate-500" x-text="d.model"></td>
+                      <td class="px-4 py-3 text-slate-500" x-text="d.group"></td>
+                      <td class="px-4 py-3" x-text="d.os"></td>
+                      <td class="px-4 py-3 text-xs text-slate-500" x-text="d.user"></td>
+                      <td class="px-4 py-3">
+                        <span :class="statusClass(d.status)" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium">
+                          <span :class="statusDot(d.status)" class="w-1.5 h-1.5 rounded-full"></span>
+                          <span x-text="d.status"></span>
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-slate-500" x-text="d.lastSeen"></td>
+                      <td class="px-4 py-3 text-slate-400 cursor-pointer" @click="selectedDevice = d; deviceDetailTab='overview'">›</td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+            <div x-show="devices.length > 0" class="mt-3 flex items-center justify-between text-sm text-slate-500">
+              <div>Showing <span x-text="filteredDevices().length"></span> of <span x-text="devices.length"></span> devices</div>
+              <div class="flex gap-1">
+                <button class="px-3 py-1 border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800">Prev</button>
+                <button class="px-3 py-1 border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-900">1</button>
+                <button class="px-3 py-1 border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800">Next</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== ENROLL ===== -->
+          <div x-show="view === 'enroll'">
+            <div class="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-800">
+              <template x-for="tab in ['QR code','Zero-touch','ADB sideload','Bulk CSV','Tokens']">
+                <button @click="enrollTab = tab" :class="enrollTab === tab ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" class="px-4 py-2 text-sm font-medium border-b-2 transition" x-text="tab"></button>
+              </template>
+            </div>
+
+            <div x-show="enrollTab === 'QR code'" class="grid grid-cols-2 gap-8 max-w-5xl">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8">
+                <h2 class="font-bold text-lg mb-2">QR code enrollment</h2>
+                <p class="text-sm text-slate-500 mb-6">Scan from a factory-reset Android tablet to enroll it into Accelerate Robotics MDM.</p>
+
+                <!-- Empty state -->
+                <div x-show="!enrollment.qrUrl && !enrollment.busy" class="bg-slate-50 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-10 flex flex-col items-center justify-center mb-4">
+                  <svg class="w-14 h-14 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                  <div class="text-sm text-slate-500 mb-3">Click below to generate a fresh QR.</div>
+                </div>
+
+                <!-- Loading -->
+                <div x-show="enrollment.busy" class="bg-slate-50 dark:bg-slate-800 rounded-xl p-10 flex items-center justify-center mb-4 text-sm text-slate-500">Generating…</div>
+
+                <!-- QR rendered -->
+                <div x-show="enrollment.qrUrl" class="bg-white rounded-xl p-6 flex items-center justify-center mb-4 border border-slate-200">
+                  <img :src="enrollment.qrUrl" alt="Enrollment QR" class="w-64 h-64" />
+                </div>
+
+                <div x-show="enrollment.error" x-text="enrollment.error" class="bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg p-3 mb-3"></div>
+
+                <div x-show="enrollment.qrUrl" class="bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-lg p-3 mb-4">
+                  This token expires <span class="font-bold" x-text="formatExpiry(enrollment.expirationTimestamp)"></span>. Generate a new one if the device doesn't scan in time.
+                </div>
+
+                <div class="flex gap-2">
+                  <button @click="generateEnrollmentToken()" :disabled="enrollment.busy" class="flex-1 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium" x-text="enrollment.qrUrl ? 'Regenerate QR' : 'Generate QR'"></button>
+                </div>
+              </div>
+              <div>
+                <h3 class="font-bold mb-3">Enrollment steps</h3>
+                <ol class="space-y-4 text-sm">
+                  <template x-for="(step, i) in ['Factory reset the tablet', 'Tap 6 times on the welcome screen', 'Scan the QR code', 'Wait for provisioning']">
+                    <li class="flex gap-3"><div class="w-6 h-6 rounded-full bg-brand-600 text-white flex-shrink-0 flex items-center justify-center text-xs font-bold" x-text="i+1"></div><div><div class="font-medium" x-text="step"></div></div></li>
+                  </template>
+                </ol>
+                <div class="mt-6 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 text-xs text-slate-600 dark:text-slate-300">
+                  <div class="font-semibold text-slate-900 dark:text-slate-100 mb-1">Need a walkthrough?</div>
+                  See <button @click="view='onboarding'" class="text-brand-600 hover:underline">Onboarding</button> for step-by-step instructions and Keenon-specific notes.
+                </div>
+              </div>
+            </div>
+
+            <div x-show="enrollTab === 'Zero-touch'" class="max-w-3xl">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 mb-4">
+                <h2 class="font-bold text-lg mb-2">Zero-touch enrollment</h2>
+                <p class="text-sm text-slate-500 mb-4">Devices purchased from a participating reseller are auto-enrolled on first boot — no manual setup required.</p>
+                <div class="bg-brand-50 dark:bg-brand-900/30 text-brand-900 dark:text-brand-100 text-sm rounded-lg p-4 mb-4">
+                  <div class="font-medium mb-1">Connected resellers: 2</div>
+                  <div class="text-xs">Samsung Knox Mobile Enrollment • Zebra Workcloud</div>
+                </div>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800"><span>Devices pending first boot</span><span class="font-bold">8</span></div>
+                  <div class="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800"><span>Devices enrolled via ZT (last 30d)</span><span class="font-bold">12</span></div>
+                  <div class="flex justify-between py-2"><span>Default config on arrival</span><span class="font-medium">Accelerate Standard (v3)</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div x-show="enrollTab === 'Bulk CSV'" class="max-w-3xl">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h2 class="font-bold text-lg mb-2">Bulk CSV enrollment</h2>
+                <p class="text-sm text-slate-500 mb-4">Upload a CSV of serial numbers to pre-register devices. Columns: serial, assigned_user, group, policy.</p>
+                <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-10 text-center">
+                  <svg class="w-10 h-10 mx-auto text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.9 5 5 0 019.9-1A5.002 5.002 0 0120 17h-1m-4-4l-4-4m0 0L7 13m4-4v12"/></svg>
+                  <div class="text-sm">Drop CSV here or <button class="text-brand-600 font-medium">browse</button></div>
+                  <div class="text-xs text-slate-500 mt-1">Max 500 devices per file</div>
+                </div>
+                <button class="mt-4 text-sm text-brand-600 hover:text-brand-700">Download template CSV</button>
+              </div>
+            </div>
+
+            <div x-show="enrollTab === 'ADB sideload'" class="max-w-3xl">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h2 class="font-bold text-lg mb-2">ADB sideload</h2>
+                <p class="text-sm text-slate-500 mb-4">For devices that don't support QR — install the Accelerate DPC APK over USB debugging and set as device owner.</p>
+                <pre class="bg-slate-900 text-slate-100 text-xs rounded-lg p-4 overflow-x-auto"><code>adb install accelerate-dpc-v2.3.1.apk
+adb shell dpm set-device-owner ai.acceleraterobotics.dpc/.DeviceAdminReceiver
+adb shell am start -n ai.acceleraterobotics.dpc/.EnrollActivity --es token "xL9k3-7fQ2"</code></pre>
+                <button class="mt-4 text-sm text-brand-600 hover:text-brand-700">Download APK (v2.3.1)</button>
+              </div>
+            </div>
+
+            <div x-show="enrollTab === 'Tokens'" class="max-w-5xl">
+              <div class="flex items-center justify-between mb-4">
+                <p class="text-sm text-slate-500">Active enrollment tokens.</p>
+                <div class="flex gap-2">
+                  <button @click="loadEnrollmentTokens()" :disabled="enrollment.tokenListBusy" class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60">Refresh</button>
+                  <button @click="enrollTab='QR code'; generateEnrollmentToken()" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-sm">+ New token</button>
+                </div>
+              </div>
+              <div x-show="enrollment.tokenListError" x-text="enrollment.tokenListError" class="bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-lg px-4 py-3 mb-4"></div>
+              <div x-show="!enrollment.tokenListError && enrollment.tokens.length === 0" class="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-10 text-center text-sm text-slate-500">No active tokens. Generate one to enroll a device.</div>
+              <div x-show="enrollment.tokens.length > 0" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500">
+                    <tr><th class="px-4 py-3 text-left">Token</th><th class="px-4 py-3 text-left">Policy</th><th class="px-4 py-3 text-left">Expires</th><th class="px-4 py-3"></th></tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="t in enrollment.tokens" :key="t.name">
+                      <tr class="border-b border-slate-100 dark:border-slate-800">
+                        <td class="px-4 py-3 font-mono text-xs" x-text="tokenIdFromName(t.name)"></td>
+                        <td class="px-4 py-3" x-text="(t.policyName || '').split('/').pop() || '—'"></td>
+                        <td class="px-4 py-3" x-text="formatExpiry(t.expirationTimestamp)"></td>
+                        <td class="px-4 py-3"><button @click="revokeToken(t.name)" class="text-rose-600 text-xs hover:underline">Revoke</button></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== USERS & GROUPS ===== -->
+          <div x-show="view === 'users'">
+            <div class="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-800">
+              <template x-for="tab in ['Users','Groups']">
+                <button @click="usersTab = tab" :class="usersTab === tab ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'" class="px-4 py-2 text-sm font-medium border-b-2" x-text="tab"></button>
+              </template>
+            </div>
+
+            <div x-show="usersTab === 'Users'">
+              <div class="flex items-center justify-between mb-4">
+                <input placeholder="Search users..." class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm w-64" />
+                <div class="flex gap-2">
+                  <button class="border border-slate-300 dark:border-slate-700 px-3 py-2 rounded-lg text-sm bg-white dark:bg-slate-900">Sync from Google Workspace</button>
+                  <button class="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm">+ Add user</button>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3 text-left">Name</th><th class="px-4 py-3 text-left">Email</th><th class="px-4 py-3 text-left">Department</th><th class="px-4 py-3 text-left">Devices</th><th class="px-4 py-3 text-left">Status</th></tr></thead>
+                  <tbody>
+                    <template x-for="u in users" :key="u.id">
+                      <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold" x-text="u.initials"></div><span class="font-medium" x-text="u.name"></span></div></td>
+                        <td class="px-4 py-3 text-slate-500" x-text="u.email"></td>
+                        <td class="px-4 py-3" x-text="u.dept"></td>
+                        <td class="px-4 py-3" x-text="u.deviceCount"></td>
+                        <td class="px-4 py-3"><span :class="u.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'" class="text-xs px-2 py-0.5 rounded-full font-medium" x-text="u.active ? 'Active' : 'Inactive'"></span></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div x-show="usersTab === 'Groups'">
+              <div class="flex items-center justify-between mb-4">
+                <p class="text-sm text-slate-500">Groups bundle devices together for policy + app targeting.</p>
+                <button class="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm">+ New group</button>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <template x-for="g in groups" :key="g.id">
+                  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                    <div class="flex items-start justify-between mb-3">
+                      <div>
+                        <div class="flex items-center gap-2"><h3 class="font-bold" x-text="g.name"></h3><span :class="g.dynamic ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-600'" class="text-xs px-2 py-0.5 rounded-full" x-text="g.dynamic ? 'Dynamic' : 'Static'"></span></div>
+                        <p class="text-sm text-slate-500 mt-1" x-text="g.description"></p>
+                      </div>
+                      <div class="text-right"><div class="text-2xl font-bold" x-text="g.count"></div><div class="text-xs text-slate-500">devices</div></div>
+                    </div>
+                    <div class="text-xs text-slate-500 border-t border-slate-100 dark:border-slate-800 pt-3">
+                      <span>Policy: </span><span class="font-medium text-slate-700 dark:text-slate-300" x-text="g.policy"></span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== POLICIES ===== -->
+          <div x-show="view === 'policies'">
+            <div class="flex items-center justify-between mb-5">
+              <p class="text-sm text-slate-500">Policies control what users can do on managed devices.</p>
+              <button @click="toast('New policy wizard would open')" class="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium">+ New policy</button>
+            </div>
+            <div class="space-y-3">
+              <template x-for="p in policies" :key="p.id">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-sm">
+                  <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2"><h3 class="font-bold" x-text="p.name"></h3>
+                        <span x-show="p.default" class="text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full">Default</span>
+                        <span class="text-xs text-slate-500 font-mono" x-text="'v' + p.version"></span>
+                      </div>
+                      <p class="text-sm text-slate-500 mt-1" x-text="p.description"></p>
+                      <div class="flex flex-wrap gap-2 mt-3">
+                        <template x-for="rule in p.rules"><span class="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-1 rounded" x-text="rule"></span></template>
+                      </div>
+                    </div>
+                    <div class="text-right text-sm"><div class="font-bold text-lg" x-text="p.deviceCount"></div><div class="text-xs text-slate-500">devices</div>
+                      <div class="flex gap-1 mt-2 justify-end"><button class="text-xs text-slate-500 hover:text-brand-600">Edit</button><button class="text-xs text-slate-500 hover:text-brand-600">Clone</button></div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- ===== APPS ===== -->
+          <div x-show="view === 'apps'">
+            <div class="flex items-center justify-between mb-5">
+              <div class="flex gap-2">
+                <input placeholder="Search apps..." class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm w-64" />
+                <select class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm"><option>All</option><option>Required</option><option>Available</option><option>Blocked</option></select>
+              </div>
+              <div class="flex gap-2">
+                <button class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 rounded-lg text-sm">Upload private APK</button>
+                <button @click="toast('Managed Google Play iframe would open here')" class="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Add from Play</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
+              <template x-for="app in apps" :key="app.id">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                  <div class="flex items-center gap-3 mb-3">
+                    <div :style="'background:' + app.color" class="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold" x-text="app.name[0]"></div>
+                    <div class="flex-1 min-w-0"><div class="font-bold truncate" x-text="app.name"></div><div class="text-xs text-slate-500 truncate" x-text="app.pkg"></div></div>
+                  </div>
+                  <div class="flex items-center justify-between text-sm pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <div><div class="text-slate-500 text-xs">Installed</div><div class="font-medium" x-text="app.installed + ' / 24'"></div></div>
+                    <div><div class="text-slate-500 text-xs">Version</div><div class="font-mono text-xs" x-text="app.version"></div></div>
+                    <span :class="app.mode === 'Required' ? 'bg-emerald-100 text-emerald-700' : app.mode === 'Available' ? 'bg-slate-100 text-slate-700' : 'bg-rose-100 text-rose-700'" class="text-xs px-2 py-0.5 rounded-full font-medium self-start" x-text="app.mode"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- ===== UPDATES ===== -->
+          <div x-show="view === 'updates'">
+            <div class="grid grid-cols-3 gap-4 mb-6">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5"><div class="text-xs text-slate-500 uppercase">Up to date</div><div class="text-3xl font-bold mt-2">19</div><div class="text-xs text-emerald-600">79% of fleet</div></div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5"><div class="text-xs text-slate-500 uppercase">Pending install</div><div class="text-3xl font-bold mt-2">3</div><div class="text-xs text-amber-600">scheduled tonight 2am</div></div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5"><div class="text-xs text-slate-500 uppercase">Out of date</div><div class="text-3xl font-bold mt-2">2</div><div class="text-xs text-rose-600">Android 10 — EOL</div></div>
+            </div>
+
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-bold">Update rings</h2>
+              <button class="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm">+ New ring</button>
+            </div>
+            <div class="space-y-3">
+              <template x-for="r in updateRings" :key="r.id">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3"><div :class="r.color" class="w-3 h-3 rounded-full"></div><div><h3 class="font-bold" x-text="r.name"></h3><div class="text-xs text-slate-500" x-text="r.description"></div></div></div>
+                    <div class="text-right text-sm"><div class="font-bold" x-text="r.deviceCount"></div><div class="text-xs text-slate-500">devices</div></div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-4 text-sm pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <div><div class="text-xs text-slate-500 uppercase">Defer</div><div class="font-medium" x-text="r.defer"></div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Install window</div><div class="font-medium" x-text="r.window"></div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Forced reboot</div><div class="font-medium" x-text="r.reboot"></div></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- ===== NETWORK ===== -->
+          <div x-show="view === 'network'">
+            <div class="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-800">
+              <template x-for="tab in ['Wi-Fi','VPN','Certificates']">
+                <button @click="networkTab = tab" :class="networkTab === tab ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'" class="px-4 py-2 text-sm font-medium border-b-2" x-text="tab"></button>
+              </template>
+            </div>
+
+            <div x-show="networkTab === 'Wi-Fi'">
+              <div class="flex items-center justify-between mb-4"><p class="text-sm text-slate-500">Wi-Fi profiles pushed to managed devices.</p><button class="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm">+ Add profile</button></div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3 text-left">SSID</th><th class="px-4 py-3 text-left">Security</th><th class="px-4 py-3 text-left">Auto-connect</th><th class="px-4 py-3 text-left">Assigned to</th><th class="px-4 py-3 text-left">Devices</th></tr></thead>
+                  <tbody>
+                    <tr class="border-b border-slate-100 dark:border-slate-800"><td class="px-4 py-3 font-medium">Accelerate-Corp</td><td class="px-4 py-3">WPA2-Enterprise (EAP-TLS)</td><td class="px-4 py-3">Yes</td><td class="px-4 py-3">All groups</td><td class="px-4 py-3">24</td></tr>
+                    <tr class="border-b border-slate-100 dark:border-slate-800"><td class="px-4 py-3 font-medium">Accelerate-Guest</td><td class="px-4 py-3">WPA2-PSK</td><td class="px-4 py-3">No</td><td class="px-4 py-3">Kiosks</td><td class="px-4 py-3">3</td></tr>
+                    <tr><td class="px-4 py-3 font-medium">Warehouse-A</td><td class="px-4 py-3">WPA2-PSK</td><td class="px-4 py-3">Yes</td><td class="px-4 py-3">Warehouse A group</td><td class="px-4 py-3">2</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div x-show="networkTab === 'VPN'">
+              <div class="flex items-center justify-between mb-4"><p class="text-sm text-slate-500">Always-on VPN profiles.</p><button class="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm">+ Add VPN</button></div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                <div class="flex items-center justify-between">
+                  <div><h3 class="font-bold">Accelerate WireGuard</h3><div class="text-xs text-slate-500">wg.acceleraterobotics.ai:51820 • always-on</div></div>
+                  <span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full font-medium">Active on 22 devices</span>
+                </div>
+              </div>
+            </div>
+
+            <div x-show="networkTab === 'Certificates'">
+              <div class="flex items-center justify-between mb-4"><p class="text-sm text-slate-500">Trusted CAs and device certificates.</p><button class="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm">+ Upload cert</button></div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3 text-left">Name</th><th class="px-4 py-3 text-left">Type</th><th class="px-4 py-3 text-left">Issuer</th><th class="px-4 py-3 text-left">Expires</th></tr></thead>
+                  <tbody>
+                    <tr class="border-b border-slate-100 dark:border-slate-800"><td class="px-4 py-3 font-medium">Accelerate Root CA</td><td class="px-4 py-3">Root</td><td class="px-4 py-3">Accelerate Robotics Inc.</td><td class="px-4 py-3">2034-01-15</td></tr>
+                    <tr class="border-b border-slate-100 dark:border-slate-800"><td class="px-4 py-3 font-medium">RADIUS Server</td><td class="px-4 py-3">Server auth</td><td class="px-4 py-3">Accelerate Root CA</td><td class="px-4 py-3">2027-06-12</td></tr>
+                    <tr><td class="px-4 py-3 font-medium">Device EAP-TLS</td><td class="px-4 py-3">Client (SCEP)</td><td class="px-4 py-3">Accelerate Root CA</td><td class="px-4 py-3">per-device 1yr</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== CONTENT ===== -->
+          <div x-show="view === 'content'">
+            <div class="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-800">
+              <template x-for="tab in ['Files','Wallpapers','Bookmarks','Launcher']">
+                <button @click="contentTab = tab" :class="contentTab === tab ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'" class="px-4 py-2 text-sm font-medium border-b-2" x-text="tab"></button>
+              </template>
+            </div>
+
+            <div x-show="contentTab === 'Files'">
+              <div class="flex items-center justify-between mb-4"><p class="text-sm text-slate-500">Files pushed to device storage, readable by the Accelerate Field App.</p><button class="bg-brand-600 text-white px-3 py-2 rounded-lg text-sm">+ Upload file</button></div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3 text-left">File</th><th class="px-4 py-3 text-left">Size</th><th class="px-4 py-3 text-left">Target</th><th class="px-4 py-3 text-left">Installed</th></tr></thead>
+                  <tbody>
+                    <tr class="border-b border-slate-100 dark:border-slate-800"><td class="px-4 py-3 font-medium">SafetyChecklist-2026.pdf</td><td class="px-4 py-3">2.1 MB</td><td class="px-4 py-3">Field Tablets</td><td class="px-4 py-3">18 / 18</td></tr>
+                    <tr class="border-b border-slate-100 dark:border-slate-800"><td class="px-4 py-3 font-medium">WarehouseMap.png</td><td class="px-4 py-3">860 KB</td><td class="px-4 py-3">Warehouse A</td><td class="px-4 py-3">2 / 2</td></tr>
+                    <tr><td class="px-4 py-3 font-medium">OfflineCatalog.zip</td><td class="px-4 py-3">48 MB</td><td class="px-4 py-3">Drivers</td><td class="px-4 py-3">3 / 3</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div x-show="contentTab === 'Wallpapers'">
+              <div class="grid grid-cols-4 gap-4">
+                <template x-for="i in 4">
+                  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                    <div :style="'background: linear-gradient(' + (i*40) + 'deg, #0055ff, #0a1628)'" class="h-32 flex items-center justify-center text-white font-bold headline">Accelerate</div>
+                    <div class="p-3 text-sm"><div class="font-medium">Wallpaper <span x-text="i"></span></div><div class="text-xs text-slate-500" x-text="i === 1 ? 'Default' : 'Optional'"></div></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <div x-show="contentTab === 'Bookmarks'">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                <div class="text-sm text-slate-500 mb-3">Bookmarks pushed to Chrome managed profile.</div>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800"><span>Accelerate Intranet</span><span class="text-slate-500 text-xs">intranet.acceleraterobotics.ai</span></div>
+                  <div class="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800"><span>Field Support</span><span class="text-slate-500 text-xs">support.acceleraterobotics.ai</span></div>
+                  <div class="flex justify-between py-2"><span>HR Portal</span><span class="text-slate-500 text-xs">hr.acceleraterobotics.ai</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div x-show="contentTab === 'Launcher'">
+              <div class="grid grid-cols-2 gap-6">
+                <div>
+                  <h3 class="font-bold mb-3">Home screen layout — Field Tablets</h3>
+                  <div class="bg-gradient-to-b from-brand-700 to-brand-900 rounded-2xl p-6 aspect-[3/4]">
+                    <div class="grid grid-cols-4 gap-3">
+                      <template x-for="app in apps.slice(0,8)">
+                        <div class="text-center">
+                          <div :style="'background:' + app.color" class="w-12 h-12 rounded-xl mx-auto flex items-center justify-center text-white font-bold" x-text="app.name[0]"></div>
+                          <div class="text-white text-xs mt-1 truncate" x-text="app.name"></div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 class="font-bold mb-3">Settings</h3>
+                  <div class="space-y-3 text-sm">
+                    <label class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800"><span>Lock to launcher</span><input type="checkbox" checked /></label>
+                    <label class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800"><span>Hide system notifications</span><input type="checkbox" /></label>
+                    <label class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800"><span>Disable status bar</span><input type="checkbox" checked /></label>
+                    <label class="flex items-center justify-between py-2"><span>Show clock</span><input type="checkbox" checked /></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== LOCATION ===== -->
+          <div x-show="view === 'location'">
+            <div class="grid grid-cols-4 gap-4">
+              <div class="col-span-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <h2 class="font-bold">Fleet map</h2>
+                  <div class="flex gap-2 text-sm">
+                    <button class="border border-slate-300 dark:border-slate-700 px-2 py-1 rounded">Live</button>
+                    <button class="text-slate-500 px-2 py-1">Last 24h</button>
+                    <button class="text-slate-500 px-2 py-1">Last 7d</button>
+                  </div>
+                </div>
+                <div class="map-bg h-[520px] relative">
+                  <template x-for="(pin, i) in mapPins" :key="i">
+                    <div :style="'left:' + pin.x + '%; top:' + pin.y + '%'" class="absolute -translate-x-1/2 -translate-y-full cursor-pointer group">
+                      <div :class="pin.status === 'ok' ? 'bg-emerald-500' : pin.status === 'warn' ? 'bg-amber-500' : 'bg-rose-500'" class="w-4 h-4 rounded-full border-2 border-white shadow-lg"></div>
+                      <div class="absolute bottom-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition" x-text="pin.name"></div>
+                    </div>
+                  </template>
+                  <!-- Geofence ring -->
+                  <div class="absolute border-2 border-brand-500/50 bg-brand-500/10 rounded-full" style="width: 200px; height: 200px; left: 20%; top: 30%"></div>
+                  <div class="absolute border-2 border-emerald-500/50 bg-emerald-500/10 rounded-full" style="width: 150px; height: 150px; left: 60%; top: 55%"></div>
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                  <h3 class="font-bold text-sm mb-3">Geofences</h3>
+                  <div class="space-y-2 text-sm">
+                    <div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-brand-500"></div><span>HQ Campus</span><span class="ml-auto text-xs text-slate-500">200m</span></div>
+                    <div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-emerald-500"></div><span>Warehouse A</span><span class="ml-auto text-xs text-slate-500">150m</span></div>
+                    <div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-rose-500"></div><span>Exclusion Zone</span><span class="ml-auto text-xs text-slate-500">500m</span></div>
+                  </div>
+                  <button class="mt-3 text-xs text-brand-600">+ New geofence</button>
+                </div>
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                  <h3 class="font-bold text-sm mb-3">Outside geofence</h3>
+                  <div class="space-y-2 text-sm">
+                    <div class="flex justify-between"><span>Driver-06</span><span class="text-rose-600 text-xs">3h ago</span></div>
+                    <div class="flex justify-between"><span>Field-Tablet-10</span><span class="text-amber-600 text-xs">25m ago</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== COMPLIANCE ===== -->
+          <div x-show="view === 'compliance'">
+            <div class="flex items-center justify-between mb-5">
+              <p class="text-sm text-slate-500">Rules that mark devices non-compliant and trigger actions.</p>
+              <button class="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium">+ New rule</button>
+            </div>
+            <div class="space-y-3">
+              <template x-for="r in complianceRules" :key="r.id">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                  <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2"><h3 class="font-bold" x-text="r.name"></h3>
+                        <span :class="r.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'" class="text-xs px-2 py-0.5 rounded-full font-medium" x-text="r.enabled ? 'Enabled' : 'Disabled'"></span>
+                      </div>
+                      <div class="mt-3 flex items-center gap-2 text-sm flex-wrap">
+                        <span class="text-xs text-slate-500 uppercase">IF</span>
+                        <span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-mono text-xs" x-text="r.condition"></span>
+                        <span class="text-xs text-slate-500 uppercase ml-2">THEN</span>
+                        <span class="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 px-2 py-1 rounded font-mono text-xs" x-text="r.action"></span>
+                      </div>
+                    </div>
+                    <div class="text-right"><div class="text-xl font-bold" x-text="r.triggered"></div><div class="text-xs text-slate-500">triggers (30d)</div></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- ===== ALERTS ===== -->
+          <div x-show="view === 'alerts'">
+            <div class="grid grid-cols-3 gap-4 mb-6">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5"><div class="text-xs text-slate-500 uppercase">Open alerts</div><div class="text-3xl font-bold mt-2">4</div></div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5"><div class="text-xs text-slate-500 uppercase">Channels configured</div><div class="text-3xl font-bold mt-2">3</div><div class="text-xs text-slate-500">Email, Slack, Webhook</div></div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5"><div class="text-xs text-slate-500 uppercase">Triggered (7d)</div><div class="text-3xl font-bold mt-2">27</div></div>
+            </div>
+
+            <div class="flex gap-2 mb-4 border-b border-slate-200 dark:border-slate-800">
+              <template x-for="tab in ['Open','Rules','Channels']">
+                <button @click="alertsTab = tab" :class="alertsTab === tab ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'" class="px-4 py-2 text-sm font-medium border-b-2" x-text="tab"></button>
+              </template>
+            </div>
+
+            <div x-show="alertsTab === 'Open'" class="space-y-2">
+              <template x-for="a in openAlerts.concat([
+                {title:'Driver-06 has been offline > 3 hours', level:'med', time:'3h ago'},
+                {title:'Field-Tablet-10 failed policy compliance', level:'med', time:'25m ago'}
+              ])">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex items-center gap-4">
+                  <div :class="a.level === 'high' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'" class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">!</div>
+                  <div class="flex-1"><div class="font-medium" x-text="a.title"></div><div class="text-xs text-slate-500" x-text="a.time"></div></div>
+                  <button class="text-sm text-slate-500 hover:text-brand-600">Acknowledge</button>
+                  <button class="text-sm text-slate-500 hover:text-brand-600">Snooze</button>
+                </div>
+              </template>
+            </div>
+
+            <div x-show="alertsTab === 'Rules'" class="space-y-2">
+              <template x-for="(r, i) in ['Device offline > 2h', 'Battery < 15%', 'Failed compliance check', 'Left geofence', 'Failed wipe command', 'Root/jailbreak detected']">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex items-center gap-4">
+                  <input type="checkbox" :checked="i < 5" />
+                  <div class="flex-1 font-medium" x-text="r"></div>
+                  <span class="text-xs text-slate-500">→ Email, Slack</span>
+                </div>
+              </template>
+            </div>
+
+            <div x-show="alertsTab === 'Channels'" class="grid grid-cols-3 gap-4">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5"><div class="font-bold">Email</div><div class="text-xs text-slate-500 mt-1">it-alerts@acceleraterobotics.ai</div><div class="mt-3 text-xs text-emerald-600">Active</div></div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5"><div class="font-bold">Slack</div><div class="text-xs text-slate-500 mt-1">#mdm-alerts</div><div class="mt-3 text-xs text-emerald-600">Active</div></div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5"><div class="font-bold">Webhook</div><div class="text-xs text-slate-500 mt-1 font-mono truncate">hooks.acceleraterobotics.ai/mdm</div><div class="mt-3 text-xs text-emerald-600">Active</div></div>
+            </div>
+          </div>
+
+          <!-- ===== REPORTS ===== -->
+          <div x-show="view === 'reports'">
+            <div class="grid grid-cols-3 gap-4 mb-6">
+              <template x-for="r in ['Battery health trend', 'Data usage by device', 'App install report', 'Compliance history', 'Device inventory', 'Enrollment timeline', 'Location heatmap', 'User activity', 'Command success rate']">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow cursor-pointer">
+                  <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    </div>
+                    <button class="text-xs text-slate-500 hover:text-brand-600">Export</button>
+                  </div>
+                  <div class="font-bold" x-text="r"></div>
+                  <div class="text-xs text-slate-500 mt-1">Last run: 1h ago</div>
+                </div>
+              </template>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+              <h2 class="font-bold mb-4">Scheduled reports</h2>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800"><div><div class="font-medium">Weekly compliance summary</div><div class="text-xs text-slate-500">Every Monday 9am → it-alerts@acceleraterobotics.ai</div></div><span class="text-xs text-emerald-600">Active</span></div>
+                <div class="flex justify-between py-2"><div><div class="font-medium">Monthly device inventory</div><div class="text-xs text-slate-500">1st of month → cfo@acceleraterobotics.ai</div></div><span class="text-xs text-emerald-600">Active</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== ACTIVITY ===== -->
+          <div x-show="view === 'activity'">
+            <div class="flex gap-2 mb-4">
+              <input placeholder="Filter..." class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm w-64" />
+              <select class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm"><option>All actors</option><option>Admins</option><option>System</option></select>
+              <select class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 text-sm"><option>All actions</option><option>Policy changes</option><option>Wipes</option><option>Enrollments</option></select>
+              <div class="flex-1"></div>
+              <button class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 rounded-lg text-sm">Export audit log</button>
+            </div>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase text-slate-500"><tr><th class="px-5 py-3 text-left">Time</th><th class="px-5 py-3 text-left">Actor</th><th class="px-5 py-3 text-left">Action</th><th class="px-5 py-3 text-left">Target</th><th class="px-5 py-3 text-left">Result</th></tr></thead>
+                <tbody>
+                  <template x-for="log in auditLog">
+                    <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <td class="px-5 py-3 text-slate-500 font-mono text-xs" x-text="log.time"></td>
+                      <td class="px-5 py-3" x-text="log.actor"></td>
+                      <td class="px-5 py-3" x-text="log.action"></td>
+                      <td class="px-5 py-3 text-slate-600 dark:text-slate-400" x-text="log.target"></td>
+                      <td class="px-5 py-3"><span :class="log.result === 'success' ? 'text-emerald-600' : 'text-rose-600'" class="text-xs font-medium" x-text="log.result"></span></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ===== ONBOARDING ===== -->
+          <div x-show="view === 'onboarding'" class="max-w-5xl">
+            <div class="mb-6">
+              <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Add a device to Accelerate Robotics MDM</h1>
+              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Step-by-step guide for enrolling Android devices — including Keenon service-robot tablets and company-owned staff devices.</p>
+            </div>
+
+            <!-- Requirements -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 mb-6">
+              <h2 class="font-bold text-base mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                Before you start
+              </h2>
+              <ul class="text-sm space-y-2">
+                <li class="flex gap-2"><span class="text-emerald-600 font-bold">✓</span><span><strong>Android 10 or newer.</strong> Older versions are not supported.</span></li>
+                <li class="flex gap-2"><span class="text-emerald-600 font-bold">✓</span><span><strong>Google Play Services installed.</strong> Without it, Android Device Policy can't be installed and enrollment will fail. Check Settings → Apps → search "Google Play Services".</span></li>
+                <li class="flex gap-2"><span class="text-emerald-600 font-bold">✓</span><span><strong>Device factory-reset</strong> (or brand new). Enrollment must happen during the initial setup wizard.</span></li>
+                <li class="flex gap-2"><span class="text-emerald-600 font-bold">✓</span><span><strong>Wi-Fi available</strong> at the location where you're provisioning the device.</span></li>
+              </ul>
+            </div>
+
+            <!-- Method comparison -->
+            <h2 class="font-bold text-lg mb-3 text-slate-900 dark:text-slate-100">Pick an enrollment method</h2>
+            <div class="grid grid-cols-3 gap-4 mb-8">
+              <div class="bg-white dark:bg-slate-900 border-2 border-brand-500 rounded-xl p-5 relative">
+                <div class="absolute -top-2 right-3 bg-brand-600 text-white text-xs font-bold px-2 py-0.5 rounded">Recommended</div>
+                <div class="w-10 h-10 rounded-lg bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                </div>
+                <div class="font-bold text-sm mb-1">QR code</div>
+                <div class="text-xs text-slate-500">Scan a QR with the device camera during setup. Works on most Android 10+ devices.</div>
+              </div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                <div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                </div>
+                <div class="font-bold text-sm mb-1">Token (afw#setup)</div>
+                <div class="text-xs text-slate-500">Type a token at the Google sign-in screen. Use when the camera or QR scanner isn't available.</div>
+              </div>
+              <div class="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-5">
+                <div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <div class="font-bold text-sm mb-1 text-slate-600 dark:text-slate-300">Zero-touch / KME</div>
+                <div class="text-xs text-slate-400">Auto-enroll on first boot. Requires the device to be purchased through an enrolled reseller. Coming later.</div>
+              </div>
+            </div>
+
+            <!-- Method 1: QR -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 mb-6">
+              <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-sm">1</div>
+                <h2 class="font-bold text-lg">QR code enrollment</h2>
+              </div>
+              <ol class="space-y-4 text-sm ml-11">
+                <li class="flex gap-3">
+                  <div class="w-7 h-7 rounded-full border-2 border-brand-600 text-brand-600 flex-shrink-0 flex items-center justify-center text-xs font-bold">1</div>
+                  <div>
+                    <div class="font-medium text-slate-900 dark:text-slate-100">Generate a QR in this console</div>
+                    <div class="text-slate-500 dark:text-slate-400">Go to <button @click="view='enroll'" class="text-brand-600 hover:underline">Enroll → QR code</button>, choose the policy/group, and click Generate.</div>
+                  </div>
+                </li>
+                <li class="flex gap-3">
+                  <div class="w-7 h-7 rounded-full border-2 border-brand-600 text-brand-600 flex-shrink-0 flex items-center justify-center text-xs font-bold">2</div>
+                  <div>
+                    <div class="font-medium text-slate-900 dark:text-slate-100">Factory reset the target device</div>
+                    <div class="text-slate-500 dark:text-slate-400">Settings → System → Reset → Erase all data. The device must be at the very first boot screen.</div>
+                  </div>
+                </li>
+                <li class="flex gap-3">
+                  <div class="w-7 h-7 rounded-full border-2 border-brand-600 text-brand-600 flex-shrink-0 flex items-center justify-center text-xs font-bold">3</div>
+                  <div>
+                    <div class="font-medium text-slate-900 dark:text-slate-100">Tap the welcome screen 6 times</div>
+                    <div class="text-slate-500 dark:text-slate-400">Tap the same spot on the screen six times in a row. The device opens its QR scanner.</div>
+                  </div>
+                </li>
+                <li class="flex gap-3">
+                  <div class="w-7 h-7 rounded-full border-2 border-brand-600 text-brand-600 flex-shrink-0 flex items-center justify-center text-xs font-bold">4</div>
+                  <div>
+                    <div class="font-medium text-slate-900 dark:text-slate-100">Connect to Wi-Fi (if prompted), then scan</div>
+                    <div class="text-slate-500 dark:text-slate-400">Point the camera at the QR shown in this console. The device downloads Android Device Policy.</div>
+                  </div>
+                </li>
+                <li class="flex gap-3">
+                  <div class="w-7 h-7 rounded-full border-2 border-brand-600 text-brand-600 flex-shrink-0 flex items-center justify-center text-xs font-bold">5</div>
+                  <div>
+                    <div class="font-medium text-slate-900 dark:text-slate-100">Wait 3–5 minutes for provisioning</div>
+                    <div class="text-slate-500 dark:text-slate-400">The device installs the policy and reboots. When it appears in <button @click="view='devices'" class="text-brand-600 hover:underline">Devices</button> with status <span class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1 rounded">ACTIVE</span>, you're done.</div>
+                  </div>
+                </li>
+              </ol>
+            </div>
+
+            <!-- Method 2: afw#setup -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 mb-6">
+              <div class="flex items-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-full bg-slate-600 text-white flex items-center justify-center font-bold text-sm">2</div>
+                <h2 class="font-bold text-lg">Token (<span class="font-mono">afw#setup</span>) enrollment</h2>
+              </div>
+              <p class="text-sm text-slate-500 dark:text-slate-400 mb-4 ml-11">Use when the device's QR scanner isn't accessible — for example, if the welcome-screen six-tap shortcut is disabled by the OEM.</p>
+              <ol class="space-y-4 text-sm ml-11">
+                <li class="flex gap-3">
+                  <div class="w-7 h-7 rounded-full border-2 border-slate-600 text-slate-600 dark:text-slate-300 flex-shrink-0 flex items-center justify-center text-xs font-bold">1</div>
+                  <div>
+                    <div class="font-medium text-slate-900 dark:text-slate-100">Generate an enrollment token</div>
+                    <div class="text-slate-500 dark:text-slate-400">In <button @click="view='enroll'" class="text-brand-600 hover:underline">Enroll → Tokens</button>, generate a new token and copy its <span class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1 rounded">value</span> string.</div>
+                  </div>
+                </li>
+                <li class="flex gap-3">
+                  <div class="w-7 h-7 rounded-full border-2 border-slate-600 text-slate-600 dark:text-slate-300 flex-shrink-0 flex items-center justify-center text-xs font-bold">2</div>
+                  <div>
+                    <div class="font-medium text-slate-900 dark:text-slate-100">Factory reset the device, complete setup until the Google sign-in screen</div>
+                    <div class="text-slate-500 dark:text-slate-400">When prompted to add a Google account, type <span class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">afw#setup</span> as the email and continue.</div>
+                  </div>
+                </li>
+                <li class="flex gap-3">
+                  <div class="w-7 h-7 rounded-full border-2 border-slate-600 text-slate-600 dark:text-slate-300 flex-shrink-0 flex items-center justify-center text-xs font-bold">3</div>
+                  <div>
+                    <div class="font-medium text-slate-900 dark:text-slate-100">Install Android Device Policy when prompted</div>
+                    <div class="text-slate-500 dark:text-slate-400">Accept the install. When asked for an enrollment token, paste the <span class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1 rounded">value</span> from step 1.</div>
+                  </div>
+                </li>
+                <li class="flex gap-3">
+                  <div class="w-7 h-7 rounded-full border-2 border-slate-600 text-slate-600 dark:text-slate-300 flex-shrink-0 flex items-center justify-center text-xs font-bold">4</div>
+                  <div>
+                    <div class="font-medium text-slate-900 dark:text-slate-100">Wait for provisioning, verify in Devices</div>
+                  </div>
+                </li>
+              </ol>
+            </div>
+
+            <!-- Hardware notes -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 mb-6">
+              <h2 class="font-bold text-lg mb-4 text-slate-900 dark:text-slate-100">Hardware notes</h2>
+
+              <div class="mb-5">
+                <h3 class="font-semibold text-sm mb-2 text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span class="text-xs bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-200 px-2 py-0.5 rounded">Robots</span>
+                  Keenon service-robot tablets
+                </h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-2">Keenon robots use embedded Android 10 tablets. Before enrolling, verify the tablet ships with Google Mobile Services (GMS):</p>
+                <ul class="text-sm space-y-1 ml-4 text-slate-600 dark:text-slate-300">
+                  <li>• Settings → Apps → search for "Google Play Services" and "Google Play Store" — both must be present and enabled.</li>
+                  <li>• Settings → About — look for a "Google Play system update" entry.</li>
+                </ul>
+                <div class="mt-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-xs text-amber-900 dark:text-amber-100">
+                  <strong>If GMS is missing:</strong> AMAPI enrollment is not possible on that device. Contact Keenon support to confirm whether their hardware is Google-certified, or contact your IT team for an alternative management path.
+                </div>
+              </div>
+
+              <div class="mb-2">
+                <h3 class="font-semibold text-sm mb-2 text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span class="text-xs bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-200 px-2 py-0.5 rounded">Staff</span>
+                  Company-owned Android tablets and phones
+                </h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Off-the-shelf Samsung, Pixel, and Lenovo devices generally have GMS by default and enroll cleanly via QR. If you're standardizing on Samsung, Samsung Knox Mobile Enrollment (KME) eventually allows true zero-touch — but that's a separate procurement decision and isn't required to enroll today.</p>
+              </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 mb-6">
+              <h2 class="font-bold text-lg mb-4 text-slate-900 dark:text-slate-100">Troubleshooting</h2>
+              <div class="space-y-4 text-sm">
+                <div>
+                  <div class="font-semibold text-slate-900 dark:text-slate-100">Tapping the welcome screen does nothing</div>
+                  <div class="text-slate-500 dark:text-slate-400 mt-1">The OEM may have disabled the six-tap shortcut. Use the <span class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1 rounded">afw#setup</span> token method instead.</div>
+                </div>
+                <div>
+                  <div class="font-semibold text-slate-900 dark:text-slate-100">QR scans but the device says "Couldn't enroll"</div>
+                  <div class="text-slate-500 dark:text-slate-400 mt-1">The token may have expired (default lifetime is 1 hour). Generate a fresh QR. Also check Wi-Fi connectivity — provisioning needs to reach Google's servers.</div>
+                </div>
+                <div>
+                  <div class="font-semibold text-slate-900 dark:text-slate-100">Device provisions but doesn't appear in the Devices list</div>
+                  <div class="text-slate-500 dark:text-slate-400 mt-1">Wait 60 seconds and refresh — first check-in can take a moment. If it still doesn't appear, confirm the policy assigned to the token references the same enterprise this console is connected to.</div>
+                </div>
+                <div>
+                  <div class="font-semibold text-slate-900 dark:text-slate-100">Setup wizard skips straight to a custom OEM UI</div>
+                  <div class="text-slate-500 dark:text-slate-400 mt-1">Some embedded devices boot directly into a vendor app. Check the OEM's documentation for how to access the underlying Android setup wizard, or whether they expose an enrollment hook of their own.</div>
+                </div>
+                <div>
+                  <div class="font-semibold text-slate-900 dark:text-slate-100">Device shows up but commands don't execute</div>
+                  <div class="text-slate-500 dark:text-slate-400 mt-1">Commands (Lock, Reboot) are queued by the API and executed asynchronously by the device. They typically run within 30–60 seconds when the device is online. The Activity log shows command status.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Help footer -->
+            <div class="bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900 rounded-xl p-5 text-sm">
+              <div class="font-semibold text-brand-900 dark:text-brand-100 mb-1">Still stuck?</div>
+              <div class="text-brand-800 dark:text-brand-200">Check the device's compliance state on the <button @click="view='devices'" class="underline font-medium">Devices</button> page, or open the <button @click="view='activity'" class="underline font-medium">Activity log</button> to see what enrollment events were recorded.</div>
+            </div>
+          </div>
+
+          <!-- ===== SETTINGS ===== -->
+          <div x-show="view === 'settings'" class="max-w-4xl">
+            <div class="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-800">
+              <template x-for="tab in ['Organization','Admins & roles','Single sign-on','API & webhooks','Billing','Audit export']">
+                <button @click="settingsTab = tab" :class="settingsTab === tab ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'" class="px-4 py-2 text-sm font-medium border-b-2" x-text="tab"></button>
+              </template>
+            </div>
+
+            <div x-show="settingsTab === 'Organization'" class="space-y-4">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h3 class="font-bold mb-4">Organization</h3>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                  <div><div class="text-slate-500 text-xs uppercase">Name</div><div class="mt-1">Accelerate Robotics</div></div>
+                  <div><div class="text-slate-500 text-xs uppercase">Enterprise ID</div><div class="mt-1 font-mono text-xs">LC04k8f2x9</div></div>
+                  <div><div class="text-slate-500 text-xs uppercase">License seats</div><div class="mt-1">24 / 50</div></div>
+                  <div><div class="text-slate-500 text-xs uppercase">Region</div><div class="mt-1">us-east-1</div></div>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h3 class="font-bold mb-4">Security</h3>
+                <div class="space-y-3 text-sm">
+                  <label class="flex items-center justify-between"><span>Require 2FA for admins</span><input type="checkbox" checked class="w-4 h-4" /></label>
+                  <label class="flex items-center justify-between"><span>Session timeout after 30 min idle</span><input type="checkbox" checked class="w-4 h-4" /></label>
+                  <label class="flex items-center justify-between"><span>IP allowlist for admin console</span><input type="checkbox" class="w-4 h-4" /></label>
+                  <label class="flex items-center justify-between"><span>Encrypt device data at rest (mandatory)</span><input type="checkbox" checked disabled class="w-4 h-4" /></label>
+                </div>
+              </div>
+            </div>
+
+            <div x-show="settingsTab === 'Admins & roles'">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 mb-4">
+                <div class="flex items-center justify-between mb-4"><h3 class="font-bold">Admins</h3><button class="text-sm text-brand-600">+ Invite admin</button></div>
+                <div class="space-y-2">
+                  <template x-for="a in admins">
+                    <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                      <div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold" x-text="a.initials"></div>
+                        <div><div class="text-sm font-medium" x-text="a.name"></div><div class="text-xs text-slate-500" x-text="a.email"></div></div>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <span class="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full" x-text="a.role"></span>
+                        <span class="text-xs text-slate-500" x-text="a.lastLogin"></span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h3 class="font-bold mb-4">Roles</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="py-2 border-b border-slate-100 dark:border-slate-800"><div class="font-medium">Owner</div><div class="text-xs text-slate-500">Full access including billing</div></div>
+                  <div class="py-2 border-b border-slate-100 dark:border-slate-800"><div class="font-medium">Admin</div><div class="text-xs text-slate-500">Manage devices, policies, apps — no billing</div></div>
+                  <div class="py-2 border-b border-slate-100 dark:border-slate-800"><div class="font-medium">Help Desk</div><div class="text-xs text-slate-500">View devices, lock/unlock, push apps — no delete/wipe</div></div>
+                  <div class="py-2"><div class="font-medium">Read only</div><div class="text-xs text-slate-500">View everything, change nothing</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div x-show="settingsTab === 'Single sign-on'">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h3 class="font-bold mb-4">SAML / OIDC</h3>
+                <div class="space-y-3 text-sm">
+                  <div class="flex items-center justify-between py-2"><span>Google Workspace</span><span class="text-xs text-emerald-600">Connected</span></div>
+                  <div class="flex items-center justify-between py-2"><span>Microsoft Entra ID</span><button class="text-xs text-brand-600">Connect</button></div>
+                  <div class="flex items-center justify-between py-2"><span>Okta</span><button class="text-xs text-brand-600">Connect</button></div>
+                  <div class="flex items-center justify-between py-2"><span>Generic SAML 2.0</span><button class="text-xs text-brand-600">Configure</button></div>
+                </div>
+              </div>
+            </div>
+
+            <div x-show="settingsTab === 'API & webhooks'">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 mb-4">
+                <div class="flex items-center justify-between mb-4"><h3 class="font-bold">API tokens</h3><button class="text-sm text-brand-600">+ New token</button></div>
+                <div class="space-y-2 text-sm">
+                  <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800"><div><div class="font-medium">Backup runner</div><div class="font-mono text-xs text-slate-500">atk_●●●●●●●●●●●●7f9a</div></div><span class="text-xs text-slate-500">Last used 2h ago</span></div>
+                  <div class="flex items-center justify-between py-2"><div><div class="font-medium">Splunk integration</div><div class="font-mono text-xs text-slate-500">atk_●●●●●●●●●●●●3d2c</div></div><span class="text-xs text-slate-500">Last used 12m ago</span></div>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4"><h3 class="font-bold">Webhooks</h3><button class="text-sm text-brand-600">+ New webhook</button></div>
+                <div class="space-y-2 text-sm">
+                  <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800"><div><div class="font-medium">Slack alerts</div><div class="font-mono text-xs text-slate-500 truncate">hooks.slack.com/services/T0.../B0...</div></div><span class="text-xs text-emerald-600">200 OK</span></div>
+                  <div class="flex items-center justify-between py-2"><div><div class="font-medium">PagerDuty</div><div class="font-mono text-xs text-slate-500">events.pagerduty.com/v2/...</div></div><span class="text-xs text-emerald-600">200 OK</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div x-show="settingsTab === 'Billing'">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h3 class="font-bold mb-4">Plan</h3>
+                <div class="text-3xl font-bold">Self-hosted</div>
+                <div class="text-sm text-slate-500 mt-1">No usage fees — infrastructure billed via AWS.</div>
+                <div class="grid grid-cols-3 gap-4 mt-6 text-sm">
+                  <div><div class="text-xs text-slate-500 uppercase">Device seats used</div><div class="text-2xl font-bold">24</div></div>
+                  <div><div class="text-xs text-slate-500 uppercase">Storage</div><div class="text-2xl font-bold">1.4 GB</div></div>
+                  <div><div class="text-xs text-slate-500 uppercase">AWS this month</div><div class="text-2xl font-bold">$23</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div x-show="settingsTab === 'Audit export'">
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+                <h3 class="font-bold mb-4">Audit log retention & export</h3>
+                <div class="space-y-3 text-sm">
+                  <div class="flex items-center justify-between"><span>Retain audit logs for</span><select class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded px-2 py-1 text-xs"><option>90 days</option><option>1 year</option><option>3 years</option><option>7 years</option></select></div>
+                  <div class="flex items-center justify-between"><span>Auto-export to S3</span><input type="checkbox" checked /></div>
+                  <div class="flex items-center justify-between"><span>Bucket</span><span class="font-mono text-xs text-slate-500">s3://accelerate-mdm-audit/</span></div>
+                </div>
+                <button class="mt-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm">Download audit CSV</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </main>
+
+      <!-- Device detail drawer -->
+      <div x-show="selectedDevice" @click.self="selectedDevice = null" class="fixed inset-0 bg-slate-900/50 z-40 flex justify-end" x-transition.opacity>
+        <div @click.stop class="bg-white dark:bg-slate-900 w-[560px] h-full overflow-y-auto shadow-xl">
+          <template x-if="selectedDevice">
+            <div>
+              <div class="p-6 border-b border-slate-200 dark:border-slate-800">
+                <div class="flex items-start justify-between mb-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    </div>
+                    <div>
+                      <h2 class="font-bold text-lg" x-text="selectedDevice.name"></h2>
+                      <div class="text-xs text-slate-500 font-mono" x-text="selectedDevice.serial"></div>
+                    </div>
+                  </div>
+                  <button @click="selectedDevice = null" class="text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+                <div class="flex gap-2">
+                  <button @click="issueDeviceCommand(selectedDevice.id, 'LOCK')" class="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 py-2 rounded-lg text-xs font-medium">Lock</button>
+                  <button @click="issueDeviceCommand(selectedDevice.id, 'REBOOT')" class="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 py-2 rounded-lg text-xs font-medium">Reboot</button>
+                  <button @click="toast('Ring not yet supported via AMAPI')" disabled class="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 py-2 rounded-lg text-xs font-medium opacity-50 cursor-not-allowed" title="Not supported by AMAPI">Ring</button>
+                  <button @click="toast('Locate not yet supported via AMAPI')" disabled class="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 py-2 rounded-lg text-xs font-medium opacity-50 cursor-not-allowed" title="Not supported by AMAPI">Locate</button>
+                  <button @click="confirmWipe = selectedDevice" class="flex-1 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-100 py-2 rounded-lg text-xs font-medium">Wipe</button>
+                </div>
+              </div>
+
+              <div class="border-b border-slate-200 dark:border-slate-800 px-6">
+                <div class="flex gap-4 text-sm">
+                  <template x-for="t in ['overview','apps','policies','location','hardware','commands','logs']">
+                    <button @click="deviceDetailTab = t" :class="deviceDetailTab === t ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'" class="py-3 border-b-2 capitalize" x-text="t"></button>
+                  </template>
+                </div>
+              </div>
+
+              <div class="p-6">
+                <div x-show="deviceDetailTab === 'overview'">
+                  <div class="grid grid-cols-2 gap-4 text-sm mb-6">
+                    <div><div class="text-xs text-slate-500 uppercase">Status</div><div class="mt-1 font-medium" x-text="selectedDevice.status"></div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Assigned</div><div class="mt-1 font-medium" x-text="selectedDevice.user"></div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Group</div><div class="mt-1 font-medium" x-text="selectedDevice.group"></div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Model</div><div class="mt-1 font-medium" x-text="selectedDevice.model"></div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">OS</div><div class="mt-1 font-medium" x-text="selectedDevice.os"></div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Battery</div><div class="mt-1 font-medium" x-text="selectedDevice.battery + '%'"></div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Last seen</div><div class="mt-1 font-medium" x-text="selectedDevice.lastSeen"></div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">IP address</div><div class="mt-1 font-mono text-xs">10.4.22.<span x-text="selectedDevice.id + 100"></span></div></div>
+                  </div>
+                  <h3 class="font-bold text-sm mb-2">Applied policy</h3>
+                  <div class="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 text-sm mb-4">Accelerate Standard (v3) — synced 2m ago</div>
+                  <h3 class="font-bold text-sm mb-2">Storage</h3>
+                  <div class="text-sm">
+                    <div class="flex justify-between"><span class="text-slate-500">Internal</span><span>18.2 / 32 GB used</span></div>
+                    <div class="h-2 bg-slate-100 dark:bg-slate-800 rounded-full mt-1 overflow-hidden"><div class="h-full bg-brand-500" style="width: 56%"></div></div>
+                  </div>
+                </div>
+
+                <div x-show="deviceDetailTab === 'apps'">
+                  <div class="space-y-2 text-sm">
+                    <template x-for="app in apps.slice(0,5)">
+                      <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                        <div class="flex items-center gap-3"><div :style="'background:' + app.color" class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" x-text="app.name[0]"></div><div><div class="font-medium" x-text="app.name"></div><div class="text-xs text-slate-500 font-mono" x-text="app.version"></div></div></div>
+                        <span :class="app.mode === 'Required' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'" class="text-xs px-2 py-0.5 rounded-full" x-text="app.mode"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <div x-show="deviceDetailTab === 'policies'">
+                  <div class="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 text-sm mb-4"><div class="font-bold mb-2">Accelerate Standard (v3)</div><div class="space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                    <div>✓ PIN required (6+ digits)</div>
+                    <div>✓ Encryption enforced</div>
+                    <div>✓ USB debugging off</div>
+                    <div>✓ Unknown sources blocked</div>
+                    <div>✓ Screen lock 5 min</div>
+                  </div></div>
+                </div>
+
+                <div x-show="deviceDetailTab === 'location'">
+                  <div class="map-bg h-64 rounded-lg relative mb-4">
+                    <div class="absolute" style="left: 45%; top: 40%"><div class="w-4 h-4 rounded-full bg-brand-500 border-2 border-white shadow-lg -translate-x-1/2 -translate-y-full"></div></div>
+                  </div>
+                  <div class="text-sm space-y-1">
+                    <div class="flex justify-between"><span class="text-slate-500">Lat/Long</span><span class="font-mono text-xs">40.7128, -74.0060</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Accuracy</span><span>±12m</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Inside geofence</span><span class="text-emerald-600">Yes (HQ Campus)</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Last updated</span><span x-text="selectedDevice.lastSeen"></span></div>
+                  </div>
+                </div>
+
+                <div x-show="deviceDetailTab === 'hardware'">
+                  <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div><div class="text-xs text-slate-500 uppercase">CPU</div><div class="mt-1">Snapdragon 662</div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">RAM</div><div class="mt-1">3 GB</div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Storage</div><div class="mt-1">32 GB</div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">MAC address</div><div class="mt-1 font-mono text-xs">d4:c9:ef:a1:2b:<span x-text="selectedDevice.id < 10 ? '0'+selectedDevice.id : selectedDevice.id"></span></div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">IMEI</div><div class="mt-1 font-mono text-xs">358240051111110</div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Cellular</div><div class="mt-1">AT&T LTE</div></div>
+                  </div>
+                </div>
+
+                <div x-show="deviceDetailTab === 'commands'">
+                  <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800"><div><div class="font-medium">Apply policy</div><div class="text-xs text-slate-500">Accelerate Standard v3 • 2m ago</div></div><span class="text-xs text-emerald-600">Delivered</span></div>
+                    <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800"><div><div class="font-medium">Install app</div><div class="text-xs text-slate-500">Accelerate Field App • 4h ago</div></div><span class="text-xs text-emerald-600">Delivered</span></div>
+                    <div class="flex items-center justify-between py-2"><div><div class="font-medium">Sync</div><div class="text-xs text-slate-500">Scheduled • every 15m</div></div><span class="text-xs text-slate-500">Active</span></div>
+                  </div>
+                </div>
+
+                <div x-show="deviceDetailTab === 'logs'">
+                  <div class="bg-slate-900 text-slate-100 text-xs font-mono rounded-lg p-4 space-y-1 max-h-64 overflow-y-auto">
+                    <div><span class="text-emerald-400">14:32:01</span> sync OK (policy=v3, apps=5)</div>
+                    <div><span class="text-emerald-400">14:17:01</span> sync OK</div>
+                    <div><span class="text-emerald-400">14:02:01</span> sync OK</div>
+                    <div><span class="text-amber-400">13:58:44</span> app install: ai.acceleraterobotics.field → OK</div>
+                    <div><span class="text-emerald-400">13:47:01</span> sync OK</div>
+                    <div><span class="text-slate-400">13:30:12</span> device boot</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Wipe confirmation -->
+      <div x-show="confirmWipe" @click.self="confirmWipe = null" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-6" x-transition.opacity>
+        <div @click.stop class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 max-w-md w-full">
+          <template x-if="confirmWipe">
+            <div>
+              <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-4">!</div>
+              <h3 class="font-bold text-lg">Wipe <span x-text="confirmWipe.name"></span>?</h3>
+              <p class="text-sm text-slate-600 dark:text-slate-400 mt-2">This will factory reset the device. All data will be erased and the device will need to be re-enrolled.</p>
+              <div class="mt-4 space-y-2 text-sm">
+                <label class="flex items-center gap-2"><input type="checkbox" checked /><span>Preserve enrollment (re-enrolls automatically)</span></label>
+                <label class="flex items-center gap-2"><input type="checkbox" /><span>Keep factory reset protection</span></label>
+              </div>
+              <div class="mt-5 flex gap-2">
+                <button @click="confirmWipe = null" class="flex-1 border border-slate-300 dark:border-slate-700 py-2.5 rounded-lg text-sm font-medium">Cancel</button>
+                <button @click="toast('Wipe is not yet wired (uses enterprises.devices.delete with wipeDataFlags). Use Lock + factory-reset on-device for now.'); confirmWipe = null" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-lg text-sm font-medium">Wipe device</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Command palette -->
+      <div x-show="commandOpen" @click.self="commandOpen = false" class="fixed inset-0 bg-slate-900/60 z-50 flex items-start justify-center p-6 pt-24" x-transition.opacity>
+        <div @click.stop class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-xl overflow-hidden">
+          <div class="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input placeholder="Search devices, users, apps, policies..." autofocus class="flex-1 outline-none bg-transparent text-sm" />
+            <kbd>ESC</kbd>
+          </div>
+          <div class="p-2 max-h-96 overflow-y-auto text-sm">
+            <div class="px-2 py-1 text-xs text-slate-500 uppercase">Devices</div>
+            <template x-for="d in devices.slice(0,3)">
+              <button @click="selectedDevice = d; commandOpen = false" class="w-full text-left px-2 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">
+                <span class="w-6 h-6 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs">📱</span>
+                <span x-text="d.name"></span>
+                <span class="text-xs text-slate-500 ml-auto" x-text="d.user"></span>
+              </button>
+            </template>
+            <div class="px-2 py-1 text-xs text-slate-500 uppercase mt-2">Quick actions</div>
+            <button @click="view='enroll'; commandOpen=false" class="w-full text-left px-2 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">+ Enroll device</button>
+            <button @click="view='policies'; commandOpen=false" class="w-full text-left px-2 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">+ Create policy</button>
+            <button @click="view='reports'; commandOpen=false" class="w-full text-left px-2 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Run report</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications panel -->
+      <div x-show="notifOpen" @click.away="notifOpen = false" x-transition class="fixed top-14 right-6 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl w-96 overflow-hidden">
+        <div class="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <h3 class="font-bold text-sm">Notifications</h3>
+          <button class="text-xs text-brand-600">Mark all read</button>
+        </div>
+        <div class="max-h-96 overflow-y-auto">
+          <template x-for="n in notifications">
+            <div class="p-3 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <div class="flex items-start gap-3">
+                <div :class="n.color" class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"></div>
+                <div class="flex-1 min-w-0"><div class="text-sm font-medium" x-text="n.title"></div><div class="text-xs text-slate-500" x-text="n.time"></div></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Toast -->
+      <div x-show="toastMsg" x-transition class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-lg shadow-xl text-sm z-50" x-text="toastMsg"></div>
+
+    </div>
+  </template>
+
+</div>
+
+<script>
+function mdmApp() {
+  return {
+    // ===== Auth =====
+    // WHY: This page is served behind requireAuthPage, so by the time
+    // the JS runs the visitor is already authenticated as a Dashboard
+    // admin. We treat the page as always-authed and let the JWT cookie
+    // ride on every fetch via credentials: 'same-origin' (the default).
+    authed: true,
+
+    // ===== Live data (API-backed) =====
+    devices: [],
+    devicesLoading: false,
+    devicesError: '',
+    enrollment: {
+      qrUrl: null,
+      qrPayload: null,
+      expirationTimestamp: null,
+      busy: false,
+      error: '',
+      tokens: [],
+      tokenListBusy: false,
+      tokenListError: '',
+    },
+
+    // ===== UI state =====
+    view: 'dashboard',
+    dark: false,
+    commandOpen: false,
+    notifOpen: false,
+    deviceFilter: '',
+    deviceStatusFilter: '',
+    deviceGroupFilter: '',
+    selectedDevice: null,
+    confirmWipe: null,
+    selected: [],
+    toastMsg: '',
+    enrollTab: 'QR code',
+    usersTab: 'Users',
+    networkTab: 'Wi-Fi',
+    contentTab: 'Files',
+    alertsTab: 'Open',
+    settingsTab: 'Organization',
+    deviceDetailTab: 'overview',
+
+    navSections: [
+      { label: 'Main', items: [
+        { id: 'dashboard', label: 'Dashboard',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>' },
+        { id: 'devices',   label: 'Devices',      dynamicBadge: 'deviceCount', icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>' },
+        { id: 'enroll',    label: 'Enroll',       icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' },
+        { id: 'users',     label: 'Users & Groups', icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>' },
+      ]},
+      { label: 'Manage', items: [
+        { id: 'policies',  label: 'Policies',     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>' },
+        { id: 'apps',      label: 'Apps',         icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>' },
+        { id: 'updates',   label: 'Updates',      icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' },
+        { id: 'network',   label: 'Network',      icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>' },
+        { id: 'content',   label: 'Content',      icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' },
+      ]},
+      { label: 'Monitor', items: [
+        { id: 'location',   label: 'Location',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' },
+        { id: 'compliance', label: 'Compliance',  icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>' },
+        { id: 'alerts',     label: 'Alerts',      icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>' },
+        { id: 'reports',    label: 'Reports',     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>' },
+        { id: 'activity',   label: 'Activity log', icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>' },
+      ]},
+      { label: 'Help', items: [
+        { id: 'onboarding', label: 'Onboarding',  icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+      ]},
+    ],
+
+    stats: [
+      { label: 'Total devices',     value: '24', change: '+2 this week',    trend: 'up',   icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>' },
+      { label: 'Online now',        value: '21', change: '88% availability', trend: 'up',  icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>' },
+      { label: 'Non-compliant',     value: '2',  change: '2 need attention', trend: 'down',icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' },
+      { label: 'Pending commands',  value: '3',  change: 'processing',       trend: 'flat',icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+    ],
+
+    users: [
+      { id:1, name:'Alex Chen',     initials:'AC', email:'alex.chen@acceleraterobotics.ai',     dept:'Field Ops',    deviceCount:1, active:true },
+      { id:2, name:'Morgan Hill',   initials:'MH', email:'morgan.hill@acceleraterobotics.ai',   dept:'Field Ops',    deviceCount:1, active:true },
+      { id:3, name:'Sam Rivera',    initials:'SR', email:'sam.rivera@acceleraterobotics.ai',    dept:'Field Ops',    deviceCount:1, active:true },
+      { id:4, name:'Jordan Park',   initials:'JP', email:'jordan.park@acceleraterobotics.ai',   dept:'Logistics',    deviceCount:1, active:true },
+      { id:5, name:'Taylor Brooks', initials:'TB', email:'taylor.brooks@acceleraterobotics.ai', dept:'Logistics',    deviceCount:1, active:true },
+      { id:6, name:'Casey Wong',    initials:'CW', email:'casey.wong@acceleraterobotics.ai',    dept:'Logistics',    deviceCount:1, active:true },
+      { id:7, name:'Reese Lopez',   initials:'RL', email:'reese.lopez@acceleraterobotics.ai',   dept:'Field Ops',    deviceCount:1, active:true },
+      { id:8, name:'Retired User',  initials:'RU', email:'former@acceleraterobotics.ai',        dept:'—',            deviceCount:0, active:false },
+    ],
+
+    groups: [
+      { id:1, name:'Field Tablets', description:'Tablets issued to field technicians', count:5, dynamic:false, policy:'Accelerate Standard' },
+      { id:2, name:'Drivers',       description:'Driver handhelds running route app', count:3, dynamic:false, policy:'Accelerate Standard' },
+      { id:3, name:'Warehouse A',   description:'Zebra scanners — warehouse A only',   count:2, dynamic:true,  policy:'Warehouse Scanner' },
+      { id:4, name:'Kiosks',        description:'Lobby and shared kiosks',             count:3, dynamic:false, policy:'Kiosk Mode' },
+      { id:5, name:'Android 10 EOL',description:'Auto-group: devices running Android 10', count:2, dynamic:true, policy:'Accelerate Standard (restricted)' },
+    ],
+
+    activity: [
+      { type: 'ok',    device: 'Field-Tablet-01', action: 'checked in',                   time: '2 minutes ago' },
+      { type: 'warn',  device: 'Field-Tablet-03', action: 'failed compliance check (OS out of date)', time: '12 minutes ago' },
+      { type: 'ok',    device: 'Warehouse-01',    action: 'installed Accelerate Field App 1.8.2', time: '28 minutes ago' },
+      { type: 'info',  device: 'Driver-04',       action: 'battery dropped to 20%',       time: '1 hour ago' },
+      { type: 'ok',    device: 'Kiosk-Lobby',     action: 'was enrolled',                 time: '2 hours ago' },
+      { type: 'warn',  device: 'Driver-06',       action: 'went offline',                 time: '3 hours ago' },
+    ],
+
+    openAlerts: [
+      { title: 'Field-Tablet-03: Android 10 is end-of-life', level:'high', time:'12 min ago' },
+      { title: 'Driver-06: Battery at 22% and offline',       level:'med',  time:'1 hour ago' },
+    ],
+
+    notifications: [
+      { title:'Field-Tablet-03 failed compliance', time:'12m ago', color:'bg-amber-500' },
+      { title:'Kiosk-Lobby was enrolled',          time:'2h ago',  color:'bg-emerald-500' },
+      { title:'Driver-06 went offline',            time:'3h ago',  color:'bg-rose-500' },
+      { title:'Policy Accelerate Standard v3 published', time:'yesterday', color:'bg-brand-500' },
+    ],
+
+    policies: [
+      { id: 1, name: 'Accelerate Standard', version: '3.1', default: true, description: 'Default policy for all field devices.', deviceCount: 18,
+        rules: ['PIN 6+ digits', 'Encryption', 'USB debugging off', 'Unknown sources blocked', 'Screen lock 5 min', 'Camera allowed', 'Backup disabled'] },
+      { id: 2, name: 'Kiosk Mode', version: '1.4', default: false, description: 'Locks device to a single app for lobby kiosks.', deviceCount: 3,
+        rules: ['Single-app lock', 'Hardware keys disabled', 'No notifications', 'Auto-restart daily', 'Power button blocked'] },
+      { id: 3, name: 'Warehouse Scanner', version: '2.0', default: false, description: 'Limited apps, no browsing.', deviceCount: 2,
+        rules: ['Whitelist 4 apps', 'No Play Store', 'Wi-Fi locked to Warehouse-A', 'Location always on', 'NFC on'] },
+      { id: 4, name: 'BYOD Work Profile', version: '1.0', default: false, description: 'Personal devices — only manages work profile.', deviceCount: 1,
+        rules: ['Work profile only', 'Personal data untouched', 'Corporate apps isolated'] },
+    ],
+
+    apps: [
+      { id: 1, name: 'Accelerate Field App', pkg: 'ai.acceleraterobotics.field',      installed: 22, version:'1.8.2',  mode: 'Required',  color: '#0055ff' },
+      { id: 2, name: 'Gmail',           pkg: 'com.google.android.gm',        installed: 24, version:'2024.12',mode: 'Required',  color: '#d93025' },
+      { id: 3, name: 'Chrome',          pkg: 'com.android.chrome',           installed: 20, version:'130.0',  mode: 'Available', color: '#fbbc04' },
+      { id: 4, name: 'Google Maps',     pkg: 'com.google.android.apps.maps', installed: 18, version:'11.8',   mode: 'Available', color: '#34a853' },
+      { id: 5, name: 'Microsoft Teams', pkg: 'com.microsoft.teams',          installed: 12, version:'1416/1', mode: 'Available', color: '#4b53bc' },
+      { id: 6, name: 'Zebra DataWedge', pkg: 'com.symbol.datawedge',         installed: 2,  version:'11.3',   mode: 'Required',  color: '#0082ca' },
+      { id: 7, name: 'Facebook',        pkg: 'com.facebook.katana',          installed: 0,  version:'—',      mode: 'Blocked',   color: '#1877f2' },
+      { id: 8, name: 'TikTok',          pkg: 'com.zhiliaoapp.musically',     installed: 0,  version:'—',      mode: 'Blocked',   color: '#000' },
+      { id: 9, name: 'Signal',          pkg: 'org.thoughtcrime.securesms',   installed: 5,  version:'7.1',    mode: 'Available', color: '#3a76f0' },
+    ],
+
+    updateRings: [
+      { id:1, name:'Pilot',       description:'IT team devices — test updates first', deviceCount: 2, defer:'0 days', window:'Any time', reboot:'Immediate', color:'bg-brand-500' },
+      { id:2, name:'Early',       description:'10% of fleet — deployed 7 days after pilot', deviceCount: 3, defer:'7 days', window:'Tue 2-4am', reboot:'After 2h', color:'bg-emerald-500' },
+      { id:3, name:'Broad',       description:'Majority of fleet', deviceCount: 17, defer:'14 days', window:'Sun 2-4am', reboot:'After 4h', color:'bg-amber-500' },
+      { id:4, name:'Exempt',      description:'Critical kiosks — manual updates only', deviceCount: 2, defer:'∞',      window:'Manual',  reboot:'Never',     color:'bg-slate-400' },
+    ],
+
+    complianceRules: [
+      { id:1, name:'Encryption required',     enabled:true,  condition:'encrypted == false', action:'mark non-compliant + email admin',                 triggered: 0 },
+      { id:2, name:'Minimum OS version',      enabled:true,  condition:'os_version < 11',    action:'mark non-compliant + alert',                         triggered: 2 },
+      { id:3, name:'Offline > 4 hours',       enabled:true,  condition:'last_seen > 4h',     action:'mark non-compliant + send push',                     triggered: 3 },
+      { id:4, name:'Root detection',          enabled:true,  condition:'rooted == true',     action:'auto-wipe + alert',                                 triggered: 0 },
+      { id:5, name:'Password complexity',     enabled:true,  condition:'pin_length < 6',     action:'mark non-compliant',                                triggered: 0 },
+      { id:6, name:'Unauthorized app installed', enabled:false, condition:'blocklisted_app_detected', action:'uninstall app',                            triggered: 0 },
+    ],
+
+    admins: [
+      { name:'Kaylie Murphey', initials:'KM', email:'claude.k.murphey@acceleraterobotics.ai', role:'Owner', lastLogin:'now' },
+      { name:'Deputy Admin',   initials:'DA', email:'deputy@acceleraterobotics.ai',            role:'Admin', lastLogin:'2h ago' },
+      { name:'Help Desk',      initials:'HD', email:'helpdesk@acceleraterobotics.ai',          role:'Help Desk', lastLogin:'1d ago' },
+    ],
+
+    mapPins: [
+      { name:'Field-Tablet-01', x:25, y:35, status:'ok' },
+      { name:'Field-Tablet-02', x:28, y:38, status:'ok' },
+      { name:'Field-Tablet-03', x:31, y:34, status:'warn' },
+      { name:'Driver-04',       x:55, y:60, status:'ok' },
+      { name:'Driver-05',       x:65, y:62, status:'ok' },
+      { name:'Driver-06',       x:85, y:30, status:'bad' },
+      { name:'Warehouse-01',    x:62, y:58, status:'ok' },
+      { name:'Warehouse-02',    x:64, y:57, status:'ok' },
+      { name:'Kiosk-Lobby',     x:27, y:36, status:'ok' },
+    ],
+
+    auditLog: [
+      { time: '2026-04-22 14:32', actor: 'Kaylie Murphey', action: 'Pushed policy',   target: 'Accelerate Standard → Field-Tablet-03', result: 'success' },
+      { time: '2026-04-22 14:15', actor: 'system',         action: 'Compliance check',target: 'Field-Tablet-03',                   result: 'failure' },
+      { time: '2026-04-22 13:58', actor: 'Kaylie Murphey', action: 'Enrolled device', target: 'Kiosk-Lobby',                       result: 'success' },
+      { time: '2026-04-22 11:22', actor: 'Kaylie Murphey', action: 'Installed app',   target: 'Accelerate Field App → Warehouse-01',    result: 'success' },
+      { time: '2026-04-22 09:08', actor: 'Kaylie Murphey', action: 'Signed in',       target: 'admin console',                     result: 'success' },
+      { time: '2026-04-21 17:45', actor: 'Kaylie Murphey', action: 'Updated policy',  target: 'Accelerate Standard (v2 → v3)',          result: 'success' },
+      { time: '2026-04-21 16:30', actor: 'Kaylie Murphey', action: 'Wiped device',    target: 'Driver-07 (retired)',               result: 'success' },
+      { time: '2026-04-21 11:02', actor: 'Deputy Admin',   action: 'Created token',   target: 'enrollment token xL9k3',            result: 'success' },
+      { time: '2026-04-20 15:40', actor: 'system',         action: 'Scheduled backup',target: 'audit logs → s3://accelerate-mdm-audit', result: 'success' },
+    ],
+
+    viewTitle() {
+      return ({
+        dashboard:'Dashboard', devices:'Devices', enroll:'Enroll device',
+        users:'Users & Groups', policies:'Policies', apps:'Apps', updates:'Updates',
+        network:'Network', content:'Content', location:'Location',
+        compliance:'Compliance rules', alerts:'Alerts', reports:'Reports',
+        activity:'Activity log', settings:'Settings',
+      })[this.view] || '';
+    },
+    viewSubtitle() {
+      return ({
+        dashboard:'Fleet overview and recent activity',
+        devices:'All enrolled Android devices',
+        enroll:'Add a new device to Accelerate Robotics MDM',
+        users:'People and device groups',
+        policies:'Rules applied to device groups',
+        apps:'Managed Google Play apps',
+        updates:'OS update rings and deferrals',
+        network:'Wi-Fi, VPN, and certificates',
+        content:'Files, wallpapers, bookmarks, launcher',
+        location:'Fleet map and geofences',
+        compliance:'Automated rules and actions',
+        alerts:'Open alerts and notification channels',
+        reports:'Analytics and scheduled exports',
+        activity:'Audit trail of admin and device actions',
+        settings:'Organization, admins, and security',
+      })[this.view] || '';
+    },
+    filteredDevices() {
+      const q = this.deviceFilter.toLowerCase();
+      return this.devices.filter(d => {
+        if (q && !(d.name.toLowerCase().includes(q) || d.user.toLowerCase().includes(q) || d.serial.toLowerCase().includes(q))) return false;
+        if (this.deviceStatusFilter && d.status !== this.deviceStatusFilter) return false;
+        if (this.deviceGroupFilter && d.group !== this.deviceGroupFilter) return false;
+        return true;
+      });
+    },
+    toggleSelect(id) {
+      const i = this.selected.indexOf(id);
+      if (i >= 0) this.selected.splice(i,1); else this.selected.push(id);
+    },
+    toggleAll(on) {
+      this.selected = on ? this.filteredDevices().map(d => d.id) : [];
+    },
+    statusClass(s) {
+      return s === 'Compliant' ? 'bg-emerald-100 text-emerald-700'
+           : s === 'Non-compliant' ? 'bg-amber-100 text-amber-700'
+           : 'bg-slate-200 text-slate-600';
+    },
+    statusDot(s) {
+      return s === 'Compliant' ? 'bg-emerald-500'
+           : s === 'Non-compliant' ? 'bg-amber-500'
+           : 'bg-slate-400';
+    },
+    eventColor(t) {
+      return t === 'ok' ? 'bg-emerald-500' : t === 'warn' ? 'bg-amber-500' : 'bg-brand-500';
+    },
+    toast(msg) {
+      this.toastMsg = msg;
+      clearTimeout(this._t);
+      this._t = setTimeout(() => this.toastMsg = '', 2500);
+    },
+
+    // ===== Init helper =====
+    afterLogin() {
+      // Load whichever view they're starting on. Name retained for clarity
+      // even though there's no longer a per-page sign-in step.
+      if (this.view === 'devices') { this.loadDevices(); this.startDevicesPolling(); }
+      if (this.view === 'enroll') this.loadEnrollmentTokens();
+    },
+
+    // ===== API helper =====
+    // All requests are same-origin and rely on the dashboard's JWT cookie
+    // for auth (sent automatically). On 401 we redirect to the dashboard
+    // login page rather than showing our own form.
+    async apiCall(method, path, body = null) {
+      const opts = {
+        method,
+        headers: { Accept: 'application/json' },
+        // credentials: 'same-origin' is the default; documented for clarity.
+      };
+      if (body !== null) {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
+      }
+      const r = await fetch('/api/mdm' + path, opts);
+      if (r.status === 401) {
+        // Dashboard session expired — bounce to login.
+        window.location.href = '/admin-command-center.html';
+        throw new Error('Session expired — redirecting to sign in.');
+      }
+      if (r.status === 204) return null;
+      if (!r.ok) {
+        let msg = `${method} ${path} → ${r.status}`;
+        try {
+          const body = await r.json();
+          if (body && body.detail) msg += ': ' + JSON.stringify(body.detail);
+          else if (body && body.error) msg += ': ' + body.error;
+        } catch { /* ignore */ }
+        throw new Error(msg);
+      }
+      const ctype = r.headers.get('content-type') || '';
+      if (ctype.includes('application/json')) return await r.json();
+      return r;
+    },
+
+    // Same-origin image URLs send the JWT cookie automatically — no
+    // need for the blob-URL workaround the standalone tool used.
+    // Keeping the function name for callsite stability; it just returns
+    // the path verbatim now.
+    async fetchAuthedBlobUrl(fullPath) {
+      return fullPath;
+    },
+
+    // ===== Devices =====
+    async loadDevices() {
+      this.devicesLoading = true;
+      this.devicesError = '';
+      try {
+        const list = await this.apiCall('GET', '/devices');
+        this.devices = list.map(this.mapAmapiDevice);
+      } catch (e) {
+        this.devicesError = e.message;
+        this.devices = [];
+      } finally {
+        this.devicesLoading = false;
+      }
+    },
+
+    mapAmapiDevice(d) {
+      const hw = d.hardware_info || {};
+      const sw = d.software_info || {};
+      const stateMap = { ACTIVE: 'Compliant', DISABLED: 'Non-compliant', DELETED: 'Offline', PROVISIONING: 'Pending' };
+      const fmtTime = (ts) => {
+        if (!ts) return '—';
+        try {
+          const diff = (Date.now() - new Date(ts).getTime()) / 1000;
+          if (diff < 60) return 'Just now';
+          if (diff < 3600) return Math.floor(diff / 60) + ' min ago';
+          if (diff < 86400) return Math.floor(diff / 3600) + ' hr ago';
+          return Math.floor(diff / 86400) + ' d ago';
+        } catch { return ts; }
+      };
+      return {
+        id: d.device_id,
+        name: hw.deviceBrand && hw.model ? `${hw.deviceBrand} ${hw.model}` : ('Device ' + d.device_id.substring(0, 8)),
+        serial: hw.serialNumber || d.device_id.substring(0, 12),
+        user: d.management_mode || '—',
+        group: (d.name || '').includes('/policies/') ? d.name.split('/policies/')[1] : 'default',
+        os: sw.androidVersion ? `Android ${sw.androidVersion}` : 'Android',
+        status: stateMap[d.state] || d.state || '—',
+        lastSeen: fmtTime(d.last_status_report_time || d.enrollment_time),
+        model: hw.model || '—',
+        battery: 100,
+        _raw: d,
+      };
+    },
+
+    async issueDeviceCommand(deviceId, type) {
+      try {
+        const op = await this.apiCall('POST', `/devices/${deviceId}/commands`, { type });
+        this.toast(`${type} queued · operation ${op.operation_name.split('/').pop()}`);
+      } catch (e) {
+        this.toast(`${type} failed: ${e.message}`);
+      }
+    },
+
+    async bulkLock() {
+      const ids = this.selected.slice();
+      if (!ids.length) return;
+      this.toast(`Locking ${ids.length} devices…`);
+      let ok = 0, fail = 0;
+      for (const id of ids) {
+        try {
+          await this.apiCall('POST', `/devices/${id}/commands`, { type: 'LOCK' });
+          ok++;
+        } catch { fail++; }
+      }
+      this.toast(`Lock done · ${ok} succeeded, ${fail} failed`);
+      this.selected = [];
+    },
+
+    // ===== Enrollment =====
+    async generateEnrollmentToken() {
+      this.enrollment.busy = true;
+      this.enrollment.error = '';
+      try {
+        const tok = await this.apiCall('POST', '/enrollment-tokens');
+        this.enrollment.qrPayload = tok;
+        this.enrollment.expirationTimestamp = tok.expiration_timestamp;
+        const url = new URL(tok.qr_png_url, window.location.origin);
+        if (this.enrollment.qrUrl) URL.revokeObjectURL(this.enrollment.qrUrl);
+        this.enrollment.qrUrl = await this.fetchAuthedBlobUrl(url.pathname + url.search);
+        // (path already includes /api prefix from the backend's url_for)
+        // Refresh token list in background
+        this.loadEnrollmentTokens();
+      } catch (e) {
+        this.enrollment.error = e.message;
+      } finally {
+        this.enrollment.busy = false;
+      }
+    },
+
+    async loadEnrollmentTokens() {
+      this.enrollment.tokenListBusy = true;
+      this.enrollment.tokenListError = '';
+      try {
+        const list = await this.apiCall('GET', '/enrollment-tokens');
+        this.enrollment.tokens = Array.isArray(list) ? list : [];
+      } catch (e) {
+        this.enrollment.tokenListError = e.message;
+      } finally {
+        this.enrollment.tokenListBusy = false;
+      }
+    },
+
+    async revokeToken(tokenName) {
+      const id = tokenName.split('/').pop();
+      try {
+        await this.apiCall('DELETE', `/enrollment-tokens/${id}`);
+        this.toast('Token revoked');
+        this.loadEnrollmentTokens();
+      } catch (e) {
+        this.toast('Revoke failed: ' + e.message);
+      }
+    },
+
+    tokenIdFromName(name) {
+      return (name || '').split('/').pop() || '—';
+    },
+
+    navBadgeValue(key) {
+      if (key === 'deviceCount') return this.devices.length;
+      return 0;
+    },
+
+    isViewWired(v) {
+      return ['devices', 'enroll', 'onboarding'].includes(v);
+    },
+
+    _devicesPoll: null,
+    startDevicesPolling() {
+      this.stopDevicesPolling();
+      this._devicesPoll = setInterval(() => {
+        if (this.view === 'devices' && this.authed) this.loadDevices();
+      }, 15000);
+    },
+    stopDevicesPolling() {
+      if (this._devicesPoll) { clearInterval(this._devicesPoll); this._devicesPoll = null; }
+    },
+
+    formatExpiry(ts) {
+      if (!ts) return '—';
+      try {
+        const t = new Date(ts).getTime();
+        const diff = Math.floor((t - Date.now()) / 1000);
+        if (diff < 0) return 'expired';
+        if (diff < 60) return 'in ' + diff + 's';
+        if (diff < 3600) return 'in ' + Math.floor(diff / 60) + 'm';
+        if (diff < 86400) return 'in ' + Math.floor(diff / 3600) + 'h ' + Math.floor((diff % 3600) / 60) + 'm';
+        return 'in ' + Math.floor(diff / 86400) + 'd';
+      } catch { return ts; }
+    },
+
+    // ===== Init =====
+    init() {
+      this.$watch('view', (v) => {
+        if (!this.authed) return;
+        if (v === 'devices') { this.loadDevices(); this.startDevicesPolling(); }
+        else { this.stopDevicesPolling(); }
+        if (v === 'enroll') this.loadEnrollmentTokens();
+      });
+      if (this.authed) this.afterLogin();
+    },
+  }
+}
+</script>
+
+</body>
+</html>
