@@ -4,23 +4,562 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>WiFi Vision Extreme · Accelerate Robotics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  /* WHY: The embedded A/V Cast / WiFi Audit views (port 8765) already provide
-     their own command bar with tabs and a theme switch. Wrapping them in
-     another header here just adds a duplicate row, so the page is intentionally
-     a bare iframe — A/V Cast is the default landing view, and switching to
-     WiFi Audit happens via the embedded page's own tab pill. */
-  html, body { margin: 0; padding: 0; height: 100%; background: #f4f6fb; }
-  iframe {
-    display: block;
+  /* WHY: A/V Cast + WiFi Audit need a real backend on the user's machine
+     (browsers can't network-scan). The first time someone clicks one of
+     these buttons we ship them the one-shot installer; on every visit
+     after that the same button just opens the live dashboard.
+     "First time" is tracked via localStorage — the installer redirects
+     back here with ?installed=1 once the backend is live.
+
+     The visual layer is intentionally over-the-top — animated mesh
+     background, frosted-glass card, pulsing brand-mark, scan-line
+     sweep, animated title. Everything respects prefers-reduced-motion. */
+
+  :root {
+    --brand:   #0055ff;
+    --brand-2: #6c3fc7;
+    --brand-3: #7cf9ff;
+    --brand-4: #5eff9e;
+    --bg:      #f4f6fb;
+    --bg-card: rgba(255, 255, 255, 0.74);
+    --ink:     #1a1f36;
+    --ink-dim: #5a6580;
+    --line:    rgba(15, 23, 48, 0.10);
+    --shadow:  0 24px 72px rgba(0, 85, 255, .14),
+               0 1px 0 rgba(255, 255, 255, .8) inset,
+               0 0 0 1px rgba(0, 85, 255, .04);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; overflow-x: hidden; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 40px 20px;
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* ─── Animated mesh-gradient backdrop ─────────────────────────────── */
+  body::before {
+    content: "";
+    position: fixed; inset: -25%;
+    background:
+      radial-gradient(circle at 18% 28%, rgba(0,   85, 255, .55), transparent 38%),
+      radial-gradient(circle at 82% 18%, rgba(108, 63, 199, .50), transparent 38%),
+      radial-gradient(circle at 60% 82%, rgba(124,249, 255, .45), transparent 40%),
+      radial-gradient(circle at 28% 72%, rgba(94, 255, 158, .35), transparent 42%);
+    filter: blur(80px) saturate(140%);
+    z-index: -3;
+    animation: mesh-shift 22s ease-in-out infinite alternate;
+  }
+  @keyframes mesh-shift {
+    0%   { transform: translate(0%,  0%)  scale(1); }
+    50%  { transform: translate(-2%, 3%)  scale(1.06); }
+    100% { transform: translate(2%, -3%)  scale(1.04); }
+  }
+
+  /* ─── Faint dot grid overlay (network feel) ────────────────────────── */
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    background-image: radial-gradient(circle, rgba(15, 23, 48, .12) 1px, transparent 1px);
+    background-size: 30px 30px;
+    z-index: -2;
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  /* ─── Horizontal scan line that sweeps the viewport ────────────────── */
+  .scan-line {
+    position: fixed; left: 0; right: 0; top: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+      transparent, var(--brand) 30%, var(--brand-2) 50%, var(--brand-3) 70%, transparent);
+    box-shadow: 0 0 16px rgba(0, 85, 255, .55), 0 0 32px rgba(124, 249, 255, .35);
+    pointer-events: none;
+    z-index: 1;
+    animation: scan 7s cubic-bezier(.5,.05,.5,.95) infinite;
+    opacity: 0;
+  }
+  @keyframes scan {
+    0%   { transform: translateY(0);     opacity: 0; }
+    8%   { opacity: 0.85; }
+    92%  { opacity: 0.85; }
+    100% { transform: translateY(100vh); opacity: 0; }
+  }
+
+  /* ─── Card ────────────────────────────────────────────────────────── */
+  .launcher { width: 100%; max-width: 760px; position: relative; z-index: 2; }
+  .card {
+    position: relative;
+    background: var(--bg-card);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+            backdrop-filter: saturate(180%) blur(28px);
+    border: 1px solid rgba(255, 255, 255, .65);
+    border-radius: 26px;
+    box-shadow: var(--shadow);
+    padding: 44px 48px 38px;
+    overflow: hidden;
+    animation: card-rise .9s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes card-rise {
+    from { opacity: 0; transform: translateY(24px) scale(.985); filter: blur(6px); }
+    to   { opacity: 1; transform: none;                          filter: blur(0); }
+  }
+
+  /* Soft accent halo around the card */
+  .card::before {
+    content: ""; position: absolute; inset: -1px;
+    border-radius: 26px;
+    padding: 1px;
+    background: linear-gradient(135deg,
+      rgba(0, 85, 255, .55), rgba(108, 63, 199, .55), rgba(124, 249, 255, .55), rgba(94, 255, 158, .45));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  /* Bracket marks at the corners (Accelerate brand consistency) */
+  .corner {
+    position: absolute; width: 28px; height: 28px;
+    border: 2px solid rgba(0, 85, 255, .55);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .corner.tl { top: 14px; left: 14px;  border-right: 0; border-bottom: 0; border-radius: 8px 0 0 0; }
+  .corner.tr { top: 14px; right: 14px; border-left:  0; border-bottom: 0; border-radius: 0 8px 0 0; }
+  .corner.bl { bottom: 14px; left: 14px;  border-right: 0; border-top: 0; border-radius: 0 0 0 8px; }
+  .corner.br { bottom: 14px; right: 14px; border-left:  0; border-top: 0; border-radius: 0 0 8px 0; }
+
+  /* ─── Brand row + pulsing WiFi rings ──────────────────────────────── */
+  .mark-row { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; position: relative; }
+  .mark {
+    position: relative;
+    width: 50px; height: 50px;
+    border-radius: 13px;
+    display: grid; place-items: center;
+    color: var(--brand);
+    background: linear-gradient(135deg, rgba(0,85,255,.15), rgba(108,63,199,.15));
+    border: 1px solid rgba(0, 85, 255, .35);
+    box-shadow: 0 6px 20px rgba(0, 85, 255, .22);
+    z-index: 1;
+  }
+  .mark::before, .mark::after {
+    content: "";
+    position: absolute; inset: 0;
+    border: 2px solid var(--brand);
+    border-radius: 50%;
+    opacity: 0;
+    animation: wifi-pulse 2.6s cubic-bezier(.2,.8,.2,1) infinite;
+    z-index: -1;
+  }
+  .mark::after { animation-delay: 1.3s; }
+  @keyframes wifi-pulse {
+    0%   { transform: scale(1);   opacity: 0.55; }
+    80%  { opacity: 0.05; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+
+  .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand-text .main {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px; font-weight: 700; letter-spacing: 2.5px; color: var(--ink);
+  }
+  .brand-text .sub {
+    font-size: 10px; font-weight: 600; letter-spacing: 2.5px;
+    color: var(--ink-dim); text-transform: uppercase; margin-top: 3px;
+  }
+
+  /* ─── Title with shimmering gradient ──────────────────────────────── */
+  h1 {
+    font-size: 34px; font-weight: 900; letter-spacing: -.8px; line-height: 1.1;
+    margin: 0 0 10px;
+    background: linear-gradient(110deg,
+      var(--brand) 0%, var(--brand-2) 30%, var(--brand-3) 55%, var(--brand-2) 80%, var(--brand) 100%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: title-shimmer 7s ease-in-out infinite;
+  }
+  @keyframes title-shimmer {
+    0%, 100% { background-position: 0%   center; }
+    50%      { background-position: 100% center; }
+  }
+  .lede {
+    color: var(--ink-dim);
+    font-size: 14.5px; line-height: 1.6;
+    margin: 0 0 30px;
+    max-width: 560px;
+  }
+
+  /* ─── Buttons ─────────────────────────────────────────────────────── */
+  .buttons { display: grid; gap: 12px; margin-bottom: 18px; }
+  .btn {
+    position: relative;
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 18px 22px;
+    border: 1px solid rgba(0, 85, 255, .14);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .72);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+            backdrop-filter: saturate(180%) blur(18px);
+    color: var(--ink);
+    text-decoration: none;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    overflow: hidden;
+    transition: border-color .2s ease, box-shadow .2s ease, transform .15s ease, background .2s ease;
+  }
+  .btn::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(120deg, transparent 0%, rgba(0, 85, 255, .08) 50%, transparent 100%);
+    transform: translateX(-100%);
+    transition: transform .55s ease;
+    pointer-events: none;
+  }
+  .btn:hover {
+    border-color: rgba(0, 85, 255, .55);
+    box-shadow: 0 14px 40px rgba(0, 85, 255, .20);
+    transform: translateY(-2px);
+  }
+  .btn:hover::before { transform: translateX(100%); }
+  .btn:active { transform: translateY(0); }
+  .btn .icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: grid; place-items: center;
+    background: rgba(0, 85, 255, .10);
+    color: var(--brand);
+    transition: transform .2s ease;
+  }
+  .btn:hover .icon { transform: scale(1.05); }
+  .btn.primary .icon {
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(0, 85, 255, .35);
+  }
+  .btn .copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .btn .label { font-weight: 800; font-size: 15px; letter-spacing: .2px; }
+  .btn .sub { color: var(--ink-dim); font-size: 12.5px; }
+  .btn .arrow { color: var(--ink-dim); font-size: 19px; transition: transform .25s ease, color .2s ease; }
+  .btn:hover .arrow { color: var(--brand); transform: translateX(4px); }
+
+  /* ─── Setup hint that appears after first click ───────────────────── */
+  .setup-hint {
+    margin-top: 14px;
+    background: linear-gradient(180deg, rgba(0,85,255,.06), rgba(108,63,199,.06));
+    border: 1px solid rgba(0, 85, 255, .22);
+    border-radius: 16px;
+    padding: 18px 20px;
+    color: var(--ink);
+    font-size: 13px; line-height: 1.6;
+    animation: hint-in .5s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .setup-hint[hidden] { display: none; }
+  @keyframes hint-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .setup-hint h3 {
+    margin: 0 0 10px;
+    font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--brand); font-weight: 800;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .setup-hint h3::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--brand);
+    box-shadow: 0 0 0 4px rgba(0,85,255,.18);
+    animation: dot-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes dot-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,85,255,.32); }
+    50%      { box-shadow: 0 0 0 8px rgba(0,85,255,0);  }
+  }
+  .setup-hint ol { margin: 0; padding-left: 22px; }
+  .setup-hint li { margin-bottom: 5px; }
+  .setup-hint code {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px;
+    background: rgba(0, 85, 255, .08); padding: 1px 7px; border-radius: 5px; color: var(--brand);
+  }
+  .setup-hint kbd {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 11px; font-weight: 700;
+    background: #fff; border: 1px solid var(--line); border-bottom-width: 2px;
+    border-radius: 4px; padding: 1px 6px; color: var(--ink);
+  }
+  .cmd-box {
+    margin: 12px 0 8px;
+    background: #0e1326;
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid rgba(0, 85, 255, .35);
+    box-shadow: 0 8px 28px rgba(0, 85, 255, .14), inset 0 1px 0 rgba(255,255,255,.04);
+    overflow: hidden;
+  }
+  .cmd-box code {
+    flex: 1; min-width: 0;
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px;
+    background: transparent !important;
+    color: #b0c8ff !important;
+    padding: 0 !important; border-radius: 0;
+    white-space: nowrap; overflow-x: auto;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6px, #000 calc(100% - 24px), transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0, #000 6px, #000 calc(100% - 24px), transparent 100%);
+  }
+  .cmd-box code::before { content: "$ "; color: rgba(176, 200, 255, .55); user-select: none; }
+  .copy-btn {
+    flex: 0 0 auto;
+    border: 1px solid rgba(124, 249, 255, .45);
+    background: rgba(124, 249, 255, .12);
+    color: #b6f3ff;
+    padding: 6px 12px; border-radius: 8px;
+    cursor: pointer; font: 600 12px/1 inherit; letter-spacing: .3px;
+    transition: background .15s ease, border-color .15s ease, color .15s ease, transform .12s ease;
+  }
+  .copy-btn:hover { background: rgba(124, 249, 255, .22); border-color: rgba(124, 249, 255, .8); color: #fff; }
+  .copy-btn.copied { background: rgba(94, 255, 158, .22); border-color: rgba(94, 255, 158, .65); color: #c5ffdc; }
+  .hint-foot { margin: 6px 0 0; color: var(--ink-dim); font-size: 12px; }
+
+  /* ─── Footer microcopy ────────────────────────────────────────────── */
+  .footnote {
+    margin-top: 18px;
+    font-size: 11.5px;
+    color: var(--ink-dim);
+    display: flex; gap: 10px; align-items: center;
+  }
+  .footnote .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px;
+    background: rgba(94, 255, 158, .18);
+    border: 1px solid rgba(94, 255, 158, .55);
+    border-radius: 999px;
+    color: #0c8a4d;
+    font-weight: 700; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .footnote .pill::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: #0c8a4d;
+    animation: dot-pulse 1.6s ease-in-out infinite;
+  }
+
+  /* ─── Local-dev iframe takeover ──────────────────────────────────── */
+  iframe.embed {
+    position: fixed; inset: 0;
     width: 100%; height: 100%;
     border: 0;
-    background: #f4f6fb;
+    background: var(--bg);
+    z-index: 10;
+  }
+
+  /* ─── Reduced motion ─────────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    body::before, .scan-line, .mark::before, .mark::after, h1, .setup-hint h3::before, .footnote .pill::before {
+      animation: none !important;
+    }
+    .card { animation: none !important; }
   }
 </style>
 </head>
 <body>
-<iframe id="wifi-vision-frame" title="WiFi Vision Extreme"
-        src="http://127.0.0.1:8765/" loading="eager"></iframe>
+
+<div class="scan-line" aria-hidden="true"></div>
+
+<div class="launcher" id="launcher">
+  <div class="card">
+    <span class="corner tl" aria-hidden="true"></span>
+    <span class="corner tr" aria-hidden="true"></span>
+    <span class="corner bl" aria-hidden="true"></span>
+    <span class="corner br" aria-hidden="true"></span>
+
+    <div class="mark-row">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28">
+          <circle cx="16" cy="23" r="2.5" fill="currentColor"/>
+          <path d="M10 17 Q16 13 22 17" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M7 12 Q16 6.5 25 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
+          <path d="M4 7 Q16 0 28 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.4"/>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <span class="main">WIFI VISION EXTREME</span>
+        <span class="sub">Accelerate Robotics &middot; I.T.</span>
+      </div>
+    </div>
+
+    <h1 id="page-title">See your network. Control your network.</h1>
+    <p class="lede" id="page-lede">
+      Live A/V control and a security audit of the WiFi you're on. First click installs a tiny background service on your Mac (~30&nbsp;sec) — after that, every click jumps straight to the live dashboard.
+    </p>
+
+    <div class="buttons">
+      <button type="button" id="btn-avcast" class="btn primary" data-app="avcast">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9 L3 15 L7 15 L13 20 L13 4 L7 9 Z"/>
+            <path d="M16 8 Q19 12 16 16"/>
+            <path d="M19 5 Q24 12 19 19"/>
+          </svg>
+        </span>
+        <span class="copy">
+          <span class="label" id="btn-avcast-label">Start Live Cast</span>
+          <span class="sub" id="btn-avcast-sub">Show me how to install · 30 seconds · one Terminal paste</span>
+        </span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </button>
+
+      <button type="button" id="btn-audit" class="btn" data-app="audit">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2 L4 6 V12 Q4 17 12 22 Q20 17 20 12 V6 Z"/>
+            <path d="M9 12 L11 14 L15 10"/>
+          </svg>
+        </span>
+        <span class="copy">
+          <span class="label" id="btn-audit-label">Start Scan</span>
+          <span class="sub" id="btn-audit-sub">Show me how to install · 30 seconds · one Terminal paste</span>
+        </span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </button>
+    </div>
+
+    <div id="setup-hint" class="setup-hint" hidden>
+      <h3>Almost there</h3>
+      <ol>
+        <li>Open Terminal: press <kbd>⌘</kbd>&nbsp;<kbd>Space</kbd>, type <strong>Terminal</strong>, press <kbd>Enter</kbd>.</li>
+        <li>Paste this line and press <kbd>Enter</kbd>:</li>
+      </ol>
+      <div class="cmd-box">
+        <code id="install-cmd">curl -fsSL https://acceleraterobotics.ai/installers/wifi-vision-setup.sh | bash</code>
+        <button type="button" id="copy-cmd" class="copy-btn">📋 Copy</button>
+      </div>
+      <script>
+        // Build the install line from this page's own origin so it works the
+        // same in local dev (localhost:3000) and production (acceleraterobotics.ai).
+        (function() {
+          const o = window.location.origin;
+          const url = `${o}/installers/wifi-vision-setup.sh`;
+          // For prod (default ORIGIN already correct), keep the line clean.
+          // For non-prod, prepend WV_ORIGIN= so the script targets this host.
+          const isProd = o === 'https://acceleraterobotics.ai';
+          const line = isProd
+            ? `curl -fsSL ${url} | bash`
+            : `curl -fsSL ${url} | WV_ORIGIN='${o}' bash`;
+          document.getElementById('install-cmd').textContent = line;
+        })();
+      </script>
+      <p class="hint-foot">Wait ~30&nbsp;seconds. The dashboard opens automatically when the backend is up. (Already copied to your clipboard — just paste.)</p>
+    </div>
+
+    <div class="footnote" id="footnote">
+      <span class="pill" id="footnote-pill">Mac · Apple Silicon &amp; Intel</span>
+      <span id="footnote-text">macOS only for now · runs as a quiet background service · uninstall any time</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State -----------------------------------------------------------
+  const KEY = 'wifiVisionInstalled';
+  const params = new URLSearchParams(location.search);
+  if (params.get('installed') === '1') {
+    localStorage.setItem(KEY, 'true');
+    // Hand-off straight to the live dashboard — the install script just
+    // navigated this very tab to ?installed=1 (via AppleScript on macOS),
+    // so finishing the journey here keeps everything in one tab.
+    location.replace('http://127.0.0.1:8765/');
+  }
+
+  // ── Per-app config --------------------------------------------------
+  const APPS = {
+    avcast: {
+      first: { label: 'Start Live Cast', sub: 'Show me how to install · 30 seconds · one Terminal paste' },
+      ready: { label: 'Open A/V Cast',   sub: 'Live A/V fleet control on your network' },
+      url:   'http://127.0.0.1:8765/',
+    },
+    audit: {
+      first: { label: 'Start Scan',      sub: 'Show me how to install · 30 seconds · one Terminal paste' },
+      ready: { label: 'Open WiFi Audit', sub: 'Internal network assessment' },
+      url:   'http://127.0.0.1:8765/report.html',
+    },
+  };
+
+  function updateLabels() {
+    const ready = localStorage.getItem(KEY) === 'true';
+    for (const [app, cfg] of Object.entries(APPS)) {
+      const state = ready ? cfg.ready : cfg.first;
+      document.getElementById(`btn-${app}-label`).textContent = state.label;
+      document.getElementById(`btn-${app}-sub`).textContent = state.sub;
+    }
+    if (ready) {
+      document.getElementById('page-title').textContent = 'Pick a control surface';
+      document.getElementById('page-lede').textContent = "You're set up. Click either button to jump into the live dashboard — your local backend is running in the background.";
+      document.getElementById('footnote-pill').textContent = '✓ Backend installed';
+      document.getElementById('footnote-text').textContent = 'Auto-starts on login · uninstall any time';
+    }
+  }
+  updateLabels();
+
+  // ── Click handler ---------------------------------------------------
+  function handleClick(app) {
+    const cfg = APPS[app];
+    const ready = localStorage.getItem(KEY) === 'true';
+    if (ready) {
+      window.open(cfg.url, '_blank');
+      return;
+    }
+    // First-time path: copy the install command to clipboard + show steps.
+    // We deliberately don't download a .command file — modern Gatekeeper
+    // (macOS 14.4+) blocks unsigned scripts even via right-click → Open.
+    // A `curl … | bash` line bypasses Gatekeeper entirely (no file on disk).
+    const cmd = document.getElementById('install-cmd').textContent.trim();
+    navigator.clipboard?.writeText(cmd).catch(() => {});
+    const hint = document.getElementById('setup-hint');
+    hint.hidden = false;
+    hint.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  document.getElementById('btn-avcast').addEventListener('click', () => handleClick('avcast'));
+  document.getElementById('btn-audit').addEventListener('click',  () => handleClick('audit'));
+
+  // Manual copy button inside the hint
+  document.getElementById('copy-cmd').addEventListener('click', () => {
+    const btn = document.getElementById('copy-cmd');
+    const cmd = document.getElementById('install-cmd').textContent.trim();
+    navigator.clipboard?.writeText(cmd).then(() => {
+      btn.classList.add('copied');
+      btn.textContent = '✓ Copied';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋 Copy'; }, 1800);
+    });
+  });
+
+  // ── Local-dev convenience ------------------------------------------
+  // ?launcher in the URL forces the launcher view even on HTTP so we
+  // can preview the production look locally without deploying.
+  const forceLauncher = params.has('launcher');
+  if (location.protocol === 'http:' && !forceLauncher) {
+    const f = document.createElement('iframe');
+    f.className = 'embed';
+    f.title = 'WiFi Vision Extreme';
+    f.src = APPS.avcast.url;
+    document.body.appendChild(f);
+    document.getElementById('launcher').remove();
+  }
+</script>
+
 </body>
 </html>

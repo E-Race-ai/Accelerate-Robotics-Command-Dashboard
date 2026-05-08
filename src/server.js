@@ -140,6 +140,24 @@ for (const page of PROTECTED_PUBLIC_PAGES) {
 
 // ── Static files ────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// WHY: WiFi Vision Extreme installer + bundle. PUBLIC by design — the
+// installer .command needs to fetch the bundle without an auth cookie
+// (the bundle download runs in /bin/bash, not in the browser session).
+// The .command itself is served with the right content-type so Safari
+// triggers a download instead of trying to render it.
+app.use('/installers', express.static(path.join(__dirname, '..', 'installers'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.command')) {
+      res.setHeader('Content-Type', 'application/x-sh');
+      res.setHeader('Content-Disposition', 'attachment; filename="wifi-vision-setup.command"');
+    } else if (filePath.endsWith('.sh')) {
+      // text/plain so `curl | bash` gets the raw script body instead of the
+      // browser trying to download. Inline disposition keeps it pipe-friendly.
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    }
+  },
+}));
 // WHY: Serve the pages/ directory for standalone HTML pages (robot catalog, etc.)
 // WHY: requireAuthPage ensures these toolkit pages are only accessible to logged-in users
 // WHY: no-store on .html so the browser never serves a cached page —
