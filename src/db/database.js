@@ -439,6 +439,19 @@ async function initSchema() {
       resolved_at TEXT
     )`,
     `CREATE INDEX IF NOT EXISTS idx_improvement_status_created ON improvement_requests(status, created_at DESC)`,
+    // ── IR Comments — threaded discussion on improvement requests
+    // WHY: Team members need to ask clarifying questions and leave notes on
+    // tickets without changing the original description.
+    `CREATE TABLE IF NOT EXISTS ir_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      request_id INTEGER NOT NULL REFERENCES improvement_requests(id) ON DELETE CASCADE,
+      author_name TEXT,
+      author_email TEXT,
+      body TEXT NOT NULL,
+      is_admin INTEGER NOT NULL DEFAULT 0 CHECK(is_admin IN (0, 1)),
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_ir_comments_request ON ir_comments(request_id, created_at)`,
 
     // WHY: Generic key-value store for runtime-editable settings that don't warrant a
     // dedicated table. First user is the Creative Labs tunnel URL — Eric pastes
