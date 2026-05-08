@@ -164,6 +164,79 @@ router.patch('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /:id/comments — List comments for a request ─────────
+router.get('/:id/comments', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });
+
+  try {
+    const comments = await db.all(
+      `SELECT id, request_id, author_name, author_email, body, is_admin, created_at
+       FROM ir_comments WHERE request_id = ? ORDER BY created_at ASC`,
+      [id],
+    );
+    res.json(comments);
+  } catch (e) {
+    console.error('[improvement] list comments failed:', e);
+    res.status(500).json({ error: 'Failed to load comments' });
+  }
+});
+
+// ── POST /:id/comments — Add a comment (public, rate-limited upstream) ──
+router.post('/:id/comments', async (req, res) => {
+  const requestId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(requestId)) return res.status(400).json({ error: 'invalid id' });
+
+  const { body: commentBody, author_name, author_email } = req.body || {};
+  if (!commentBody || !String(commentBody).trim()) {
+    return res.status(400).json({ error: 'comment body is required' });
+  }
+  if (String(commentBody).length > 5000) {
+    return res.status(400).json({ error: 'comment too long (max 5000 chars)' });
+  }
+
+  // Verify the request exists
+  const request = await db.one('SELECT id FROM improvement_requests WHERE id = ?', [requestId]);
+  if (!request) return res.status(404).json({ error: 'request not found' });
+
+  // WHY: Detect admin status from JWT cookie if present — admins get a visual
+  // badge so users know the response is official.
+  let isAdmin = 0;
+  try {
+    const jwt = require('jsonwebtoken');
+    const token = req.cookies && req.cookies.token;
+    if (token) {
+      jwt.verify(token, process.env.JWT_SECRET);
+      isAdmin = 1;
+    }
+  } catch (_) { /* not logged in — public endpoint */ }
+
+  try {
+    const result = await db.run(
+      `INSERT INTO ir_comments (request_id, author_name, author_email, body, is_admin)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        requestId,
+        author_name ? String(author_name).slice(0, 100) : null,
+        author_email ? String(author_email).slice(0, 200) : null,
+        String(commentBody).trim(),
+        isAdmin,
+      ],
+    );
+
+    await logActivity(
+      (author_name && String(author_name).trim()) || 'anonymous',
+      'ir_comment_added',
+      { request_id: requestId, comment_id: result.lastInsertRowid },
+    );
+
+    res.status(201).json({ ok: true, comment_id: result.lastInsertRowid });
+  } catch (e) {
+    console.error('[improvement] add comment failed:', e);
+    res.status(500).json({ error: 'Failed to save comment' });
+  }
+});
+
 // ── DELETE /:id — Remove request (admin only) ────────────────
 router.delete('/:id', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id, 10);
