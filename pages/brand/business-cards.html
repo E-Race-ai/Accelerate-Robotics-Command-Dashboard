@@ -13,6 +13,12 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
+<!-- Print-shop-ready PDF export: html-to-image rasterises each card (handles
+     webfonts + absolutely-positioned SVGs better than html2canvas), jsPDF
+     wraps it in a 3.75x2.25 in page (3.5x2 trim + 0.125 bleed) for Staples. -->
+<script src="https://unpkg.com/html-to-image@1.11.13/dist/html-to-image.js"></script>
+<script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+
 <style>
   :root {
     --ink:    #1A1814;        /* warm near-black */
@@ -211,6 +217,7 @@
     font-variation-settings: "opsz" 144;
     letter-spacing: -0.005em;
     color: var(--ink);
+    white-space: nowrap;
   }
   .card.--ink .lockup-name { color: var(--paper); }
   .lockup-sub {
@@ -218,6 +225,7 @@
     font-variation-settings: "opsz" 144;
     color: var(--muted);
     letter-spacing: 0;
+    white-space: nowrap;
   }
 
   .back-foot {

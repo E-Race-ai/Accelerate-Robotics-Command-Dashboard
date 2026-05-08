@@ -65,7 +65,11 @@ app.use(helmet({
       // The cloudflared quick tunnel (rotates URL when it restarts) lives on
       // *.trycloudflare.com; localhost:3100 is the fallback for when an admin
       // is on Eric's MacBook directly.
-      connectSrc: ["'self'", "http://localhost:3100", "https://*.trycloudflare.com"],
+      // WHY: fonts.googleapis.com + fonts.gstatic.com — the business-card PDF
+      // exporter fetches the Google Fonts CSS + woff2 binaries via JS to embed
+      // them in the SVG capture. Without this, fetch() is blocked by CSP and
+      // the export falls back to Times instead of Fraunces.
+      connectSrc: ["'self'", "http://localhost:3100", "https://*.trycloudflare.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
       // WHY: YouTube embeds + same-origin iframes (elevator-embed.html) + Creative Labs robot command embed
       frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com", "http://localhost:3100", "https://*.trycloudflare.com"],
       // WHY: Helmet defaults script-src-attr to 'none', which blocks ALL inline event
