@@ -381,7 +381,11 @@ body.light .slider::before{background:var(--accent2)}
   body,body.light{background:white !important;color:#111 !important}
   .finding,.kpi,.rec,.step,.chart,.host,.topology,.hero .score{background:white !important;border-color:#ddd !important;box-shadow:none !important}
   .hero .score .verdict{color:#111}
-  .sidebar,.sb-toggle,.theme-toggle,.cmd-bar{display:none !important}
+  .sidebar,.sb-toggle,.theme-toggle,.cmd-bar,.wv-frame-bar,.rescan-status{display:none !important}
+  /* keep findings/hosts/recs from breaking mid-card across pages */
+  .finding,.host,.rec,.step,.kpi,.hero .score{page-break-inside:avoid;break-inside:avoid}
+  /* let long sections breathe */
+  section,.hero{page-break-inside:auto}
 }
 
 /* ===== Atlas Command Bar (sticky top — page tabs + theme toggle) ===== */
@@ -405,7 +409,15 @@ body.light .cmd-bar{background:rgba(245,247,251,.72);border-bottom-color:rgba(15
   padding:6px 14px;font:inherit;font-size:13px;font-weight:600;
   color:#475569;cursor:pointer;transition:background .12s}
 .wv-frame-bar .back-btn:hover{background:#f1f5f9}
-.wv-frame-bar .open-external{margin-left:auto;font-size:12px;color:#64748b;
+.wv-frame-bar .download-btn{margin-left:auto;display:inline-flex;align-items:center;gap:6px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+  border:0;border-radius:8px;padding:6px 14px;font:inherit;font-size:13px;font-weight:700;
+  letter-spacing:.2px;cursor:pointer;box-shadow:0 2px 8px rgba(124,249,255,.25);
+  transition:transform .12s,box-shadow .15s,filter .15s}
+.wv-frame-bar .download-btn:hover{transform:translateY(-1px);
+  box-shadow:0 4px 14px rgba(124,249,255,.35);filter:brightness(1.05)}
+.wv-frame-bar .download-btn:active{transform:translateY(0)}
+.wv-frame-bar .open-external{font-size:12px;color:#64748b;
   text-decoration:none;display:inline-flex;align-items:center;gap:4px}
 .wv-frame-bar .open-external:hover{color:#334155}
 body.dark .wv-frame-bar{background:#0e1526;border-bottom-color:rgba(255,255,255,.08)}
@@ -535,12 +547,20 @@ html,body{transition:background-color .35s ease,color .35s ease}
 <body class="light">
 <script>document.body.className = (document.documentElement.dataset.bodyClass || 'light');</script>
 
-<!-- ===== FRAME BAR (matches AR launcher's toolFrameBar — Back left, Open in new tab right) ===== -->
+<!-- ===== FRAME BAR (matches AR launcher's toolFrameBar — Back left, actions right) ===== -->
 <div class="wv-frame-bar">
   <button type="button" class="back-btn" onclick="wvBack()" title="Back to launcher" aria-label="Back to launcher">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
     Back
   </button>
+  <a class="download-btn" href="/api/security/report.pdf" title="Download a server-generated PDF of this report — identical layout across browsers, contains all findings, hosts, and recommendations">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+    Download report
+  </a>
   <a class="open-external" id="wv-open-external" href="" target="_blank" rel="noopener">
     Open in new tab
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
