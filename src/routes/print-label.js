@@ -129,21 +129,49 @@ function lpSend(printer, pdfPath) {
   });
 }
 
+// Pure parser for `lpstat -p <printer> -l` output. Split out so it's unit-
+// testable without shelling out to CUPS. Returns the first problem found
+// (caller only needs one reason to refuse the print). Order matters:
+// "disabled" wins over "offline" because a disabled queue won't auto-recover
+// even if the device comes back.
+//
+// WHY this exists at all: previous version only checked "disabled" and
+// "Rejecting Jobs", which meant a printer marked **offline** (USB unplugged,
+// network unreachable, power off) silently passed the readiness check. The
+// queue was still "enabled," so `lp` happily accepted jobs that piled up
+// behind a stuck "active" job, and the UI reported "✓ Sent" while no paper
+// ever came out. We now also detect offline / waiting / unable-to-connect.
+function parsePrinterState(out, printer) {
+  if (/disabled/i.test(out)) {
+    return { ok: false, error: `printer ${printer} is disabled — run \`cupsenable ${printer}\`` };
+  }
+  if (/Rejecting Jobs/i.test(out)) {
+    return { ok: false, error: `printer ${printer} is rejecting jobs — run \`cupsaccept ${printer}\`` };
+  }
+  // CUPS surfaces device-unreachable state on the indented detail line as
+  // one of these phrases. Any of them means new jobs will queue but never
+  // deliver until the link is restored.
+  if (/(the printer is offline|waiting for printer|unable to connect to)/i.test(out)) {
+    return {
+      ok: false,
+      error: `printer ${printer} is offline — check the cable/power, then run \`cupsdisable ${printer} && cupsenable ${printer}\` to re-probe`,
+    };
+  }
+  return { ok: true };
+}
+
 function ensurePrinterReady(printer) {
+  let out;
   try {
-    const out = execFileSync('lpstat', ['-p', printer, '-l'], { encoding: 'utf-8', timeout: 4000 });
-    if (/disabled/i.test(out)) {
-      throw new Error(`printer ${printer} is disabled — run \`cupsenable ${printer}\``);
-    }
-    if (/Rejecting Jobs/i.test(out)) {
-      throw new Error(`printer ${printer} is rejecting jobs — run \`cupsaccept ${printer}\``);
-    }
+    out = execFileSync('lpstat', ['-p', printer, '-l'], { encoding: 'utf-8', timeout: 4000 });
   } catch (err) {
     if (err.code === 'ENOENT' || /no destination/i.test(String(err.message))) {
       throw new Error(`printer ${printer} is not configured on this machine`);
     }
     throw err;
   }
+  const state = parsePrinterState(out, printer);
+  if (!state.ok) throw new Error(state.error);
 }
 
 router.post('/send', async (req, res) => {
@@ -204,3 +232,7 @@ router.get('/health', (_req, res) => {
 });
 
 module.exports = router;
+// Exported for unit tests. The route handler itself is the Express router
+// above; this side-export keeps the pure parser reachable without spinning
+// up the server.
+module.exports.parsePrinterState = parsePrinterState;
