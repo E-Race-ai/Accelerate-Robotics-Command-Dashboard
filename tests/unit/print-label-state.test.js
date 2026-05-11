@@ -26,6 +26,10 @@ describe('parsePrinterState', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/offline/i);
     expect(result.error).toMatch(/cupsdisable JADENS_Label && cupsenable JADENS_Label/);
+    // Offline IS recoverable via a queue-state cycle — the route uses this
+    // flag to decide whether to attempt auto-recovery before failing.
+    expect(result.recoverable).toBe(true);
+    expect(result.reason).toBe('offline');
   });
 
   it('rejects a disabled printer with the cupsenable hint', () => {
@@ -34,6 +38,10 @@ describe('parsePrinterState', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/disabled/);
     expect(result.error).toMatch(/cupsenable/);
+    // Disabled means the operator explicitly turned the queue off; auto-
+    // recovery cycling won't help — they have to flip it back on themselves.
+    expect(result.recoverable).toBe(false);
+    expect(result.reason).toBe('disabled');
   });
 
   it('rejects a printer that is rejecting jobs', () => {
@@ -42,6 +50,8 @@ describe('parsePrinterState', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/rejecting jobs/i);
     expect(result.error).toMatch(/cupsaccept/);
+    expect(result.recoverable).toBe(false);
+    expect(result.reason).toBe('rejecting');
   });
 
   it('rejects a printer stuck waiting for the device to come back', () => {
@@ -49,6 +59,8 @@ describe('parsePrinterState', () => {
     const result = parsePrinterState(out, 'JADENS_Label');
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/offline/i);
+    expect(result.recoverable).toBe(true);
+    expect(result.reason).toBe('offline');
   });
 
   it('rejects a printer when the backend cannot connect', () => {
@@ -56,6 +68,8 @@ describe('parsePrinterState', () => {
     const result = parsePrinterState(out, 'JADENS_Label');
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/offline/i);
+    expect(result.recoverable).toBe(true);
+    expect(result.reason).toBe('offline');
   });
 
   it('prefers the "disabled" reason when both disabled and offline are present', () => {
