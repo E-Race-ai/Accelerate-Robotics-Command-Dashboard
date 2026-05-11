@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Portals — Accelerate Robotics</title>
+<link rel="stylesheet" href="/admin/portals.css" onerror="this.remove()">
+<style>
+/* ============================================================================
+   Customer Portals — admin styles
+   Designed to match the existing /admin pages (dark navy header, white nav,
+   light gray page bg, blue accents). Inlined so this file works as a drop-in
+   even before the build pipeline picks up the .css file.
+   ============================================================================ */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.5; color: #1A1A1A; background: #F5F7FA; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+.brand-bar { background: linear-gradient(135deg, #0A1628 0%, #1F4E79 100%); color: #fff; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+.brand-bar .logo-block { display: flex; flex-direction: column; gap: 2px; }
+.brand-bar .logo-name { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
+.brand-bar .logo-tag { font-size: 11px; color: rgba(255,255,255,0.7); }
+.brand-bar .top-actions { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+.brand-bar .top-actions a { color: rgba(255,255,255,0.85); text-decoration: none; }
+.nav-bar { background: #fff; border-bottom: 1px solid #E5E7EB; padding: 0 28px; display: flex; gap: 4px; overflow-x: auto; }
+.nav-bar a { padding: 12px 16px; text-decoration: none; color: #6B7280; font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent; white-space: nowrap; }
+.nav-bar a.active { color: #1F4E79; border-bottom-color: #1F4E79; }
+.page { max-width: 1400px; margin: 0 auto; padding: 24px 28px 80px; }
+.page-header { margin-bottom: 24px; }
+.page-header h1 { margin: 0 0 6px; font-size: 28px; font-weight: 700; color: #0A1628; letter-spacing: -0.02em; }
+.page-header .sub { color: #6B7280; font-size: 14px; }
+.page-header .header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; }
+.kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.kpi { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px 18px; }
+.kpi .v { font-size: 24px; font-weight: 700; color: #0A1628; line-height: 1.1; }
+.kpi .k { font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+.kpi .delta { font-size: 11px; color: #6B7280; margin-top: 4px; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.toolbar .left, .toolbar .right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.toolbar .search { background: #fff; border: 1px solid #D1D5DB; border-radius: 6px; padding: 7px 12px; font-size: 13px; width: 240px; }
+.filter-chip { background: #fff; border: 1px solid #D1D5DB; border-radius: 999px; padding: 5px 12px; font-size: 12px; color: #374151; cursor: pointer; }
+.filter-chip.active { background: #1F4E79; border-color: #1F4E79; color: #fff; }
+.btn { background: #fff; border: 1px solid #D1D5DB; border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; color: #374151; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+.btn:hover { background: #F9FAFB; border-color: #9CA3AF; }
+.btn-primary { background: #1F4E79; border-color: #1F4E79; color: #fff; }
+.btn-primary:hover { background: #163A5C; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.portal-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; padding: 18px; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; gap: 10px; text-decoration: none; color: inherit; }
+.portal-card:hover { border-color: #1F4E79; box-shadow: 0 2px 8px rgba(31,78,121,0.08); transform: translateY(-1px); }
+.portal-card .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.portal-card .name { font-weight: 600; font-size: 15px; color: #0A1628; line-height: 1.3; }
+.portal-card .sub { font-size: 12px; color: #6B7280; }
+.portal-card .stats { display: flex; gap: 16px; padding-top: 8px; border-top: 1px solid #F3F4F6; }
+.portal-card .stat { font-size: 11px; color: #6B7280; }
+.portal-card .stat strong { display: block; font-size: 16px; color: #0A1628; font-weight: 700; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.pill.active { background: #D1FAE5; color: #065F46; }
+.pill.draft { background: #FEF3C7; color: #92400E; }
+.pill.archived { background: #E5E7EB; color: #4B5563; }
+.empty { text-align: center; padding: 60px 20px; color: #6B7280; }
+.empty .ic { font-size: 32px; margin-bottom: 8px; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(10, 22, 40, 0.5); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+.modal-backdrop.open { display: flex; }
+.modal { background: #fff; border-radius: 10px; max-width: 520px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+.modal h3 { margin: 0; padding: 18px 22px; border-bottom: 1px solid #E5E7EB; font-size: 17px; font-weight: 600; color: #0A1628; }
+.modal .body { padding: 20px 22px; }
+.modal .footer { padding: 14px 22px; border-top: 1px solid #E5E7EB; display: flex; justify-content: flex-end; gap: 8px; background: #F9FAFB; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+.field input, .field textarea, .field select { width: 100%; border: 1px solid #D1D5DB; border-radius: 6px; padding: 8px 12px; font-size: 14px; font-family: inherit; }
+.field .hint { font-size: 11px; color: #6B7280; margin-top: 4px; }
+.muted { color: #6B7280; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: #1F4E79; color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); z-index: 200; }
+.toast.error { background: #B91C1C; }
+</style>
+</head>
+<body>
+
+<div class="brand-bar">
+  <div class="logo-block">
+    <div class="logo-name">Accelerate Robotics</div>
+    <div class="logo-tag">One Brain. Many Bots.</div>
+  </div>
+  <div class="top-actions">
+    <a href="/">View Site</a>
+    <a href="/admin/logout">Sign Out</a>
+  </div>
+</div>
+
+<div class="nav-bar">
+  <a href="/admin">Command Center</a>
+  <a href="/admin/deals">Deals</a>
+  <a href="/pages/pipeline-prospects.html">Prospects</a>
+  <a href="/pages/assessments.html">Assessments</a>
+  <a href="/pages/robot-catalog.html">Catalog</a>
+  <a href="/pages/fleet-designer.html">Fleet</a>
+  <a href="/admin/deals?stage=won&stage=deploying&stage=active">Deploy</a>
+  <a href="/admin/portals.html" class="active">Portals</a>
+</div>
+
+<div class="page">
+  <div class="page-header">
+    <div class="header-flex">
+      <div>
+        <h1>Customer Portals</h1>
+        <div class="sub">Branded deal rooms for sharing files, tracking engagement, and collaborating with customers</div>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" id="archive-toggle">Show archived</button>
+        <button class="btn btn-primary" id="new-portal-btn">+ New Portal</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-strip" id="kpis"></div>
+
+  <div class="toolbar">
+    <div class="left">
+      <input type="search" class="search" id="search" placeholder="Search portals...">
+      <span class="filter-chip active" data-filter="all">All</span>
+      <span class="filter-chip" data-filter="active">Active</span>
+      <span class="filter-chip" data-filter="draft">Draft</span>
+      <span class="filter-chip" data-filter="has-deal">Linked to deal</span>
+    </div>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<!-- Create modal -->
+<div class="modal-backdrop" id="create-modal">
+  <div class="modal">
+    <h3>Create New Portal</h3>
+    <div class="body">
+      <div class="field"><label>Customer name *</label><input type="text" id="cm-name" placeholder="e.g., Thesis Hotel"></div>
+      <div class="field"><label>Internal portal name</label><input type="text" id="cm-internal" placeholder="e.g., Thesis Hotel — Miami"><div class="hint">For your reference. Customers don't see this.</div></div>
+      <div class="field"><label>URL slug *</label><input type="text" id="cm-slug" placeholder="thesis-hotel"><div class="hint">acceleraterobotics.ai/portal/<span id="slug-preview" style="font-weight:600;">[slug]</span> — cannot be changed later.</div></div>
+      <div class="field"><label>Welcome message</label><textarea id="cm-welcome" rows="3" placeholder="Optional. Shown at the top of the portal."></textarea></div>
+    </div>
+    <div class="footer">
+      <button class="btn" id="cm-cancel">Cancel</button>
+      <button class="btn btn-primary" id="cm-create">Create Portal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+let portalsCache = [];
+let currentFilter = 'all';
+let showArchived = false;
+
+const $ = (s, root = document) => root.querySelector(s);
+const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
+
+function escape(s) { return (s||'').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function ago(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso.replace(' ', 'T') + (iso.endsWith('Z') ? '' : 'Z'));
+  const diff = Date.now() - d.getTime();
+  const m=Math.floor(diff/60000), h=Math.floor(diff/3600000), days=Math.floor(diff/86400000);
+  if (days > 30) return Math.floor(days/30) + 'mo ago';
+  if (days > 0) return days + 'd ago';
+  if (h > 0) return h + 'h ago';
+  if (m > 0) return m + 'm ago';
+  return 'just now';
+}
+function toast(msg, isError = false) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    ...opts,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let msg;
+    try { msg = JSON.parse(text).error; } catch (_) { msg = text || res.statusText; }
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+async function load() {
+  try {
+    const data = await api('/api/portals' + (showArchived ? '?archived=true' : ''));
+    portalsCache = data.portals || [];
+    render();
+  } catch (err) {
+    if (err.message.toLowerCase().includes('auth')) {
+      window.location.href = '/admin-login';
+      return;
+    }
+    $('#list').innerHTML = `<div class="empty"><div class="ic">⚠️</div><div>Couldn't load portals: ${escape(err.message)}</div></div>`;
+  }
+}
+
+function render() {
+  let portals = portalsCache;
+  const search = $('#search').value.toLowerCase();
+  if (search) {
+    portals = portals.filter(p =>
+      [p.name, p.customer_name, p.slug].some(s => (s||'').toLowerCase().includes(search))
+    );
+  }
+  if (currentFilter === 'active') portals = portals.filter(p => p.status === 'active');
+  if (currentFilter === 'draft') portals = portals.filter(p => p.status === 'draft');
+  if (currentFilter === 'has-deal') portals = portals.filter(p => p.deal_id);
+
+  // KPIs based on full cache, not filtered
+  const all = portalsCache;
+  const totalParts = all.reduce((s, p) => s + (p.summary?.total_participants || 0), 0);
+  const totalActive = all.filter(p => p.status === 'active').length;
+  const totalDraft = all.filter(p => p.status === 'draft').length;
+
+  $('#kpis').innerHTML = `
+    <div class="kpi"><div class="v">${all.length}</div><div class="k">Total portals</div></div>
+    <div class="kpi"><div class="v">${totalActive}</div><div class="k">Active</div></div>
+    <div class="kpi"><div class="v">${totalDraft}</div><div class="k">Draft</div></div>
+    <div class="kpi"><div class="v">${totalParts}</div><div class="k">Customer participants</div></div>
+  `;
+
+  if (portals.length === 0) {
+    $('#list').innerHTML = `<div class="empty"><div class="ic">📂</div><div>No portals match your filters</div></div>`;
+    return;
+  }
+
+  $('#list').innerHTML = `<div class="card-grid">${portals.map(p => `
+    <a class="portal-card" href="/admin/portal-detail.html?id=${encodeURIComponent(p.id)}">
+      <div class="head">
+        <div>
+          <div class="name">${escape(p.customer_name)}</div>
+          <div class="sub">${escape(p.name)}</div>
+        </div>
+        <span class="pill ${p.status}">${p.status}</span>
+      </div>
+      <div class="sub" style="font-family: monospace; font-size: 11px;">/portal/${escape(p.slug)}</div>
+      <div class="stats">
+        <div class="stat"><strong>${p.summary?.active_participants || 0}/${p.summary?.total_participants || 0}</strong>active</div>
+        <div class="stat"><strong>${p.summary?.total_visits || 0}</strong>visits</div>
+        <div class="stat"><strong>${p.summary?.total_comments || 0}</strong>comments</div>
+      </div>
+      <div class="sub" style="font-size:11px;">${p.summary?.days_since_external !== null ? `Last visit: ${p.summary.days_since_external}d ago` : 'No external visits yet'}</div>
+    </a>
+  `).join('')}</div>`;
+}
+
+// --- Filter chips ---
+$$('.filter-chip').forEach(chip => chip.addEventListener('click', () => {
+  $$('.filter-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  currentFilter = chip.dataset.filter;
+  render();
+}));
+
+// --- Search ---
+$('#search').addEventListener('input', render);
+
+// --- Show archived toggle ---
+$('#archive-toggle').addEventListener('click', () => {
+  showArchived = !showArchived;
+  $('#archive-toggle').textContent = showArchived ? 'Show active' : 'Show archived';
+  load();
+});
+
+// --- Create modal ---
+const slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+$('#new-portal-btn').addEventListener('click', () => {
+  $('#create-modal').classList.add('open');
+  $('#cm-name').focus();
+});
+$('#cm-cancel').addEventListener('click', () => {
+  $('#create-modal').classList.remove('open');
+  ['cm-name','cm-internal','cm-slug','cm-welcome'].forEach(id => $('#' + id).value = '');
+});
+$('#cm-name').addEventListener('input', e => {
+  const s = slugify(e.target.value);
+  $('#cm-slug').value = s;
+  $('#slug-preview').textContent = s || '[slug]';
+});
+$('#cm-slug').addEventListener('input', e => {
+  $('#slug-preview').textContent = e.target.value || '[slug]';
+});
+$('#cm-create').addEventListener('click', async () => {
+  const customer_name = $('#cm-name').value.trim();
+  const slug = $('#cm-slug').value.trim();
+  const name = $('#cm-internal').value.trim() || customer_name;
+  const welcome_message = $('#cm-welcome').value.trim();
+  if (!customer_name || !slug) {
+    toast('Customer name and slug are required', true);
+    return;
+  }
+  try {
+    const result = await api('/api/portals', {
+      method: 'POST',
+      body: JSON.stringify({ slug, name, customer_name, welcome_message }),
+    });
+    window.location.href = `/admin/portal-detail.html?id=${encodeURIComponent(result.portal.id)}`;
+  } catch (err) {
+    toast(err.message, true);
+  }
+});
+
+load();
+</script>
+
+</body>
+</html>
