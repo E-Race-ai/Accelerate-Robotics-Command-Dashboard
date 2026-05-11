@@ -34,6 +34,8 @@ const whatsappRoutes = require('./routes/whatsapp');
 const hotelResearchRoutes = require('./routes/hotel-research');
 const glossaryGameRoutes = require('./routes/glossary-game');
 const systemSettingsRoutes = require('./routes/system-settings');
+const portalsRouter = require('./routes/portals');
+const portalPublicRouter = require('./routes/portal-public');
 const { creativeLabsProxy } = require('./routes/creative-labs-proxy');
 
 const app = express();
@@ -292,6 +294,13 @@ app.use('/api/glossary-game', glossaryGameRoutes);
 
 app.use('/api/system-settings', systemSettingsRoutes);
 
+// Customer Portals — branded deal rooms.
+// `/api/portal-public` is unauthenticated (magic-link → portal_session cookie).
+// `/api/portals` is admin-only; the router attaches the existing requireAuth
+// middleware itself so it follows the project-wide per-route auth pattern.
+app.use('/api/portal-public', portalPublicRouter);
+app.use('/api/portals', portalsRouter);
+
 // MDM (Mobile Device Management) — Android Management API integration.
 // Manages two fleets via Google's AMAPI: Keenon-style robot tablets and
 // Atlas-owned staff devices. All methods require auth; gated inside the
@@ -368,6 +377,21 @@ app.get('/api/debug/resend-check', async (req, res) => {
   } catch (err) {
     res.json({ ok: false, key: masked, from, error: err.message });
   }
+});
+
+// ── Customer Portals — serve the per-slug customer pages ───────
+// WHY: A customer hits /portal/<slug>/ and the HTML reads the slug from the
+// URL. Without these routes Express would 404 because there's no on-disk
+// /portal/<slug>/index.html. Sign-in is its own page so the magic-link
+// callback can redirect there on error.
+app.get('/portal/:slug', (req, res) => {
+  res.redirect(`/portal/${encodeURIComponent(req.params.slug)}/`);
+});
+app.get('/portal/:slug/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'portal', 'index.html'));
+});
+app.get('/portal/:slug/sign-in.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'portal', 'sign-in.html'));
 });
 
 // ── SPA fallback for admin routes ───────────────────────────────

@@ -602,6 +602,119 @@ async function initSchema() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_glossary_user_points ON glossary_user_progress(total_points DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_glossary_activities_user ON glossary_activities(user_email, created_at DESC)`,
+
+    // ── Customer Portals (deal-room style spaces) ──────────────────
+    // WHY: Branded, per-customer spaces where customers view files we share
+    // with them, comment, optionally upload, and where we track engagement.
+    // Tables are prefixed `portal_` to avoid collisions with existing tables.
+    // External users authenticate via magic-link; tokens are hashed at rest
+    // and single-use (consumed_at is set inside a transaction).
+    `CREATE TABLE IF NOT EXISTS portal_spaces (
+      id                          TEXT PRIMARY KEY,
+      slug                        TEXT NOT NULL UNIQUE,
+      name                        TEXT NOT NULL,
+      customer_name               TEXT NOT NULL,
+      customer_logo_path          TEXT,
+      status                      TEXT NOT NULL DEFAULT 'draft',
+      deal_id                     TEXT,
+      allow_external_uploads      INTEGER NOT NULL DEFAULT 1,
+      allow_external_downloads    INTEGER NOT NULL DEFAULT 1,
+      allow_external_invites      INTEGER NOT NULL DEFAULT 0,
+      welcome_message             TEXT NOT NULL DEFAULT '',
+      theme_primary_color         TEXT NOT NULL DEFAULT '#1F4E79',
+      theme_accent_color          TEXT NOT NULL DEFAULT '#2E86C1',
+      owner_user_id               TEXT NOT NULL,
+      created_at                  TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at                  TEXT NOT NULL DEFAULT (datetime('now')),
+      archived_at                 TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_slug    ON portal_spaces(slug)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_status  ON portal_spaces(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_owner   ON portal_spaces(owner_user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_spaces_deal    ON portal_spaces(deal_id)`,
+
+    `CREATE TABLE IF NOT EXISTS portal_participants (
+      id              TEXT PRIMARY KEY,
+      portal_id       TEXT NOT NULL,
+      email           TEXT NOT NULL,
+      full_name       TEXT,
+      role            TEXT NOT NULL,
+      status          TEXT NOT NULL DEFAULT 'invited',
+      invited_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      invited_by      TEXT NOT NULL,
+      last_seen_at    TEXT,
+      FOREIGN KEY (portal_id) REFERENCES portal_spaces(id) ON DELETE CASCADE,
+      UNIQUE (portal_id, email)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_participants_portal ON portal_participants(portal_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_participants_email  ON portal_participants(email)`,
+
+    `CREATE TABLE IF NOT EXISTS portal_content (
+      id                   TEXT PRIMARY KEY,
+      portal_id            TEXT NOT NULL,
+      parent_folder_id     TEXT,
+      kind                 TEXT NOT NULL,
+      title                TEXT NOT NULL,
+      description          TEXT NOT NULL DEFAULT '',
+      file_path            TEXT,
+      file_type            TEXT,
+      file_size_bytes      INTEGER,
+      source_tool          TEXT,
+      source_record_id     TEXT,
+      uploaded_by_email    TEXT NOT NULL,
+      sort_order           INTEGER NOT NULL DEFAULT 0,
+      is_pinned            INTEGER NOT NULL DEFAULT 0,
+      created_at           TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (portal_id) REFERENCES portal_spaces(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_folder_id) REFERENCES portal_content(id) ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_content_portal ON portal_content(portal_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_content_parent ON portal_content(parent_folder_id)`,
+
+    `CREATE TABLE IF NOT EXISTS portal_comments (
+      id                   TEXT PRIMARY KEY,
+      portal_id            TEXT NOT NULL,
+      content_item_id      TEXT NOT NULL,
+      parent_comment_id    TEXT,
+      author_email         TEXT NOT NULL,
+      body                 TEXT NOT NULL,
+      created_at           TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (portal_id) REFERENCES portal_spaces(id) ON DELETE CASCADE,
+      FOREIGN KEY (content_item_id) REFERENCES portal_content(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_comment_id) REFERENCES portal_comments(id) ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_comments_portal  ON portal_comments(portal_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_comments_content ON portal_comments(content_item_id)`,
+
+    `CREATE TABLE IF NOT EXISTS portal_activity (
+      id                   TEXT PRIMARY KEY,
+      portal_id            TEXT NOT NULL,
+      participant_email    TEXT,
+      event_type           TEXT NOT NULL,
+      target_type          TEXT,
+      target_id            TEXT,
+      metadata_json        TEXT NOT NULL DEFAULT '{}',
+      ip_address           TEXT,
+      user_agent           TEXT,
+      occurred_at          TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (portal_id) REFERENCES portal_spaces(id) ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_activity_portal      ON portal_activity(portal_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_activity_occurred    ON portal_activity(occurred_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_activity_participant ON portal_activity(portal_id, participant_email)`,
+
+    `CREATE TABLE IF NOT EXISTS portal_magic_tokens (
+      id              TEXT PRIMARY KEY,
+      participant_id  TEXT NOT NULL,
+      token_hash      TEXT NOT NULL UNIQUE,
+      expires_at      TEXT NOT NULL,
+      consumed_at     TEXT,
+      created_ip      TEXT,
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (participant_id) REFERENCES portal_participants(id) ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_magic_tokens_hash        ON portal_magic_tokens(token_hash)`,
+    `CREATE INDEX IF NOT EXISTS idx_portal_magic_tokens_participant ON portal_magic_tokens(participant_id)`,
   ];
 
   for (const sql of statements) {
