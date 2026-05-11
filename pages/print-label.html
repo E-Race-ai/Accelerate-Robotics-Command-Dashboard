@@ -269,6 +269,18 @@
     .health-badge[data-state="error"] .health-dot {
       background: #a02020;
     }
+    /* Browser-print fallback mode — page is loaded on a host (production
+       deploy) that has no local CUPS. Print Label calls window.print()
+       instead of the server-side render-and-lp pipeline. Blue, neutral
+       tone — not an error, just a different code path. */
+    .health-badge[data-state="browser"] {
+      color: #1d4f8e;
+      border-color: rgba(29, 79, 142, 0.30);
+      background: rgba(29, 79, 142, 0.06);
+    }
+    .health-badge[data-state="browser"] .health-dot {
+      background: #1d4f8e;
+    }
     @keyframes hbpulse {
       0%, 100% { opacity: 1; }
       50%      { opacity: 0.35; }
@@ -1043,6 +1055,60 @@ function resetForNextLabel() {
   renderLabel();
 }
 
+// Shared print dispatcher — picks the right path based on PRINT_MODE
+// (server-side direct print vs browser-side window.print()). Both paths
+// end with rememberRecent + resetForNextLabel so the post-print UX is
+// identical regardless of mode.
+async function dispatchPrint(prospect, btnEl, btnOriginalText) {
+  if (PRINT_MODE === 'browser') {
+    // Browser-side: window.print() opens the OS print dialog. The page's
+    // @media print CSS hides everything except .label-shell and the
+    // @page rule sizes the paper to match the selected label size, so
+    // the dialog opens with a ready-to-print preview. The rep picks the
+    // target printer in the dialog and confirms.
+    btnEl.disabled = true;
+    btnEl.textContent = 'Opening dialog…';
+    try {
+      // Small tick to let the button update before the dialog steals focus.
+      await new Promise(r => requestAnimationFrame(r));
+      window.print();
+      rememberRecent(prospect);
+      btnEl.textContent = '✓ Sent to OS dialog';
+      setTimeout(() => {
+        btnEl.textContent = btnOriginalText;
+        btnEl.disabled = false;
+        resetForNextLabel();
+      }, 1600);
+    } catch (err) {
+      console.error('browser print failed:', err);
+      showError('Print dialog failed: ' + err.message);
+      btnEl.textContent = btnOriginalText;
+      btnEl.disabled = false;
+    }
+    return;
+  }
+  // Server-side: POST /api/print-label/send. The route renders the page
+  // via headless Chrome and pipes the PDF to lp on the local Mac. No
+  // dialog — label feeds directly.
+  btnEl.disabled = true;
+  btnEl.textContent = 'Sending to printer…';
+  try {
+    const result = await sendToPrinter(prospect.id);
+    rememberRecent(prospect);
+    btnEl.textContent = `✓ Sent · ${result.job_id}`;
+    setTimeout(() => {
+      btnEl.textContent = btnOriginalText;
+      btnEl.disabled = false;
+      resetForNextLabel();
+    }, 2400);
+  } catch (err) {
+    console.error('print failed:', err);
+    showError('Could not print: ' + err.message);
+    btnEl.textContent = btnOriginalText;
+    btnEl.disabled = false;
+  }
+}
+
 $('btnPrint').addEventListener('click', async () => {
   if (!CURRENT_PROSPECT) {
     showError('Pick a prospect from the dropdown (or a recent chip) before printing.');
@@ -1054,24 +1120,7 @@ $('btnPrint').addEventListener('click', async () => {
   showError('');
   const btn = $('btnPrint');
   const original = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Sending to printer…';
-  try {
-    const result = await sendToPrinter(CURRENT_PROSPECT.id);
-    rememberRecent(CURRENT_PROSPECT);
-    btn.textContent = `✓ Sent · ${result.job_id}`;
-    // Reset for the next label after the success flash
-    setTimeout(() => {
-      btn.textContent = original;
-      btn.disabled = false;
-      resetForNextLabel();
-    }, 2400);
-  } catch (err) {
-    console.error('print failed:', err);
-    showError('Could not print: ' + err.message);
-    btn.textContent = original;
-    btn.disabled = false;
-  }
+  await dispatchPrint(CURRENT_PROSPECT, btn, original);
 });
 
 // ─── Recent-prospects quick chips ──────────────────────────────────
@@ -1110,18 +1159,36 @@ function renderRecents() {
       const id = btn.dataset.prospectId;
       $('ctrlHotel').value = id;
       pickProspect(id);
-      const orig = btn.textContent;
       btn.disabled = true;
       btn.style.color = 'var(--primary)';
-      btn.querySelector('.chip-action').textContent = 'Sending…';
+      const action = btn.querySelector('.chip-action');
+      // Branch on PRINT_MODE so the chip behaves the same as the main
+      // Print Label button — server-side direct print on local, OS
+      // dialog on production.
+      if (PRINT_MODE === 'browser') {
+        action.textContent = 'Opening…';
+        try {
+          await new Promise(r => requestAnimationFrame(r));
+          window.print();
+          if (CURRENT_PROSPECT) rememberRecent(CURRENT_PROSPECT);
+          action.textContent = '✓ Dialog';
+          setTimeout(() => renderRecents(), 1600);
+        } catch (err) {
+          showError('Print dialog failed: ' + err.message);
+          action.textContent = '✗ failed';
+          btn.disabled = false;
+        }
+        return;
+      }
+      action.textContent = 'Sending…';
       try {
         const r = await sendToPrinter(Number(id));
-        rememberRecent(CURRENT_PROSPECT);
-        btn.querySelector('.chip-action').textContent = `✓ ${r.job_id || 'sent'}`;
+        if (CURRENT_PROSPECT) rememberRecent(CURRENT_PROSPECT);
+        action.textContent = `✓ ${r.job_id || 'sent'}`;
         setTimeout(() => renderRecents(), 2200);
       } catch (err) {
         showError('Could not print: ' + err.message);
-        btn.querySelector('.chip-action').textContent = '✗ failed';
+        action.textContent = '✗ failed';
         btn.disabled = false;
       }
     });
@@ -1158,19 +1225,38 @@ function maybeAutoPrint() {
 }
 
 // ─── Printer health badge ─────────────────────────────────────────
-// Polls /api/print-label/health on load and every 10s. Surfaces three
-// states inline so the rep knows the printer is ready *before* clicking
-// Print Label — no more "click, wait, get a surprise error." When the
-// printer goes red, the Reset button appears to run the full recovery
-// (cancel queued jobs + cycle the CUPS state).
+// Polls /api/print-label/health on load and every 10s. Surfaces four
+// states inline so the rep knows what they're about to get when they
+// click Print Label:
+//   ready    — server-side render-and-lp pipeline is good to go
+//   recovering — transient (during a manual /reset)
+//   offline/error — server-side knows the printer but it's unhealthy
+//   browser  — server-side has no printer (production deploy). Fall back
+//              to window.print() so the rep can still print via the OS
+//              dialog. Same target printer, one extra dialog confirm.
 const HEALTH_POLL_INTERVAL_MS = 10_000;  // 10s — frequent enough to catch a USB unplug, light enough not to spam CUPS
 let _healthPollTimer = null;
+// 'server' = POST /api/print-label/send (one-click, no dialog)
+// 'browser' = window.print() (OS dialog, works on any host)
+let PRINT_MODE = 'server';
 
 function applyHealthState(state) {
   const badge = $('healthBadge');
   const label = $('healthLabel');
   const reset = $('healthReset');
   if (!badge || !label || !reset) return;
+  // Server-side print not available on this host — fall back to
+  // window.print(). Distinguished from offline/error so the rep doesn't
+  // think something is broken: this is just a different print code path
+  // for production deploys (no local CUPS to drive).
+  if (state && !state.ok && state.reason === 'unconfigured') {
+    PRINT_MODE = 'browser';
+    badge.dataset.state = 'browser';
+    label.textContent = 'Browser print · OS dialog';
+    reset.style.display = 'none';
+    return;
+  }
+  PRINT_MODE = 'server';
   if (state && state.ok) {
     badge.dataset.state = 'ready';
     label.textContent = `${state.printer || 'Printer'} ready`;
