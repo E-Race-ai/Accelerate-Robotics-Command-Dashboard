@@ -335,6 +335,31 @@
   .copy-btn:hover { background: rgba(124, 249, 255, .22); border-color: rgba(124, 249, 255, .8); color: #fff; }
   .copy-btn.copied { background: rgba(94, 255, 158, .22); border-color: rgba(94, 255, 158, .65); color: #c5ffdc; }
   .hint-foot { margin: 6px 0 0; color: var(--ink-dim); font-size: 12px; }
+  .uninstall-link {
+    background: none; border: 0; padding: 0; margin: 0;
+    color: var(--brand); font: inherit; font-weight: 600; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+    text-decoration-color: rgba(0, 85, 255, .45);
+    transition: color .15s ease, text-decoration-color .15s ease;
+  }
+  .uninstall-link:hover {
+    color: #b8324b;
+    text-decoration-color: rgba(184, 50, 75, .7);
+  }
+  .uninstall-link[aria-expanded="true"] {
+    color: #b8324b;
+    text-decoration-color: rgba(184, 50, 75, .9);
+  }
+  .hint-close {
+    position: absolute; top: 10px; right: 12px;
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    background: transparent; border: 0;
+    color: var(--ink-dim); font-size: 22px; font-weight: 400; line-height: 1;
+    cursor: pointer; border-radius: 8px;
+    transition: color .15s, background .15s;
+  }
+  .hint-close:hover { color: var(--ink); background: rgba(15, 23, 48, .06); }
 
   /* ─── Footer microcopy ────────────────────────────────────────────── */
   .footnote {
@@ -468,7 +493,34 @@
 
     <div class="footnote" id="footnote">
       <span class="pill" id="footnote-pill">Mac · Apple Silicon &amp; Intel</span>
-      <span id="footnote-text">macOS only for now · runs as a quiet background service · uninstall any time</span>
+      <span id="footnote-text">macOS only · auto-starts on login · </span><button type="button" id="uninstall-link" class="uninstall-link" aria-expanded="false">uninstall any time</button>
+    </div>
+
+    <div id="uninstall-panel" class="setup-hint" hidden style="position:relative">
+      <button type="button" class="hint-close" id="close-uninstall" aria-label="Close uninstall instructions">&times;</button>
+      <h3>Uninstall WiFi Vision Extreme</h3>
+      <p style="margin:0 0 8px;color:var(--ink-dim);font-size:12.5px">
+        Stops the background service, removes the launchd auto-start entry,
+        and deletes <code>~/Library/Application Support/WiFiVisionExtreme/</code>.
+      </p>
+      <div class="cmd-box">
+        <code id="uninstall-cmd">curl -fsSL https://acceleraterobotics.ai/installers/wifi-vision-uninstall.sh | bash</code>
+        <button type="button" id="copy-uninstall" class="copy-btn">📋 Copy</button>
+      </div>
+      <script>
+        // Build the uninstall line from this page's own origin (same trick
+        // the install command uses so it works in local dev too).
+        (function() {
+          const o = window.location.origin;
+          const url = `${o}/installers/wifi-vision-uninstall.sh`;
+          const isProd = o === 'https://acceleraterobotics.ai';
+          const line = isProd
+            ? `curl -fsSL ${url} | bash`
+            : `curl -fsSL ${url} | WV_ORIGIN='${o}' bash`;
+          document.getElementById('uninstall-cmd').textContent = line;
+        })();
+      </script>
+      <p class="hint-foot">Paste that into Terminal. The launcher will reset itself when uninstall finishes.</p>
     </div>
   </div>
 </div>
@@ -478,11 +530,18 @@
   const KEY = 'wifiVisionInstalled';
   const params = new URLSearchParams(location.search);
   if (params.get('installed') === '1') {
+    // Install just finished. Flip the flag and strip the param — but
+    // leave the user on the launcher so they can pick A/V Cast or
+    // WiFi Audit themselves. The buttons will read "Open …" now.
     localStorage.setItem(KEY, 'true');
-    // Hand-off straight to the live dashboard — the install script just
-    // navigated this very tab to ?installed=1 (via AppleScript on macOS),
-    // so finishing the journey here keeps everything in one tab.
-    location.replace('http://127.0.0.1:8765/');
+    history.replaceState({}, '', location.pathname);
+  }
+  if (params.get('uninstalled') === '1') {
+    // The uninstaller just navigated this tab back. Clear the flag so the
+    // buttons revert to "Start Live Cast", then strip the query param so
+    // a refresh doesn't re-trigger this branch.
+    localStorage.removeItem(KEY);
+    history.replaceState({}, '', location.pathname);
   }
 
   // ── Per-app config --------------------------------------------------
@@ -510,7 +569,7 @@
       document.getElementById('page-title').textContent = 'Pick a control surface';
       document.getElementById('page-lede').textContent = "You're set up. Click either button to jump into the live dashboard — your local backend is running in the background.";
       document.getElementById('footnote-pill').textContent = '✓ Backend installed';
-      document.getElementById('footnote-text').textContent = 'Auto-starts on login · uninstall any time';
+      document.getElementById('footnote-text').textContent = 'Auto-starts on login · ';
     }
   }
   updateLabels();
@@ -520,7 +579,15 @@
     const cfg = APPS[app];
     const ready = localStorage.getItem(KEY) === 'true';
     if (ready) {
-      window.open(cfg.url, '_blank');
+      // Top-level navigation so the whole browser tab goes to the
+      // dashboard. The dashboard's "← Launcher" button reads ?back=
+      // and saves it to localStorage so it survives cmd-bar tab nav.
+      const target = window.top || window;
+      let backUrl;
+      try { backUrl = target.location.href; } catch { backUrl = window.location.href; }
+      const url = cfg.url + (cfg.url.includes('?') ? '&' : '?') + 'back=' + encodeURIComponent(backUrl);
+      try { target.location.href = url; }
+      catch (e) { window.location.href = url; }
       return;
     }
     // First-time path: copy the install command to clipboard + show steps.
@@ -547,18 +614,30 @@
     });
   });
 
-  // ── Local-dev convenience ------------------------------------------
-  // ?launcher in the URL forces the launcher view even on HTTP so we
-  // can preview the production look locally without deploying.
-  const forceLauncher = params.has('launcher');
-  if (location.protocol === 'http:' && !forceLauncher) {
-    const f = document.createElement('iframe');
-    f.className = 'embed';
-    f.title = 'WiFi Vision Extreme';
-    f.src = APPS.avcast.url;
-    document.body.appendChild(f);
-    document.getElementById('launcher').remove();
+  // ── Uninstall disclosure -------------------------------------------
+  const uninstallBtn   = document.getElementById('uninstall-link');
+  const uninstallPanel = document.getElementById('uninstall-panel');
+  function setUninstallOpen(isOpen) {
+    uninstallPanel.hidden = !isOpen;
+    uninstallBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    if (isOpen) {
+      const cmd = document.getElementById('uninstall-cmd').textContent.trim();
+      navigator.clipboard?.writeText(cmd).catch(() => {});  // auto-copy on open
+      uninstallPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   }
+  uninstallBtn.addEventListener('click', () => setUninstallOpen(uninstallPanel.hidden));
+  document.getElementById('close-uninstall').addEventListener('click', () => setUninstallOpen(false));
+  document.getElementById('copy-uninstall').addEventListener('click', () => {
+    const btn = document.getElementById('copy-uninstall');
+    const cmd = document.getElementById('uninstall-cmd').textContent.trim();
+    navigator.clipboard?.writeText(cmd).then(() => {
+      btn.classList.add('copied');
+      btn.textContent = '✓ Copied';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋 Copy'; }, 1800);
+    });
+  });
+
 </script>
 
 </body>

@@ -52,6 +52,41 @@ echo "→ preparing Python environment (this is the slow part — ~30s)…"
 PYBIN="$(command -v python3 || true)"
 [ -z "$PYBIN" ] && PYBIN="/usr/bin/python3"
 [ -x "$PYBIN" ] || { echo "✗ Python 3 not found — install from python.org and re-run"; exit 1; }
+
+# Pre-flight: catch the two most common macOS python3 stub failures and
+# turn the cryptic system message into a one-line fix the user can paste.
+PROBE=$("$PYBIN" --version 2>&1 || true)
+RERUN_PREFIX=""
+[ "$WV_ORIGIN" != "https://acceleraterobotics.ai" ] && RERUN_PREFIX="WV_ORIGIN='$WV_ORIGIN' "
+RERUN="curl -fsSL $WV_ORIGIN/installers/wifi-vision-setup.sh | ${RERUN_PREFIX}bash"
+if echo "$PROBE" | grep -qi "Xcode license"; then
+  echo
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "  ✗ macOS needs you to accept the Xcode license once before"
+  echo "    Python can run on this Mac."
+  echo "═══════════════════════════════════════════════════════════════"
+  echo
+  echo "  Paste this single line — it accepts the license (you'll be"
+  echo "  asked for your Mac password) and then re-runs setup for you:"
+  echo
+  echo "    sudo xcodebuild -license accept && $RERUN"
+  echo
+  exit 1
+fi
+if echo "$PROBE" | grep -qiE "no developer tools|invalid active developer path"; then
+  echo
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "  ✗ macOS Command Line Tools aren't installed yet."
+  echo "═══════════════════════════════════════════════════════════════"
+  echo
+  echo "  A popup should have appeared — click Install, wait ~3 minutes,"
+  echo "  then paste this line to re-run setup:"
+  echo
+  echo "    $RERUN"
+  echo
+  exit 1
+fi
+
 "$PYBIN" -m venv "$VENV"
 "$VENV/bin/pip" install --quiet --upgrade pip wheel
 "$VENV/bin/pip" install --quiet -r "$APP_DIR/requirements.txt"

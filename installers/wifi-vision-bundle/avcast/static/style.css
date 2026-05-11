@@ -81,6 +81,39 @@ a:hover { text-decoration: underline; }
 }
 
 .cmd-bar-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* Frame bar that sits ABOVE the cmd-bar — visually identical to the AR
+   admin Command Center's toolFrameBar so the dashboard feels like a
+   continuation of the launcher's chrome. */
+.wv-frame-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky; top: 0;
+  z-index: 200;
+}
+.wv-frame-bar .back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 6px 14px; font: inherit; font-size: 13px; font-weight: 600;
+  color: #475569; cursor: pointer; transition: background .12s;
+}
+.wv-frame-bar .back-btn:hover { background: #f1f5f9; }
+.wv-frame-bar .open-external {
+  margin-left: auto;
+  font-size: 12px; color: #64748b; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.wv-frame-bar .open-external:hover { color: #334155; }
+[data-theme="dark"] .wv-frame-bar { background: #0e1526; border-bottom-color: rgba(255,255,255,.08); }
+[data-theme="dark"] .wv-frame-bar .back-btn { border-color: rgba(255,255,255,.12); color: var(--ink-dim); }
+[data-theme="dark"] .wv-frame-bar .back-btn:hover { background: rgba(255,255,255,.06); color: var(--ink); }
+[data-theme="dark"] .wv-frame-bar .open-external { color: var(--ink-dim); }
+[data-theme="dark"] .wv-frame-bar .open-external:hover { color: var(--ink); }
+/* Push the cmd-bar down so both stay sticky-stacked at the top */
+.cmd-bar { top: 49px !important; }
 .cmd-bar-mark {
   display: grid; place-items: center;
   width: 32px; height: 32px;
@@ -295,6 +328,28 @@ body { transition: background-color .35s ease, color .35s ease; }
 }
 .livecast-btn .lc-label { fill: var(--accent); }
 .livecast-btn:hover .lc-rect { stroke-width: 2; opacity: 1; }
+
+/* SCANNING state — amber pulse to signal "discovery in progress, hold tight" */
+.livecast-btn.is-scanning .lc-rect {
+  stroke: #f59e0b;
+  stroke-width: 2;
+  fill: rgba(245, 158, 11, 0.10);
+  opacity: 1;
+  animation: lc-scan-glow 1.6s ease-in-out infinite;
+}
+.livecast-btn.is-scanning .lc-dot {
+  fill: #f59e0b;
+  animation: lc-blink 0.7s ease-in-out infinite;
+}
+.livecast-btn.is-scanning .lc-label { fill: #f59e0b; }
+.livecast-btn.is-scanning .lc-halo {
+  animation: lc-halo 1.4s ease-out infinite;
+  stroke: #f59e0b;
+}
+@keyframes lc-scan-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.45)); }
+  50%      { filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.95)); }
+}
 
 /* ON state — pulsing red broadcast aesthetic */
 .livecast-btn.is-live .lc-rect {

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Header
 import threading
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from discovery import discover_all
@@ -16,6 +16,7 @@ import controllers
 import hue as hue_lib
 import printers as printer_lib
 import security_audit
+import security_report_pdf
 from fastapi import UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 import io
@@ -401,3 +402,24 @@ def security_report_data():
     if not f.exists():
         raise HTTPException(404, "data.js not found")
     return FileResponse(f, media_type="application/javascript")
+
+
+@app.get("/api/security/report.pdf")
+def security_report_pdf_endpoint():
+    """Server-side rendered PDF of the audit. Identical bytes on every browser."""
+    data_file = HERE.parent / "data.js"
+    if not data_file.exists():
+        raise HTTPException(404, "no audit data yet — run a scan first")
+    try:
+        pdf_bytes = security_report_pdf.build_pdf(data_file)
+    except Exception as e:
+        raise HTTPException(500, f"PDF generation failed: {e}")
+    fname = f"wifi-audit-report-{int(time.time())}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{fname}"',
+            "Cache-Control": "no-store",
+        },
+    )
