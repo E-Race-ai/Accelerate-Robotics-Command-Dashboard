@@ -3262,8 +3262,15 @@
          embedded toolkit pages open new tabs that INHERIT this iframe's sandbox,
          and many third-party sites (Google, Booking) refuse to render in a sandboxed
          context, throwing ERR_BLOCKED_BY_RESPONSE. Letting popups escape lets
-         "Open in Google Maps" / "Web search" land normally. -->
-    <iframe id="toolFrameIframe" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"></iframe>
+         "Open in Google Maps" / "Web search" land normally.
+         WHY allow-top-navigation-by-user-activation: WiFi Vision Extreme's launcher
+         needs to navigate the *top* window to the user's local backend
+         (http://127.0.0.1:8765) when they click "Open A/V Cast" — without this flag
+         window.top.location is silently blocked, the URL bar doesn't update, and
+         a refresh bounces them back to the launcher. The "by-user-activation" form
+         restricts top-nav to actual user clicks (vs. automatic JS), so a hostile
+         iframe can't sneakily redirect on its own. -->
+    <iframe id="toolFrameIframe" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-top-navigation-by-user-activation"></iframe>
   </div>
 
   <script src="/js/admin-auth.js"></script>

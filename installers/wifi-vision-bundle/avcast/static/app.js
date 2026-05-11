@@ -71,16 +71,35 @@ async function loadDevices() {
 }
 
 // ---------- Live Cast (replaces one-shot rescan) ----------
-// ON  → kicks off an immediate discovery scan + sets up auto-rescan every 60s.
-// OFF → clears the auto-rescan loop. Periodic device polling stays on either way.
+// Three-state machine:
+//   'off'      → quiet cyan outline, "▶ START LIVE CAST"
+//   'scanning' → amber pulse, "⌛ SCANNING…" — initial discovery in flight
+//   'on'       → green broadcast glow + halo, "■ STOP LIVE CAST"
+//                + auto-rescan loop every 60s
+// We hold in 'scanning' until the backend's `scanning` flag flips false AND
+// devices appear (or a 60s safety timeout), so the user gets clear feedback
+// that the scan is working before the button looks "complete".
 let _liveCastTimer = null;
+let _liveCastPollTimer = null;
+let _liveCastState = "off";
 const LIVECAST_INTERVAL_MS = 60_000;
+const LIVECAST_SCAN_TIMEOUT_MS = 60_000;
+const LIVECAST_POLL_MS = 2_000;
 
-function _setLiveCastUI(isOn) {
+function _setLiveCastUI(s) {
+  _liveCastState = s;
   const g = document.getElementById("livecast-btn");
   const lbl = document.getElementById("livecast-label");
-  if (g) g.classList.toggle("is-live", isOn);
-  if (lbl) lbl.textContent = isOn ? "● LIVE CAST ON" : "LIVE CAST OFF";
+  if (g) {
+    g.classList.toggle("is-live",     s === "on");
+    g.classList.toggle("is-scanning", s === "scanning");
+  }
+  if (lbl) {
+    lbl.textContent =
+      s === "on"       ? "■ STOP LIVE CAST"
+      : s === "scanning" ? "⌛ SCANNING…"
+      :                    "▶ START LIVE CAST";
+  }
 }
 
 async function _doLiveCastScan(pw) {
@@ -99,32 +118,58 @@ async function _doLiveCastScan(pw) {
   }
 }
 
+function _stopLiveCast(reason) {
+  if (_liveCastTimer)     clearInterval(_liveCastTimer);
+  if (_liveCastPollTimer) clearInterval(_liveCastPollTimer);
+  _liveCastTimer = null;
+  _liveCastPollTimer = null;
+  _setLiveCastUI("off");
+  if (reason) toast(reason);
+}
+
 async function toggleLiveCast() {
-  // Currently ON → turn OFF
-  if (_liveCastTimer) {
-    clearInterval(_liveCastTimer);
-    _liveCastTimer = null;
-    _setLiveCastUI(false);
-    toast("Live Cast paused");
+  // Anything other than off → click stops it.
+  if (_liveCastState !== "off") {
+    _stopLiveCast("Live Cast paused");
     return;
   }
-  // Currently OFF → turn ON (gated by password — auto-rescan triggers real scans)
+  // OFF → ask for password, kick off scan
   let pw = sessionStorage.getItem("avcast_rescan_pw");
   if (!pw) {
     pw = prompt("Live Cast password:");
     if (!pw) return;
   }
-  const lbl = document.getElementById("livecast-label");
-  const orig = lbl?.textContent;
-  if (lbl) lbl.textContent = "⌛ STARTING";
+  _setLiveCastUI("scanning");
   const res = await _doLiveCastScan(pw);
-  if (!res.auth) { if (lbl) lbl.textContent = orig; toast("Wrong password", "error"); return; }
-  if (!res.ok)   { if (lbl) lbl.textContent = orig; toast("Failed to start scan", "error"); return; }
+  if (!res.auth) { _setLiveCastUI("off"); toast("Wrong password", "error"); return; }
+  if (!res.ok)   { _setLiveCastUI("off"); toast("Failed to start scan", "error"); return; }
   sessionStorage.setItem("avcast_rescan_pw", pw);
-  _setLiveCastUI(true);
-  toast(`Live Cast active — auto-rescan every ${LIVECAST_INTERVAL_MS / 1000}s`, "success");
-  setTimeout(loadDevices, 8000);
-  _liveCastTimer = setInterval(() => _doLiveCastScan(pw), LIVECAST_INTERVAL_MS);
+  toast("Scanning network — devices will appear shortly");
+
+  // Poll for backend scan completion. Flip to 'on' once devices show up
+  // (or after a hard timeout so the button doesn't get stuck on a stalled scan).
+  const startedAt = Date.now();
+  _liveCastPollTimer = setInterval(async () => {
+    if (_liveCastState !== "scanning") {
+      // User cancelled or state moved on
+      clearInterval(_liveCastPollTimer); _liveCastPollTimer = null;
+      return;
+    }
+    await loadDevices();
+    const haveDevices = state.devices && state.devices.length > 0;
+    const backendDone = state.scanning === false;
+    const timedOut    = Date.now() - startedAt > LIVECAST_SCAN_TIMEOUT_MS;
+    if ((backendDone && haveDevices) || timedOut) {
+      clearInterval(_liveCastPollTimer); _liveCastPollTimer = null;
+      _setLiveCastUI("on");
+      _liveCastTimer = setInterval(() => _doLiveCastScan(pw), LIVECAST_INTERVAL_MS);
+      if (haveDevices) {
+        toast(`Live Cast active — auto-rescan every ${LIVECAST_INTERVAL_MS / 1000}s`, "success");
+      } else {
+        toast("Live Cast on — no devices found yet, will keep checking", "warning");
+      }
+    }
+  }, LIVECAST_POLL_MS);
 }
 
 async function setVolume(deviceId, level, sliderEl) {
@@ -606,6 +651,33 @@ function toast(msg, kind = "") {
 // ---------- Theme + Atlas Command Bar ----------
 // Shared with /report.html via the `atlas.theme` localStorage key — flipping
 // the theme on either page carries to the other. Default: light.
+
+// "← Launcher" back button: prefer the URL the launcher passed via ?back=,
+// remember it across cmd-bar tab nav via localStorage, fall back to the
+// production launcher if nothing's stored.
+const _WV_BACK_KEY = "wv.backUrl";
+const _WV_DEFAULT_BACK = "https://acceleraterobotics.ai/admin?tool=/pages/wifi-vision.html";
+(function _wvCaptureBackUrl() {
+  const params = new URLSearchParams(location.search);
+  const back = params.get("back");
+  if (back) {
+    try { localStorage.setItem(_WV_BACK_KEY, back); } catch {}
+    params.delete("back");
+    const qs = params.toString();
+    history.replaceState({}, "", location.pathname + (qs ? "?" + qs : ""));
+  }
+})();
+function wvBack() {
+  let url;
+  try { url = localStorage.getItem(_WV_BACK_KEY); } catch {}
+  window.location.href = url || _WV_DEFAULT_BACK;
+}
+// Frame bar's "Open in new tab" → point at this exact URL minus any
+// transient query params we strip on load (so the new tab is a clean view).
+(function _wvWireOpenExternal() {
+  const a = document.getElementById("wv-open-external");
+  if (a) a.href = window.location.pathname + window.location.search;
+})();
 
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
