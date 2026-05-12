@@ -623,7 +623,11 @@
       <div class="row">
         <div class="ctrl-field">
           <label for="ctrlHotel">Prospect</label>
-          <select id="ctrlHotel"><option value="">— loading prospects —</option></select>
+          <select id="ctrlHotel"><option value="">— select a prospect —</option></select>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+            <span style="font-size:0.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;">or type name</span>
+            <input id="ctrlManualHotel" type="text" placeholder="Hotel name (if not in list)" maxlength="120" style="flex:1;">
+          </div>
         </div>
         <div class="ctrl-field" style="flex: 0 1 220px;">
           <label for="ctrlSize">Paper / label size</label>
@@ -916,7 +920,10 @@ function renderLabel() {
     : 'Hospitality Programme';
 
   if (!p) {
-    $('lblHotelName').textContent = '— select prospect —';
+    // WHY: Fall back to the manual hotel name input so reps can print
+    // labels for hotels not yet in the prospect pipeline.
+    const manual = ($('ctrlManualHotel')?.value || '').trim();
+    $('lblHotelName').textContent = manual || '— select prospect —';
     $('lblHotelAddress').textContent = '';
     $('lblHotelStats').innerHTML = '';
     return;
@@ -988,7 +995,24 @@ bindInput('ctrlRole', 'role');
 bindInput('ctrlPhone', 'phone');
 bindInput('ctrlNote', 'note');
 
-$('ctrlHotel').addEventListener('change', (e) => pickProspect(e.target.value));
+$('ctrlHotel').addEventListener('change', (e) => {
+  // WHY: Selecting a prospect clears the manual name field so only one
+  // source drives the label. If the rep types a name first then picks a
+  // prospect, the dropdown wins.
+  if (e.target.value) $('ctrlManualHotel').value = '';
+  pickProspect(e.target.value);
+});
+
+// WHY: Manual hotel name — lets the rep type a hotel name that isn't in
+// the prospect pipeline yet (e.g. a cold drop-in during a tour day).
+$('ctrlManualHotel').addEventListener('input', () => {
+  // Clear the prospect dropdown so the manual name takes effect
+  if ($('ctrlManualHotel').value.trim()) {
+    $('ctrlHotel').value = '';
+    CURRENT_PROSPECT = null;
+  }
+  renderLabel();
+});
 
 // ─── Size selector — drives the @page rule via a runtime <style> ───
 // WHY runtime: @page can't read CSS variables, so we inject a fresh
