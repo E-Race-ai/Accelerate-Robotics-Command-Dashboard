@@ -77,10 +77,11 @@ function q(v) { return encodeURIComponent(String(v == null ? '' : v)); }
 
 // Build the URL the headless browser hits. Profile values land as query
 // params; the page's boot block reads them and applies before render.
-function buildRenderUrl({ origin, prospect_id, size, profile, photoToken }) {
+function buildRenderUrl({ origin, prospect_id, manual_hotel_name, size, profile, photoToken }) {
   const p = profile || {};
   const params = new URLSearchParams();
   if (prospect_id) params.set('prospect', String(prospect_id));
+  if (manual_hotel_name) params.set('manualHotel', manual_hotel_name);
   if (size) params.set('size', String(size));
   if (p.name)  params.set('name', p.name);
   if (p.role)  params.set('role', p.role);
@@ -279,8 +280,11 @@ function waitForJobCompletion(printer, jobId, timeoutMs) {
 router.post('/send', async (req, res) => {
   const body = req.body || {};
   const prospect_id = Number(body.prospect_id);
-  if (!Number.isInteger(prospect_id) || prospect_id <= 0) {
-    return res.status(400).json({ error: 'prospect_id required' });
+  const manual_hotel_name = (body.manual_hotel_name || '').trim().slice(0, 120);
+  // WHY: Accept either prospect_id (full pipeline data) or manual_hotel_name
+  // (typed-in name for hotels not yet in the pipeline — cold drop-ins).
+  if ((!Number.isInteger(prospect_id) || prospect_id <= 0) && !manual_hotel_name) {
+    return res.status(400).json({ error: 'prospect_id or manual_hotel_name required' });
   }
   const size = ['4x6', '4x3', '2x4', 'letter'].includes(body.size) ? body.size : '4x6';
   const printer = String(body.printer || DEFAULT_PRINTER).slice(0, 40);
@@ -301,9 +305,10 @@ router.post('/send', async (req, res) => {
   // We pass the token (not the data URL — it's too big for a URL) and
   // the page fetches the image via /api/print-label/photo/:token.
   const photoToken = body.profile?.photo ? stashPhoto(body.profile.photo) : null;
-  const url = buildRenderUrl({ origin, prospect_id, size, profile: body.profile, photoToken });
+  const url = buildRenderUrl({ origin, prospect_id, manual_hotel_name, size, profile: body.profile, photoToken });
 
-  const tmpFile = path.join(os.tmpdir(), `accelerate-label-${Date.now()}-${prospect_id}.pdf`);
+  const fileTag = prospect_id > 0 ? prospect_id : 'manual';
+  const tmpFile = path.join(os.tmpdir(), `accelerate-label-${Date.now()}-${fileTag}.pdf`);
 
   try {
     await renderToPdf(url, tmpFile);
