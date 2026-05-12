@@ -963,22 +963,45 @@ function renderLabel() {
   else      { noteEl.style.display = 'none'; }
 }
 
-// ── Photo upload (data URL → localStorage) ──
-$('ctrlPhoto').addEventListener('change', (e) => {
+// ── Photo upload — auto-resize + compress so any phone photo works ──
+// WHY: Phone photos are typically 3-8MB. Instead of rejecting them, we
+// resize client-side via canvas to max 800px and compress to JPEG ~0.85
+// quality. Result is usually 60-150KB — well within localStorage limits.
+function resizeImage(file, maxPx, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxPx || h > maxPx) {
+        const scale = maxPx / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => reject(new Error('Could not load image'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+$('ctrlPhoto').addEventListener('change', async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
-  if (file.size > 1_500_000) { showError('Photo must be under 1.5MB. Resize it first.'); return; }
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const dataUrl = ev.target.result;
+  try {
+    const dataUrl = await resizeImage(file, 800, 0.85);
     const profile = loadProfile();
     profile.photo = dataUrl;
     saveProfile(profile);
     $('photoPreview').src = dataUrl;
     showError('');
     renderLabel();
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    showError('Could not process photo: ' + err.message);
+  }
 });
 
 function bindInput(id, key) {
