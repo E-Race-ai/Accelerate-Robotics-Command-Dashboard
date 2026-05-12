@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup · Find My + Radius · Hotel Research</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --ink: #0f172a;
+      --ink-dim: #475569;
+      --ink-faint: #94a3b8;
+      --hairline: #e2e8f0;
+      --orange: #ea580c;
+      --orange-bg: #fff7ed;
+      --emerald: #059669;
+      --emerald-bg: #ecfdf5;
+      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --slate: #334155;
+      --blue: #0891b2;
+      --pin-lead: #94a3b8;
+      --pin-contacted: #38bdf8;
+      --pin-qualified: #6366f1;
+      --pin-proposed: #f59e0b;
+      --pin-won: #10b981;
+      --pin-lost: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    /* Mockup banner */
+    .mockup-banner {
+      background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+      border-bottom: 1px solid #f59e0b;
+      padding: 8px 16px;
+      font-size: 12px;
+      color: #78350f;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .mockup-banner code { background: rgba(120, 53, 15, 0.10); padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+
+    /* Mockup state controls (NOT part of the real feature — just for the mockup) */
+    .mockup-controls {
+      background: #1e293b; color: #f1f5f9;
+      padding: 12px 16px;
+      display: flex; gap: 8px; align-items: center;
+      border-bottom: 1px solid #334155;
+      font-size: 12px;
+    }
+    .mockup-controls .label {
+      font-weight: 600; letter-spacing: 0.04em;
+      text-transform: uppercase; font-size: 10px;
+      color: #94a3b8; margin-right: 6px;
+    }
+    .mockup-controls button {
+      background: transparent; color: #cbd5e1;
+      border: 1px solid #475569; padding: 5px 12px;
+      border-radius: 4px; cursor: pointer;
+      font-size: 12px;
+    }
+    .mockup-controls button:hover { border-color: #94a3b8; color: white; }
+    .mockup-controls button.active {
+      background: var(--blue); border-color: var(--blue); color: white;
+    }
+    .mockup-controls .spacer { flex: 1; }
+    .mockup-controls .hint { color: #64748b; font-size: 11px; }
+
+    /* Page wrap mimicking hotel-research */
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px 32px 80px;
+    }
+    .hr-title {
+      font-size: 32px; font-weight: 700; margin: 32px 0 8px;
+      color: var(--ink); letter-spacing: -0.02em;
+    }
+    .hr-sub {
+      color: var(--ink-dim); margin-bottom: 24px;
+    }
+
+    /* Toolbar — simplified version of the real one */
+    .toolbar {
+      background: var(--panel);
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+    }
+    .toolbar-row {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      align-items: center;
+      padding: 8px 0;
+    }
+    .toolbar-row + .toolbar-row {
+      border-top: 1px solid var(--hairline);
+    }
+    .field {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--ink-dim);
+    }
+    .field select, .field input[type="text"], .field input[type="number"] {
+      padding: 4px 8px; border: 1px solid var(--hairline);
+      border-radius: 4px; background: white; font: inherit;
+      color: var(--ink);
+    }
+    .field input[type="checkbox"] { margin-right: 4px; }
+    .pill-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--hairline);
+      background: white;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--slate);
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: all 0.15s;
+    }
+    .pill-btn:hover { border-color: var(--ink-faint); }
+    .pill-btn.orange {
+      background: var(--orange);
+      border-color: var(--orange);
+      color: white;
+    }
+    .pill-btn.orange:hover { background: #c2410c; border-color: #c2410c; }
+
+    /* ── NEW row: Find My location row ─────────────────────────────── */
+    .findmy-row {
+      display: flex; align-items: center; gap: 16px;
+      padding: 12px 0 8px;
+      border-top: 1px solid var(--hairline);
+    }
+    .findmy-row .left-cap {
+      font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--ink-faint); font-weight: 600;
+      padding: 2px 8px; border: 1px solid var(--hairline);
+      border-radius: 999px;
+    }
+    .findmy-btn-wrap {
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .findmy-btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid transparent;
+      transition: all 0.16s;
+      width: fit-content;
+    }
+    .findmy-btn[data-state="fresh"] {
+      background: var(--emerald);
+      color: white;
+      border-color: var(--emerald);
+    }
+    .findmy-btn[data-state="fresh"]:hover { background: #047857; border-color: #047857; }
+    .findmy-btn[data-state="stale"] {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border-color: var(--amber);
+    }
+    .findmy-btn[data-state="stale"]:hover { background: #fef3c7; }
+    .findmy-btn[data-state="nodata"] {
+      background: #f1f5f9;
+      color: var(--ink-faint);
+      border-color: var(--hairline);
+      cursor: not-allowed;
+    }
+    .findmy-subtitle {
+      font-size: 11px; color: var(--ink-dim);
+      letter-spacing: 0.01em;
+      padding-left: 4px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .findmy-subtitle[data-state="stale"] { color: var(--amber); }
+    .findmy-subtitle[data-state="nodata"] { color: var(--ink-faint); }
+    .findmy-subtitle[data-state="success"] { color: var(--emerald); font-weight: 500; }
+    .findmy-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      display: inline-block;
+    }
+    .findmy-dot[data-state="fresh"] { background: var(--emerald); animation: pulse 2s ease-in-out infinite; }
+    .findmy-dot[data-state="stale"] { background: var(--amber); }
+    .findmy-dot[data-state="nodata"] { background: var(--ink-faint); }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+    .connect-link {
+      font-size: 11px;
+      color: var(--blue);
+      text-decoration: underline; text-underline-offset: 2px;
+      cursor: pointer;
+      margin-left: 8px;
+      background: none; border: 0; padding: 0;
+      font-family: inherit;
+    }
+
+    /* Onboarding banner */
+    .onboard {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13px; color: #1e3a8a;
+    }
+    .onboard.hidden { display: none; }
+    .onboard .icon { font-size: 18px; }
+    .onboard .text { flex: 1; }
+    .onboard .text strong { color: #1e40af; }
+    .onboard button {
+      background: white;
+      border: 1px solid #93c5fd;
+      color: #1e40af;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .onboard button:hover { background: #dbeafe; }
+    .onboard .dismiss {
+      background: transparent; border: 0; color: #64748b;
+      font-size: 14px; cursor: pointer; padding: 4px 8px;
+    }
+
+    /* Map */
+    #map {
+      height: 560px;
+      border-radius: 8px;
+      border: 1px solid var(--hairline);
+      background: #e5e7eb;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex; gap: 18px; flex-wrap: wrap;
+      align-items: center;
+      padding: 12px 4px 0;
+      font-size: 12px; color: var(--ink-dim);
+    }
+    .legend-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      display: inline-block; margin-right: 4px;
+      vertical-align: middle;
+    }
+    .legend-right {
+      margin-left: auto;
+      color: var(--orange);
+      font-size: 12px;
+    }
+
+    /* Map overlays */
+    .radius-label-inner {
+      background: white;
+      border: 2px solid var(--orange);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 13px; font-weight: 700;
+      color: var(--orange);
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+      cursor: pointer;
+      min-width: 70px;
+    }
+    .radius-label-inner .sub {
+      display: block;
+      font-size: 11px; font-weight: 400;
+      color: var(--ink-dim); margin-top: 1px;
+    }
+    .ben-marker {
+      width: 32px; height: 32px;
+      background: white;
+      border: 3px solid var(--emerald);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.35);
+      animation: benPulse 2s ease-in-out infinite;
+    }
+    @keyframes benPulse {
+      0%, 100% { box-shadow: 0 2px 8px rgba(5, 150, 105, 0.35); }
+      50% { box-shadow: 0 2px 16px rgba(5, 150, 105, 0.6); }
+    }
+    .ben-tooltip {
+      background: var(--emerald) !important;
+      color: white !important;
+      border: 0 !important;
+      font-weight: 500;
+    }
+
+    /* Modal for "How to connect" */
+    .modal-back {
+      position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 5000;
+    }
+    .modal-back.open { display: flex; }
+    .modal {
+      background: white;
+      max-width: 540px; width: 92%;
+      border-radius: 12px;
+      padding: 24px 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.30);
+    }
+    .modal h3 { margin: 0 0 12px; font-size: 18px; }
+    .modal p { font-size: 13px; line-height: 1.55; color: var(--ink-dim); margin: 8px 0; }
+    .modal code, .modal pre {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-family: 'SF Mono', Menlo, monospace;
+      color: var(--slate);
+    }
+    .modal pre {
+      padding: 12px; overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    .modal ol { padding-left: 20px; }
+    .modal ol li { margin: 6px 0; font-size: 13px; color: var(--slate); }
+    .modal .close {
+      background: var(--ink); color: white;
+      border: 0; padding: 8px 16px; border-radius: 6px;
+      cursor: pointer; margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="mockup-banner">
+    🧪 <strong>Mockup</strong> — not the production page. Use the dark bar below to toggle bridge states.
+    Real path: <code>pages/hotel-research.html</code>
+  </div>
+
+  <div class="mockup-controls">
+    <span class="label">Bridge state</span>
+    <button onclick="setState('fresh')" class="active" id="ctrl-fresh">🟢 Fresh (Ben's iPhone · 2 min ago)</button>
+    <button onclick="setState('stale')" id="ctrl-stale">🟠 Stale (47 min ago)</button>
+    <button onclick="setState('nodata')" id="ctrl-nodata">⚫ No data yet</button>
+    <span class="spacer"></span>
+    <span class="hint">Click the green button on the page to see the drop animation</span>
+  </div>
+
+  <div class="page">
+
+    <div class="onboard" id="onboardBanner">
+      <div class="icon">📍</div>
+      <div class="text">
+        <strong>NEW</strong> — Drop circles at your current location automatically.
+        Requires tesla-mobile-office running locally with your Apple ID configured.
+      </div>
+      <button onclick="document.getElementById('howToConnect').classList.add('open')">Show me how</button>
+      <button class="dismiss" onclick="document.getElementById('onboardBanner').classList.add('hidden')">✕</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="toolbar-row">
+        <span class="field">Status: <select><option>All</option></select></span>
+        <span class="field">Submarket: <select><option>All</option></select></span>
+        <span class="field">ADR ≥ $ <input type="number" value="0" style="width:60px"> ≤ $ <input type="number" value="9999" style="width:70px"></span>
+        <span class="field">View: <select><option>Pins</option></select></span>
+        <span class="field">Color by: <select><option>Status</option></select></span>
+      </div>
+      <div class="toolbar-row">
+        <span class="field"><input type="checkbox"> ⚡ Chargers</span>
+        <span class="field"><input type="checkbox" checked> ✈️ Airports</span>
+        <button class="pill-btn">🗺️ Route mode</button>
+      </div>
+      <div class="toolbar-row">
+        <span class="field">Chain <select><option>All chains</option></select></span>
+        <span class="field">City <select><option>West Hollywood (12)</option></select></span>
+        <span class="field">Zip <select><option>All zips</option></select></span>
+        <span class="field">Fit ≥ <input type="number" value="0" style="width:60px"></span>
+        <span class="field">Within <select><option>any distance to airport</option></select></span>
+      </div>
+      <div class="toolbar-row">
+        <span class="field"><input type="checkbox"> 🐳 Deep researched only</span>
+        <button class="pill-btn orange">📏 Click map to drop circle</button>
+        <button class="pill-btn">✕ Clear circles</button>
+      </div>
+
+      <!-- NEW row: Find My location -->
+      <div class="findmy-row">
+        <span class="left-cap">📍 New</span>
+        <div class="findmy-btn-wrap">
+          <button class="findmy-btn" data-state="fresh" id="findmyBtn" onclick="dropAtBen()">
+            📍 Drop circle at my location
+          </button>
+          <div class="findmy-subtitle" id="findmySub">
+            <span class="findmy-dot" data-state="fresh"></span>
+            <span id="findmySubText">Ben's iPhone 17 Pro · 2 min ago</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="legend">
+      <span><span class="legend-dot" style="background:var(--pin-lead)"></span>Lead</span>
+      <span><span class="legend-dot" style="background:var(--pin-contacted)"></span>Contacted</span>
+      <span><span class="legend-dot" style="background:var(--pin-qualified)"></span>Qualified</span>
+      <span><span class="legend-dot" style="background:var(--pin-proposed)"></span>Proposed</span>
+      <span><span class="legend-dot" style="background:var(--pin-won)"></span>Won</span>
+      <span><span class="legend-dot" style="background:var(--pin-lost)"></span>Lost</span>
+      <span class="legend-right">📍 click a pin to view + plan a visit</span>
+    </div>
+
+    <h1 class="hr-title">Hotel Research</h1>
+    <p class="hr-sub">Mockup of how Find My integration will appear in the production toolbar.</p>
+  </div>
+
+  <!-- How to connect modal -->
+  <div class="modal-back" id="howToConnect" onclick="if(event.target===this) this.classList.remove('open')">
+    <div class="modal">
+      <h3>📍 Connect Find My to the dashboard</h3>
+      <p>The dashboard reads your location from the <code>tesla-mobile-office</code> bridge running on your laptop. One-time setup:</p>
+      <ol>
+        <li>Install <code>tesla-mobile-office</code> on your Mac.</li>
+        <li>Add to its <code>.env</code>:
+          <pre>APPLE_ID=ben@accelerate-robotics.com
+APPLE_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
+AR_BASE_URL=https://command.accelerate-robotics.com
+AR_USER=ben@accelerate-robotics.com
+AR_PASSWORD=your-AR-password</pre>
+        </li>
+        <li>Run <code>npm start</code>. The bridge will start polling iCloud and POSTing locations to AR.</li>
+        <li>Refresh this page. The button will turn 🟢 green when the first heartbeat lands.</li>
+      </ol>
+      <p style="font-size: 11px; color: var(--ink-faint)">App-specific password: generate one at <code>appleid.apple.com → Sign-In and Security → App-Specific Passwords</code>.</p>
+      <button class="close" onclick="document.getElementById('howToConnect').classList.remove('open')">Got it</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ── Init map centred on West Hollywood ─────────────────────────
+    const map = L.map('map').setView([34.092, -118.382], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19
+    }).addTo(map);
+
+    // ── Fake hotel inventory (West Hollywood / Sunset Strip) ────────
+    const HOTELS = [
+      { name: "Andaz West Hollywood", lat: 34.0925, lng: -118.3856, status: 'qualified', fit: 78 },
+      { name: "Sunset Marquis", lat: 34.0894, lng: -118.3862, status: 'lead', fit: 52 },
+      { name: "Pendry West Hollywood", lat: 34.0954, lng: -118.3838, status: 'contacted', fit: 65 },
+      { name: "Chateau Marmont", lat: 34.0958, lng: -118.3776, status: 'proposed', fit: 81 },
+      { name: "Mondrian Los Angeles", lat: 34.0938, lng: -118.3849, status: 'qualified', fit: 70 },
+      { name: "1 Hotel West Hollywood", lat: 34.0900, lng: -118.3823, status: 'won', fit: 88 },
+      { name: "Sunset Tower", lat: 34.0937, lng: -118.3768, status: 'lead', fit: 45 },
+      { name: "Petit Ermitage", lat: 34.0876, lng: -118.3855, status: 'contacted', fit: 58 },
+      { name: "Le Parc Suite", lat: 34.0840, lng: -118.3826, status: 'lead', fit: 38 },
+      { name: "London West Hollywood", lat: 34.0866, lng: -118.3870, status: 'qualified', fit: 72 },
+      { name: "Kimpton La Peer", lat: 34.0830, lng: -118.3835, status: 'lost', fit: 40 },
+      { name: "Hyatt House Cypress", lat: 34.0975, lng: -118.3690, status: 'lead', fit: 30 },
+    ];
+    const STATUS_COLORS = {
+      lead: '#94a3b8', contacted: '#38bdf8', qualified: '#6366f1',
+      proposed: '#f59e0b', won: '#10b981', lost: '#ef4444'
+    };
+    HOTELS.forEach(h => {
+      L.circleMarker([h.lat, h.lng], {
+        radius: 7, color: 'white', weight: 2,
+        fillColor: STATUS_COLORS[h.status] || '#94a3b8',
+        fillOpacity: 0.95
+      }).addTo(map).bindTooltip(`${h.name} · fit ${h.fit}`);
+    });
+
+    // ── Ben's "current" location (fixed for the mockup) ─────────────
+    const BEN_LOC = { lat: 34.0930, lng: -118.3850, name: "Ben's iPhone 17 Pro", accuracy: 12 };
+
+    function haversineMi(lat1, lng1, lat2, lng2) {
+      const toRad = x => x * Math.PI / 180;
+      const R = 3958.8;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat/2)**2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // ── State machine for the mockup ───────────────────────────────
+    let state = 'fresh';
+    function setState(s) {
+      state = s;
+      ['fresh', 'stale', 'nodata'].forEach(x => {
+        document.getElementById('ctrl-' + x).classList.toggle('active', x === s);
+      });
+      updateButton();
+    }
+
+    function updateButton() {
+      const btn = document.getElementById('findmyBtn');
+      const sub = document.getElementById('findmySub');
+      const subText = document.getElementById('findmySubText');
+      const dot = sub.querySelector('.findmy-dot');
+      btn.dataset.state = state;
+      sub.dataset.state = state;
+      dot.dataset.state = state;
+      if (state === 'fresh') {
+        subText.textContent = "Ben's iPhone 17 Pro · 2 min ago";
+        btn.disabled = false;
+      } else if (state === 'stale') {
+        subText.innerHTML = "Ben's iPhone 17 Pro · 47 min ago <strong>(stale)</strong>";
+        btn.disabled = false;
+        btn.title = "Bridge hasn't reported in 47 min. Click to drop anyway, or restart tesla-mobile-office on your laptop.";
+      } else {
+        subText.innerHTML = `No location data yet · <button class="connect-link" onclick="document.getElementById('howToConnect').classList.add('open')">How to connect</button>`;
+        btn.disabled = true;
+      }
+    }
+
+    // ── The drop action ────────────────────────────────────────────
+    let dropped = null;
+    function dropAtBen() {
+      if (state === 'nodata') return;
+
+      // Pan to Ben
+      map.flyTo([BEN_LOC.lat, BEN_LOC.lng], 14, { duration: 0.6 });
+
+      // Clear previous
+      if (dropped) {
+        map.removeLayer(dropped.circle);
+        map.removeLayer(dropped.label);
+        map.removeLayer(dropped.benMarker);
+      }
+
+      // Compute hotels inside 1 mi
+      const radiusMi = 1.0;
+      const inside = HOTELS.filter(h =>
+        haversineMi(BEN_LOC.lat, BEN_LOC.lng, h.lat, h.lng) <= radiusMi);
+      const avgFit = inside.length
+        ? Math.round(inside.reduce((a, b) => a + b.fit, 0) / inside.length)
+        : '—';
+
+      const circle = L.circle([BEN_LOC.lat, BEN_LOC.lng], {
+        radius: radiusMi * 1609.344,
+        color: 'var(--orange)', weight: 2,
+        fillColor: '#fb923c', fillOpacity: 0.10
+      }).addTo(map);
+      // Use real colour (CSS var doesn't work in Leaflet style — set after)
+      circle.setStyle({ color: '#ea580c', fillColor: '#fb923c' });
+
+      const label = L.marker([BEN_LOC.lat, BEN_LOC.lng], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="radius-label-inner">${inside.length}<span class="sub">${radiusMi.toFixed(1)}mi · avg ${avgFit}</span></div>`,
+          iconSize: [88, 56], iconAnchor: [44, 28]
+        }), interactive: true
+      }).addTo(map);
+
+      // Offset Ben marker slightly so it doesn't overlap the label
+      const benOffset = { lat: BEN_LOC.lat - 0.0028, lng: BEN_LOC.lng + 0.0015 };
+      const benMarker = L.marker([benOffset.lat, benOffset.lng], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="ben-marker">📱</div>`,
+          iconSize: [32, 32], iconAnchor: [16, 16]
+        })
+      }).addTo(map);
+      benMarker.bindTooltip(
+        `<strong>${BEN_LOC.name}</strong><br>` +
+        `Reported ${state === 'stale' ? '47 min' : '2 min'} ago<br>` +
+        `Accuracy: ±${BEN_LOC.accuracy}m`,
+        { className: 'ben-tooltip', direction: 'top', offset: [0, -10] }
+      );
+
+      dropped = { circle, label, benMarker };
+
+      // Subtitle flash
+      const subText = document.getElementById('findmySubText');
+      const sub = document.getElementById('findmySub');
+      const original = subText.innerHTML;
+      const origState = sub.dataset.state;
+      sub.dataset.state = 'success';
+      subText.innerHTML = `✓ Circle dropped at ${BEN_LOC.name} (${inside.length} hotels inside)`;
+      setTimeout(() => {
+        sub.dataset.state = origState;
+        subText.innerHTML = original;
+      }, 3000);
+    }
+
+    // ── Boot ───────────────────────────────────────────────────────
+    updateButton();
+  </script>
+</body>
+</html>
