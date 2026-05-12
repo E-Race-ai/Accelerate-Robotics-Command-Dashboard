@@ -1963,7 +1963,7 @@ function renderOverviewTab() {
     html += '<div class="field-row"><div class="field-group"><label>Covers / Capacity</label>';
     html += '<input type="number" inputmode="numeric" value="' + (v.covers || '') + '" placeholder="' + (typeInfo.typical_covers || '—') + '" oninput="state.operations_data.fb_venues[' + i + '].covers = this.value ? parseInt(this.value) : null; markDirty();"></div>';
     html += '<div class="field-group"><label>Floor</label>';
-    html += '<input type="number" inputmode="numeric" value="' + (v.floor != null ? v.floor : '') + '" placeholder="e.g., 1, L, R" oninput="state.operations_data.fb_venues[' + i + '].floor = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
+    html += '<input type="text" value="' + esc(v.floor != null ? String(v.floor) : '') + '" placeholder="e.g., 1, LL, M, B1" oninput="state.operations_data.fb_venues[' + i + '].floor = this.value || null; markDirty();"></div></div>';
     html += '<div class="field-group"><label>Notes</label>';
     html += '<input type="text" value="' + esc(v.notes || '') + '" placeholder="Hours, seasonal, managed by..." oninput="state.operations_data.fb_venues[' + i + '].notes = this.value; markDirty();"></div>';
     // WHY: Show robot needs inline so the rep can discuss them during the site walk
@@ -2004,7 +2004,7 @@ function renderOverviewTab() {
     html += '<div class="field-group"><label>Sq Ft</label>';
     html += '<input type="number" inputmode="numeric" value="' + (es.sqft || '') + '" placeholder="' + (typeInfo.typical_sqft || '') + '" oninput="state.operations_data.event_spaces[' + i + '].sqft = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
     html += '<div class="field-row"><div class="field-group"><label>Floor</label>';
-    html += '<input type="number" inputmode="numeric" value="' + (es.floor != null ? es.floor : '') + '" placeholder="e.g., 2" oninput="state.operations_data.event_spaces[' + i + '].floor = this.value ? parseInt(this.value) : null; markDirty();"></div>';
+    html += '<input type="text" value="' + esc(es.floor != null ? String(es.floor) : '') + '" placeholder="e.g., 2, LL, M, B1" oninput="state.operations_data.event_spaces[' + i + '].floor = this.value || null; markDirty();"></div>';
     html += '<div class="field-group"><label>Max Capacity</label>';
     html += '<input type="number" inputmode="numeric" value="' + (es.capacity || '') + '" placeholder="e.g., 500" oninput="state.operations_data.event_spaces[' + i + '].capacity = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
     // WHY: Divisible flag matters for robot cleaning — divisible rooms need multiple passes
@@ -3158,8 +3158,8 @@ function renderZoneTab(zoneIdx) {
   html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Zone Details</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
   html += `<div class="field-group"><label>Zone Name</label>
     <input type="text" value="${esc(z.zone_name)}" oninput="state.zones[${zoneIdx}].zone_name = this.value; renderTabBar(); markDirty();"></div>`;
-  html += `<div class="field-group"><label>Floor Number</label>
-    <input type="number" inputmode="numeric" value="${z.floor_number || ''}" oninput="state.zones[${zoneIdx}].floor_number = this.value ? parseInt(this.value) : null; markDirty();"></div>`;
+  html += `<div class="field-group"><label>Floor</label>
+    <input type="text" value="${esc(z.floor_number != null ? String(z.floor_number) : '')}" placeholder="e.g., 1, LL, M, B1" oninput="state.zones[${zoneIdx}].floor_number = this.value || null; markDirty();"></div>`;
 
   // Floor surfaces (multi-select chips)
   html += '<div class="field-group"><label>Floor Surfaces</label><div class="checkbox-grid">';
