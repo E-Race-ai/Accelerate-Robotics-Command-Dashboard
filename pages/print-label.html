@@ -1037,27 +1037,26 @@ $('ctrlSize').addEventListener('change', (e) => applySize(e.target.value));
 
 // Print Label button: server-side direct print. Posts to /api/print-label/send
 // which renders the page → PDF → lp's it to JADENS_Label. No browser dialog.
-async function sendToPrinter(prospectId) {
+async function sendToPrinter(prospectId, manualHotelName) {
   const profile = loadProfile();
   const size = $('ctrlSize').value;
+  const payload = {
+    size,
+    profile: {
+      name: profile.name,
+      role: profile.role,
+      phone: profile.phone,
+      note: profile.note,
+      photo: profile.photo,
+    },
+  };
+  if (prospectId) payload.prospect_id = prospectId;
+  else if (manualHotelName) payload.manual_hotel_name = manualHotelName;
   const res = await fetch('/api/print-label/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
-    body: JSON.stringify({
-      prospect_id: prospectId,
-      size,
-      profile: {
-        name: profile.name,
-        role: profile.role,
-        phone: profile.phone,
-        note: profile.note,
-        // Photo data URL piggybacks on the POST body — too big for a
-        // URL param. Server stashes it under a short-lived token and
-        // forwards just the token to the headless render.
-        photo: profile.photo,
-      },
-    }),
+    body: JSON.stringify(payload),
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
@@ -1070,6 +1069,7 @@ async function sendToPrinter(prospectId) {
 function resetForNextLabel() {
   CURRENT_PROSPECT = null;
   $('ctrlHotel').value = '';
+  $('ctrlManualHotel').value = '';
   $('ctrlNote').value = '';
   // Strip the note from the saved profile so it doesn't bleed into
   // the next render. Photo/name/role/phone untouched.
@@ -1117,8 +1117,8 @@ async function dispatchPrint(prospect, btnEl, btnOriginalText) {
   btnEl.disabled = true;
   btnEl.textContent = 'Sending to printer…';
   try {
-    const result = await sendToPrinter(prospect.id);
-    rememberRecent(prospect);
+    const result = await sendToPrinter(prospect._manual ? null : prospect.id, prospect._manual ? prospect.name : null);
+    if (!prospect._manual) rememberRecent(prospect);
     btnEl.textContent = `✓ Sent · ${result.job_id}`;
     setTimeout(() => {
       btnEl.textContent = btnOriginalText;
@@ -1134,8 +1134,9 @@ async function dispatchPrint(prospect, btnEl, btnOriginalText) {
 }
 
 $('btnPrint').addEventListener('click', async () => {
-  if (!CURRENT_PROSPECT) {
-    showError('Pick a prospect from the dropdown (or a recent chip) before printing.');
+  const manualName = ($('ctrlManualHotel')?.value || '').trim();
+  if (!CURRENT_PROSPECT && !manualName) {
+    showError('Pick a prospect from the dropdown, or type a hotel name.');
     const sel = $('ctrlHotel');
     sel?.focus();
     sel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1144,7 +1145,8 @@ $('btnPrint').addEventListener('click', async () => {
   showError('');
   const btn = $('btnPrint');
   const original = btn.textContent;
-  await dispatchPrint(CURRENT_PROSPECT, btn, original);
+  const target = CURRENT_PROSPECT || { id: null, name: manualName, _manual: true };
+  await dispatchPrint(target, btn, original);
 });
 
 // ─── Recent-prospects quick chips ──────────────────────────────────
@@ -1359,6 +1361,12 @@ $('healthReset')?.addEventListener('click', async () => {
   // (Profile-from-URL handling is in loadProfile() now — applied on
   //  every render, no separate boot-time override needed.)
   applySize($('ctrlSize').value);
+  // WHY: Server-side headless render passes manualHotel in the URL when
+  // printing a label for a typed-in hotel name (no prospect_id).
+  const manualHotelParam = params.get('manualHotel');
+  if (manualHotelParam) {
+    $('ctrlManualHotel').value = manualHotelParam;
+  }
   // Kick off the health poller before loading prospects so the badge
   // settles into its real state as quickly as possible.
   checkHealth();
