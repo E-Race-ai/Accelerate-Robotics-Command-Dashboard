@@ -5,6 +5,88 @@ now captured, Tessie token validated, awaiting Tesla account link and
 final design approval before implementation). See "Current resume point"
 at the bottom.
 
+---
+
+## 🤖 For a fresh Claude reading this (resume protocol)
+
+If you're a new Claude session and the user has asked you to resume this
+work, do exactly the following before doing anything else:
+
+```bash
+# 1. Land on the right branch
+cd ~/Code/accelerate-robotics
+git fetch origin
+git checkout docs/location-sharing-design
+git pull --ff-only
+
+# 2. Confirm you're reading the right thing
+ls docs/superpowers/specs/2026-05-12-location-sharing-design.md
+ls pages/mockup-findmy-circle.html
+
+# 3. Verify external state — what's running, what data is flowing
+echo "--- accelerate-robotics dev server (dashboard) ---"
+lsof -nP -iTCP:3000 -sTCP:LISTEN | tail -2
+echo "--- tesla-mobile-office (local helper) ---"
+lsof -nP -iTCP:3115 -sTCP:LISTEN | tail -2
+echo "--- Tessie still authenticated? ---"
+curl -s http://127.0.0.1:3115/api/tesla/now | python3 -m json.tool 2>/dev/null | head -20
+```
+
+Expected results after the above:
+
+- `dashboard dev server` on :3000 — may or may not be running. If absent and
+  the user wants to test, restart with `cd ~/Code/accelerate-robotics &&
+  npm run dev` in a background process.
+- `local helper` on :3115 — may or may not be running. If absent and the
+  user wants to verify Tessie status, restart with `cd
+  ~/Code/tesla-mobile-office && npm start` in a background process.
+- `tessie.configured` — should be `true` if the Tessie token Eric saved
+  on 2026-05-12 is still valid (Tessie tokens don't expire unless he
+  revoked them).
+- `live: null` → the Tessie ↔ Tesla OAuth was not yet completed when we
+  paused. `live: {...}` → he completed it; that's the implementation green
+  light to show real Tesla GPS in the dashboard.
+
+Then read this **entire doc** before responding to the user. The
+"Decisions made so far" table and "Current resume point" section together
+tell you what was settled vs. what's next.
+
+## ⛔ What is NOT in scope, even if the user phrases it broadly
+
+- Do not write any code in `src/` or `public/` (in this repo) without
+  first confirming the user wants to move from brainstorming to
+  implementation. The brainstorming gate has not been cleared.
+- Do not modify `~/Code/tesla-mobile-office` for the location-sharing
+  feature (the only change there so far is the unrelated `setupSave`
+  scope fix on local branch `fix/setup-save-scope-error`).
+- Do not commit anything to `main` of either repo. All work stays on
+  feature branches until the user explicitly merges.
+- The mockup `pages/mockup-findmy-circle.html` is a design artifact, not
+  production code. It currently lives on `docs/location-sharing-design`
+  only; it must not ship to production via a merge to `main` without the
+  user's explicit OK. If it does eventually need to live somewhere
+  long-lived, move it to `docs/superpowers/mockups/` first.
+
+## 🧭 Decision tree when the user gives a vague prompt
+
+If the user says something like *"pick back up"* or *"continue this":*
+
+1. Run the verify-state block above.
+2. Report a one-paragraph status: branch state, helper state, Tessie
+   state, dashboard state.
+3. Ask the user explicitly which of these they want to do next:
+   - Keep brainstorming (uncover new questions or revise decisions)?
+   - Move to writing-plans → produce an implementation plan from
+     "Current resume point" → "Step 4. Build the dashboard's Tessie
+     integration"?
+   - Validate a specific piece (e.g., that Tessie still authenticates,
+     that Eric has completed the Tesla link)?
+   - Something else entirely?
+
+Do NOT start implementing without that explicit answer.
+
+---
+
 ## Terminology — important, was a source of confusion
 
 We deliberately stopped abbreviating mid-session because the shortened forms
@@ -154,18 +236,6 @@ a configurable `DASHBOARD_URL/api/mifi/location/heartbeat`. Changes:
    - `AR_PASSWORD` (rep's AR password, stored plain in `.env`, gitignored)
 4. Optional: setup wizard in tesla-mobile-office gains an "Connect to
    Accelerate Robotics" panel for these 3 vars.
-
-## Artifacts produced this session
-
-| File | Status | Purpose |
-|---|---|---|
-| `pages/mockup-findmy-circle.html` | Untracked, served at `http://localhost:3000/pages/mockup-findmy-circle.html` | Interactive HTML mockup with 12 fake hotel pins in West Hollywood, three toggleable bridge states, and a working click-to-drop animation. Visual approval artifact — not real wiring. |
-
-The mockup uses **hardcoded coordinates** for "Ben's iPhone" (West
-Hollywood). User correctly flagged this as misleading — Ben is actually in
-Florida. To make it real, we need to either configure Eric's Apple ID in
-tesla-mobile-office (quick demo path the user picked) or build the full
-AR-side pipeline. We paused right before doing the configure step.
 
 ## Validated this session (real data, real state)
 
