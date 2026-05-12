@@ -1,7 +1,21 @@
 # Location Sharing — Design (DRAFT, paused mid-brainstorming)
 
-**Status:** ⏸ Paused mid-brainstorming on 2026-05-12. Scope is widening before we
-finish. See "Resume point" at the bottom.
+**Status:** ⏸ Paused 2026-05-12 (second pause point — wider-scope decisions
+now captured, Tessie token validated, awaiting Tesla account link and
+final design approval before implementation). See "Current resume point"
+at the bottom.
+
+## Terminology — important, was a source of confusion
+
+We deliberately stopped abbreviating mid-session because the shortened forms
+caused real misunderstanding. **Use the long forms in any future thread.**
+
+- **The dashboard** = `accelerate-robotics` = this repo, deployed to Render,
+  what reps open every day. Earlier abbreviated "AR" — avoid.
+- **The local helper** = `tesla-mobile-office` = a separate small Node app
+  in `~/Code/tesla-mobile-office`, runs locally on the rep's Mac at
+  `http://localhost:3115`, gathers data from LAN/iCloud-bound things the
+  cloud dashboard can't reach. Earlier abbreviated "tmo" — avoid.
 
 **Goal:** Let a rep on a site visit drop a radius circle on the Hotel
 Research map at their *current location* with one click — no manual map
@@ -18,17 +32,40 @@ feature in the map section of the hotel research tile."
 
 ## Decisions made so far
 
-Captured from the AskUserQuestion answers in the 2026-05-12 brainstorming session.
+Captured from the AskUserQuestion answers across the 2026-05-12 brainstorming
+session (two rounds — Find My-only first, wider-scope second).
+
+### Round 1 — Find My-only design
 
 | Decision | Choice | Why |
 |---|---|---|
 | Scope | **Multi-user from day one** | Avoid a rewrite when Ben is no longer the only rep. Each rep gets their own location stream. |
-| Topology | **Piggyback on tesla-mobile-office** | The bridge already exists there (`server/findmy-bridge.js` + `scripts/findmy-bridge/poll-devices.py`). Each rep runs tesla-mobile-office locally; its bridge POSTs locations to AR. |
-| Bridge auth to AR | **Bridge logs in like a browser** | Bridge POSTs `{email, password}` to `/api/auth/login`, gets the JWT cookie, reuses it on heartbeat POSTs. No new auth surface in AR. 401 → re-login. |
+| Topology (Find My) | **Piggyback on local helper** | The Find My bridge already exists in `~/Code/tesla-mobile-office` (`server/findmy-bridge.js` + `scripts/findmy-bridge/poll-devices.py`). Each rep runs the local helper; its bridge POSTs locations to the dashboard. |
+| Bridge auth to dashboard | **Bridge logs in like a browser** | Bridge POSTs `{email, password}` to `/api/auth/login`, gets the JWT cookie, reuses it on heartbeat POSTs. No new auth surface in the dashboard. 401 → re-login. |
 | Trigger UX | **One-shot button** | `📍 Drop circle at my location` next to the existing orange "Click map to drop circle" button. Subtitle shows freshness ("Ben's iPhone 17 Pro · 2 min ago"). Polled every 30s. |
 | Default radius | 1 mi | Matches the existing map's default. Adjustable via the existing slider in the circle's popup. |
 | Stale threshold | 10 min | Subtitle goes amber + warning beyond this. Click still works. |
-| Primary device | Latest-updated device per user | For v1. Future: let user designate primary in settings. |
+| Primary device (Find My) | Latest-updated device per user | For v1. Future: let user designate primary in settings. |
+
+### Round 2 — Wider scope (Tessie + MiFi + unified onboarding)
+
+| Decision | Choice | Why |
+|---|---|---|
+| Setup model | **Hybrid** | Browser geolocation as zero-install floor. Local helper as opt-in upgrade for richer sources. Every rep gets *something* working with no setup; reps who install the local helper get the richer multi-source experience. |
+| Source picking with multiple available | **Auto-pick the best by accuracy + recency** | One button, no dropdown. Subtitle surfaces which source was used (`Tesla · 30s ago` / `iPhone · 2 min ago` / `Browser · 12s ago`). Ranking: Tesla GPS ~5m > Find My ~12m > browser ~30m, broken by recency. |
+| Tessie wiring | **Dashboard reads Tessie directly** | Tessie is HTTPS, the cloud dashboard can call it. No local helper needed for the Tesla source. Per-user token stored in the dashboard's user table. Reps who only want Tesla GPS skip the local helper entirely. |
+| MiFi wiring | **Local helper required** (deferred) | MiFi 3100 is LAN-only — Render can't reach it. Local helper polls MiFi locally and POSTs to dashboard. Same heartbeat pipe as Find My. |
+| Find My wiring | **Local helper required** (deferred) | pyicloud needs an interactive 2FA setup + a persistent Python process per user. Cloud server can't do this. |
+
+### Three rep onboarding tiers
+
+| Tier | Setup work | Sources |
+|---|---|---|
+| 1 — Floor | Click "allow" on browser geolocation once | Browser geolocation |
+| 2 — Tessie | Paste Tessie token in dashboard settings | Browser + Tesla GPS |
+| 3 — Full | Install local helper, configure Find My + MiFi | All four sources |
+
+Each tier is purely additive. The radius button works at every tier.
 
 ## Architecture sketch
 
@@ -130,67 +167,84 @@ Florida. To make it real, we need to either configure Eric's Apple ID in
 tesla-mobile-office (quick demo path the user picked) or build the full
 AR-side pipeline. We paused right before doing the configure step.
 
-## Resume point
+## Validated this session (real data, real state)
 
-User picked the **quick demo path** (~20 min):
-1. Eric configures his Apple ID + app-specific password in tesla-mobile-office's `⚙ Setup` modal at `http://localhost:3115`.
-2. Bridge starts polling iCloud; data lands in tesla-mobile-office's `gps_snapshots` table (already wired).
-3. AR gains a same-origin proxy endpoint `GET /api/findmy-demo/devices` that forwards to `http://localhost:3115/api/mifi/gps/devices` (sidesteps CSP/CORS).
-4. Mockup fetches from `/api/findmy-demo/devices` on load + every 30s instead of using hardcoded coords.
-5. Mockup auto-derives the fresh/stale/no-data state from the real `ts` field on the latest reading.
+### Tessie token
 
-Then we re-evaluate the design with real data flowing before the full
-production buildout.
+- Eric generated a Tessie API token and pasted it into the local helper's
+  `⚙ Setup` wizard.
+- Local helper now reports `tessie.configured: true` from
+  `GET http://localhost:3115/api/tesla/now`.
+- `live: null` — expected. Eric has not completed the Tessie ↔ Tesla
+  OAuth flow yet (that's a Tessie-side step, not a code change). When
+  he does, `live` will populate with GPS, SOC, range, etc., and the
+  same token will work for the dashboard's direct integration too.
+- The first token Eric generated was pasted in chat and is therefore
+  considered burned. He rotated it before saving in the wizard. **Both
+  the dashboard's eventual token storage and the local helper's `.env`
+  use the rotated token.**
 
-## Open question that triggered the pause (next brainstorm round)
+### Bug fixed in the local helper
 
-User wants to widen scope before we ship:
+- `setupSave()` in `tesla-mobile-office/public/shell.js` had a
+  block-scoping bug: `tok` and `pw` were declared `const` inside the
+  per-feature branches but read at function scope after the await, so
+  saving either Tessie *or* Apple credentials threw `ReferenceError: pw
+  is not defined`.
+- Fixed by hoisting both to `let` at function scope.
+- Committed on local branch `fix/setup-save-scope-error` in
+  `~/Code/tesla-mobile-office`. **That repo has no remote configured**,
+  so the fix lives only on Eric's Mac. To preserve it across branch
+  switches, merge to local main: `git checkout main && git merge
+  fix/setup-save-scope-error`.
 
-> "would like to talk through what it would look like to do the location set up
-> with the other services: Tessie, mifi 3100, and set up wizard. Ideally, I would
-> want this to be an easy process for the user to share their location with the
-> dashboard so they can utilize the map feature with the radius."
+## Current resume point
 
-Implications to explore in the next brainstorming session:
-- **Three potential location sources** for the same rep:
-  - **Find My** — iCloud device location (iPhone in pocket, accurate)
-  - **Tessie** — Tesla GPS (when rep is driving the Model X)
-  - **MiFi 3100** — Inseego hotspot GPS (when MiFi is the field connectivity)
-- **Per-source freshness, accuracy, and trust** differ. Tesla GPS is most
-  accurate while driving; iPhone wins when out of the car; MiFi is a
-  reasonable fallback. Some logic to "pick the best current source" — or
-  let the rep choose — is now in scope.
-- **Setup wizard** should ideally be unified: one place where a rep
-  configures *all* their location sources, regardless of source.
-  - Where does this wizard live? AR (the dashboard the rep uses daily)
-    or tesla-mobile-office (where the bridges run)?
-  - If AR: the wizard collects credentials and pushes them to the
-    rep's local tesla-mobile-office over what channel?
-- **What surfaces the source choice?** A dropdown in the button ("Use
-  iPhone / Tesla / MiFi"), or a single "best available" pick with the
-  source labeled in the subtitle?
-- **What if multiple sources disagree?** (iPhone says SF, Tesla says LA —
-  rep left phone in office while driving.) Surface both, let user pick?
-  Or trust the most recent reading?
-- **Auth simplification.** Right now the plan is bridge-logs-in-like-a-browser.
-  If a unified setup wizard is in AR, it could generate per-user API tokens
-  that the bridge uses — cleaner than email/password in `.env`.
+Paused **before building the Tessie integration in the dashboard.**
 
-These are the questions the next brainstorming round should answer.
+When resumed, the next steps are:
+
+1. **(Optional, no code)** Eric completes the Tessie ↔ Tesla OAuth flow
+   inside Tessie so `live` starts returning GPS. Lets us test the
+   dashboard integration with real data instead of synthetic empty
+   responses.
+2. **Design self-review** on this doc (per the brainstorming skill flow)
+   to catch placeholders, contradictions, ambiguity, scope drift.
+3. **Get final design approval** from Eric on the now-complete decision
+   set in this doc.
+4. **Build the dashboard's Tessie integration** on a new branch (separate
+   from `docs/location-sharing-design`):
+   - SQLite migration: `tessie_token TEXT` column on `users` (or new
+     `user_settings` table — TBD during plan-writing).
+   - `src/adapters/tessie.js` — server-side Tessie HTTPS client.
+   - `GET /api/me/tesla/location` — auth-required endpoint that
+     returns `{ lat, lng, heading, age_s, source: 'tesla' }` or 404.
+   - Settings panel (in user profile or a new "Connections" page) to
+     paste the token.
+   - Hotel Research button's source-picker logic gains Tesla as a
+     candidate.
+5. **Then-and-only-then** layer in Find My + MiFi via the local helper's
+   bridge POSTing heartbeats to the dashboard. That's a separate plan.
+
+## Artifacts produced this session
+
+| File | Status | Purpose |
+|---|---|---|
+| `pages/mockup-findmy-circle.html` | Committed on this branch | Interactive HTML mockup with 12 fake hotel pins in West Hollywood, three toggleable bridge states, and a working click-to-drop animation. Visual approval artifact — not real wiring. Open at `http://localhost:3000/pages/mockup-findmy-circle.html` when accelerate-robotics' dev server is running. Has hardcoded coords; Eric correctly flagged this as misleading — replacement plan is part of step 4 above. |
+| `docs/superpowers/specs/2026-05-12-location-sharing-design.md` | This file | Design-in-progress; updated with Round 2 decisions. |
+| `~/Code/tesla-mobile-office` branch `fix/setup-save-scope-error` | Local-only (no remote) | Bug fix for the setup wizard. See "Bug fixed in the local helper" above. |
 
 ## How to resume
 
-1. Open `docs/superpowers/specs/2026-05-12-location-sharing-design.md` (this file).
-2. If continuing the quick-demo path: pick up at "Resume point" above —
-   configure Apple ID in tesla-mobile-office, then build the proxy + mockup wiring.
-3. If continuing the broader brainstorm: jump to "Open question that
-   triggered the pause" and start a fresh `Skill: superpowers:brainstorming`
-   session with this doc as context.
-
-The mockup file `pages/mockup-findmy-circle.html` is untracked. To
-preserve it across branches without committing into `pages/` (where it'd
-ship with the next deploy), either:
-- Move it to `docs/superpowers/mockups/2026-05-12-findmy-circle.html`
-  before next deploy, OR
-- Commit it alongside this spec on the same docs branch so it travels with
-  the design record.
+1. Open this file.
+2. Read the "Decisions made so far" table — both rounds.
+3. Confirm decisions still hold (especially the hybrid model and
+   Tessie-direct wiring).
+4. Start a new session with `Skill: superpowers:brainstorming` if any
+   decision needs revisiting, otherwise jump to
+   `Skill: superpowers:writing-plans` to produce an implementation
+   plan from step 4 of "Current resume point".
+5. Verify in the local helper that `tessie.configured: true` is still
+   true (`curl -s http://127.0.0.1:3115/api/tesla/now | jq .tessie`).
+   If Eric has completed the Tessie ↔ Tesla OAuth flow by then, `live`
+   should also be non-null.
