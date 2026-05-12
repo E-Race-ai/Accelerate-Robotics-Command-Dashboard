@@ -2044,9 +2044,20 @@ function renderOverviewTab() {
 
 // WHY: One-tap archetype applies typical values AND auto-creates recommended zones.
 // Rep still edits everything — this just eliminates 5 min of blank-slate typing.
+// WHY: Toggle behavior — tapping the already-selected archetype deselects it so the
+// rep can undo a misclick without refreshing the page.
 function applyArchetype(key) {
   const arch = PROPERTY_ARCHETYPES[key];
   if (!arch) return;
+
+  // Deselect if already active
+  if (state.property_type === key) {
+    state.property_type = null;
+    markDirty();
+    renderActiveTab();
+    renderTabBar();
+    return;
+  }
 
   state.property_type = key;
 
