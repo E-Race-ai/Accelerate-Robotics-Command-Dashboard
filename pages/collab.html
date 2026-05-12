@@ -391,6 +391,26 @@
     padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:12px; display:none;
   }
   .status-msg.error { display:block; background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+
+  /* ── Detail modal ── */
+  .detail-close {
+    position:absolute; top:16px; right:16px; background:none; border:none;
+    font-size:1.5rem; color:#94a3b8; cursor:pointer; line-height:1;
+    width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+    border-radius:8px;
+  }
+  .detail-close:hover { background:#f1f5f9; color:#475569; }
+  .detail-header { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:12px; }
+  .detail-title { font-size:1.2rem; font-weight:800; color:#0f172a; margin-bottom:8px; line-height:1.3; }
+  .detail-section { margin-bottom:16px; }
+  .detail-section-label { font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px; }
+  .detail-description { font-size:0.9rem; color:#334155; line-height:1.6; white-space:pre-wrap; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; }
+  .detail-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .detail-meta-item { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; }
+  .detail-meta-label { font-size:0.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.03em; }
+  .detail-meta-value { font-size:0.88rem; font-weight:600; color:#1e293b; margin-top:2px; }
+  .atc-card { cursor:pointer; }
+  .atc-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.08); }
 </style>
 </head>
 <body>
@@ -542,6 +562,15 @@
         <button type="submit" class="primary" id="saveBtn">Post Request</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- WHY: Detail modal shows full ticket info when a card is clicked.
+     Separate from the "New Ticket" modal so both can coexist. -->
+<div class="modal-bg" id="detailModalBg">
+  <div class="modal" style="max-width:620px; position:relative;">
+    <button class="detail-close" id="detailClose">&times;</button>
+    <div id="detailContent"></div>
   </div>
 </div>
 
@@ -829,10 +858,127 @@
     }
   });
 
-  // Modal open/close
+  // New Ticket modal open/close
   $('#newBtn').addEventListener('click', () => $('#modalBg').classList.add('show'));
   $('#cancelBtn').addEventListener('click', () => $('#modalBg').classList.remove('show'));
   $('#modalBg').addEventListener('click', (e) => { if (e.target === $('#modalBg')) $('#modalBg').classList.remove('show'); });
+
+  // ── Detail modal ──────────────────────────────────────────
+  // WHY: Clicking a card opens a detail view so users don't have to navigate
+  // to the Bug/Improvement pages to see full ticket info.
+  $('#detailClose').addEventListener('click', () => $('#detailModalBg').classList.remove('show'));
+  $('#detailModalBg').addEventListener('click', (e) => { if (e.target === $('#detailModalBg')) $('#detailModalBg').classList.remove('show'); });
+
+  document.addEventListener('click', (e) => {
+    // WHY: Don't open detail when clicking action buttons or archive — those have their own handlers
+    if (e.target.closest('button[data-action]')) return;
+    const card = e.target.closest('.atc-card');
+    if (!card) return;
+    const id = parseInt(card.dataset.id);
+    const req = allRequests.find(r => r.id === id);
+    if (!req) return;
+    openDetailModal(req);
+  });
+
+  function openDetailModal(req) {
+    const statusLabels = { open: 'Inbound', claimed: 'Claimed', in_progress: 'In Flight', done: 'Landed', archived: 'Archived' };
+    const statusColors = { open: '#3b82f6', claimed: '#f59e0b', in_progress: '#8b5cf6', done: '#22c55e', archived: '#94a3b8' };
+    const prioColors = { urgent: '#dc2626', high: '#f97316', medium: '#eab308', low: '#6b7280' };
+
+    const requester = req.requester_name || req.requester_email || '?';
+    const target = req.target_user ? req.target_user.split('@')[0] : null;
+    const claimedBy = req.claimed_by ? req.claimed_by.split('@')[0] : null;
+
+    let html = '';
+
+    // Header pills
+    html += '<div class="detail-header">';
+    if (req.is_security) html += '<span class="pill" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;">⚠️ Security</span>';
+    html += `<span class="pill type-${escapeHtml(req.type)}">${escapeHtml(req.type)}</span>`;
+    html += `<span class="pill prio-${escapeHtml(req.priority)}">${escapeHtml(req.priority)}</span>`;
+    html += `<span class="pill" style="background:${statusColors[req.status] || '#94a3b8'}22;color:${statusColors[req.status] || '#94a3b8'};border:1px solid ${statusColors[req.status] || '#94a3b8'}44;font-weight:700;">${statusLabels[req.status] || req.status}</span>`;
+    html += '</div>';
+
+    // Title
+    html += `<div class="detail-title">${escapeHtml(req.title)}</div>`;
+
+    // Description
+    if (req.description) {
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-label">Description</div>';
+      html += `<div class="detail-description">${escapeHtml(req.description)}</div>`;
+      html += '</div>';
+    }
+
+    // Skills
+    if (req.skills) {
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-label">Skills Needed</div>';
+      html += `<div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+      req.skills.split(',').map(s => s.trim()).filter(Boolean).forEach(skill => {
+        html += `<span style="font-size:0.8rem;padding:4px 10px;border-radius:12px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">${escapeHtml(skill)}</span>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Meta grid
+    html += '<div class="detail-section">';
+    html += '<div class="detail-section-label">Details</div>';
+    html += '<div class="detail-meta-grid">';
+    html += `<div class="detail-meta-item"><div class="detail-meta-label">Submitted By</div><div class="detail-meta-value">${escapeHtml(requester)}</div></div>`;
+    html += `<div class="detail-meta-item"><div class="detail-meta-label">Created</div><div class="detail-meta-value">${escapeHtml(req.created_at ? new Date(req.created_at).toLocaleDateString() : '—')}</div></div>`;
+    if (claimedBy) html += `<div class="detail-meta-item"><div class="detail-meta-label">Claimed By</div><div class="detail-meta-value">🤝 ${escapeHtml(claimedBy)}</div></div>`;
+    if (target) html += `<div class="detail-meta-item"><div class="detail-meta-label">Tagged</div><div class="detail-meta-value">→ ${escapeHtml(target)}</div></div>`;
+    if (req.due_date) html += `<div class="detail-meta-item"><div class="detail-meta-label">Due Date</div><div class="detail-meta-value">⏱ ${escapeHtml(req.due_date)}</div></div>`;
+    if (req.resolved_at) html += `<div class="detail-meta-item"><div class="detail-meta-label">Resolved</div><div class="detail-meta-value">✅ ${escapeHtml(new Date(req.resolved_at).toLocaleDateString())}</div></div>`;
+    if (req.requester_email) html += `<div class="detail-meta-item"><div class="detail-meta-label">Email</div><div class="detail-meta-value">${escapeHtml(req.requester_email)}</div></div>`;
+    html += '</div></div>';
+
+    // ── Stage transition buttons ──
+    // WHY: Let users move the ticket through stages directly from the detail modal
+    // without having to close it and drag the card on the board.
+    const stages = [
+      { status: 'open', label: '📥 Inbound', color: '#3b82f6' },
+      { status: 'claimed', label: '🤝 Claimed', color: '#f59e0b' },
+      { status: 'in_progress', label: '✈️ In Flight', color: '#8b5cf6' },
+      { status: 'done', label: '🛬 Landed', color: '#22c55e' },
+    ];
+    html += '<div class="detail-section" style="margin-top:20px; padding-top:16px; border-top:1px solid #e2e8f0;">';
+    html += '<div class="detail-section-label">Move to Stage</div>';
+    html += '<div style="display:flex; gap:8px; flex-wrap:wrap;">';
+    stages.forEach(s => {
+      const isCurrent = req.status === s.status;
+      html += `<button onclick="moveTicketStage(${req.id}, '${s.status}')" style="padding:8px 16px; border-radius:8px; font-size:0.82rem; font-weight:600; cursor:${isCurrent ? 'default' : 'pointer'}; border:2px solid ${s.color}; background:${isCurrent ? s.color : 'white'}; color:${isCurrent ? 'white' : s.color}; opacity:${isCurrent ? '1' : '0.8'};" ${isCurrent ? 'disabled' : ''}>${s.label}</button>`;
+    });
+    html += '</div></div>';
+
+    // Close button at bottom
+    html += '<div style="display:flex; justify-content:flex-end; margin-top:16px;">';
+    html += '<button onclick="$(\'#detailModalBg\').classList.remove(\'show\')" style="padding:10px 20px; border-radius:9px; font-size:0.85rem; font-weight:700; cursor:pointer; border:1.5px solid #e2e8f0; background:white; color:#475569;">Close</button>';
+    html += '</div>';
+
+    $('#detailContent').innerHTML = html;
+    $('#detailModalBg').classList.add('show');
+  }
+
+  // WHY: Move ticket to a new stage from the detail modal, then refresh board + reopen detail
+  async function moveTicketStage(id, newStatus) {
+    const body = (newStatus === 'claimed') ? { claim: true } : { status: newStatus };
+    try {
+      const r = await fetch(`/api/collab/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      await loadRequests();
+      // Reopen the detail modal with updated data
+      const updated = allRequests.find(r => r.id === id);
+      if (updated) openDetailModal(updated);
+    } catch (err) {
+      alert('Failed to move ticket: ' + err.message);
+    }
+  }
 
   // Submit
   $('#newForm').addEventListener('submit', async (e) => {
