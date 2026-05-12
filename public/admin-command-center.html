@@ -4365,6 +4365,17 @@ function _wireATCDashBoard() {
     }
   });
 
+  // WHY: Click a card to open the detail modal — skip if clicking an action button
+  board.addEventListener('click', (e) => {
+    if (e.target.closest('button[data-action]')) return;
+    const card = e.target.closest('.atc-card');
+    if (!card) return;
+    const id = card.dataset.id;
+    const req = _atcDashRequests.find(r => String(r.id) === String(id));
+    if (!req) return;
+    _openATCDetail(req);
+  });
+
   // HTML5 drag-and-drop between lanes
   board.addEventListener('dragstart', (e) => {
     const card = e.target.closest('.atc-card');
@@ -4408,6 +4419,100 @@ function _wireATCDashBoard() {
     }
   });
 }
+
+// ── ATC Detail Modal ──────────────────────────────────────────
+function _openATCDetail(req) {
+  const statusLabels = { open: 'Inbound', claimed: 'Claimed', in_progress: 'In Flight', done: 'Landed', archived: 'Archived' };
+  const statusColors = { open: '#3b82f6', claimed: '#f59e0b', in_progress: '#8b5cf6', done: '#22c55e', archived: '#94a3b8' };
+  const requester = (req.requester_name || req.requester_email || '?').toString().split('@')[0];
+  const claimedBy = req.claimed_by ? req.claimed_by.split('@')[0] : null;
+  const target = req.target_user ? req.target_user.split('@')[0] : null;
+  const isFeedback = req._source === 'feedback';
+
+  let html = '';
+  // Pills
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">';
+  if (req.is_security) html += '<span class="pill" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-size:.72rem;padding:3px 8px;border-radius:10px;">⚠️ Security</span>';
+  html += `<span class="pill type-${escapeHtml(req.type)}" style="font-size:.72rem;padding:3px 8px;border-radius:10px;">${escapeHtml(req.type)}</span>`;
+  html += `<span class="pill prio-${escapeHtml(req.priority)}" style="font-size:.72rem;padding:3px 8px;border-radius:10px;">${escapeHtml(req.priority)}</span>`;
+  html += `<span style="font-size:.72rem;padding:3px 8px;border-radius:10px;background:${statusColors[req.status] || '#94a3b8'}22;color:${statusColors[req.status] || '#94a3b8'};border:1px solid ${statusColors[req.status] || '#94a3b8'}44;font-weight:700;">${statusLabels[req.status] || req.status}</span>`;
+  if (isFeedback) html += '<span style="font-size:.72rem;padding:3px 8px;border-radius:10px;background:#fef3c7;color:#92400e;">via Bug/Feature form</span>';
+  html += '</div>';
+
+  // Title
+  html += `<div style="font-size:1.2rem;font-weight:800;color:#0f172a;margin-bottom:12px;line-height:1.3;">${escapeHtml(req.title)}</div>`;
+
+  // Description
+  if (req.description) {
+    html += '<div style="margin-bottom:16px;"><div style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Description</div>';
+    html += `<div style="font-size:.9rem;color:#334155;line-height:1.6;white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;">${escapeHtml(req.description)}</div></div>`;
+  }
+
+  // Skills
+  if (req.skills) {
+    html += '<div style="margin-bottom:16px;"><div style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Skills Needed</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+    req.skills.split(',').map(s => s.trim()).filter(Boolean).forEach(skill => {
+      html += `<span style="font-size:.8rem;padding:4px 10px;border-radius:12px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">${escapeHtml(skill)}</span>`;
+    });
+    html += '</div></div>';
+  }
+
+  // Meta grid
+  html += '<div style="margin-bottom:16px;"><div style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Details</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+  html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Submitted By</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">${escapeHtml(requester)}</div></div>`;
+  html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Created</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">${escapeHtml(req.created_at ? new Date(req.created_at).toLocaleDateString() : '—')}</div></div>`;
+  if (claimedBy) html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Claimed By</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">🤝 ${escapeHtml(claimedBy)}</div></div>`;
+  if (target) html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Tagged</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">→ ${escapeHtml(target)}</div></div>`;
+  if (req.due_date) html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Due Date</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">⏱ ${escapeHtml(req.due_date)}</div></div>`;
+  if (req.resolved_at) html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Resolved</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">✅ ${escapeHtml(new Date(req.resolved_at).toLocaleDateString())}</div></div>`;
+  html += '</div></div>';
+
+  // Stage buttons
+  const stages = [
+    { status: 'open', label: '📥 Inbound', color: '#3b82f6' },
+    { status: 'claimed', label: '🤝 Claimed', color: '#f59e0b' },
+    { status: 'in_progress', label: '✈️ In Flight', color: '#8b5cf6' },
+    { status: 'done', label: '🛬 Landed', color: '#22c55e' },
+  ];
+  html += '<div style="margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0;">';
+  html += '<div style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Move to Stage</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  stages.forEach(s => {
+    const cur = req.status === s.status;
+    html += `<button onclick="_moveATCTicket('${escapeHtml(String(req.id))}','${s.status}')" style="padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:${cur?'default':'pointer'};border:2px solid ${s.color};background:${cur?s.color:'white'};color:${cur?'white':s.color};opacity:${cur?'1':'0.8'};" ${cur?'disabled':''}>${s.label}</button>`;
+  });
+  html += '</div></div>';
+
+  // Close button
+  html += '<div style="display:flex;justify-content:flex-end;margin-top:16px;">';
+  html += `<button onclick="document.getElementById('atcDetailOverlay').style.display='none'" style="padding:10px 20px;border-radius:9px;font-size:.85rem;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f0;background:white;color:#475569;">Close</button>`;
+  html += '</div>';
+
+  document.getElementById('atcDetailBody').innerHTML = html;
+  document.getElementById('atcDetailOverlay').style.display = 'flex';
+}
+
+async function _moveATCTicket(id, newStatus) {
+  const item = _atcDashRequests.find(r => String(r.id) === String(id));
+  if (!item) return;
+  try {
+    const claimAlias = (item.status === 'open' && newStatus === 'claimed' && item._source !== 'feedback');
+    await _atcPatch(item, claimAlias ? { claim: true } : { laneStatus: newStatus });
+    await loadCommunityBoard();
+    renderActivityFeed();
+    const updated = _atcDashRequests.find(r => String(r.id) === String(id));
+    if (updated) _openATCDetail(updated);
+  } catch (err) {
+    alert('Failed to move ticket: ' + err.message);
+  }
+}
+
+// Close overlay on backdrop click
+document.getElementById('atcDetailOverlay')?.addEventListener('click', (e) => {
+  if (e.target.id === 'atcDetailOverlay') e.target.style.display = 'none';
+});
 
 // One PATCH wrapper for both data sources — keeps the click + drop handlers
 // agnostic of which API is involved. `op` is { claim: true } for collab-only
@@ -7440,5 +7545,13 @@ if (document.readyState === 'loading') {
 }
   </script>
   <script src="/js/brand.js"></script>
+
+  <!-- WHY: ATC detail modal — shows full ticket info when clicking a card on the dashboard board -->
+  <div id="atcDetailOverlay" style="position:fixed;inset:0;background:rgba(15,23,42,0.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px;">
+    <div style="background:white;border-radius:16px;width:100%;max-width:620px;max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 20px 50px rgba(15,23,42,0.25);position:relative;">
+      <button onclick="document.getElementById('atcDetailOverlay').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.5rem;color:#94a3b8;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;">&times;</button>
+      <div id="atcDetailBody"></div>
+    </div>
+  </div>
 </body>
 </html>
