@@ -131,6 +131,8 @@ h1,h2,h3,h4 { font-family: 'Space Grotesk', sans-serif; }
   font-family: 'Inter', sans-serif;
 }
 .sync-btn:active { transform: scale(0.97); }
+/* WHY: Dedicated class for the Print button so the linter can't strip the inline style */
+.print-btn { background: rgba(59,130,246,0.08) !important; color: #2563eb !important; border-color: rgba(59,130,246,0.2) !important; }
 
 .sync-dot {
   width: 8px; height: 8px; border-radius: 50%;
@@ -854,6 +856,10 @@ select {
     </select>
     <span class="status-badge" id="statusBadge">DRAFT</span>
     <span class="save-indicator" id="saveIndicator">Not saved</span>
+    <button class="sync-btn" onclick="manualSave()" style="background:#f0fdf4; color:#16a34a; border-color:#86efac;">
+      <span>&#128190;</span>
+      <span>Save</span>
+    </button>
     <button class="sync-btn sync-ready" id="syncBtn" onclick="syncToServer()">
       <span class="sync-dot"></span>
       <span id="syncLabel">Sync</span>
@@ -861,9 +867,8 @@ select {
     <!-- WHY: Print dropdown offers two PDF modes — summary (filled data only) and full
          (all sections). PDFs are generated server-side so the assessment must be synced first. -->
     <div style="position:relative;display:inline-block;" id="printDropdownWrap">
-      <button class="sync-btn" onclick="togglePrintMenu()" style="background:rgba(59,130,246,0.08); color:#2563eb; border-color:rgba(59,130,246,0.2);">
-        <span>&#128438;</span>
-        <span>Print</span>
+      <button class="sync-btn print-btn" onclick="togglePrintMenu()">
+        <span>&#128438; Print</span>
       </button>
       <div id="printMenu" style="display:none; position:absolute; right:0; top:100%; margin-top:4px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.12); z-index:100; min-width:200px; overflow:hidden;">
         <div style="padding:8px 12px; font-size:.7rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #f1f5f9;">Print Assessment</div>
@@ -922,8 +927,8 @@ select {
 <div class="toast-container" id="toastContainer"></div>
 
 <!-- ── Hidden Photo Input ── -->
-<input type="file" accept="image/*" capture="environment" id="photoInput" class="hidden">
-<input type="file" accept="image/*" capture="environment" id="infraPhotoInput" class="hidden">
+<input type="file" accept="image/*,.heic,.heif" id="photoInput" class="hidden">
+<input type="file" accept="image/*,.heic,.heif" id="infraPhotoInput" class="hidden">
 
 <script>
 /* ===================================================================
@@ -1046,6 +1051,7 @@ let state = {
   },
   zones: [],
   stakeholders: [],
+  item_photos: {},
   notes: '',
   created_at: null, updated_at: null, synced_at: null
 };
@@ -1197,10 +1203,14 @@ function renderActiveTab() {
 
   if (activeTab === 'overview') {
     main.innerHTML = '<div class="tab-content active">' + renderOverviewTab() + '</div>';
+    // WHY: Load item photo grids after DOM renders (amenity photos)
+    setTimeout(() => loadItemPhotoGrids(), 50);
   } else if (activeTab === 'stakeholders') {
     main.innerHTML = '<div class="tab-content active">' + renderStakeholdersTab() + '</div>';
   } else if (activeTab === 'operations') {
     main.innerHTML = '<div class="tab-content active">' + renderOperationsTab() + '</div>';
+    // WHY: Load item photo grids after DOM renders (F&B venue + event space photos)
+    setTimeout(() => loadItemPhotoGrids(), 50);
   } else if (activeTab === 'infrastructure') {
     main.innerHTML = '<div class="tab-content active">' + renderInfrastructureTab() + '</div>';
   } else if (activeTab.startsWith('zone_')) {
@@ -1841,7 +1851,7 @@ function renderOverviewTab() {
   html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
   amenityToggles.forEach(a => {
     const active = !!s[a.key];
-    html += '<button class="chip-btn" onclick="state.' + a.key + ' = !state.' + a.key + '; markDirty(); renderTab(0);"'
+    html += '<button class="chip-btn" onclick="state.' + a.key + ' = !state.' + a.key + '; markDirty(); renderActiveTab();"'
       + ' style="font-size:.85em;padding:8px 16px;border-radius:20px;border:1px solid ' + (active ? '#16a34a' : 'var(--border,#e2e8f0)') + ';'
       + 'background:' + (active ? '#f0fdf4' : 'var(--card-bg,#fff)') + ';color:' + (active ? '#166534' : '#475569') + ';cursor:pointer;font-weight:' + (active ? '600' : '400') + ';min-height:44px;">'
       + (active ? '&#10003; ' : '') + a.label + '</button>';
@@ -1850,6 +1860,13 @@ function renderOverviewTab() {
   if (s.pool) {
     html += '<div class="field-group" style="margin-bottom:8px;"><label>Pool Details</label>';
     html += '<input type="text" value="' + esc(s.pool_type) + '" placeholder="e.g., rooftop, ground level, indoor, cabanas" oninput="state.pool_type = this.value; markDirty();"></div>';
+    html += renderItemPhotoArea('amenity', 'pool', 'Pool Area Photos');
+  }
+  if (s.spa) {
+    html += renderItemPhotoArea('amenity', 'spa', 'Spa Photos');
+  }
+  if (s.fitness_center) {
+    html += renderItemPhotoArea('amenity', 'fitness_center', 'Fitness Center Photos');
   }
   html += '</div></div>';
 
@@ -1957,6 +1974,7 @@ function renderOverviewTab() {
       });
       html += '</div></div>';
     }
+    html += renderItemPhotoArea('fb_venue', i, 'Venue Photos');
     html += '</div>';
   });
 
@@ -2000,6 +2018,7 @@ function renderOverviewTab() {
       });
       html += '</div></div>';
     }
+    html += renderItemPhotoArea('event_space', i, 'Space Photos');
     html += '</div>';
   });
 
@@ -3372,6 +3391,124 @@ function toggleSection(headerEl) {
 let pendingPhotoZoneIdx = null;
 let pendingPhotoChecklistItem = null;
 
+// WHY: Item photos (amenities, F&B venues, event spaces) use the same IndexedDB pipeline
+// as zone photos, but store references on the item instead of a zone. The checklist_item
+// field tags them (e.g., "amenity_pool", "fb_venue_0", "event_space_1").
+let pendingItemPhotoContext = null; // { type: 'amenity'|'fb_venue'|'event_space', index: number|string }
+
+function captureItemPhoto(contextType, contextIndex) {
+  pendingItemPhotoContext = { type: contextType, index: contextIndex };
+  document.getElementById('photoInput').click();
+}
+
+function getItemPhotoTag(ctx) {
+  return ctx.type + '_' + ctx.index;
+}
+
+function getItemPhotos(contextType, contextIndex) {
+  const tag = contextType + '_' + contextIndex;
+  if (!state.item_photos) state.item_photos = {};
+  if (!state.item_photos[tag]) state.item_photos[tag] = [];
+  return state.item_photos[tag];
+}
+
+async function handleItemPhotoSelected(file) {
+  if (!pendingItemPhotoContext) return false;
+  const ctx = pendingItemPhotoContext;
+  pendingItemPhotoContext = null;
+
+  try {
+    const thumbnail = await generateThumbnail(file);
+    const photoId = generateUUID();
+    const tag = getItemPhotoTag(ctx);
+
+    await savePhotoToDB({
+      id: photoId,
+      assessmentId: state.id,
+      zoneId: null,
+      blob: file,
+      thumbnail: thumbnail,
+      annotations: [],
+      caption: tag,
+      checklistItem: tag,
+      takenAt: new Date().toISOString()
+    });
+
+    if (!state.item_photos) state.item_photos = {};
+    if (!state.item_photos[tag]) state.item_photos[tag] = [];
+    state.item_photos[tag].push({ id: photoId });
+
+    markDirty();
+    renderActiveTab();
+    setTimeout(() => renderItemPhotoGrid(tag), 50);
+    showToast('Photo captured', 'success');
+    return true;
+  } catch (err) {
+    console.error('Item photo capture error:', err);
+    showToast('Failed to save photo: ' + (err.message || err), 'error');
+    return true;
+  }
+}
+
+async function renderItemPhotoGrid(tag) {
+  const gridEl = document.getElementById('itemPhotoGrid_' + tag);
+  if (!gridEl) return;
+
+  const photos = (state.item_photos && state.item_photos[tag]) || [];
+  if (photos.length === 0) {
+    gridEl.innerHTML = '<div style="color:var(--text-dim);font-size:0.75rem;font-style:italic;padding:6px 0;">No photos yet</div>';
+    return;
+  }
+
+  let html = '';
+  for (const ref of photos) {
+    try {
+      const photo = await getPhotoFromDB(ref.id);
+      if (!photo) continue;
+      const safeSrc = (photo.thumbnail && photo.thumbnail.startsWith('data:image/')) ? photo.thumbnail : '';
+      html += '<div style="position:relative;flex-shrink:0;display:inline-block;">'
+        + '<img src="' + safeSrc + '" alt="Photo" style="width:72px;height:72px;border-radius:8px;object-fit:cover;border:2px solid #e2e8f0;">'
+        + '<button onclick="deleteItemPhoto(\'' + esc(ref.id) + '\',\'' + esc(tag) + '\')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#ef4444;color:#fff;border:2px solid #fff;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;">&times;</button>'
+        + '</div>';
+    } catch (err) {
+      console.error('Failed to load item photo:', err);
+    }
+  }
+  gridEl.innerHTML = html || '<div style="color:var(--text-dim);font-size:0.75rem;font-style:italic;padding:6px 0;">No photos yet</div>';
+}
+
+async function deleteItemPhoto(photoId, tag) {
+  await deletePhotoFromDB(photoId);
+  if (state.item_photos && state.item_photos[tag]) {
+    state.item_photos[tag] = state.item_photos[tag].filter(p => p.id !== photoId);
+  }
+  markDirty();
+  renderActiveTab();
+  setTimeout(() => renderItemPhotoGrid(tag), 50);
+  showToast('Photo deleted', 'info');
+}
+
+// WHY: After a tab renders, scan for all item photo grid placeholders and load thumbnails
+function loadItemPhotoGrids() {
+  if (!state.item_photos) return;
+  Object.keys(state.item_photos).forEach(tag => {
+    if (state.item_photos[tag].length > 0) {
+      renderItemPhotoGrid(tag);
+    }
+  });
+}
+
+function renderItemPhotoArea(contextType, contextIndex, label) {
+  const tag = contextType + '_' + contextIndex;
+  const photos = (state.item_photos && state.item_photos[tag]) || [];
+  return '<div style="margin-top:10px;padding:10px;background:#f8fafc;border:1px dashed #d1d5db;border-radius:10px;">'
+    + '<div style="font-size:0.72rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">&#128247; ' + label + '</div>'
+    + '<button onclick="captureItemPhoto(\'' + contextType + '\',' + (typeof contextIndex === 'string' ? '\'' + contextIndex + '\'' : contextIndex) + ')" class="sync-btn print-btn" style="font-size:0.82rem;padding:6px 12px;min-height:36px;margin-bottom:6px;">&#128247; Take Photo</button>'
+    + '<div id="itemPhotoGrid_' + tag + '" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">'
+    + (photos.length === 0 ? '<div style="color:var(--text-dim);font-size:0.75rem;font-style:italic;padding:6px 0;">No photos yet</div>' : '')
+    + '</div></div>';
+}
+
 function capturePhoto(zoneIdx, checklistItem) {
   pendingPhotoZoneIdx = zoneIdx;
   pendingPhotoChecklistItem = checklistItem;
@@ -3381,6 +3518,14 @@ function capturePhoto(zoneIdx, checklistItem) {
 async function handlePhotoSelected(e) {
   const file = e.target.files[0];
   if (!file) return;
+
+  // WHY: Route to item photo handler if an item context is pending (amenity/F&B/event).
+  // Always return after attempting — never fall through to zone handler.
+  if (pendingItemPhotoContext) {
+    e.target.value = '';
+    await handleItemPhotoSelected(file);
+    return;
+  }
 
   const zoneIdx = pendingPhotoZoneIdx;
   const checklistItem = pendingPhotoChecklistItem;
@@ -3431,7 +3576,7 @@ async function handlePhotoSelected(e) {
 }
 
 function generateThumbnail(blob) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(blob);
     img.onload = () => {
@@ -3451,7 +3596,21 @@ function generateThumbnail(blob) {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image for thumbnail'));
+      // WHY: HEIC and other formats the browser can't render natively still get
+      // saved — the full blob uploads to the server. We use a placeholder thumbnail
+      // so the UI doesn't break. The server has the original file.
+      const canvas = document.createElement('canvas');
+      canvas.width = 200; canvas.height = 200;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(0, 0, 200, 200);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '48px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('\u{1F4F7}', 100, 110);
+      ctx.font = '12px sans-serif';
+      ctx.fillText(blob.name || 'Photo', 100, 145);
+      resolve(canvas.toDataURL('image/jpeg', 0.7));
     };
     img.src = url;
   });
@@ -3820,6 +3979,7 @@ async function loadFromServer(id) {
     if (!data.infrastructure_data.wifi) data.infrastructure_data.wifi = {};
     if (!data.zones) data.zones = [];
     if (!data.stakeholders) data.stakeholders = [];
+    if (!data.item_photos) data.item_photos = {};
 
     // Parse zone floor_surfaces from JSON strings
     data.zones.forEach(z => {
@@ -3834,6 +3994,14 @@ async function loadFromServer(id) {
     console.error('Server load failed:', err);
     return null;
   }
+}
+
+// ── Manual Save ──
+// WHY: Explicit save button gives reps confidence their work is preserved.
+// autoSave runs on a timer, but a visible button + toast removes doubt.
+function manualSave() {
+  autoSave();
+  showToast('Progress saved locally', 'success');
 }
 
 // ── Print Assessment ──
