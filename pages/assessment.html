@@ -858,6 +858,24 @@ select {
       <span class="sync-dot"></span>
       <span id="syncLabel">Sync</span>
     </button>
+    <!-- WHY: Print dropdown offers two PDF modes — summary (filled data only) and full
+         (all sections). PDFs are generated server-side so the assessment must be synced first. -->
+    <div style="position:relative;display:inline-block;" id="printDropdownWrap">
+      <button class="sync-btn" onclick="togglePrintMenu()" style="background:#1e293b;">
+        <span>&#128438; Print</span>
+      </button>
+      <div id="printMenu" style="display:none; position:absolute; right:0; top:100%; margin-top:4px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.12); z-index:100; min-width:200px; overflow:hidden;">
+        <div style="padding:8px 12px; font-size:.7rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #f1f5f9;">Print Assessment</div>
+        <button onclick="printAssessment('summary')" style="display:block; width:100%; text-align:left; padding:10px 14px; border:none; background:none; cursor:pointer; font-size:.82rem; color:#1e293b;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='none'">
+          <div style="font-weight:600;">&#128196; Summary</div>
+          <div style="font-size:.7rem; color:#64748b; margin-top:2px;">Overview with filled-in data only</div>
+        </button>
+        <button onclick="printAssessment('full')" style="display:block; width:100%; text-align:left; padding:10px 14px; border:none; background:none; cursor:pointer; font-size:.82rem; color:#1e293b; border-top:1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='none'">
+          <div style="font-weight:600;">&#128209; Full Report</div>
+          <div style="font-size:.7rem; color:#64748b; margin-top:2px;">All sections, detailed view</div>
+        </button>
+      </div>
+    </div>
   </div>
 </nav>
 
@@ -3816,6 +3834,38 @@ async function loadFromServer(id) {
     return null;
   }
 }
+
+// ── Print Assessment ──
+// WHY: Print requires a server-synced assessment — PDFs are generated server-side via PDFKit.
+// Two modes: 'summary' (only filled sections) and 'full' (all sections, even empty).
+function togglePrintMenu() {
+  const menu = document.getElementById('printMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function printAssessment(mode) {
+  document.getElementById('printMenu').style.display = 'none';
+
+  if (!state.id) {
+    showToast('Save the assessment before printing', 'error');
+    return;
+  }
+  if (!state.synced_at && state.status === 'draft') {
+    showToast('Sync the assessment to the server before printing', 'error');
+    return;
+  }
+
+  const url = '/api/assessments/' + encodeURIComponent(state.id) + '/pdf?mode=' + mode;
+  window.open(url, '_blank');
+}
+
+// WHY: Close the print dropdown when clicking outside it
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('printDropdownWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('printMenu').style.display = 'none';
+  }
+});
 
 // ── Sync to Server ──
 async function syncToServer() {
