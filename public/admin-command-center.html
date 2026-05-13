@@ -4345,13 +4345,16 @@ function _wireATCDashBoard() {
     if (!item) return;
     btn.disabled = true;
     try {
-      // WHY: Delete action uses the source attribute to hit the right API
+      // WHY: Delete action uses the source attribute to hit the right API.
+      // Use _rawId (the original numeric DB id) because feedback IDs are
+      // prefixed with "fb-" for display — the backend needs the raw number.
       if (btn.dataset.action === 'delete') {
         if (!confirm('Permanently delete this item?')) { btn.disabled = false; return; }
         const source = btn.dataset.source || 'collab';
+        const rawId = item._rawId != null ? item._rawId : id;
         const endpoint = source === 'feedback'
-          ? `/api/feedback/${encodeURIComponent(id)}`
-          : `/api/collab/${encodeURIComponent(id)}`;
+          ? `/api/feedback/${encodeURIComponent(rawId)}`
+          : `/api/collab/${encodeURIComponent(rawId)}`;
         const r = await fetch(endpoint, { method: 'DELETE' });
         if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
       } else {
@@ -4362,6 +4365,7 @@ function _wireATCDashBoard() {
     } catch (err) {
       btn.disabled = false;
       console.warn('[ATC dash] action failed:', err);
+      alert('Action failed: ' + err.message);
     }
   });
 
