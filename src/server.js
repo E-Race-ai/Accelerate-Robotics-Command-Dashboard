@@ -220,6 +220,16 @@ for (const repo of hotelRepos) {
 }
 
 // ── API routes ──────────────────────────────────────────────────
+// WHY: Safari aggressively caches API responses even with max-age=0,
+// causing the dashboard to show stale data (wrong deploy status, old GSD
+// counts). no-store forces every browser to always fetch fresh API data.
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // WHY: Rate-limit the public forgot-password endpoint before mounting the
 // broader auth routes, so it's impossible to route around the limiter.
 app.use('/api/auth/forgot-password', forgotPasswordLimiter);
