@@ -144,7 +144,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
   const existing = await db.one('SELECT * FROM collab_requests WHERE id = ?', [id]);
   if (!existing) return res.status(404).json({ error: 'not found' });
 
-  const { status, claim, priority, is_security } = req.body || {};
+  const { status, claim, claimed_by, priority, is_security } = req.body || {};
   const sets = [];
   const args = [];
 
@@ -152,6 +152,11 @@ router.patch('/:id', requireAuth, async (req, res) => {
   if (claim === true) {
     sets.push('claimed_by = ?', 'claimed_at = datetime(\'now\')', 'status = ?');
     args.push(req.admin.email, 'claimed');
+  }
+  // WHY: Allow explicit claimed_by for reassigning tickets to a specific person
+  if (claimed_by !== undefined && !claim) {
+    sets.push('claimed_by = ?', 'claimed_at = datetime(\'now\')');
+    args.push(claimed_by || null);
   }
   if (status && ALLOWED_STATUS.has(status)) {
     sets.push('status = ?');
