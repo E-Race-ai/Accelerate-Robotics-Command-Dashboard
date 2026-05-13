@@ -4193,7 +4193,7 @@ function _normalizeFeedbackForATC(f) {
     requester_name: f.user_name,
     requester_email: f.user_email,
     target_user: null,
-    claimed_by: null,
+    claimed_by: f.claimed_by || null,
     due_date: null,
     created_at: f.created_at,
     resolved_at: f.resolved_at,
@@ -4467,7 +4467,16 @@ function _openATCDetail(req) {
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
   html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Submitted By</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">${escapeHtml(requester)}</div></div>`;
   html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Created</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">${escapeHtml(req.created_at ? new Date(req.created_at).toLocaleDateString() : '—')}</div></div>`;
-  if (claimedBy) html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Claimed By</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">🤝 ${escapeHtml(claimedBy)}</div></div>`;
+  // WHY: Always show Claimed By — either the current assignee or an "Assign" dropdown
+  html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;">
+    <div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Claimed By</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+      <select id="atcDetailAssignee" onchange="_assignATCTicket('${escapeHtml(String(req.id))}')"
+              style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:.85rem;font-weight:600;color:#1e293b;background:white;cursor:pointer;">
+        <option value="">— Unassigned —</option>
+      </select>
+    </div>
+  </div>`;
   if (target) html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Tagged</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">→ ${escapeHtml(target)}</div></div>`;
   if (req.due_date) html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Due Date</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">⏱ ${escapeHtml(req.due_date)}</div></div>`;
   if (req.resolved_at) html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;"><div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;">Resolved</div><div style="font-size:.88rem;font-weight:600;color:#1e293b;margin-top:2px;">✅ ${escapeHtml(new Date(req.resolved_at).toLocaleDateString())}</div></div>`;
@@ -4496,6 +4505,54 @@ function _openATCDetail(req) {
 
   document.getElementById('atcDetailBody').innerHTML = html;
   document.getElementById('atcDetailOverlay').style.display = 'flex';
+
+  // WHY: Populate the assignee dropdown with team members from /api/collab/team
+  // and pre-select the current claimed_by value
+  _populateAssigneeDropdown(req.claimed_by);
+}
+
+async function _populateAssigneeDropdown(currentClaimedBy) {
+  const select = document.getElementById('atcDetailAssignee');
+  if (!select) return;
+  try {
+    const res = await fetch('/api/collab/team');
+    if (!res.ok) return;
+    const team = await res.json();
+    team.forEach(member => {
+      const opt = document.createElement('option');
+      opt.value = member.email;
+      opt.textContent = member.name || member.email.split('@')[0];
+      if (currentClaimedBy && member.email === currentClaimedBy) opt.selected = true;
+      select.appendChild(opt);
+    });
+  } catch { /* Team list unavailable — dropdown stays with manual option only */ }
+}
+
+async function _assignATCTicket(id) {
+  const select = document.getElementById('atcDetailAssignee');
+  if (!select) return;
+  const claimedBy = select.value || null;
+  const item = _atcDashRequests.find(r => String(r.id) === String(id));
+  if (!item) return;
+  try {
+    const rawId = item._rawId != null ? item._rawId : id;
+    const endpoint = item._source === 'feedback'
+      ? `/api/feedback/${encodeURIComponent(rawId)}`
+      : `/api/collab/${encodeURIComponent(rawId)}`;
+    const r = await fetch(endpoint, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ claimed_by: claimedBy }),
+    });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
+    await loadCommunityBoard();
+    renderActivityFeed();
+    // WHY: Refresh the detail modal with updated data
+    const updated = _atcDashRequests.find(r => String(r.id) === String(id));
+    if (updated) _openATCDetail(updated);
+  } catch (err) {
+    alert('Failed to assign: ' + err.message);
+  }
 }
 
 async function _moveATCTicket(id, newStatus) {

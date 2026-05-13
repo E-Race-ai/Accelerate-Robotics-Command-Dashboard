@@ -158,7 +158,8 @@ router.get('/', requireAuth, async (req, res) => {
 
   const sql = `
     SELECT f.id, f.type, f.title, f.description, f.severity, f.page_url,
-           f.user_email, f.user_name, f.status, f.created_at, f.resolved_at,
+           f.user_email, f.user_name, f.status, f.claimed_by, f.claimed_at,
+           f.created_at, f.resolved_at,
            (SELECT COUNT(*) FROM feedback_screenshots s WHERE s.feedback_id = f.id) AS screenshot_count
     FROM feedback f
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -195,17 +196,46 @@ router.get('/:id', requireAuth, async (req, res) => {
 // ── PATCH /:id — Update status (admin) ────────────────────────
 router.patch('/:id', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const { status } = req.body || {};
-  if (!ALLOWED_STATUS.has(status)) {
-    return res.status(400).json({ error: `status must be one of: ${[...ALLOWED_STATUS].join(', ')}` });
+  const { status, claimed_by } = req.body || {};
+
+  // WHY: Allow PATCH with just claimed_by (no status change) for reassignment
+  if (!status && !claimed_by) {
+    return res.status(400).json({ error: 'status or claimed_by is required' });
   }
-  const resolvedAt = (status === 'resolved' || status === 'wontfix')
-    ? "datetime('now')"
-    : 'NULL';
+
+  const sets = [];
+  const args = [];
+
+  if (status) {
+    if (!ALLOWED_STATUS.has(status)) {
+      return res.status(400).json({ error: `status must be one of: ${[...ALLOWED_STATUS].join(', ')}` });
+    }
+    sets.push('status = ?');
+    args.push(status);
+
+    const resolvedAt = (status === 'resolved' || status === 'wontfix')
+      ? "datetime('now')"
+      : 'NULL';
+    sets.push(`resolved_at = ${resolvedAt}`);
+
+    // WHY: When triaging or moving to in_progress, auto-claim to the acting user
+    // unless a specific claimed_by was provided in the same request
+    if ((status === 'triaged' || status === 'in_progress') && !claimed_by) {
+      sets.push('claimed_by = ?', "claimed_at = datetime('now')");
+      args.push(req.admin.email);
+    }
+  }
+
+  if (claimed_by !== undefined) {
+    sets.push('claimed_by = ?', "claimed_at = datetime('now')");
+    args.push(claimed_by || null);
+  }
+
+  args.push(id);
   try {
     const r = await db.run(
-      `UPDATE feedback SET status = ?, resolved_at = ${resolvedAt} WHERE id = ?`,
-      [status, id],
+      `UPDATE feedback SET ${sets.join(', ')} WHERE id = ?`,
+      args,
     );
     if (!r.changes) return res.status(404).json({ error: 'not found' });
     res.json({ ok: true });

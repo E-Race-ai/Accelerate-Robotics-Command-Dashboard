@@ -378,6 +378,8 @@ async function initSchema() {
       user_name TEXT,
       status TEXT NOT NULL DEFAULT 'new'
         CHECK(status IN ('new', 'triaged', 'in_progress', 'resolved', 'wontfix')),
+      claimed_by TEXT,
+      claimed_at TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       resolved_at TEXT
     )`,
@@ -901,6 +903,10 @@ async function initSchema() {
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN chain_description TEXT");
   await additiveAlterIfMissing("ALTER TABLE hotels_saved ADD COLUMN chain_url TEXT");
   await client.execute("CREATE INDEX IF NOT EXISTS idx_hotels_saved_depth ON hotels_saved(enrichment_depth)");
+
+  // WHY: Track who claimed/triaged a feedback item so the ATC board shows attribution
+  await additiveAlterIfMissing("ALTER TABLE feedback ADD COLUMN claimed_by TEXT");
+  await additiveAlterIfMissing("ALTER TABLE feedback ADD COLUMN claimed_at TEXT");
 
   // ── Facility master record — the unified record per real-world property ─
   // WHY: BDR research, prospect graduation, deals, assessments, and CRM
