@@ -159,6 +159,34 @@ router.post('/:id/contacts', requireAuth, requireRole('admin', 'sales'), async (
   res.status(201).json(await db.one('SELECT * FROM contacts WHERE id = ?', [id]));
 });
 
+router.patch('/:facilityId/contacts/:contactId', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
+  const existing = await db.one('SELECT * FROM contacts WHERE id = ? AND facility_id = ?', [req.params.contactId, req.params.facilityId]);
+  if (!existing) return res.status(404).json({ error: 'Contact not found' });
+
+  const { name, title, email, phone, role } = req.body;
+  if (role && !VALID_CONTACT_ROLES.includes(role)) {
+    return res.status(400).json({ error: `Role must be one of: ${VALID_CONTACT_ROLES.join(', ')}` });
+  }
+
+  const updates = {};
+  if (name !== undefined) updates.name = name;
+  if (title !== undefined) updates.title = title;
+  if (email !== undefined) updates.email = email;
+  if (phone !== undefined) updates.phone = phone;
+  if (role !== undefined) updates.role = role;
+
+  const keys = Object.keys(updates);
+  if (!keys.length) return res.status(400).json({ error: 'No fields to update' });
+
+  const setClauses = keys.map(k => `${k} = ?`).join(', ');
+  await db.run(
+    `UPDATE contacts SET ${setClauses} WHERE id = ? AND facility_id = ?`,
+    [...keys.map(k => updates[k]), req.params.contactId, req.params.facilityId]
+  );
+
+  res.json(await db.one('SELECT * FROM contacts WHERE id = ?', [req.params.contactId]));
+});
+
 router.delete('/:facilityId/contacts/:contactId', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
   const result = await db.run('DELETE FROM contacts WHERE id = ? AND facility_id = ?', [req.params.contactId, req.params.facilityId]);
   if (result.changes === 0) return res.status(404).json({ error: 'Contact not found' });
