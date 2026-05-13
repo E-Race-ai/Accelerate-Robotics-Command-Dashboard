@@ -380,7 +380,7 @@ function renderChallenges() {
   }
 
   el.innerHTML = challenges.map(c => `
-    <div class="challenge-item">
+    <div class="challenge-item" style="cursor:pointer;" onclick="openChallengeDetailModal('${escapeHtml(c.id)}')">
       <span class="category-badge"
             style="background:${CHALLENGE_COLORS[c.category] || '#64748b'}20;color:${CHALLENGE_COLORS[c.category] || '#64748b'}">
         ${escapeHtml(c.category)}
@@ -683,6 +683,59 @@ function closeContactModal() {
   document.getElementById('contact-modal').classList.add('hidden');
   document.getElementById('contact-form').reset();
 }
+// ── Challenge detail modal (edit / delete) ────────────────────
+let currentChallengeId = null;
+
+function openChallengeDetailModal(challengeId) {
+  currentChallengeId = challengeId;
+  const challenges = facility?.challenges || [];
+  const c = challenges.find(x => x.id === challengeId);
+  if (!c) return;
+
+  const form = document.getElementById('challenge-detail-form');
+  form.challenge_id.value = c.id;
+  form.category.value = c.category || '';
+  form.description.value = c.description || '';
+  form.priority.value = c.priority || 'medium';
+  form.current_cost_monthly.value = c.current_cost_monthly || '';
+  form.area_sqft.value = c.area_sqft || '';
+
+  document.getElementById('challenge-detail-modal').classList.remove('hidden');
+}
+
+function closeChallengeDetailModal() {
+  currentChallengeId = null;
+  document.getElementById('challenge-detail-modal').classList.add('hidden');
+  document.getElementById('challenge-detail-form').reset();
+}
+
+async function updateChallenge(challengeId, data) {
+  const res = await fetch(`/api/facilities/${facility.id}/challenges/${challengeId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to update challenge' }));
+    throw new Error(err.error);
+  }
+  await loadDeal();
+}
+
+async function deleteCurrentChallenge() {
+  if (!currentChallengeId || !facility) return;
+  if (!confirm('Delete this challenge?')) return;
+  const res = await fetch(`/api/facilities/${facility.id}/challenges/${currentChallengeId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    alert('Failed to delete challenge');
+    return;
+  }
+  closeChallengeDetailModal();
+  await loadDeal();
+}
+
 // ── Contact detail modal (edit / delete) ──────────────────────
 let currentContactId = null;
 
@@ -798,6 +851,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Add Contact';
+    }
+  });
+
+  document.getElementById('challenge-detail-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving…';
+    try {
+      await updateChallenge(form.challenge_id.value, {
+        category: form.category.value,
+        description: form.description.value,
+        priority: form.priority.value || 'medium',
+        current_cost_monthly: form.current_cost_monthly.value ? Number(form.current_cost_monthly.value) : null,
+        area_sqft: form.area_sqft.value ? Number(form.area_sqft.value) : null,
+      });
+      closeChallengeDetailModal();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Changes';
     }
   });
 
