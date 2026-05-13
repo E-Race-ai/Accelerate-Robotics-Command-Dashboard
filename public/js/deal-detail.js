@@ -471,34 +471,182 @@ function renderTimeline() {
 }
 
 // ── Notes ──────────────────────────────────────────────────────
+// WHY: Notes are stored as a JSON array of {text, author, date} objects in deal.notes.
+// Legacy plain-text notes are migrated on first render so old data isn't lost.
+function parseNotes(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+  } catch { /* not JSON — treat as legacy plain text */ }
+  // WHY: Migrate legacy plain-text notes into the structured format
+  return raw.trim() ? [{ text: raw.trim(), author: 'Unknown', date: new Date().toISOString() }] : [];
+}
+
 function renderNotes() {
   const el = document.getElementById('notes-content');
   if (!el) return;
-  el.textContent = deal.notes || 'No notes';
+  const notes = parseNotes(deal.notes);
+
+  if (!notes.length) {
+    el.innerHTML = '<p class="text-gray-400 text-sm">No notes</p>';
+    return;
+  }
+
+  // WHY: Store original index so clicking opens the right note from the reversed display
+  const reversed = notes.slice().reverse();
+  el.innerHTML = reversed.map((n, displayIdx) => {
+    const origIdx = notes.length - 1 - displayIdx;
+    const commentCount = (n.comments || []).length;
+    return `
+      <div class="challenge-item mb-2" style="cursor:pointer;" onclick="openNoteDetailModal(${origIdx})">
+        <p class="text-sm text-gray-700">${escapeHtml(n.text)}</p>
+        <div class="flex items-center gap-3 mt-2 text-xs text-gray-400">
+          <span>${escapeHtml(n.author)}</span>
+          <span>${new Date(n.date).toLocaleString()}</span>
+          ${commentCount ? `<span class="text-blue-500">${commentCount} comment${commentCount > 1 ? 's' : ''}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
+async function addNote(text) {
+  const notes = parseNotes(deal.notes);
+  // WHY: adminEmail is set from the auth check — attribute the note to the logged-in user
+  const author = document.getElementById('adminEmail')?.textContent || 'Unknown';
+  notes.push({ text, author, date: new Date().toISOString() });
+  const payload = JSON.stringify(notes);
+
+  const res = await fetch(`/api/deals/${deal.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes: payload }),
+  });
+  if (!res.ok) throw new Error('Failed to save note');
+  deal.notes = payload;
+  renderNotes();
+  initNotesEditor();
+}
+
+
+// ── Note detail modal ─────────────────────────────────────────
+let currentNoteIndex = null;
+
+function openNoteDetailModal(idx) {
+  currentNoteIndex = idx;
+  document.getElementById('note-detail-modal').classList.remove('hidden');
+  renderNoteDetail();
+}
+
+function closeNoteDetailModal() {
+  currentNoteIndex = null;
+  document.getElementById('note-detail-modal').classList.add('hidden');
+  document.getElementById('note-comment-input').value = '';
+}
+
+function renderNoteDetail() {
+  const notes = parseNotes(deal.notes);
+  const n = notes[currentNoteIndex];
+  if (!n) return closeNoteDetailModal();
+
+  const bodyEl = document.getElementById('note-detail-body');
+  bodyEl.innerHTML = `
+    <p class="text-sm text-gray-700 whitespace-pre-line">${escapeHtml(n.text)}</p>
+    <div class="flex items-center gap-3 mt-2 text-xs text-gray-400">
+      <span>${escapeHtml(n.author)}</span>
+      <span>${new Date(n.date).toLocaleString()}</span>
+    </div>
+  `;
+
+  const commentsEl = document.getElementById('note-detail-comments');
+  const comments = n.comments || [];
+  if (!comments.length) {
+    commentsEl.innerHTML = '<p class="text-xs text-gray-400">No comments yet</p>';
+  } else {
+    commentsEl.innerHTML = comments.map((c, ci) => `
+      <div class="flex items-start justify-between gap-2 p-3 rounded-lg bg-gray-50 border border-gray-100">
+        <div>
+          <p class="text-sm text-gray-700">${escapeHtml(c.text)}</p>
+          <div class="flex items-center gap-2 mt-1 text-xs text-gray-400">
+            <span>${escapeHtml(c.author)}</span>
+            <span>${new Date(c.date).toLocaleString()}</span>
+          </div>
+        </div>
+        <button onclick="removeNoteComment(${ci})" title="Remove comment"
+                class="text-gray-300 hover:text-red-400 transition flex-shrink-0 mt-0.5">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    `).join('');
+  }
+}
+
+async function saveNotes(notes) {
+  const payload = JSON.stringify(notes);
+  const res = await fetch(`/api/deals/${deal.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes: payload }),
+  });
+  if (!res.ok) throw new Error('Failed to save notes');
+  deal.notes = payload;
+  renderNotes();
+  initNotesEditor();
+}
+
+async function deleteCurrentNote() {
+  if (currentNoteIndex === null) return;
+  if (!confirm('Delete this note?')) return;
+  const notes = parseNotes(deal.notes);
+  notes.splice(currentNoteIndex, 1);
+  await saveNotes(notes);
+  closeNoteDetailModal();
+}
+
+async function addNoteComment() {
+  if (currentNoteIndex === null) return;
+  const input = document.getElementById('note-comment-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const notes = parseNotes(deal.notes);
+  const n = notes[currentNoteIndex];
+  if (!n.comments) n.comments = [];
+  const author = document.getElementById('adminEmail')?.textContent || 'Unknown';
+  n.comments.push({ text, author, date: new Date().toISOString() });
+
+  await saveNotes(notes);
+  input.value = '';
+  renderNoteDetail();
+}
+
+async function removeNoteComment(commentIdx) {
+  if (currentNoteIndex === null) return;
+  const notes = parseNotes(deal.notes);
+  const n = notes[currentNoteIndex];
+  if (!n.comments || !n.comments[commentIdx]) return;
+  n.comments.splice(commentIdx, 1);
+  await saveNotes(notes);
+  renderNoteDetail();
+}
 
 function initNotesEditor() {
   const editor = document.getElementById('notes-editor');
   if (!editor || !deal) return;
-  editor.value = deal.notes || '';
+  // WHY: Show notes as readable text in the full editor — one note per block, newest first
+  const notes = parseNotes(deal.notes);
+  editor.value = notes.slice().reverse().map(n =>
+    `[${new Date(n.date).toLocaleString()} — ${n.author}]\n${n.text}`
+  ).join('\n\n') || '';
 }
 
 function onNotesChange() {
-  if (typeof wsAutoSave !== 'function') return;
-  wsAutoSave(async function() {
-    const editor = document.getElementById('notes-editor');
-    if (!editor || !deal) return;
-    const res = await fetch(`/api/deals/${deal.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: editor.value }),
-    });
-    if (!res.ok) throw new Error('Save failed');
-    deal.notes = editor.value;
-    /* WHY: Also update the notes display in the overview panel */
-    renderNotes();
-  });
+  // WHY: The Notes tab editor is now read-only — all edits go through the Add Note modal
+  // to keep the structured format intact. This handler is kept as a no-op so the
+  // oninput attribute in the HTML doesn't throw.
 }
 
 // ── Modals ─────────────────────────────────────────────────────
@@ -515,6 +663,13 @@ function openContactModal() {
 function closeContactModal() {
   document.getElementById('contact-modal').classList.add('hidden');
   document.getElementById('contact-form').reset();
+}
+function openNoteModal() {
+  document.getElementById('note-modal').classList.remove('hidden');
+}
+function closeNoteModal() {
+  document.getElementById('note-modal').classList.add('hidden');
+  document.getElementById('note-form').reset();
 }
 
 // ── Init ───────────────────────────────────────────────────────
@@ -571,6 +726,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Add Contact';
+    }
+  });
+
+  // WHY: Let users press Enter to submit a comment without clicking the Add button
+  document.getElementById('note-comment-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addNoteComment(); }
+  });
+
+  document.getElementById('note-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving…';
+    try {
+      await addNote(form.note_text.value);
+      closeNoteModal();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Note';
     }
   });
 
