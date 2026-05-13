@@ -132,11 +132,33 @@ async function advanceStage(newStage) {
   await loadDeal();
 }
 
+// WHY: Contacts and challenges are stored under a facility. If the deal doesn't
+// have one yet, auto-create a facility using the deal name and link it to the deal.
+// This prevents the confusing "Add a facility first" blocker.
+async function ensureFacility() {
+  if (facility) return;
+
+  const createRes = await fetch('/api/facilities', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: deal.name }),
+  });
+  if (!createRes.ok) throw new Error('Failed to create facility');
+  const newFacility = await createRes.json();
+
+  const linkRes = await fetch(`/api/deals/${deal.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ facility_id: newFacility.id }),
+  });
+  if (!linkRes.ok) throw new Error('Failed to link facility to deal');
+
+  facility = newFacility;
+  deal.facility_id = newFacility.id;
+}
+
 async function addChallenge(data) {
-  if (!facility) {
-    alert('This deal has no facility linked. Add a facility first.');
-    return;
-  }
+  await ensureFacility();
   const res = await fetch(`/api/facilities/${facility.id}/challenges`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -150,10 +172,7 @@ async function addChallenge(data) {
 }
 
 async function addContact(data) {
-  if (!facility) {
-    alert('This deal has no facility linked. Add a facility first.');
-    return;
-  }
+  await ensureFacility();
   const res = await fetch(`/api/facilities/${facility.id}/contacts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -388,14 +407,14 @@ function renderContacts() {
   }
 
   el.innerHTML = contacts.map(c => `
-    <div class="contact-item brand-glass">
+    <div class="contact-item brand-glass" style="cursor:pointer;" onclick="openContactDetailModal('${escapeHtml(c.id)}')">
       <div class="flex items-center flex-wrap gap-2">
         <strong class="text-sm text-gray-900">${escapeHtml(c.name)}</strong>
         ${c.title ? `<span class="text-xs text-gray-400">— ${escapeHtml(c.title)}</span>` : ''}
         ${c.role ? `<span class="brand-badge brand-badge-purple">${escapeHtml(c.role.replace(/_/g, ' '))}</span>` : ''}
       </div>
       <div class="flex flex-wrap items-center gap-3 mt-1">
-        ${c.email ? `<a href="mailto:${escapeHtml(c.email)}" class="text-xs text-blue-600 hover:underline">${escapeHtml(c.email)}</a>` : ''}
+        ${c.email ? `<span class="text-xs text-blue-600">${escapeHtml(c.email)}</span>` : ''}
         ${c.phone ? `<span class="text-xs text-gray-400">${escapeHtml(c.phone)}</span>` : ''}
       </div>
     </div>
@@ -414,14 +433,14 @@ function renderContactsPanel() {
   }
 
   el.innerHTML = contacts.map(c => `
-    <div class="brand-glass" style="padding:16px;">
+    <div class="brand-glass" style="padding:16px;cursor:pointer;" onclick="openContactDetailModal('${escapeHtml(c.id)}')">
       <div class="flex items-center flex-wrap gap-2 mb-2">
         <strong class="text-sm text-gray-900">${escapeHtml(c.name)}</strong>
         ${c.role ? `<span class="brand-badge brand-badge-purple">${escapeHtml(c.role.replace(/_/g, ' '))}</span>` : ''}
       </div>
       ${c.title ? `<p class="text-xs text-gray-500 mb-2">${escapeHtml(c.title)}</p>` : ''}
       <div class="flex flex-wrap items-center gap-3">
-        ${c.email ? `<a href="mailto:${escapeHtml(c.email)}" class="text-xs text-blue-600 hover:underline">${escapeHtml(c.email)}</a>` : ''}
+        ${c.email ? `<span class="text-xs text-blue-600">${escapeHtml(c.email)}</span>` : ''}
         ${c.phone ? `<span class="text-xs text-gray-400">${escapeHtml(c.phone)}</span>` : ''}
       </div>
     </div>
@@ -664,6 +683,59 @@ function closeContactModal() {
   document.getElementById('contact-modal').classList.add('hidden');
   document.getElementById('contact-form').reset();
 }
+// ── Contact detail modal (edit / delete) ──────────────────────
+let currentContactId = null;
+
+function openContactDetailModal(contactId) {
+  currentContactId = contactId;
+  const contacts = facility?.contacts || [];
+  const c = contacts.find(x => x.id === contactId);
+  if (!c) return;
+
+  const form = document.getElementById('contact-detail-form');
+  form.contact_id.value = c.id;
+  form.contact_name.value = c.name || '';
+  form.title.value = c.title || '';
+  form.email.value = c.email || '';
+  form.phone.value = c.phone || '';
+  form.role.value = c.role || '';
+
+  document.getElementById('contact-detail-modal').classList.remove('hidden');
+}
+
+function closeContactDetailModal() {
+  currentContactId = null;
+  document.getElementById('contact-detail-modal').classList.add('hidden');
+  document.getElementById('contact-detail-form').reset();
+}
+
+async function updateContact(contactId, data) {
+  const res = await fetch(`/api/facilities/${facility.id}/contacts/${contactId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to update contact' }));
+    throw new Error(err.error);
+  }
+  await loadDeal();
+}
+
+async function deleteCurrentContact() {
+  if (!currentContactId || !facility) return;
+  if (!confirm('Delete this contact?')) return;
+  const res = await fetch(`/api/facilities/${facility.id}/contacts/${currentContactId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    alert('Failed to delete contact');
+    return;
+  }
+  closeContactDetailModal();
+  await loadDeal();
+}
+
 function openNoteModal() {
   document.getElementById('note-modal').classList.remove('hidden');
 }
@@ -726,6 +798,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Add Contact';
+    }
+  });
+
+  document.getElementById('contact-detail-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving…';
+    try {
+      await updateContact(form.contact_id.value, {
+        name: form.contact_name.value,
+        title: form.title.value || null,
+        email: form.email.value || null,
+        phone: form.phone.value || null,
+        role: form.role.value || null,
+      });
+      closeContactDetailModal();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Changes';
     }
   });
 
