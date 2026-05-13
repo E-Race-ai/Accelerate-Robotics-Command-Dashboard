@@ -131,6 +131,34 @@ router.post('/:id/challenges', requireAuth, requireRole('admin', 'sales', 'ops')
   res.status(201).json(await db.one('SELECT * FROM operational_challenges WHERE id = ?', [id]));
 });
 
+router.patch('/:facilityId/challenges/:challengeId', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
+  const existing = await db.one('SELECT * FROM operational_challenges WHERE id = ? AND facility_id = ?', [req.params.challengeId, req.params.facilityId]);
+  if (!existing) return res.status(404).json({ error: 'Challenge not found' });
+
+  const { category, description, priority, current_cost_monthly, area_sqft } = req.body;
+  if (category && !VALID_CHALLENGE_CATEGORIES.includes(category)) {
+    return res.status(400).json({ error: `Category must be one of: ${VALID_CHALLENGE_CATEGORIES.join(', ')}` });
+  }
+
+  const updates = {};
+  if (category !== undefined) updates.category = category;
+  if (description !== undefined) updates.description = description;
+  if (priority !== undefined) updates.priority = priority;
+  if (current_cost_monthly !== undefined) updates.current_cost_monthly = current_cost_monthly;
+  if (area_sqft !== undefined) updates.area_sqft = area_sqft;
+
+  const keys = Object.keys(updates);
+  if (!keys.length) return res.status(400).json({ error: 'No fields to update' });
+
+  const setClauses = keys.map(k => `${k} = ?`).join(', ');
+  await db.run(
+    `UPDATE operational_challenges SET ${setClauses} WHERE id = ? AND facility_id = ?`,
+    [...keys.map(k => updates[k]), req.params.challengeId, req.params.facilityId]
+  );
+
+  res.json(await db.one('SELECT * FROM operational_challenges WHERE id = ?', [req.params.challengeId]));
+});
+
 router.delete('/:facilityId/challenges/:challengeId', requireAuth, requireRole('admin', 'sales'), async (req, res) => {
   const result = await db.run('DELETE FROM operational_challenges WHERE id = ? AND facility_id = ?', [req.params.challengeId, req.params.facilityId]);
   if (result.changes === 0) return res.status(404).json({ error: 'Challenge not found' });
