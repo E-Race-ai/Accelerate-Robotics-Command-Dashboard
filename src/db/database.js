@@ -480,12 +480,27 @@ async function initSchema() {
       member_count INTEGER NOT NULL DEFAULT 0,
       notes TEXT,
       pinned INTEGER NOT NULL DEFAULT 0,
+      group_chat_url TEXT,
       created_by TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     )`,
     `CREATE INDEX IF NOT EXISTS idx_whatsapp_groups_category ON whatsapp_groups(category)`,
     `CREATE INDEX IF NOT EXISTS idx_whatsapp_groups_pinned_updated ON whatsapp_groups(pinned DESC, updated_at DESC)`,
+    // ── WhatsApp message templates — reusable pre-written messages
+    // WHY: Team members pick from curated templates when composing messages
+    // via the WhatsApp Hub compose bar. Templates support {name} and {sender}
+    // placeholders that get replaced before opening wa.me.
+    `CREATE TABLE IF NOT EXISTS whatsapp_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      body TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'general'
+        CHECK(category IN ('general', 'follow_up', 'proposal', 'scheduling', 'introduction')),
+      created_by TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
     // ── Hotel Research Tool — saved prospects from OSM lookups
     // WHY: Sales reps run city/zip searches against OpenStreetMap Overpass
     // (free, no key) and bookmark the candidates into this table. We persist
@@ -907,6 +922,9 @@ async function initSchema() {
   // WHY: Track who claimed/triaged a feedback item so the ATC board shows attribution
   await additiveAlterIfMissing("ALTER TABLE feedback ADD COLUMN claimed_by TEXT");
   await additiveAlterIfMissing("ALTER TABLE feedback ADD COLUMN claimed_at TEXT");
+
+  // WHY: Direct chat URL for WhatsApp groups (separate from invite link)
+  await additiveAlterIfMissing("ALTER TABLE whatsapp_groups ADD COLUMN group_chat_url TEXT");
 
   // ── Facility master record — the unified record per real-world property ─
   // WHY: BDR research, prospect graduation, deals, assessments, and CRM

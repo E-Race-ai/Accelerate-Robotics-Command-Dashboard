@@ -168,6 +168,61 @@
     background: #f1f5f9; color: var(--text-faint); cursor: not-allowed;
     box-shadow: none; pointer-events: none;
   }
+
+  /* Compose bar */
+  .compose-bar {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 20px; margin-bottom: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .compose-bar-title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 0.92rem; color: var(--text); display: flex;
+    align-items: center; gap: 8px;
+  }
+  .compose-row {
+    display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap;
+  }
+  .compose-contact-wrap {
+    flex: 1 1 220px; position: relative;
+  }
+  .compose-input {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+    border-radius: 10px; font: inherit; font-size: 0.9rem; background: white;
+  }
+  .compose-input:focus { outline: 2px solid var(--wa-green); outline-offset: -1px; }
+  .compose-results {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+    background: white; border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 220px; overflow-y: auto;
+    display: none;
+  }
+  .compose-results.open { display: block; }
+  .compose-result {
+    padding: 10px 14px; cursor: pointer; font-size: 0.88rem;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .compose-result:last-child { border-bottom: none; }
+  .compose-result:hover { background: var(--wa-soft); }
+  .compose-result-name { font-weight: 600; color: var(--text); }
+  .compose-result-detail { font-size: 0.76rem; color: var(--text-faint); }
+  .compose-msg-wrap { flex: 2 1 300px; display: flex; flex-direction: column; gap: 6px; }
+  .compose-template-row { display: flex; gap: 8px; align-items: center; }
+  .compose-template-select {
+    flex: 1; padding: 7px 10px; border: 1px solid var(--border);
+    border-radius: 8px; font: inherit; font-size: 0.82rem; background: white;
+  }
+  .compose-textarea {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+    border-radius: 10px; font: inherit; font-size: 0.9rem; background: white;
+    resize: vertical; min-height: 60px;
+  }
+  .compose-textarea:focus { outline: 2px solid var(--wa-green); outline-offset: -1px; }
+  .compose-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .compose-selected {
+    font-size: 0.82rem; color: var(--wa-deep); font-weight: 600;
+    padding: 4px 10px; background: var(--wa-soft); border-radius: 8px;
+  }
   .card-pin-toggle {
     background: transparent; border: 0; cursor: pointer; padding: 4px;
     color: var(--text-faint); font-size: 1.1rem; line-height: 1;
@@ -254,6 +309,37 @@
     <h1>WhatsApp Hub</h1>
     <p class="lede">Every internal WhatsApp group + community in one place. Tap a card to jump straight into the chat. Use the notes field on each card to surface what's currently being discussed so the team can stay aligned without scrolling through history.</p>
 
+    <!-- Quick Compose Bar -->
+    <div class="compose-bar">
+      <div class="compose-bar-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--wa-green)"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.6-.8-2.7-1.4-3.7-3.2-.3-.5.3-.4.8-1.4.1-.2 0-.4-.1-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4 0 1.4 1 2.8 1.2 3 .1.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.7.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.5-.4z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.7.4 3.3 1.2 4.7L2 22l5.4-1.2c1.4.7 2.9 1.2 4.6 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18c-1.5 0-3-.4-4.2-1.1l-.3-.2-3 .8.8-3-.2-.3C4.4 15 4 13.5 4 12c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8z"/></svg>
+        Send a WhatsApp Message
+      </div>
+      <div class="compose-row">
+        <div class="compose-contact-wrap">
+          <input id="composeContact" class="compose-input" type="text" placeholder="Search contacts or enter phone number…" autocomplete="off">
+          <div id="composeResults" class="compose-results"></div>
+          <div id="composeSelected" style="margin-top:4px;display:none;"></div>
+        </div>
+        <div class="compose-msg-wrap">
+          <div class="compose-template-row">
+            <select id="composeTemplate" class="compose-template-select" onchange="applyTemplate()">
+              <option value="">— Use a template —</option>
+            </select>
+            <button type="button" class="btn btn-ghost" style="padding:6px 10px;font-size:0.78rem;" onclick="openTemplateManager()">Manage</button>
+          </div>
+          <textarea id="composeMessage" class="compose-textarea" placeholder="Type your message…" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="compose-actions">
+        <button class="btn btn-primary" onclick="sendWhatsApp()" id="composeSendBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          Send via WhatsApp
+        </button>
+        <button type="button" class="btn btn-ghost" onclick="clearCompose()" style="font-size:0.82rem;">Clear</button>
+      </div>
+    </div>
+
     <div class="hdr-row">
       <div class="stat-pills" id="statPills"></div>
       <button class="btn btn-primary" onclick="openModal()">
@@ -306,6 +392,11 @@
           <div class="form-hint">Must start with <code>https://chat.whatsapp.com/</code> or <code>https://wa.me/</code>. Leave blank if you don't have an invite link.</div>
         </div>
         <div class="form-row">
+          <label for="f_group_chat_url">Direct Chat URL</label>
+          <input id="f_group_chat_url" type="url" placeholder="https://web.whatsapp.com/…">
+          <div class="form-hint">Paste the direct link to open this group chat in WhatsApp Web or desktop app.</div>
+        </div>
+        <div class="form-row">
           <label for="f_description">Description</label>
           <textarea id="f_description" maxlength="500" placeholder="What is this group for? Who's in it?"></textarea>
         </div>
@@ -324,6 +415,47 @@
           <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Template Manager Modal -->
+  <div class="modal-backdrop" id="tmplBackdrop" onclick="if(event.target===this)closeTemplateManager()">
+    <div class="modal" role="dialog" style="max-width:640px;">
+      <h2>Message Templates</h2>
+      <p class="modal-sub">Create reusable message templates. Use <code>{name}</code> for the contact's name and <code>{sender}</code> for your name.</p>
+
+      <div id="tmplList" style="margin-bottom:16px;"></div>
+
+      <div id="tmplForm" style="display:none;border-top:1px solid var(--border);padding-top:14px;">
+        <input type="hidden" id="tmpl_id">
+        <div class="form-row">
+          <label for="tmpl_name">Template Name *</label>
+          <input id="tmpl_name" type="text" required maxlength="100" placeholder="e.g. Follow-Up After Meeting">
+        </div>
+        <div class="form-row">
+          <label for="tmpl_category">Category</label>
+          <select id="tmpl_category">
+            <option value="general">General</option>
+            <option value="follow_up">Follow Up</option>
+            <option value="proposal">Proposal</option>
+            <option value="scheduling">Scheduling</option>
+            <option value="introduction">Introduction</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="tmpl_body">Message Body *</label>
+          <textarea id="tmpl_body" maxlength="2000" rows="4" placeholder="Hi {name}, …"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="cancelTmplForm()">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveTmpl()">Save Template</button>
+        </div>
+      </div>
+
+      <div class="form-actions" id="tmplBottomActions">
+        <button type="button" class="btn btn-primary" onclick="showTmplForm()">+ Add Template</button>
+        <button type="button" class="btn btn-ghost" onclick="closeTemplateManager()">Close</button>
+      </div>
     </div>
   </div>
 
@@ -423,12 +555,15 @@ function renderCard(g) {
   const updatedLine = g.updated_at
     ? `<span class="card-meta-icon">🕒 ${escapeHtml(formatRelative(g.updated_at))}</span>`
     : '';
-  const inviteBtn = g.invite_url
-    ? `<a class="btn btn-primary" href="${escapeHtml(g.invite_url)}" target="_blank" rel="noopener noreferrer">
+  // WHY: group_chat_url opens the chat directly; invite_url is for joining
+  const chatUrl = g.group_chat_url || g.invite_url;
+  const chatLabel = g.group_chat_url ? 'Open Chat' : (g.invite_url ? 'Join Group' : null);
+  const inviteBtn = chatUrl
+    ? `<a class="btn btn-primary" href="${escapeHtml(chatUrl)}" target="_blank" rel="noopener noreferrer">
          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.6-.8-2.7-1.4-3.7-3.2-.3-.5.3-.4.8-1.4.1-.2 0-.4-.1-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4 0 1.4 1 2.8 1.2 3 .1.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.7.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.5-.4z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.7.4 3.3 1.2 4.7L2 22l5.4-1.2c1.4.7 2.9 1.2 4.6 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18c-1.5 0-3-.4-4.2-1.1l-.3-.2-3 .8.8-3-.2-.3C4.4 15 4 13.5 4 12c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8z"/></svg>
-         Open in WhatsApp
+         ${chatLabel}
        </a>`
-    : `<span class="btn btn-disabled">No invite link</span>`;
+    : `<span class="btn btn-disabled">No link</span>`;
   return `
     <div class="card ${g.pinned ? 'is-pinned' : ''}">
       <div class="card-head">
@@ -486,6 +621,7 @@ function openModal(id) {
     document.getElementById('f_category').value = g.category || 'team';
     document.getElementById('f_member_count').value = g.member_count || 0;
     document.getElementById('f_invite_url').value = g.invite_url || '';
+    document.getElementById('f_group_chat_url').value = g.group_chat_url || '';
     document.getElementById('f_description').value = g.description || '';
     document.getElementById('f_notes').value = g.notes || '';
     document.getElementById('f_pinned').checked = !!g.pinned;
@@ -514,6 +650,7 @@ async function saveGroup(e) {
     category: document.getElementById('f_category').value,
     member_count: Number(document.getElementById('f_member_count').value) || 0,
     invite_url: document.getElementById('f_invite_url').value.trim(),
+    group_chat_url: document.getElementById('f_group_chat_url').value.trim(),
     description: document.getElementById('f_description').value,
     notes: document.getElementById('f_notes').value,
     pinned: document.getElementById('f_pinned').checked,
@@ -571,8 +708,244 @@ document.getElementById('search').addEventListener('input', e => {
   renderGroups();
 });
 
+// ══════════════════════════════════════════════════════════════
+// ── Compose Bar ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+let selectedContact = null;  // { name, phone }
+let templates = [];
+let searchTimeout = null;
+
+// Contact search with debounce
+document.getElementById('composeContact').addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  const q = e.target.value.trim();
+  if (!q || q.length < 2) { closeResults(); return; }
+  // WHY: If the input looks like a phone number, don't search — let them type it
+  if (/^[\d\s+\-()]+$/.test(q) && q.replace(/\D/g, '').length >= 3) {
+    closeResults();
+    selectedContact = { name: null, phone: q };
+    showSelectedContact();
+    return;
+  }
+  searchTimeout = setTimeout(() => searchContacts(q), 300);
+});
+
+async function searchContacts(q) {
+  try {
+    const res = await fetch(`/api/whatsapp/contacts/search?q=${encodeURIComponent(q)}`);
+    if (!res.ok) return;
+    const results = await res.json();
+    const el = document.getElementById('composeResults');
+    if (!results.length) {
+      el.innerHTML = '<div class="compose-result"><span class="compose-result-detail">No contacts found. Type a phone number instead.</span></div>';
+      el.classList.add('open');
+      return;
+    }
+    el.innerHTML = results.map((r, i) => `
+      <div class="compose-result" onclick="pickContact(${i})">
+        <div class="compose-result-name">${escapeHtml(r.name)}</div>
+        <div class="compose-result-detail">${escapeHtml(r.phone)} ${r.context ? '· ' + escapeHtml(r.context) : ''} ${r.role ? '· ' + escapeHtml(r.role) : ''}</div>
+      </div>
+    `).join('');
+    el.classList.add('open');
+    el._results = results;
+  } catch (e) {
+    console.warn('contact search failed:', e);
+  }
+}
+
+function pickContact(idx) {
+  const el = document.getElementById('composeResults');
+  const r = el._results?.[idx];
+  if (!r) return;
+  selectedContact = { name: r.name, phone: r.phone };
+  document.getElementById('composeContact').value = '';
+  showSelectedContact();
+  closeResults();
+  // WHY: Auto-apply template variable substitution if a template is selected
+  applyTemplate();
+}
+
+function showSelectedContact() {
+  const el = document.getElementById('composeSelected');
+  if (!selectedContact) { el.style.display = 'none'; return; }
+  const label = selectedContact.name
+    ? `${escapeHtml(selectedContact.name)} (${escapeHtml(selectedContact.phone)})`
+    : escapeHtml(selectedContact.phone);
+  el.innerHTML = `<span class="compose-selected">${label} <span style="cursor:pointer;margin-left:4px;" onclick="clearContact()">✕</span></span>`;
+  el.style.display = 'block';
+}
+
+function clearContact() {
+  selectedContact = null;
+  document.getElementById('composeSelected').style.display = 'none';
+  document.getElementById('composeContact').value = '';
+}
+
+function closeResults() {
+  document.getElementById('composeResults').classList.remove('open');
+}
+
+// Close results when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.compose-contact-wrap')) closeResults();
+});
+
+// ── Templates ─────────────────────────────────────────────────
+
+async function loadTemplates() {
+  try {
+    const res = await fetch('/api/whatsapp/templates', { credentials: 'same-origin' });
+    if (!res.ok) return;
+    templates = await res.json();
+    renderTemplateDropdown();
+  } catch (e) { console.warn('templates load failed:', e); }
+}
+
+function renderTemplateDropdown() {
+  const sel = document.getElementById('composeTemplate');
+  sel.innerHTML = '<option value="">— Use a template —</option>' +
+    templates.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${escapeHtml(t.category.replace(/_/g,' '))})</option>`).join('');
+}
+
+function applyTemplate() {
+  const sel = document.getElementById('composeTemplate');
+  const id = Number(sel.value);
+  if (!id) return;
+  const t = templates.find(x => x.id === id);
+  if (!t) return;
+  let body = t.body;
+  // WHY: Replace {name} with the selected contact name, {sender} with logged-in user
+  if (selectedContact?.name) body = body.replace(/\{name\}/g, selectedContact.name);
+  const sender = document.getElementById('adminEmail')?.textContent?.split('@')[0] || '';
+  if (sender) body = body.replace(/\{sender\}/g, sender);
+  document.getElementById('composeMessage').value = body;
+}
+
+// ── Send ──────────────────────────────────────────────────────
+
+function sendWhatsApp() {
+  // WHY: Get phone from selected contact or from the input field directly
+  let phone = selectedContact?.phone || document.getElementById('composeContact').value.trim();
+  if (!phone) { alert('Enter a phone number or select a contact.'); return; }
+
+  // Strip non-digit characters except leading +
+  const hasPlus = phone.startsWith('+');
+  phone = phone.replace(/\D/g, '');
+  if (hasPlus) phone = '+' + phone;
+
+  const message = document.getElementById('composeMessage').value.trim();
+  let url = `https://wa.me/${phone.replace(/^\+/, '')}`;
+  if (message) url += `?text=${encodeURIComponent(message)}`;
+
+  window.open(url, '_blank');
+}
+
+function clearCompose() {
+  clearContact();
+  document.getElementById('composeMessage').value = '';
+  document.getElementById('composeTemplate').value = '';
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── Template Manager Modal ────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+function openTemplateManager() {
+  document.getElementById('tmplBackdrop').classList.add('open');
+  renderTmplList();
+  cancelTmplForm();
+}
+
+function closeTemplateManager() {
+  document.getElementById('tmplBackdrop').classList.remove('open');
+}
+
+function renderTmplList() {
+  const el = document.getElementById('tmplList');
+  if (!templates.length) {
+    el.innerHTML = '<p style="color:var(--text-faint);font-size:0.88rem;">No templates yet. Click "Add Template" to create one.</p>';
+    return;
+  }
+  el.innerHTML = templates.map(t => `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;background:#f8fafc;border:1px solid #f3f4f6;border-radius:10px;margin-bottom:8px;">
+      <div style="flex:1;">
+        <div style="font-weight:600;font-size:0.88rem;color:var(--text);">${escapeHtml(t.name)}
+          <span style="font-size:0.7rem;padding:2px 8px;border-radius:100px;background:#eff6ff;color:#1e40af;margin-left:6px;">${escapeHtml(t.category.replace(/_/g,' '))}</span>
+        </div>
+        <div style="font-size:0.82rem;color:var(--text-dim);margin-top:4px;white-space:pre-wrap;">${escapeHtml(t.body)}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px;">
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:0.76rem;" onclick="editTmpl(${t.id})">Edit</button>
+        <button class="btn btn-danger" style="padding:4px 10px;font-size:0.76rem;" onclick="deleteTmpl(${t.id})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showTmplForm() {
+  document.getElementById('tmplForm').style.display = 'block';
+  document.getElementById('tmplBottomActions').style.display = 'none';
+  document.getElementById('tmpl_id').value = '';
+  document.getElementById('tmpl_name').value = '';
+  document.getElementById('tmpl_category').value = 'general';
+  document.getElementById('tmpl_body').value = '';
+  document.getElementById('tmpl_name').focus();
+}
+
+function cancelTmplForm() {
+  document.getElementById('tmplForm').style.display = 'none';
+  document.getElementById('tmplBottomActions').style.display = 'flex';
+}
+
+function editTmpl(id) {
+  const t = templates.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('tmplForm').style.display = 'block';
+  document.getElementById('tmplBottomActions').style.display = 'none';
+  document.getElementById('tmpl_id').value = t.id;
+  document.getElementById('tmpl_name').value = t.name;
+  document.getElementById('tmpl_category').value = t.category;
+  document.getElementById('tmpl_body').value = t.body;
+}
+
+async function saveTmpl() {
+  const id = document.getElementById('tmpl_id').value;
+  const body = {
+    name: document.getElementById('tmpl_name').value.trim(),
+    category: document.getElementById('tmpl_category').value,
+    body: document.getElementById('tmpl_body').value.trim(),
+  };
+  if (!body.name || !body.body) { alert('Name and body are required.'); return; }
+  try {
+    const url = id ? `/api/whatsapp/templates/${id}` : '/api/whatsapp/templates';
+    const method = id ? 'PATCH' : 'POST';
+    const res = await fetch(url, {
+      method, credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || `HTTP ${res.status}`); }
+    await loadTemplates();
+    renderTmplList();
+    cancelTmplForm();
+  } catch (e) { alert('Save failed: ' + e.message); }
+}
+
+async function deleteTmpl(id) {
+  if (!confirm('Delete this template?')) return;
+  try {
+    const res = await fetch(`/api/whatsapp/templates/${id}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || `HTTP ${res.status}`); }
+    await loadTemplates();
+    renderTmplList();
+  } catch (e) { alert('Delete failed: ' + e.message); }
+}
+
 // ── Boot ────────────────────────────────────────────────────────
 loadGroups();
+loadTemplates();
 </script>
 </body>
 </html>

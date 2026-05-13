@@ -49,7 +49,7 @@ function clipString(raw, max) {
 router.get('/', requireAuth, async (_req, res) => {
   try {
     const rows = await db.all(
-      `SELECT id, name, description, category, invite_url, member_count,
+      `SELECT id, name, description, category, invite_url, group_chat_url, member_count,
               notes, pinned, created_by, created_at, updated_at
        FROM whatsapp_groups
        ORDER BY pinned DESC, updated_at DESC, name ASC`,
@@ -64,7 +64,7 @@ router.get('/', requireAuth, async (_req, res) => {
 
 // ── POST / — create a group (admin) ─────────────────────────────
 router.post('/', requireAuth, async (req, res) => {
-  const { name, description, category, invite_url, member_count, notes, pinned } = req.body || {};
+  const { name, description, category, invite_url, group_chat_url, member_count, notes, pinned } = req.body || {};
 
   const cleanName = clipString(name, MAX_NAME_LEN);
   if (!cleanName) return res.status(400).json({ error: 'name is required' });
@@ -75,17 +75,20 @@ router.post('/', requireAuth, async (req, res) => {
   if (inviteCheck && inviteCheck.error) return res.status(400).json({ error: inviteCheck.error });
   const cleanInvite = inviteCheck ? inviteCheck.value : null;
 
+  const cleanChatUrl = clipString(group_chat_url, MAX_URL_LEN);
+
   const memberNum = Number.isFinite(Number(member_count)) ? Math.max(0, Math.floor(Number(member_count))) : 0;
 
   try {
     const r = await db.run(
-      `INSERT INTO whatsapp_groups (name, description, category, invite_url, member_count, notes, pinned, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO whatsapp_groups (name, description, category, invite_url, group_chat_url, member_count, notes, pinned, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         cleanName,
         clipString(description, MAX_DESCRIPTION_LEN),
         cat,
         cleanInvite,
+        cleanChatUrl,
         memberNum,
         clipString(notes, MAX_NOTES_LEN),
         pinned ? 1 : 0,
@@ -104,7 +107,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
 
-  const { name, description, category, invite_url, member_count, notes, pinned } = req.body || {};
+  const { name, description, category, invite_url, group_chat_url, member_count, notes, pinned } = req.body || {};
 
   const fields = [];
   const args = [];
@@ -125,6 +128,9 @@ router.patch('/:id', requireAuth, async (req, res) => {
     const inviteCheck = sanitizeInviteUrl(invite_url);
     if (inviteCheck && inviteCheck.error) return res.status(400).json({ error: inviteCheck.error });
     fields.push('invite_url = ?'); args.push(inviteCheck ? inviteCheck.value : null);
+  }
+  if (group_chat_url !== undefined) {
+    fields.push('group_chat_url = ?'); args.push(clipString(group_chat_url, MAX_URL_LEN));
   }
   if (member_count !== undefined) {
     const n = Number(member_count);
@@ -168,5 +174,169 @@ router.delete('/:id', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Failed to delete group' });
   }
 });
+
+// ══════════════════════════════════════════════════════════════
+// ── Message Templates CRUD ────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+const ALLOWED_TEMPLATE_CATEGORY = new Set(['general', 'follow_up', 'proposal', 'scheduling', 'introduction']);
+const MAX_TEMPLATE_NAME_LEN = 100;
+const MAX_TEMPLATE_BODY_LEN = 2000;
+
+// ── GET /templates — list all templates ───────────────────────
+router.get('/templates', requireAuth, async (_req, res) => {
+  try {
+    const rows = await db.all(
+      'SELECT * FROM whatsapp_templates ORDER BY category, name',
+      [],
+    );
+    res.json(rows);
+  } catch (e) {
+    console.error('[whatsapp] templates list failed:', e);
+    res.status(500).json({ error: 'Failed to load templates' });
+  }
+});
+
+// ── POST /templates — create a template ───────────────────────
+router.post('/templates', requireAuth, async (req, res) => {
+  const { name, body, category } = req.body || {};
+  const cleanName = clipString(name, MAX_TEMPLATE_NAME_LEN);
+  if (!cleanName) return res.status(400).json({ error: 'name is required' });
+  const cleanBody = clipString(body, MAX_TEMPLATE_BODY_LEN);
+  if (!cleanBody) return res.status(400).json({ error: 'body is required' });
+  const cat = ALLOWED_TEMPLATE_CATEGORY.has(category) ? category : 'general';
+
+  try {
+    const r = await db.run(
+      `INSERT INTO whatsapp_templates (name, body, category, created_by)
+       VALUES (?, ?, ?, ?)`,
+      [cleanName, cleanBody, cat, req.admin?.email || null],
+    );
+    res.status(201).json({ ok: true, id: r.lastInsertRowid });
+  } catch (e) {
+    console.error('[whatsapp] template create failed:', e);
+    res.status(500).json({ error: 'Failed to save template' });
+  }
+});
+
+// ── PATCH /templates/:id — update a template ──────────────────
+router.patch('/templates/:id', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+
+  const { name, body, category } = req.body || {};
+  const sets = [];
+  const args = [];
+
+  if (name !== undefined) {
+    const clean = clipString(name, MAX_TEMPLATE_NAME_LEN);
+    if (!clean) return res.status(400).json({ error: 'name cannot be empty' });
+    sets.push('name = ?'); args.push(clean);
+  }
+  if (body !== undefined) {
+    const clean = clipString(body, MAX_TEMPLATE_BODY_LEN);
+    if (!clean) return res.status(400).json({ error: 'body cannot be empty' });
+    sets.push('body = ?'); args.push(clean);
+  }
+  if (category !== undefined) {
+    if (!ALLOWED_TEMPLATE_CATEGORY.has(category)) return res.status(400).json({ error: 'invalid category' });
+    sets.push('category = ?'); args.push(category);
+  }
+
+  if (sets.length === 0) return res.status(400).json({ error: 'no fields to update' });
+  sets.push("updated_at = datetime('now')");
+  args.push(id);
+
+  try {
+    const r = await db.run(
+      `UPDATE whatsapp_templates SET ${sets.join(', ')} WHERE id = ?`,
+      args,
+    );
+    if (!r.changes) return res.status(404).json({ error: 'template not found' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[whatsapp] template update failed:', e);
+    res.status(500).json({ error: 'Failed to update template' });
+  }
+});
+
+// ── DELETE /templates/:id — remove a template ─────────────────
+router.delete('/templates/:id', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const r = await db.run('DELETE FROM whatsapp_templates WHERE id = ?', [id]);
+    if (!r.changes) return res.status(404).json({ error: 'template not found' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[whatsapp] template delete failed:', e);
+    res.status(500).json({ error: 'Failed to delete template' });
+  }
+});
+
+// ── GET /contacts/search — unified contact search ─────────────
+// WHY: The compose bar needs to search across facility contacts and prospects
+// by name or phone. Returns only results that have a phone number.
+router.get('/contacts/search', requireAuth, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q || q.length < 2) return res.json([]);
+
+  const pattern = `%${q}%`;
+  try {
+    // Search facility contacts (have phone field)
+    const contacts = await db.all(
+      `SELECT c.name, c.phone, c.email, c.role, f.name AS context
+       FROM contacts c
+       LEFT JOIN facilities f ON f.id = c.facility_id
+       WHERE c.phone IS NOT NULL AND c.phone != ''
+         AND (c.name LIKE ? OR c.phone LIKE ? OR c.email LIKE ?)
+       LIMIT 20`,
+      [pattern, pattern, pattern],
+    );
+
+    const results = contacts.map(c => ({
+      name: c.name,
+      phone: c.phone,
+      source: 'contact',
+      context: c.context || null,
+      role: c.role || null,
+    }));
+
+    res.json(results);
+  } catch (e) {
+    console.error('[whatsapp] contact search failed:', e);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+// ── Seed starter templates (runs once) ────────────────────────
+// WHY: Pre-populate templates so the feature is useful on first load.
+async function seedTemplates() {
+  try {
+    const count = await db.one('SELECT COUNT(*) AS n FROM whatsapp_templates');
+    if (count && count.n > 0) return;
+
+    const seeds = [
+      { name: 'Follow-Up After Meeting', category: 'follow_up', body: 'Hi {name}, great meeting with you today. I wanted to follow up on what we discussed regarding the robotics deployment. Let me know if you have any questions.' },
+      { name: 'Proposal Sent', category: 'proposal', body: 'Hi {name}, I just sent over the proposal for your review. Take a look when you get a chance and let me know your thoughts.' },
+      { name: 'Site Walk Scheduling', category: 'scheduling', body: 'Hi {name}, I\'d like to schedule a site walk at your facility. What dates work best for you this week?' },
+      { name: 'Introduction', category: 'introduction', body: 'Hi {name}, this is {sender} from Accelerate Robotics. We specialize in autonomous robot deployment for hospitality and healthcare. I\'d love to discuss how we can help your operations.' },
+      { name: 'Check-In', category: 'follow_up', body: 'Hi {name}, just checking in to see how things are going. Let me know if there\'s anything you need from our side.' },
+    ];
+
+    for (const s of seeds) {
+      await db.run(
+        'INSERT INTO whatsapp_templates (name, body, category, created_by) VALUES (?, ?, ?, ?)',
+        [s.name, s.body, s.category, 'system'],
+      );
+    }
+    console.log(`[whatsapp] seeded ${seeds.length} starter templates`);
+  } catch (e) {
+    console.warn('[whatsapp] template seed failed (non-fatal):', e.message);
+  }
+}
+
+// Run seed after DB is ready
+db.ready.then(() => seedTemplates());
 
 module.exports = router;
