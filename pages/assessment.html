@@ -1259,12 +1259,26 @@ function renderNextButton(currentTabId) {
 }
 
 // WHY: Final step in the guided workflow — marks complete, saves, and syncs
-function completeAndSave() {
+// WHY: completeAndSave syncs to the server (not just localStorage) so the
+// assessments list page shows the updated "completed" status immediately.
+async function completeAndSave() {
   state.status = 'completed';
   updateStatusBadge();
   markDirty();
-  manualSave();
-  showToast('Assessment marked complete and saved!', 'success');
+  autoSave();
+
+  showToast('Saving and syncing...', 'info');
+
+  try {
+    await syncToServer();
+    showToast('Assessment complete!', 'success');
+    setTimeout(() => { window.location.href = '/pages/assessments.html'; }, 1000);
+  } catch (err) {
+    // WHY: If sync fails (offline, no name, etc.), still save locally and redirect
+    manualSave();
+    showToast('Saved locally — sync when online', 'info');
+    setTimeout(() => { window.location.href = '/pages/assessments.html'; }, 1200);
+  }
 }
 
 // ── Collect inputs from DOM ──
@@ -1300,6 +1314,10 @@ function renderActiveTab() {
       main.innerHTML = '<div class="tab-content active">' + renderZoneTab(idx) + '</div>';
       // Load photos for this zone
       renderPhotoGridAsync(idx);
+      // WHY: Restaurant zones include the F&B Venues section which has item photo areas
+      if (state.zones[idx].zone_type === 'restaurant') {
+        setTimeout(() => loadItemPhotoGrids(), 50);
+      }
     }
   }
 
@@ -2021,54 +2039,10 @@ function renderOverviewTab() {
     </div>
   </div>`;
 
-  // ── F&B Venues ──
+  // ── Event Spaces ──
   const ops = state.operations_data;
   if (!ops.fb_venues) ops.fb_venues = [];
   if (!ops.event_spaces) ops.event_spaces = [];
-
-  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>F&amp;B Venues <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + ops.fb_venues.length + ')</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
-
-  if (ops.fb_venues.length === 0) {
-    html += '<p style="color:#64748b;font-style:italic;margin:0 0 12px;">No F&amp;B venues added yet. Tap a type below to add one, or select a property archetype above to auto-populate.</p>';
-  }
-
-  ops.fb_venues.forEach((v, i) => {
-    const typeInfo = FB_VENUE_TYPES[v.type] || {};
-    html += '<div class="repeatable-row" style="position:relative;padding:12px;margin-bottom:10px;background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;">';
-    html += '<button class="row-remove" onclick="removeFbVenue(' + i + ')">&times;</button>';
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:1.3em;">' + (typeInfo.icon || '&#127860;') + '</span><strong style="font-size:.95em;">' + esc(typeInfo.label || v.type) + '</strong></div>';
-    html += '<div class="field-row"><div class="field-group"><label>Venue Name</label>';
-    html += '<input type="text" value="' + esc(v.name) + '" placeholder="e.g., Rooftop Bar, The Bistro" oninput="state.operations_data.fb_venues[' + i + '].name = this.value; markDirty();"></div>';
-    html += '<div class="field-group"><label>Approx. Sq Ft</label>';
-    html += '<input type="number" inputmode="numeric" value="' + (v.sqft || '') + '" placeholder="' + (typeInfo.typical_sqft || '') + '" oninput="state.operations_data.fb_venues[' + i + '].sqft = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
-    html += '<div class="field-row"><div class="field-group"><label>Covers / Capacity</label>';
-    html += '<input type="number" inputmode="numeric" value="' + (v.covers || '') + '" placeholder="' + (typeInfo.typical_covers || '—') + '" oninput="state.operations_data.fb_venues[' + i + '].covers = this.value ? parseInt(this.value) : null; markDirty();"></div>';
-    html += '<div class="field-group"><label>Floor</label>';
-    html += '<input type="text" value="' + esc(v.floor != null ? String(v.floor) : '') + '" placeholder="e.g., 1, LL, M, B1" oninput="state.operations_data.fb_venues[' + i + '].floor = this.value || null; markDirty();"></div></div>';
-    html += '<div class="field-group"><label>Notes</label>';
-    html += '<input type="text" value="' + esc(v.notes || '') + '" placeholder="Hours, seasonal, managed by..." oninput="state.operations_data.fb_venues[' + i + '].notes = this.value; markDirty();"></div>';
-    // WHY: Show robot needs inline so the rep can discuss them during the site walk
-    if (typeInfo.robot_needs && typeInfo.robot_needs.length) {
-      html += '<div style="margin-top:6px;"><span style="font-size:.75em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">Robot Opportunities</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">';
-      typeInfo.robot_needs.forEach(need => {
-        html += '<span style="font-size:.78em;padding:3px 8px;border-radius:12px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">' + need + '</span>';
-      });
-      html += '</div></div>';
-    }
-    html += renderItemPhotoArea('fb_venue', i, 'Venue Photos');
-    html += '</div>';
-  });
-
-  // WHY: Venue type chips let the rep tap to add — much faster than dropdown → add → fill on iPad
-  html += '<div style="margin-top:8px;"><span style="font-size:.78em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">+ Add Venue</span>';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">';
-  Object.entries(FB_VENUE_TYPES).forEach(([key, vt]) => {
-    html += '<button class="chip-btn" onclick="addFbVenue(\'' + key + '\')" style="font-size:.82em;padding:6px 12px;border-radius:18px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);cursor:pointer;display:flex;align-items:center;gap:4px;min-height:36px;"><span>' + vt.icon + '</span> ' + vt.label + '</button>';
-  });
-  html += '</div></div>';
-  html += '</div></div>';
-
-  // ── Event Spaces ──
   html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Event Spaces <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + ops.event_spaces.length + ')</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
 
   if (ops.event_spaces.length === 0) {
@@ -2240,6 +2214,56 @@ function setUnion(val) {
 }
 
 // ── F&B Venue & Event Space helpers ──
+// WHY: Extracted from overview tab so it can render inside the Restaurant/Bar zone tab,
+// keeping venue details contextually grouped with the zone assessment.
+function renderFbVenuesSection() {
+  const ops = state.operations_data;
+  if (!ops.fb_venues) ops.fb_venues = [];
+  let html = '';
+
+  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>F&amp;B Venues <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + ops.fb_venues.length + ')</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
+
+  if (ops.fb_venues.length === 0) {
+    html += '<p style="color:#64748b;font-style:italic;margin:0 0 12px;">No F&amp;B venues added yet. Tap a type below to add one.</p>';
+  }
+
+  ops.fb_venues.forEach((v, i) => {
+    const typeInfo = FB_VENUE_TYPES[v.type] || {};
+    html += '<div class="repeatable-row" style="position:relative;padding:12px;margin-bottom:10px;background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;">';
+    html += '<button class="row-remove" onclick="removeFbVenue(' + i + ')">&times;</button>';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:1.3em;">' + (typeInfo.icon || '&#127860;') + '</span><strong style="font-size:.95em;">' + esc(typeInfo.label || v.type) + '</strong></div>';
+    html += '<div class="field-row"><div class="field-group"><label>Venue Name</label>';
+    html += '<input type="text" value="' + esc(v.name) + '" placeholder="e.g., Rooftop Bar, The Bistro" oninput="state.operations_data.fb_venues[' + i + '].name = this.value; markDirty();"></div>';
+    html += '<div class="field-group"><label>Approx. Sq Ft</label>';
+    html += '<input type="number" inputmode="numeric" value="' + (v.sqft || '') + '" placeholder="' + (typeInfo.typical_sqft || '') + '" oninput="state.operations_data.fb_venues[' + i + '].sqft = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
+    html += '<div class="field-row"><div class="field-group"><label>Covers / Capacity</label>';
+    html += '<input type="number" inputmode="numeric" value="' + (v.covers || '') + '" placeholder="' + (typeInfo.typical_covers || '—') + '" oninput="state.operations_data.fb_venues[' + i + '].covers = this.value ? parseInt(this.value) : null; markDirty();"></div>';
+    html += '<div class="field-group"><label>Floor</label>';
+    html += '<input type="text" value="' + esc(v.floor != null ? String(v.floor) : '') + '" placeholder="e.g., 1, LL, M, B1" oninput="state.operations_data.fb_venues[' + i + '].floor = this.value || null; markDirty();"></div></div>';
+    html += '<div class="field-group"><label>Notes</label>';
+    html += '<input type="text" value="' + esc(v.notes || '') + '" placeholder="Hours, seasonal, managed by..." oninput="state.operations_data.fb_venues[' + i + '].notes = this.value; markDirty();"></div>';
+    if (typeInfo.robot_needs && typeInfo.robot_needs.length) {
+      html += '<div style="margin-top:6px;"><span style="font-size:.75em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">Robot Opportunities</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">';
+      typeInfo.robot_needs.forEach(need => {
+        html += '<span style="font-size:.78em;padding:3px 8px;border-radius:12px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">' + need + '</span>';
+      });
+      html += '</div></div>';
+    }
+    html += renderItemPhotoArea('fb_venue', i, 'Venue Photos');
+    html += '</div>';
+  });
+
+  html += '<div style="margin-top:8px;"><span style="font-size:.78em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">+ Add Venue</span>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">';
+  Object.entries(FB_VENUE_TYPES).forEach(([key, vt]) => {
+    html += '<button class="chip-btn" onclick="addFbVenue(\'' + key + '\')" style="font-size:.82em;padding:6px 12px;border-radius:18px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);cursor:pointer;display:flex;align-items:center;gap:4px;min-height:36px;"><span>' + vt.icon + '</span> ' + vt.label + '</button>';
+  });
+  html += '</div></div>';
+  html += '</div></div>';
+
+  return html;
+}
+
 function addFbVenue(typeKey) {
   if (!state.operations_data.fb_venues) state.operations_data.fb_venues = [];
   const typeInfo = FB_VENUE_TYPES[typeKey] || {};
@@ -3300,6 +3324,12 @@ function renderZoneTab(zoneIdx) {
       </select></div>
   </div>`;
   html += '</div></div>';
+
+  // WHY: Restaurant-type zones show the F&B Venues section so venue details
+  // (name, sqft, covers, floor, notes, photos) live alongside the zone assessment.
+  if (z.zone_type === 'restaurant') {
+    html += renderFbVenuesSection();
+  }
 
   // Cleaning section
   html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Cleaning & Operations</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
