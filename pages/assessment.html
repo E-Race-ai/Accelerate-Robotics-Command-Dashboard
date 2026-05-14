@@ -168,6 +168,17 @@ h1,h2,h3,h4 { font-family: 'Space Grotesk', sans-serif; }
   scrollbar-width: none;
   gap: 0;
 }
+/* WHY: Brand gradient line sits under the tabbar — matches the brand-nav::after
+   signature on other pages, but here the tabbar is the lowest fixed element */
+.tabbar::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--blue, #0055ff), var(--cyan, #00b4d8), var(--purple, #7c3aed), transparent 80%);
+  pointer-events: none;
+}
 .tabbar::-webkit-scrollbar { display: none; }
 
 .tab {
@@ -253,6 +264,33 @@ h1,h2,h3,h4 { font-family: 'Space Grotesk', sans-serif; }
   margin: 0 auto;
 }
 .tab-content.active { display: block; }
+
+/* ── Next / Prev Navigation ── */
+.tab-nav-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 24px 0 0;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.tab-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 48px;
+  transition: background 0.15s, transform 0.1s;
+}
+.tab-nav-btn:active { transform: scale(0.97); }
+.tab-nav-btn:hover { background: var(--accent-light); }
 
 /* ── Form Styles ── */
 .section {
@@ -1186,6 +1224,49 @@ function switchTab(tabId) {
   }
 }
 
+// ── Tab Navigation Helper ──
+// WHY: Builds a "Next: [tab name]" bar at the bottom of every tab to guide the user
+// through the full assessment workflow: property tabs → zone tabs → Complete & Save.
+function renderNextButton(currentTabId) {
+  // Build the full ordered list: property tabs then zone tabs
+  const allTabs = PROPERTY_TABS.slice();
+  state.zones.forEach((z, i) => allTabs.push('zone_' + i));
+
+  const idx = allTabs.indexOf(currentTabId);
+  if (idx === -1) return '';
+
+  // Last tab → "Complete & Save" button
+  if (idx >= allTabs.length - 1) {
+    return '<div class="tab-nav-bar">'
+      + '<button class="tab-nav-btn" style="background:var(--green);" onclick="completeAndSave()">'
+      + '&#10003; Complete &amp; Save'
+      + '</button></div>';
+  }
+
+  // Otherwise → "Next: [label]" button
+  const nextId = allTabs[idx + 1];
+  let nextLabel;
+  if (PROPERTY_TAB_LABELS[nextId]) {
+    nextLabel = PROPERTY_TAB_LABELS[nextId];
+  } else if (nextId.startsWith('zone_')) {
+    const zi = parseInt(nextId.split('_')[1]);
+    nextLabel = state.zones[zi] ? state.zones[zi].zone_name : 'Zone';
+  }
+  return '<div class="tab-nav-bar">'
+    + '<button class="tab-nav-btn" onclick="switchTab(\'' + nextId + '\')">'
+    + 'Next: ' + esc(nextLabel) + ' &#8594;'
+    + '</button></div>';
+}
+
+// WHY: Final step in the guided workflow — marks complete, saves, and syncs
+function completeAndSave() {
+  state.status = 'completed';
+  updateStatusBadge();
+  markDirty();
+  manualSave();
+  showToast('Assessment marked complete and saved!', 'success');
+}
+
 // ── Collect inputs from DOM ──
 // WHY: Before switching tabs or saving, gather any unsaved input values from the DOM
 function collectActiveInputs() {
@@ -2077,6 +2158,9 @@ function renderOverviewTab() {
     </div>
   </div>`;
 
+  // ── Next step navigation ──
+  html += renderNextButton('overview');
+
   return html;
 }
 
@@ -2293,6 +2377,10 @@ function renderStakeholdersTab() {
   }
 
   html += '</div></div>';
+
+  // ── Next step navigation ──
+  html += renderNextButton('stakeholders');
+
   return html;
 }
 
@@ -2665,6 +2753,9 @@ function renderOperationsTab() {
   html += '</div></div>';
   html += '<div class="field-group"><label>Details</label><textarea class="auto-expand" placeholder="Describe any existing automation or technology..." oninput="state.operations_data.automation_notes = this.value; markDirty();">' + esc(ops.automation_notes) + '</textarea></div>';
   html += '</div></div>';
+
+  // ── Next step navigation ──
+  html += renderNextButton('operations');
 
   return html;
 }
@@ -3054,6 +3145,9 @@ function renderInfrastructureTab() {
 
   html += '</div></div>';
 
+  // ── Next step navigation ──
+  html += renderNextButton('infrastructure');
+
   return html;
 }
 
@@ -3272,6 +3366,9 @@ function renderZoneTab(zoneIdx) {
   html += `<div class="field-group">
     <textarea class="auto-expand" oninput="state.zones[${zoneIdx}].notes = this.value; markDirty();">${esc(z.notes)}</textarea></div>`;
   html += '</div></div>';
+
+  // ── Next step navigation ──
+  html += renderNextButton('zone_' + zoneIdx);
 
   return html;
 }
