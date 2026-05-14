@@ -2265,4 +2265,80 @@ router.get('/facility/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /search-osm — Nominatim hotel name search proxy ───────
+// WHY: Browser-side Nominatim calls can fail due to rate limits or mixed
+// content. Proxying through the backend uses our established User-Agent
+// and avoids CORS/rate issues.
+router.get('/search-osm', requireAuth, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q || q.length < 2) return res.json([]);
+
+  try {
+    // WHY: Try Nominatim first (raw query, then with " hotel" suffix).
+    // If Nominatim finds nothing, fall back to Photon (same OSM data,
+    // different ranking/matching) which sometimes catches partial matches.
+    let results = [];
+
+    // Strategy 1: Nominatim
+    for (const suffix of ['', ' hotel']) {
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('q', q + suffix);
+      url.searchParams.set('format', 'json');
+      url.searchParams.set('limit', '5');
+      url.searchParams.set('addressdetails', '1');
+
+      const r = await fetch(url, {
+        headers: { 'User-Agent': OSM_USER_AGENT, 'Accept': 'application/json' },
+      });
+      if (!r.ok) continue;
+      const data = await r.json();
+      if (Array.isArray(data) && data.length > 0) {
+        results = data.map(d => ({
+          name: d.name || d.display_name.split(',')[0],
+          display_name: d.display_name,
+          lat: d.lat,
+          lon: d.lon,
+          type: d.type,
+          address: d.address || {},
+        }));
+        break;
+      }
+    }
+
+    // Strategy 2: Photon geocoder fallback
+    // WHY: Photon uses the same OSM data but has better fuzzy matching
+    // and sometimes returns results Nominatim misses.
+    if (results.length === 0) {
+      try {
+        const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5`;
+        const r = await fetch(photonUrl, {
+          headers: { 'User-Agent': OSM_USER_AGENT, 'Accept': 'application/json' },
+        });
+        if (r.ok) {
+          const data = await r.json();
+          const features = (data.features || []).filter(f =>
+            f.properties && f.geometry?.coordinates
+          );
+          results = features.map(f => ({
+            name: f.properties.name || q,
+            display_name: [f.properties.name, f.properties.street, f.properties.city, f.properties.state]
+              .filter(Boolean).join(', '),
+            lat: String(f.geometry.coordinates[1]),
+            lon: String(f.geometry.coordinates[0]),
+            type: f.properties.osm_value || 'place',
+            address: { city: f.properties.city, state: f.properties.state },
+          }));
+        }
+      } catch (e) {
+        console.warn('[hotel-research] Photon fallback failed:', e.message);
+      }
+    }
+
+    res.json(results);
+  } catch (err) {
+    console.warn('[hotel-research] OSM search failed:', err.message);
+    res.json([]);
+  }
+});
+
 module.exports = router;
