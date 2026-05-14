@@ -2164,6 +2164,16 @@
 
       <div class="map-toolbar">
         <div class="map-toolbar-stats" id="mapStats">Loading…</div>
+        <div class="map-toolbar-filters" style="margin-bottom:6px;">
+          <div style="flex:1;min-width:220px;position:relative;">
+            <input id="mapNameSearch" type="search" placeholder="Search hotel by name (saved + live OSM lookup)…"
+                   style="width:100%;padding:6px 12px 6px 28px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:.82rem;background:white;">
+            <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:.82rem;color:var(--text-faint);pointer-events:none;">🔍</span>
+            <div id="mapSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1000;
+                 background:white;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);
+                 max-height:260px;overflow-y:auto;margin-top:4px;"></div>
+          </div>
+        </div>
         <div class="map-toolbar-filters">
           <label>Status:
             <select id="mapStatusFilter">
@@ -4109,7 +4119,7 @@ let ROUTE_LINE = null; // current route polyline
 let MAP_ROUTE_MODE = false;
 let MAP_FILTERS = { status: 'all', submarket: 'all', adrMin: 0, adrMax: 9999,
                     chain: 'all', city: 'all', zip: 'all', fitMin: 0, airportMaxMi: 0,
-                    deepOnly: false };
+                    deepOnly: false, nameSearch: '' };
 let SHOW_CHARGERS = false;     // toggled by the ⚡ Chargers checkbox
 let CHARGER_PINS = [];         // current charger markers, swapped on each refresh
 let CHARGER_FETCH_KEY = '';    // dedupe — last bbox we fetched for
@@ -4523,6 +4533,12 @@ function renderMap() {
   // alongside the real status enum. ADR range trims out properties outside the band.
   const filtered = SAVED.filter(h => {
     if (h.lat == null || h.lng == null) return false;
+    // WHY: Name search filters by hotel name so reps can find a specific property on the map
+    if (MAP_FILTERS.nameSearch) {
+      const q = MAP_FILTERS.nameSearch.toLowerCase();
+      const hay = (h.name || '').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     if (MAP_FILTERS.submarket !== 'all' && h.submarket !== MAP_FILTERS.submarket) return false;
     if (MAP_FILTERS.city !== 'all' && (h.city || '') !== MAP_FILTERS.city) return false;
     if (MAP_FILTERS.zip !== 'all' && (h.zip || '') !== MAP_FILTERS.zip) return false;
@@ -5118,6 +5134,138 @@ document.getElementById('mapZipFilter')   ?.addEventListener('change', e => { MA
 document.getElementById('mapFitMin')      ?.addEventListener('change', e => { MAP_FILTERS.fitMin = Number(e.target.value) || 0; renderMap(); });
 document.getElementById('mapAirportRadius')?.addEventListener('change', e => { MAP_FILTERS.airportMaxMi = Number(e.target.value) || 0; renderMap(); });
 document.getElementById('mapDeepOnly')    ?.addEventListener('change', e => { MAP_FILTERS.deepOnly = e.target.checked; renderMap(); });
+// WHY: Name search with debounce — filters saved pins AND queries OSM Nominatim
+// for hotels not yet in the database. Shows a dropdown with both local matches
+// and live OSM results so reps can find any hotel worldwide.
+let _mapSearchTimeout = null;
+let _osmSearchMarkers = [];  // temporary markers for OSM results
+
+function clearOsmMarkers() {
+  _osmSearchMarkers.forEach(m => MAP.removeLayer(m));
+  _osmSearchMarkers = [];
+}
+
+document.getElementById('mapNameSearch')?.addEventListener('input', e => {
+  clearTimeout(_mapSearchTimeout);
+  const q = e.target.value.trim();
+  const resultsEl = document.getElementById('mapSearchResults');
+
+  if (!q || q.length < 2) {
+    MAP_FILTERS.nameSearch = '';
+    resultsEl.style.display = 'none';
+    clearOsmMarkers();
+    renderMap();
+    return;
+  }
+
+  _mapSearchTimeout = setTimeout(async () => {
+    MAP_FILTERS.nameSearch = q;
+    renderMap();
+
+    // Build results: local matches first
+    const localMatches = SAVED.filter(h =>
+      h.lat != null && h.lng != null && (h.name || '').toLowerCase().includes(q.toLowerCase())
+    ).slice(0, 10);
+
+    let html = '';
+    if (localMatches.length > 0) {
+      html += '<div style="padding:6px 12px;font-size:.7rem;font-weight:700;color:var(--text-faint);text-transform:uppercase;border-bottom:1px solid #f3f4f6;">Saved Hotels</div>';
+      html += localMatches.map((h, i) => `
+        <div onclick="zoomToSaved(${i})" style="padding:8px 12px;cursor:pointer;font-size:.84rem;border-bottom:1px solid #f8f9fa;"
+             onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='white'">
+          <div style="font-weight:600;color:var(--text);">${escapeHtml(h.name)}</div>
+          <div style="font-size:.74rem;color:var(--text-faint);">${escapeHtml([h.city, h.state].filter(Boolean).join(', '))} ${h.status ? '· ' + escapeHtml(h.status) : ''}</div>
+        </div>
+      `).join('');
+      // WHY: Store references so zoomToSaved can access them
+      window._localSearchMatches = localMatches;
+    }
+
+    // Query OSM via our backend proxy
+    // WHY: Proxying through /api/hotel-research/search-osm avoids browser
+    // rate-limit and CORS issues with direct Nominatim calls.
+    try {
+      const osmRes = await fetch(`/api/hotel-research/search-osm?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
+      if (osmRes.ok) {
+        const osmResults = await osmRes.json();
+        if (osmResults.length > 0) {
+          html += '<div style="padding:6px 12px;font-size:.7rem;font-weight:700;color:var(--text-faint);text-transform:uppercase;border-bottom:1px solid #f3f4f6;">Live OSM Results</div>';
+          html += osmResults.map((r, i) => `
+            <div onclick="zoomToOsm(${i})" style="padding:8px 12px;cursor:pointer;font-size:.84rem;border-bottom:1px solid #f8f9fa;"
+                 onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='white'">
+              <div style="font-weight:600;color:#2563eb;">${escapeHtml(r.name)}</div>
+              <div style="font-size:.74rem;color:var(--text-faint);">${escapeHtml(r.display_name.split(',').slice(1, 3).join(',').trim())} · OSM</div>
+            </div>
+          `).join('');
+          window._osmSearchResults = osmResults;
+        }
+      }
+    } catch (err) {
+      console.warn('OSM search failed:', err);
+    }
+
+    if (!html) {
+      html = `<div style="padding:12px;font-size:.84rem;color:var(--text-faint);text-align:center;">
+        <div style="font-weight:600;margin-bottom:4px;">No results found</div>
+        <div style="font-size:.78rem;">This hotel may not be in OpenStreetMap yet. Try searching by address or neighborhood instead (e.g. "hotel wynwood miami").</div>
+      </div>`;
+    }
+
+    resultsEl.innerHTML = html;
+    resultsEl.style.display = 'block';
+  }, 400);
+});
+
+// WHY: Zoom to a saved hotel and open its popup
+function zoomToSaved(idx) {
+  const h = window._localSearchMatches?.[idx];
+  if (!h || !MAP) return;
+  document.getElementById('mapSearchResults').style.display = 'none';
+  MAP.setView([h.lat, h.lng], 16);
+  // Find and open the matching pin's popup
+  const pin = MAP_PINS.find(p => {
+    const ll = p.getLatLng();
+    return Math.abs(ll.lat - h.lat) < 0.0001 && Math.abs(ll.lng - h.lng) < 0.0001;
+  });
+  if (pin) setTimeout(() => pin.openPopup(), 300);
+}
+
+// WHY: Zoom to an OSM result and show a temporary marker
+function zoomToOsm(idx) {
+  const r = window._osmSearchResults?.[idx];
+  if (!r || !MAP) return;
+  document.getElementById('mapSearchResults').style.display = 'none';
+  clearOsmMarkers();
+  const lat = parseFloat(r.lat);
+  const lng = parseFloat(r.lon);
+  MAP.setView([lat, lng], 16);
+
+  // WHY: Add a distinctive temporary marker so the rep can see where the OSM result is
+  const marker = L.marker([lat, lng], {
+    icon: L.divIcon({
+      className: '',
+      html: '<div style="background:#2563eb;color:white;font-size:11px;font-weight:700;padding:4px 8px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.2);white-space:nowrap;">📍 ' + escapeHtml(r.name) + '</div>',
+      iconSize: null,
+      iconAnchor: [12, 24],
+    }),
+  }).addTo(MAP);
+  marker.bindPopup(`
+    <div style="min-width:240px;">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:6px;">${escapeHtml(r.name)}</div>
+      <div style="font-size:.82rem;color:#6b7280;margin-bottom:8px;">${escapeHtml(r.display_name)}</div>
+      <div style="font-size:.75rem;color:#9ca3af;">This hotel is not yet in your database. Use the Hotel Research tool to add it.</div>
+    </div>
+  `).openPopup();
+  _osmSearchMarkers.push(marker);
+}
+
+// WHY: Close search results when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('#mapNameSearch') && !e.target.closest('#mapSearchResults')) {
+    const el = document.getElementById('mapSearchResults');
+    if (el) el.style.display = 'none';
+  }
+});
 
 // Builds <option> list for a filter dropdown from a key extractor over SAVED.
 // WHY count badges: a "Marriott (38)" option signals immediately how big a
