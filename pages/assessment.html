@@ -1768,269 +1768,10 @@ function renderOverviewTab() {
     </div>
   </div>`;
 
-  // ── Building ──
-  html += `<div class="section">
-    <div class="section-header" onclick="toggleSection(this)">
-      <h3>Building</h3>
-      <span class="section-chevron">&#9660;</span>
-    </div>
-    <div class="section-body">
-      <div class="field-row">
-        <div class="field-group">
-          <label>Rooms / Keys: <strong>${s.rooms || '—'}</strong></label>
-          <input type="range" min="10" max="1000" step="5" value="${s.rooms || 100}" class="slider"
-            oninput="state.rooms = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value; markDirty();">
-        </div>
-        <div class="field-group">
-          <label>Floors: <strong>${s.floors || '—'}</strong></label>
-          <input type="range" min="1" max="50" value="${s.floors || 5}" class="slider"
-            oninput="state.floors = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value; markDirty();">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field-group">
-          <label>Total Sq Ft</label>
-          <input type="number" inputmode="numeric" value="${s.total_sqft || ''}" placeholder="e.g., 250000"
-            oninput="state.total_sqft = this.value ? parseInt(this.value) : null; markDirty();">
-        </div>
-        <div class="field-group">
-          <label>Year Built</label>
-          <input type="number" inputmode="numeric" value="${s.year_built || ''}" placeholder="e.g., 1998"
-            oninput="state.year_built = this.value ? parseInt(this.value) : null; markDirty();">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field-group">
-          <label>Last Renovation</label>
-          <input type="number" inputmode="numeric" value="${s.last_renovation || ''}" placeholder="e.g., 2019"
-            oninput="state.last_renovation = this.value ? parseInt(this.value) : null; markDirty();">
-        </div>
-        <div class="field-group">
-          <label>Elevators: <strong>${s.elevators || '—'}</strong></label>
-          <input type="range" min="0" max="15" value="${s.elevators || 1}" class="slider"
-            oninput="state.elevators = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value; markDirty();">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field-group">
-          <label>Elevator Make</label>
-          <select onchange="state.elevator_make = this.value; markDirty();">
-            <option value="">Select...</option>
-            <option value="ThyssenKrupp" ${s.elevator_make === 'ThyssenKrupp' ? 'selected' : ''}>ThyssenKrupp</option>
-            <option value="Otis" ${s.elevator_make === 'Otis' ? 'selected' : ''}>Otis</option>
-            <option value="KONE" ${s.elevator_make === 'KONE' ? 'selected' : ''}>KONE</option>
-            <option value="Schindler" ${s.elevator_make === 'Schindler' ? 'selected' : ''}>Schindler</option>
-            <option value="Mitsubishi" ${s.elevator_make === 'Mitsubishi' ? 'selected' : ''}>Mitsubishi</option>
-            <option value="Fujitec" ${s.elevator_make === 'Fujitec' ? 'selected' : ''}>Fujitec</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>Parking</label>
-          <select onchange="state.parking_type = this.value; markDirty();">
-            <option value="" ${!s.parking_type ? 'selected' : ''}>Select...</option>
-            <option value="self" ${s.parking_type === 'self' ? 'selected' : ''}>Self-Park Only</option>
-            <option value="valet" ${s.parking_type === 'valet' ? 'selected' : ''}>Valet Only</option>
-            <option value="both" ${s.parking_type === 'both' ? 'selected' : ''}>Self-Park + Valet</option>
-            <option value="street" ${s.parking_type === 'street' ? 'selected' : ''}>Street Only</option>
-            <option value="none" ${s.parking_type === 'none' ? 'selected' : ''}>No Parking</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  // WHY: Building, Amenities, Technology Systems, Performance Metrics, F&B Venues,
+  // and Event Spaces have been moved to their respective tabs (Infrastructure,
+  // Operations) to keep the Overview focused on general property identity.
 
-  // ── Amenities ──
-  const amenityToggles = [
-    { key: 'pool', label: 'Pool' },
-    { key: 'spa', label: 'Spa' },
-    { key: 'fitness_center', label: 'Fitness Center' },
-    { key: 'business_center', label: 'Business Center' },
-    { key: 'valet', label: 'Valet Service' },
-  ];
-  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Amenities</h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
-  amenityToggles.forEach(a => {
-    const active = !!s[a.key];
-    html += '<button class="chip-btn" onclick="state.' + a.key + ' = !state.' + a.key + '; markDirty(); renderActiveTab();"'
-      + ' style="font-size:.85em;padding:8px 16px;border-radius:20px;border:1px solid ' + (active ? '#16a34a' : 'var(--border,#e2e8f0)') + ';'
-      + 'background:' + (active ? '#f0fdf4' : 'var(--card-bg,#fff)') + ';color:' + (active ? '#166534' : '#475569') + ';cursor:pointer;font-weight:' + (active ? '600' : '400') + ';min-height:44px;">'
-      + (active ? '&#10003; ' : '') + a.label + '</button>';
-  });
-  html += '</div>';
-  if (s.pool) {
-    html += '<div class="field-group" style="margin-bottom:8px;"><label>Pool Details</label>';
-    html += '<input type="text" value="' + esc(s.pool_type) + '" placeholder="e.g., rooftop, ground level, indoor, cabanas" oninput="state.pool_type = this.value; markDirty();"></div>';
-    html += renderItemPhotoArea('amenity', 'pool', 'Pool Area Photos');
-  }
-  if (s.spa) {
-    html += renderItemPhotoArea('amenity', 'spa', 'Spa Photos');
-  }
-  if (s.fitness_center) {
-    html += renderItemPhotoArea('amenity', 'fitness_center', 'Fitness Center Photos');
-  }
-  html += '</div></div>';
-
-  // ── Technology Systems ──
-  html += `<div class="section">
-    <div class="section-header" onclick="toggleSection(this)">
-      <h3>Technology Systems</h3>
-      <span class="section-chevron">&#9660;</span>
-    </div>
-    <div class="section-body">
-      <div class="field-row">
-        <div class="field-group">
-          <label>PMS (Property Mgmt System)</label>
-          <input type="text" value="${esc(s.pms_system)}" placeholder="e.g., Opera, Mews, StayNTouch, Cloudbeds"
-            oninput="state.pms_system = this.value; markDirty();">
-        </div>
-        <div class="field-group">
-          <label>Key / Lock System</label>
-          <input type="text" value="${esc(s.key_system)}" placeholder="e.g., Assa Abloy, Salto, Dormakaba, Kaba"
-            oninput="state.key_system = this.value; markDirty();">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field-group">
-          <label>Phone System</label>
-          <input type="text" value="${esc(s.phone_system)}" placeholder="e.g., Mitel, Avaya, RingCentral, Cisco"
-            oninput="state.phone_system = this.value; markDirty();">
-        </div>
-        <div class="field-group">
-          <label>Guest WiFi Provider</label>
-          <input type="text" value="${esc(s.guest_wifi_provider)}" placeholder="e.g., Ruckus, Cisco Meraki, Nomadix"
-            oninput="state.guest_wifi_provider = this.value; markDirty();">
-        </div>
-      </div>
-    </div>
-  </div>`;
-
-  // ── Performance Metrics ──
-  html += `<div class="section">
-    <div class="section-header" onclick="toggleSection(this)">
-      <h3>Performance Metrics</h3>
-      <span class="section-chevron">&#9660;</span>
-    </div>
-    <div class="section-body">
-      <div class="field-row">
-        <div class="field-group">
-          <label>Avg Daily Rate (ADR)</label>
-          <input type="number" inputmode="decimal" value="${s.avg_daily_rate || ''}" placeholder="e.g., 189"
-            oninput="state.avg_daily_rate = this.value ? parseFloat(this.value) : null; markDirty();"
-            style="padding-left:24px;">
-          <span style="position:absolute;left:12px;top:36px;color:#94a3b8;font-weight:600;pointer-events:none;">$</span>
-        </div>
-        <div class="field-group">
-          <label>Avg Occupancy: <strong>${s.occupancy_pct || '—'}%</strong></label>
-          <input type="range" min="20" max="100" value="${s.occupancy_pct || 70}" class="slider"
-            oninput="state.occupancy_pct = parseInt(this.value); this.previousElementSibling.querySelector('strong').textContent = this.value + '%'; markDirty();">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field-group">
-          <label>RevPAR</label>
-          <input type="number" inputmode="decimal" value="${s.revpar || ''}" placeholder="Auto: ADR × Occ %"
-            oninput="state.revpar = this.value ? parseFloat(this.value) : null; markDirty();"
-            style="padding-left:24px;">
-          <span style="position:absolute;left:12px;top:36px;color:#94a3b8;font-weight:600;pointer-events:none;">$</span>
-        </div>
-        <div class="field-group" style="display:flex;flex-direction:column;justify-content:center;">
-          <span style="font-size:.78em;color:#64748b;line-height:1.4;">RevPAR helps size the ROI — higher RevPAR properties justify higher-value robot deployments.</span>
-        </div>
-      </div>
-    </div>
-  </div>`;
-
-  // ── F&B Venues ──
-  const ops = state.operations_data;
-  if (!ops.fb_venues) ops.fb_venues = [];
-  if (!ops.event_spaces) ops.event_spaces = [];
-
-  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>F&amp;B Venues <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + ops.fb_venues.length + ')</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
-
-  if (ops.fb_venues.length === 0) {
-    html += '<p style="color:#64748b;font-style:italic;margin:0 0 12px;">No F&amp;B venues added yet. Tap a type below to add one, or select a property archetype above to auto-populate.</p>';
-  }
-
-  ops.fb_venues.forEach((v, i) => {
-    const typeInfo = FB_VENUE_TYPES[v.type] || {};
-    html += '<div class="repeatable-row" style="position:relative;padding:12px;margin-bottom:10px;background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;">';
-    html += '<button class="row-remove" onclick="removeFbVenue(' + i + ')">&times;</button>';
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:1.3em;">' + (typeInfo.icon || '&#127860;') + '</span><strong style="font-size:.95em;">' + esc(typeInfo.label || v.type) + '</strong></div>';
-    html += '<div class="field-row"><div class="field-group"><label>Venue Name</label>';
-    html += '<input type="text" value="' + esc(v.name) + '" placeholder="e.g., Rooftop Bar, The Bistro" oninput="state.operations_data.fb_venues[' + i + '].name = this.value; markDirty();"></div>';
-    html += '<div class="field-group"><label>Approx. Sq Ft</label>';
-    html += '<input type="number" inputmode="numeric" value="' + (v.sqft || '') + '" placeholder="' + (typeInfo.typical_sqft || '') + '" oninput="state.operations_data.fb_venues[' + i + '].sqft = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
-    html += '<div class="field-row"><div class="field-group"><label>Covers / Capacity</label>';
-    html += '<input type="number" inputmode="numeric" value="' + (v.covers || '') + '" placeholder="' + (typeInfo.typical_covers || '—') + '" oninput="state.operations_data.fb_venues[' + i + '].covers = this.value ? parseInt(this.value) : null; markDirty();"></div>';
-    html += '<div class="field-group"><label>Floor</label>';
-    html += '<input type="text" value="' + esc(v.floor != null ? String(v.floor) : '') + '" placeholder="e.g., 1, LL, M, B1" oninput="state.operations_data.fb_venues[' + i + '].floor = this.value || null; markDirty();"></div></div>';
-    html += '<div class="field-group"><label>Notes</label>';
-    html += '<input type="text" value="' + esc(v.notes || '') + '" placeholder="Hours, seasonal, managed by..." oninput="state.operations_data.fb_venues[' + i + '].notes = this.value; markDirty();"></div>';
-    // WHY: Show robot needs inline so the rep can discuss them during the site walk
-    if (typeInfo.robot_needs && typeInfo.robot_needs.length) {
-      html += '<div style="margin-top:6px;"><span style="font-size:.75em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">Robot Opportunities</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">';
-      typeInfo.robot_needs.forEach(need => {
-        html += '<span style="font-size:.78em;padding:3px 8px;border-radius:12px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">' + need + '</span>';
-      });
-      html += '</div></div>';
-    }
-    html += renderItemPhotoArea('fb_venue', i, 'Venue Photos');
-    html += '</div>';
-  });
-
-  // WHY: Venue type chips let the rep tap to add — much faster than dropdown → add → fill on iPad
-  html += '<div style="margin-top:8px;"><span style="font-size:.78em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">+ Add Venue</span>';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">';
-  Object.entries(FB_VENUE_TYPES).forEach(([key, vt]) => {
-    html += '<button class="chip-btn" onclick="addFbVenue(\'' + key + '\')" style="font-size:.82em;padding:6px 12px;border-radius:18px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);cursor:pointer;display:flex;align-items:center;gap:4px;min-height:36px;"><span>' + vt.icon + '</span> ' + vt.label + '</button>';
-  });
-  html += '</div></div>';
-  html += '</div></div>';
-
-  // ── Event Spaces ──
-  html += '<div class="section"><div class="section-header" onclick="toggleSection(this)"><h3>Event Spaces <span style="font-weight:400;opacity:.6;font-size:.85em;">(' + ops.event_spaces.length + ')</span></h3><span class="section-chevron">&#9660;</span></div><div class="section-body">';
-
-  if (ops.event_spaces.length === 0) {
-    html += '<p style="color:#64748b;font-style:italic;margin:0 0 12px;">No event spaces added yet. Tap a type below to add one.</p>';
-  }
-
-  ops.event_spaces.forEach((es, i) => {
-    const typeInfo = EVENT_SPACE_TYPES[es.type] || {};
-    html += '<div class="repeatable-row" style="position:relative;padding:12px;margin-bottom:10px;background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;">';
-    html += '<button class="row-remove" onclick="removeEventSpace(' + i + ')">&times;</button>';
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:1.3em;">' + (typeInfo.icon || '&#127917;') + '</span><strong style="font-size:.95em;">' + esc(typeInfo.label || es.type) + '</strong></div>';
-    html += '<div class="field-row"><div class="field-group"><label>Space Name</label>';
-    html += '<input type="text" value="' + esc(es.name) + '" placeholder="e.g., Grand Ballroom A, Boardroom 204" oninput="state.operations_data.event_spaces[' + i + '].name = this.value; markDirty();"></div>';
-    html += '<div class="field-group"><label>Sq Ft</label>';
-    html += '<input type="number" inputmode="numeric" value="' + (es.sqft || '') + '" placeholder="' + (typeInfo.typical_sqft || '') + '" oninput="state.operations_data.event_spaces[' + i + '].sqft = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
-    html += '<div class="field-row"><div class="field-group"><label>Floor</label>';
-    html += '<input type="text" value="' + esc(es.floor != null ? String(es.floor) : '') + '" placeholder="e.g., 2, LL, M, B1" oninput="state.operations_data.event_spaces[' + i + '].floor = this.value || null; markDirty();"></div>';
-    html += '<div class="field-group"><label>Max Capacity</label>';
-    html += '<input type="number" inputmode="numeric" value="' + (es.capacity || '') + '" placeholder="e.g., 500" oninput="state.operations_data.event_spaces[' + i + '].capacity = this.value ? parseInt(this.value) : null; markDirty();"></div></div>';
-    // WHY: Divisible flag matters for robot cleaning — divisible rooms need multiple passes
-    html += '<div class="field-row"><div class="field-group"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" ' + (es.divisible ? 'checked' : '') + ' onchange="state.operations_data.event_spaces[' + i + '].divisible = this.checked; markDirty();"> Divisible (airwalls)</label></div>';
-    html += '<div class="field-group"><label>Notes</label>';
-    html += '<input type="text" value="' + esc(es.notes || '') + '" placeholder="AV setup, dedicated kitchen..." oninput="state.operations_data.event_spaces[' + i + '].notes = this.value; markDirty();"></div></div>';
-    if (typeInfo.robot_needs && typeInfo.robot_needs.length) {
-      html += '<div style="margin-top:6px;"><span style="font-size:.75em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">Robot Opportunities</span><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">';
-      typeInfo.robot_needs.forEach(need => {
-        html += '<span style="font-size:.78em;padding:3px 8px;border-radius:12px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">' + need + '</span>';
-      });
-      html += '</div></div>';
-    }
-    html += renderItemPhotoArea('event_space', i, 'Space Photos');
-    html += '</div>';
-  });
-
-  html += '<div style="margin-top:8px;"><span style="font-size:.78em;font-weight:600;text-transform:uppercase;color:#64748b;letter-spacing:.03em;">+ Add Event Space</span>';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">';
-  Object.entries(EVENT_SPACE_TYPES).forEach(([key, et]) => {
-    html += '<button class="chip-btn" onclick="addEventSpace(\'' + key + '\')" style="font-size:.82em;padding:6px 12px;border-radius:18px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);cursor:pointer;display:flex;align-items:center;gap:4px;min-height:36px;"><span>' + et.icon + '</span> ' + et.label + '</button>';
-  });
-  html += '</div></div>';
-  html += '</div></div>';
-
-  // ── Contacts ──
   html += `<div class="section">
     <div class="section-header" onclick="toggleSection(this)">
       <h3>Contacts</h3>
@@ -2144,6 +1885,10 @@ function applyArchetype(key) {
     });
   }
 
+  // WHY: After archetype populates both F&B venues and zones, sync the
+  // overlapping data so restaurant zones get venue names, floors, etc.
+  syncAllRestaurantZones();
+
   markDirty();
   renderActiveTab();
   renderTabBar();
@@ -2172,6 +1917,7 @@ function addFbVenue(typeKey) {
   });
   // WHY: Keep fb_outlets in sync for backward compat with server column
   state.fb_outlets = state.operations_data.fb_venues.length;
+  syncAllRestaurantZones();
   markDirty();
   renderActiveTab();
 }
@@ -2179,6 +1925,7 @@ function addFbVenue(typeKey) {
 function removeFbVenue(idx) {
   state.operations_data.fb_venues.splice(idx, 1);
   state.fb_outlets = state.operations_data.fb_venues.length;
+  syncAllRestaurantZones();
   markDirty();
   renderActiveTab();
 }
@@ -3311,6 +3058,42 @@ function closeAddZoneModal() {
   document.getElementById('addZoneModal').classList.remove('open');
 }
 
+// WHY: Sync overlapping data from Operations tab into zone tabs so reps don't
+// re-enter the same information. Called when a zone is created and when
+// Operations data changes. Maps F&B venue data into Restaurant/Bar zones.
+function syncOpsDataToZone(zoneIdx) {
+  const z = state.zones[zoneIdx];
+  if (!z) return;
+  const ops = state.operations_data || {};
+
+  if (z.zone_type === 'restaurant') {
+    const venues = ops.fb_venues || [];
+    // Find a matching venue by name, or use the first one if zone has default name
+    const tmpl = ZONE_TEMPLATES.restaurant || {};
+    const isDefaultName = z.zone_name === tmpl.label || z.zone_name.startsWith(tmpl.label + ' ');
+    let match = venues.find(v => v.name && z.zone_name && v.name.toLowerCase() === z.zone_name.toLowerCase());
+    if (!match && isDefaultName && venues.length > 0) {
+      // WHY: Count how many restaurant zones already exist before this one
+      // to match the Nth venue with the Nth restaurant zone
+      const restaurantZonesBefore = state.zones.slice(0, zoneIdx).filter(zz => zz.zone_type === 'restaurant').length;
+      match = venues[restaurantZonesBefore] || venues[0];
+    }
+    if (match) {
+      if (match.name && isDefaultName) z.zone_name = match.name;
+      if (match.floor != null && !z.floor_number) z.floor_number = match.floor;
+      if (match.notes && !z.notes) z.notes = match.notes;
+    }
+  }
+}
+
+// WHY: Sync all restaurant zones when F&B venues change in Operations.
+// Called after adding/removing/editing venues.
+function syncAllRestaurantZones() {
+  state.zones.forEach((z, i) => {
+    if (z.zone_type === 'restaurant') syncOpsDataToZone(i);
+  });
+}
+
 function addZone(zoneType) {
   const tmpl = ZONE_TEMPLATES[zoneType] || ZONE_TEMPLATES.other;
 
@@ -3347,6 +3130,11 @@ function addZone(zoneType) {
 
   state.zones.push(zone);
   closeAddZoneModal();
+
+  // WHY: Pre-fill zone from matching Operations data so reps don't re-enter info.
+  // Restaurant zones pull from fb_venues, lobby zones could pull floor info, etc.
+  syncOpsDataToZone(state.zones.length - 1);
+
   markDirty();
 
   // Switch to the new zone tab
