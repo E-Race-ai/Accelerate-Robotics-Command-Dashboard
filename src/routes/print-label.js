@@ -86,6 +86,7 @@ function buildRenderUrl({ origin, prospect_id, manual_hotel_name, size, profile,
   if (p.name)  params.set('name', p.name);
   if (p.role)  params.set('role', p.role);
   if (p.phone) params.set('phone', p.phone);
+  if (p.email) params.set('email', p.email);
   if (p.note)  params.set('note', p.note);
   if (photoToken) params.set('photoToken', photoToken);
   // Disable the page's own auto-print — we're printing server-side.
