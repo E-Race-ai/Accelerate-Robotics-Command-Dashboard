@@ -742,9 +742,16 @@ async function searchContacts(q) {
       el.classList.add('open');
       return;
     }
+    // WHY: Source badge lets the user know where the contact came from
+    // (facility contact, deal GM, or prospect research).
+    const sourceBadge = (s) => {
+      const labels = { contact: 'Contact', facility: 'Facility', prospect: 'Prospect', assessment: 'Assessment', inquiry: 'Inquiry' };
+      const colors = { contact: '#6b7280', facility: '#059669', prospect: '#2563eb', assessment: '#9333ea', inquiry: '#d97706' };
+      return `<span style="font-size:0.68rem;padding:1px 5px;border-radius:3px;background:${colors[s] || '#6b7280'};color:#fff;margin-left:6px;vertical-align:middle;">${labels[s] || s}</span>`;
+    };
     el.innerHTML = results.map((r, i) => `
       <div class="compose-result" onclick="pickContact(${i})">
-        <div class="compose-result-name">${escapeHtml(r.name)}</div>
+        <div class="compose-result-name">${escapeHtml(r.name)}${sourceBadge(r.source)}</div>
         <div class="compose-result-detail">${escapeHtml(r.phone)} ${r.context ? '· ' + escapeHtml(r.context) : ''} ${r.role ? '· ' + escapeHtml(r.role) : ''}</div>
       </div>
     `).join('');

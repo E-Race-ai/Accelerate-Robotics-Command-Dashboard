@@ -275,15 +275,16 @@ router.delete('/templates/:id', requireAuth, async (req, res) => {
 });
 
 // ── GET /contacts/search — unified contact search ─────────────
-// WHY: The compose bar needs to search across facility contacts and prospects
-// by name or phone. Returns only results that have a phone number.
+// WHY: The compose bar needs to search across facility contacts, deal facility
+// GMs, and prospect hotel contacts by name or phone. Returns only results that
+// have a phone number, de-duplicated by phone.
 router.get('/contacts/search', requireAuth, async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q || q.length < 2) return res.json([]);
 
   const pattern = `%${q}%`;
   try {
-    // Search facility contacts (have phone field)
+    // 1. Facility contacts (contacts table)
     const contacts = await db.all(
       `SELECT c.name, c.phone, c.email, c.role, f.name AS context
        FROM contacts c
@@ -294,13 +295,130 @@ router.get('/contacts/search', requireAuth, async (req, res) => {
       [pattern, pattern, pattern],
     );
 
-    const results = contacts.map(c => ({
-      name: c.name,
-      phone: c.phone,
-      source: 'contact',
-      context: c.context || null,
-      role: c.role || null,
-    }));
+    // 2. Facility contacts — GM phone and property phone from ALL facilities
+    // WHY: Facilities store both the GM's direct number (gm_phone) and the
+    // property front-desk number (phone). Both are useful for outreach, and
+    // not all facilities are linked to a deal yet.
+    const facilityGMs = await db.all(
+      `SELECT f.gm_name AS name, f.gm_phone AS phone, f.name AS context
+       FROM facilities f
+       WHERE f.gm_phone IS NOT NULL AND f.gm_phone != ''
+         AND (f.gm_name LIKE ? OR f.gm_phone LIKE ? OR f.name LIKE ?)
+       LIMIT 10`,
+      [pattern, pattern, pattern],
+    );
+    const facilityPhones = await db.all(
+      `SELECT f.name AS name, f.phone, f.name AS context
+       FROM facilities f
+       WHERE f.phone IS NOT NULL AND f.phone != ''
+         AND (f.name LIKE ? OR f.phone LIKE ?)
+       LIMIT 10`,
+      [pattern, pattern],
+    );
+
+    // 3. Prospect hotel contacts (hotels_saved with dm_phone or phone)
+    // WHY: Sales reps capture decision-maker phone numbers during research;
+    // these should be reachable from the compose bar too.
+    const prospectContacts = await db.all(
+      `SELECT name, phone, context FROM (
+         SELECT
+           COALESCE(dm_name, name) AS name,
+           COALESCE(dm_phone, phone) AS phone,
+           name AS context
+         FROM hotels_saved
+         WHERE (dm_phone IS NOT NULL AND dm_phone != '')
+            OR (phone IS NOT NULL AND phone != '')
+       )
+       WHERE phone IS NOT NULL AND phone != ''
+         AND (name LIKE ? OR phone LIKE ? OR context LIKE ?)
+       LIMIT 10`,
+      [pattern, pattern, pattern],
+    );
+
+    // 4. Assessment GM contacts (gm_phone on assessments table)
+    // WHY: Site assessments capture the property GM's direct number — often
+    // the freshest contact info the team has.
+    const assessmentGMs = await db.all(
+      `SELECT gm_name AS name, gm_phone AS phone, property_name AS context
+       FROM assessments
+       WHERE gm_phone IS NOT NULL AND gm_phone != ''
+         AND (gm_name LIKE ? OR gm_phone LIKE ? OR property_name LIKE ?)
+       LIMIT 10`,
+      [pattern, pattern, pattern],
+    );
+
+    // 5. Assessment stakeholders (phone on assessment_stakeholders table)
+    // WHY: Stakeholders captured during site walks — decision makers, champions,
+    // engineering contacts — are prime WhatsApp outreach targets.
+    const assessmentStakeholders = await db.all(
+      `SELECT s.name, s.phone, a.property_name AS context, s.role
+       FROM assessment_stakeholders s
+       INNER JOIN assessments a ON a.id = s.assessment_id
+       WHERE s.phone IS NOT NULL AND s.phone != ''
+         AND (s.name LIKE ? OR s.phone LIKE ? OR a.property_name LIKE ?)
+       LIMIT 10`,
+      [pattern, pattern, pattern],
+    );
+
+    // 6. Inbound inquiries that left a phone number
+    // WHY: People who reached out through the website are warm leads —
+    // having their number in the compose bar makes follow-up easy.
+    const inquiryContacts = await db.all(
+      `SELECT name, phone, company AS context
+       FROM inquiries
+       WHERE phone IS NOT NULL AND phone != ''
+         AND (name LIKE ? OR phone LIKE ? OR company LIKE ?)
+       LIMIT 10`,
+      [pattern, pattern, pattern],
+    );
+
+    // WHY: De-duplicate by normalized phone so the same number doesn't
+    // appear twice. Priority: contacts > facilities > prospects > assessments > inquiries.
+    const seen = new Set();
+    const results = [];
+
+    for (const c of contacts) {
+      const key = c.phone.replace(/\D/g, '');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ name: c.name, phone: c.phone, source: 'contact', context: c.context || null, role: c.role || null });
+    }
+    for (const c of facilityGMs) {
+      const key = c.phone.replace(/\D/g, '');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ name: c.name, phone: c.phone, source: 'facility', context: c.context || null, role: 'GM' });
+    }
+    for (const c of facilityPhones) {
+      const key = c.phone.replace(/\D/g, '');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ name: c.name, phone: c.phone, source: 'facility', context: c.context || null, role: 'Front Desk' });
+    }
+    for (const c of prospectContacts) {
+      const key = c.phone.replace(/\D/g, '');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ name: c.name, phone: c.phone, source: 'prospect', context: c.context || null, role: null });
+    }
+    for (const c of assessmentGMs) {
+      const key = c.phone.replace(/\D/g, '');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ name: c.name, phone: c.phone, source: 'assessment', context: c.context || null, role: 'GM' });
+    }
+    for (const c of assessmentStakeholders) {
+      const key = c.phone.replace(/\D/g, '');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ name: c.name, phone: c.phone, source: 'assessment', context: c.context || null, role: c.role || null });
+    }
+    for (const c of inquiryContacts) {
+      const key = c.phone.replace(/\D/g, '');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ name: c.name, phone: c.phone, source: 'inquiry', context: c.context || null, role: null });
+    }
 
     res.json(results);
   } catch (e) {
