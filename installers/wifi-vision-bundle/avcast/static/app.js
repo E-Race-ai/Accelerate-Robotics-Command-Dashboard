@@ -46,6 +46,12 @@ function _devicesHash(devs) {
     np: d.state?.now_playing,
     track: d.state?.track || null,
     queue: (d.state?.queue_next || []).length,
+    // Pairing flips capabilities — without these in the hash, the page
+    // skips re-render after a successful pair and the user sits looking
+    // at the stale "Pair to control" badge until the next 12s poll.
+    paired: !!d.paired,
+    caps_n: (d.capabilities || []).length,
+    is_sample: !!d.is_sample,
   })));
 }
 let _lastDevicesHash = null;
@@ -56,6 +62,15 @@ async function loadDevices() {
     state.devices = data.devices || [];
     state.lastScan = data.last_scan;
     state.scanning = data.scanning;
+    // Show "SAMPLE DATA" banner whenever ANY device has is_sample:true
+    const sampleBanner = document.getElementById("sample-banner");
+    if (sampleBanner) {
+      const isSample = state.devices.some(d => d && d.is_sample === true);
+      sampleBanner.hidden = !isSample;
+    }
+    // Clear button: enabled if there's anything to clear, disabled if empty.
+    const clearBtn = document.getElementById("clear-scan-btn");
+    if (clearBtn) clearBtn.disabled = state.devices.length === 0;
     const h = _devicesHash(state.devices);
     if (h !== _lastDevicesHash) {
       _lastDevicesHash = h;
@@ -127,23 +142,130 @@ function _stopLiveCast(reason) {
   if (reason) toast(reason);
 }
 
+// Custom password modal — replaces the browser's native prompt() so we can
+// (a) keep the modal open + show inline error on a wrong password instead
+// of swallowing the failure, and (b) display a warning about scan probes
+// potentially tripping IDS/IPS / lockouts. The validator callback returns
+// `true` on success, OR a string error message to keep the modal open.
+async function passwordChallenge({ title, intent, warning, startLabel = "Start", validator }) {
+  return new Promise(resolve => {
+    const overlay = document.createElement("div");
+    overlay.className = "pw-backdrop";
+    overlay.innerHTML = `
+      <div class="pw-modal" role="dialog" aria-modal="true" aria-labelledby="pw-title">
+        <div class="pw-head">
+          <div class="pw-icon">🔐</div>
+          <div class="pw-head-text">
+            <h2 id="pw-title">${escapeHtml(title)}</h2>
+            <p class="pw-intent">${escapeHtml(intent || "")}</p>
+          </div>
+          <button class="btn-close" data-cancel title="Close">✕</button>
+        </div>
+        <div class="pw-warning">
+          <div class="pw-warn-icon">⚠</div>
+          <div>${warning}</div>
+        </div>
+        <label class="pw-label" for="pw-input">Password</label>
+        <input id="pw-input" type="password" class="pw-input" placeholder="Enter password" autocomplete="current-password" spellcheck="false" />
+        <div class="pw-error" hidden></div>
+        <div class="pw-actions">
+          <button class="pw-cancel" data-cancel>Cancel</button>
+          <button class="pw-submit">${escapeHtml(startLabel)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const modal  = overlay.querySelector(".pw-modal");
+    const input  = overlay.querySelector(".pw-input");
+    const submit = overlay.querySelector(".pw-submit");
+    const error  = overlay.querySelector(".pw-error");
+    setTimeout(() => input.focus(), 50);
+
+    const cleanup = (val) => { overlay.remove(); document.removeEventListener("keydown", onKey); resolve(val); };
+    const cancel  = () => cleanup(null);
+
+    function showErr(msg) {
+      error.textContent = msg;
+      error.hidden = false;
+      modal.classList.remove("pw-shake");
+      void modal.offsetWidth;          // restart animation on rapid retries
+      modal.classList.add("pw-shake");
+      input.select();
+    }
+
+    async function attempt() {
+      const pw = input.value;
+      if (!pw) { showErr("Enter the password first."); return; }
+      submit.disabled = true;
+      const orig = submit.textContent;
+      submit.textContent = "Verifying…";
+      try {
+        const result = await validator(pw);
+        if (result === true) {
+          cleanup(pw);                  // caller now has the validated pw
+        } else {
+          showErr(typeof result === "string" ? result : "Wrong password — try again.");
+          submit.disabled = false;
+          submit.textContent = orig;
+        }
+      } catch (e) {
+        showErr(e?.message || "Network error — backend unreachable.");
+        submit.disabled = false;
+        submit.textContent = orig;
+      }
+    }
+
+    overlay.querySelectorAll("[data-cancel]").forEach(b => b.addEventListener("click", cancel));
+    overlay.addEventListener("click", e => { if (e.target === overlay) cancel(); });
+    submit.addEventListener("click", attempt);
+    function onKey(e) {
+      if (e.key === "Escape") cancel();
+      else if (e.key === "Enter" && document.activeElement === input) attempt();
+    }
+    document.addEventListener("keydown", onKey);
+  });
+}
+
+const _LIVECAST_WARNING = `Network scanning is generally <strong>safe</strong>, but the discovery
+probes <strong>can trip sensitive security controls</strong> (IDS/IPS, firewall blocks,
+account lockouts) if those systems flag the traffic. Please monitor the network for
+disruptions while this scan runs.`;
+
 async function toggleLiveCast() {
   // Anything other than off → click stops it.
   if (_liveCastState !== "off") {
     _stopLiveCast("Live Cast paused");
     return;
   }
-  // OFF → ask for password, kick off scan
-  let pw = sessionStorage.getItem("avcast_rescan_pw");
-  if (!pw) {
-    pw = prompt("Live Cast password:");
-    if (!pw) return;
-  }
+  // OFF → custom modal validates the password against /api/auth/check
+  // (no side effects). Modal stays open + shakes on a wrong PIN.
+  const pw = await passwordChallenge({
+    title: "Start Live Cast",
+    intent: "Discover and control devices on your network in real time.",
+    warning: _LIVECAST_WARNING,
+    startLabel: "▶ Start Live Cast",
+    validator: async (pw) => {
+      try {
+        const r = await fetch("/api/auth/check", {
+          method: "POST",
+          headers: { "X-Rescan-Password": pw },
+        });
+        if (r.status === 401) return "Wrong password — try again.";
+        if (!r.ok) return `Server returned ${r.status}.`;
+        return true;
+      } catch (e) {
+        return `Network error: ${e.message || "backend unreachable"}`;
+      }
+    },
+  });
+  if (!pw) return;  // user cancelled
   _setLiveCastUI("scanning");
+  // Wipe whatever's currently shown (sample data, prior scan) so the
+  // user sees the scanning state on a clean slate, not mixed with demo.
+  try { await fetch("/api/devices/clear", { method: "POST" }); } catch {}
+  await loadDevices();
   const res = await _doLiveCastScan(pw);
   if (!res.auth) { _setLiveCastUI("off"); toast("Wrong password", "error"); return; }
   if (!res.ok)   { _setLiveCastUI("off"); toast("Failed to start scan", "error"); return; }
-  sessionStorage.setItem("avcast_rescan_pw", pw);
   toast("Scanning network — devices will appear shortly");
 
   // Poll for backend scan completion. Flip to 'on' once devices show up
@@ -199,10 +321,22 @@ async function toggleMute(deviceId, currentlyMuted, btnEl) {
 
 async function doPlayback(deviceId, action, btnEl) {
   btnEl.disabled = true;
+  // Tactile feedback — strip any in-flight pulse, force a reflow, re-add the
+  // class so the animation restarts even on rapid repeat clicks. Without the
+  // reflow trick the second click in quick succession sees the class already
+  // present and the browser skips the keyframes.
+  btnEl.classList.remove("atv-just-clicked");
+  void btnEl.offsetWidth;
+  btnEl.classList.add("atv-just-clicked");
+  setTimeout(() => btnEl.classList.remove("atv-just-clicked"), 350);
   try {
     const r = await api(`/api/device/${encodeURIComponent(deviceId)}/playback?action=${action}`, { method: "POST" });
-    if (!r.ok) toast(r.error, "error");
-    else toast(`${action} → ${deviceId.split(":")[1].slice(0,8)}`, "success");
+    if (!r.ok) toast(r.error || `${action} failed`, "error");
+    else {
+      const dev = state.devices.find(d => d.id === deviceId);
+      const label = dev?.name || deviceId.split(":")[1]?.slice(0, 12) || deviceId;
+      toast(`${action} → ${label}${r.demo ? " (demo)" : ""}`, "success");
+    }
     setTimeout(loadDevices, 800);
   } catch (e) { toast(e.message, "error"); }
   finally { btnEl.disabled = false; }
@@ -264,6 +398,134 @@ async function runSpeedCheck() {
   }
   btn.disabled = false;
   btn.textContent = orig;
+}
+
+// Demo controls — backed by /api/devices/{clear,sample}. No password,
+// no network touched, purely cosmetic on the in-memory device registry.
+async function clearScan() {
+  // Sample data is throwaway — no warning needed. Only confirm when the
+  // user is about to wipe live scan results (real data they may want).
+  const showingSample = state.devices.some(d => d && d.is_sample === true);
+  const liveCastRunning = (typeof _liveCastState !== "undefined") && _liveCastState !== "off";
+  if (!showingSample || liveCastRunning) {
+    if (!confirm("Clear all devices currently shown on the dashboard?\n\nThis also stops Live Cast if it's running. You can re-populate any time by clicking Show sample data or starting Live Cast again.")) return;
+  }
+  // If Live Cast is on or scanning, stop it first so the page goes fully quiet.
+  if (typeof _stopLiveCast === "function" && _liveCastState !== "off") {
+    _stopLiveCast(null);
+  }
+  await fetch("/api/devices/clear", { method: "POST" });
+  await loadDevices();
+  toast(showingSample ? "Sample data cleared" : "Scan cleared");
+}
+async function loadSampleData() {
+  await fetch("/api/devices/sample", { method: "POST" });
+  await loadDevices();
+  toast("Sample data loaded — this is what a populated dashboard looks like", "success");
+}
+
+// ── Apple TV / HomePod pairing flow ─────────────────────────────────
+async function unpairAtv(deviceId) {
+  const dev = state.devices.find(d => d.id === deviceId);
+  if (!dev) return;
+  if (!confirm(`Unpair "${dev.name}"?\n\nThis removes the saved pairing credentials from your Mac. To control this device again, you'll have to re-pair using a fresh 4-digit PIN.`)) return;
+  try {
+    const r = await fetch(`/api/device/${encodeURIComponent(deviceId)}/unpair`, { method: "POST" });
+    const j = await r.json();
+    if (j.ok) {
+      toast(`Unpaired ${dev.name}`, "success");
+      await loadDevices();
+    } else {
+      toast(`Unpair failed: ${j.error || "unknown"}`, "error");
+    }
+  } catch (e) {
+    toast(`Unpair failed: ${e.message}`, "error");
+  }
+}
+
+async function startAtvPair(deviceId) {
+  const dev = state.devices.find(d => d.id === deviceId);
+  if (!dev) return;
+  // Kick off pairing on the backend — the device shows a 4-digit PIN.
+  let started;
+  try {
+    const res = await fetch(`/api/device/${encodeURIComponent(deviceId)}/pair/start?protocol=airplay`, { method: "POST" });
+    started = await res.json();
+    if (!res.ok || started.error) {
+      toast(`Pairing failed: ${started.error || res.status}`, "error");
+      return;
+    }
+  } catch (e) {
+    toast(`Pairing failed: ${e.message}`, "error");
+    return;
+  }
+  // Pick pairing instructions per device kind. HomePods don't have a screen,
+  // so the PIN is spoken aloud (or you fall back to the 8-digit HomeKit setup
+  // code printed on the bottom of the unit / available in the Home app).
+  // Apple TVs show a 4-digit PIN on screen.
+  const isHomePod = !!dev.is_homepod
+    || /audioaccessory|homepod/i.test(dev.model || "")
+    || /homepod/i.test(dev.name || "");
+  const pairHint = isHomePod
+    ? `Your <strong>${escapeHtml(dev.name)}</strong> doesn't have a screen — it will <strong>speak a 4-digit PIN aloud</strong>. Listen for it and type it below.<br><br>
+       <small>If you don't hear a PIN, enter the 8-digit HomeKit setup code from the bottom of the HomePod, or from the Home app → tap the HomePod → ⚙️ → "Speaker &amp; TV Access" → "Require Password". Dashes are fine, they get stripped.</small>`
+    : `Type the 4-digit PIN that's now showing on your <strong>${escapeHtml(dev.model || dev.name || "Apple TV")}</strong>:`;
+  const placeholder = isHomePod ? "spoken PIN, or HomeKit setup code" : "••••";
+  const overlay = document.createElement("div");
+  overlay.className = "atv-pair-backdrop";
+  overlay.innerHTML = `
+    <div class="atv-pair-modal">
+      <div class="atv-pair-head">
+        <h2>🔗 Pair ${escapeHtml(dev.name)}</h2>
+        <button class="btn-close" data-cancel>✕</button>
+      </div>
+      <p class="atv-pair-msg">${escapeHtml(started.msg || "")}</p>
+      <p class="atv-pair-hint">${pairHint}</p>
+      <input type="text" class="atv-pair-pin" inputmode="numeric" pattern="[0-9\\-\\s]*" maxlength="11" placeholder="${placeholder}" autocomplete="off" />
+      <div class="atv-pair-status"></div>
+      <div class="atv-pair-actions">
+        <button class="btn-secondary" data-cancel>Cancel</button>
+        <button class="btn-primary atv-pair-submit">Pair</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const pinInput = overlay.querySelector(".atv-pair-pin");
+  pinInput.focus();
+  const status = overlay.querySelector(".atv-pair-status");
+  const submitBtn = overlay.querySelector(".atv-pair-submit");
+
+  async function cancel() {
+    try { await fetch(`/api/atv/pair/cancel?session_id=${encodeURIComponent(started.session_id)}`, { method: "POST" }); } catch {}
+    overlay.remove();
+  }
+  async function finish() {
+    // Strip dashes/spaces so HomeKit setup codes like "123-45-678" or
+    // "1234 5678" submit as plain digits — pyatv expects an int.
+    const pin = pinInput.value.replace(/[^0-9]/g, "");
+    if (!pin) { status.textContent = "Enter the PIN first."; return; }
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Pairing…";
+    try {
+      const r = await fetch(`/api/atv/pair/finish?session_id=${encodeURIComponent(started.session_id)}&pin=${encodeURIComponent(pin)}`, { method: "POST" });
+      const j = await r.json();
+      if (j.ok) {
+        toast(`Paired ${dev.name}`, "success");
+        overlay.remove();
+        await loadDevices();
+      } else {
+        status.textContent = j.error || "pairing failed";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Pair";
+      }
+    } catch (e) {
+      status.textContent = `error: ${e.message}`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Pair";
+    }
+  }
+  overlay.querySelectorAll("[data-cancel]").forEach(b => b.addEventListener("click", cancel));
+  submitBtn.addEventListener("click", finish);
+  pinInput.addEventListener("keydown", e => { if (e.key === "Enter") finish(); });
 }
 
 async function testPingAll() {
@@ -365,7 +627,20 @@ function renderTypeFilters() {
     (TYPE_META[a]?.order || 99) - (TYPE_META[b]?.order || 99));
 
   const container = document.getElementById("type-filters");
-  container.innerHTML = types.map(t => {
+  const hiddenCount = state.filterTypes.size;
+  const totalCount  = types.length;
+  // Two contextual affordances sitting in their own row right above the
+  // type chips:
+  //   ✓ Check all  → re-checks every chip (restore default)
+  //   ✕ Clear all  → unchecks every chip (hide all)
+  // Each only renders when it would actually do something.
+  // Always show both Select all + Clear all as a matching pair so they read
+  // as a symmetric toggle. Each disables itself when it would be a no-op
+  // (no point clicking Select all when everything's already selected).
+  const checkAllHtml = `<button class="chip-action chip-action-check" id="type-filter-show-all"${hiddenCount === 0 ? " disabled" : ""} title="Re-check every type chip and show all ${totalCount} device types.">✓ Select all</button>`;
+  const clearAllHtml = `<button class="chip-action chip-action-clear" id="type-filter-clear-all"${hiddenCount === totalCount ? " disabled" : ""} title="Uncheck every type chip — useful when you want to hide everything and then pick just one or two to look at.">✕ Clear all</button>`;
+  const headerRow = `<div class="filter-actions">${checkAllHtml}${clearAllHtml}</div>`;
+  container.innerHTML = headerRow + types.map(t => {
     const m = TYPE_META[t] || { icon: "•", label: t };
     const visible = !state.filterTypes.has(t);
     return `<label class="chip ${visible ? "active" : ""}">
@@ -382,6 +657,18 @@ function renderTypeFilters() {
       renderGroups();
       renderTypeFilters();
     });
+  });
+  const clearAllBtn = document.getElementById("type-filter-clear-all");
+  if (clearAllBtn) clearAllBtn.addEventListener("click", () => {
+    types.forEach(t => state.filterTypes.add(t));
+    renderGroups();
+    renderTypeFilters();
+  });
+  const showAllBtn = document.getElementById("type-filter-show-all");
+  if (showAllBtn) showAllBtn.addEventListener("click", () => {
+    state.filterTypes.clear();
+    renderGroups();
+    renderTypeFilters();
   });
 }
 
@@ -452,7 +739,18 @@ function renderGroups() {
         </section>
       `;
     }
-    const cards = byType[t].map(renderCard).join("");
+    // Sort within each group: controllable first (volume/playback), then
+    // currently-playing, then everything else. Stable on name as tiebreak.
+    const sorted = [...byType[t]].sort((a, b) => {
+      const aCtrl = (a.capabilities || []).includes("volume") ? 0 : 1;
+      const bCtrl = (b.capabilities || []).includes("volume") ? 0 : 1;
+      if (aCtrl !== bCtrl) return aCtrl - bCtrl;
+      const aPlay = a.state?.playing === true ? 0 : 1;
+      const bPlay = b.state?.playing === true ? 0 : 1;
+      if (aPlay !== bPlay) return aPlay - bPlay;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+    const cards = sorted.map(renderCard).join("");
     return `
       <section class="group">
         <header class="group-header">
@@ -492,11 +790,47 @@ function renderGroups() {
       const action = btn.dataset.action;
       if (action === "mute") {
         toggleMute(id, btn.dataset.muted === "true", btn);
+      } else if (action === "__keyboard_send") {
+        const input = groups.querySelector(`.atv-kb-input[data-id="${CSS.escape(id)}"]`);
+        sendAtvKeyboard(id, input?.value || "", btn);
+      } else if (action === "__keyboard_clear") {
+        const input = groups.querySelector(`.atv-kb-input[data-id="${CSS.escape(id)}"]`);
+        if (input) input.value = "";
+        sendAtvKeyboard(id, "", btn, /*clear*/ true);
       } else {
         doPlayback(id, action, btn);
       }
     });
   });
+
+  // Press Enter inside any Apple TV keyboard input → submit text to that device
+  groups.querySelectorAll(".atv-kb-input").forEach(input => {
+    input.addEventListener("keydown", e => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const id = input.dataset.id;
+      const card = input.closest(".card");
+      const btn = card?.querySelector(`.atv-kb-send[data-id="${CSS.escape(id)}"]`);
+      sendAtvKeyboard(id, input.value, btn);
+    });
+  });
+}
+
+async function sendAtvKeyboard(deviceId, text, btnEl, clearOnly = false) {
+  if (btnEl) btnEl.disabled = true;
+  try {
+    const url = `/api/device/${encodeURIComponent(deviceId)}/atv/keyboard`
+      + `?text=${encodeURIComponent(text)}&clear=${clearOnly ? "true" : "false"}`;
+    const r = await fetch(url, { method: "POST" });
+    const j = await r.json();
+    if (!j.ok) toast(j.error || "keyboard send failed", "error");
+    else if (clearOnly) toast("Cleared text on device", "success");
+    else if (text) toast(`Sent "${text.slice(0, 30)}${text.length > 30 ? "…" : ""}" to TV`, "success");
+  } catch (e) {
+    toast(e.message, "error");
+  } finally {
+    if (btnEl) btnEl.disabled = false;
+  }
 }
 
 function _hmsToSec(hms) {
@@ -538,9 +872,28 @@ function renderCard(d) {
   if (d.state?.group && d.state.group !== d.name) meta.push(`group: ${d.state.group}`);
 
   const badges = [];
-  if (hasVolume) badges.push(`<span class="badge controllable">Controllable</span>`);
-  else if (d.type === "appletv") badges.push(`<span class="badge warn" title="Apple TV control needs pyatv pairing — not yet implemented">View only · Pairing required</span>`);
+  const isAppleControllable = ["appletv", "airplay", "homekit"].includes(d.type);
+  if (hasVolume) {
+    badges.push(`<span class="badge controllable">Controllable</span>`);
+    if (d.paired) {
+      badges.push(`<button class="badge unpair-btn" onclick="event.stopPropagation();unpairAtv('${escapeHtml(d.id)}')" title="Remove this device's saved pairing credentials. After unpairing, you'll need to re-pair (with a fresh PIN) to control it again.">✓ Paired · unpair</button>`);
+    }
+  }
+  else if (isAppleControllable && !d.is_sample) {
+    const isHomePodHint = !!d.is_homepod || /audioaccessory|homepod/i.test(d.model || "") || /homepod/i.test(d.name || "");
+    const pairTip = isHomePodHint
+      ? "Pair this HomePod once to enable volume + playback control. The HomePod will SPEAK a 4-digit PIN aloud (no screen)."
+      : "Pair this device once to enable volume + playback control. The device will display a 4-digit PIN.";
+    badges.push(`<button class="badge pair-btn" onclick="event.stopPropagation();startAtvPair('${escapeHtml(d.id)}')" title="${pairTip}">🔗 Pair to control</button>`);
+  }
   else if (d.type === "personal-airplay") badges.push(`<span class="badge">Personal device</span>`);
+  else if (d.type === "spotify-connect") badges.push(
+    `<span class="badge spotify-badge" title="This device can receive audio from the Spotify app. Open Spotify on your phone or computer, tap the speaker icon, and pick this device. Direct control from this dashboard would require a Spotify Premium account + OAuth login.">🎵 Spotify Connect target</span>`
+  );
+  else if (d.type === "upnp-renderer") badges.push(`<span class="badge">UPnP renderer</span>`);
+  else if (d.type === "upnp")          badges.push(`<span class="badge" title="UPnP device that did not expose a media-renderer service — status only.">UPnP device</span>`);
+  else if (d.type === "smarttv")       badges.push(`<span class="badge" title="Smart TV detected via UPnP. Vendor APIs vary — status only for now.">Smart TV</span>`);
+  else if (d.type === "homekit")       badges.push(`<span class="badge" title="HomeKit accessory. If this is also an Apple TV/HomePod, controls will appear once paired.">HomeKit</span>`);
   if (d.manufacturer) badges.push(`<span class="badge">${escapeHtml(d.manufacturer)}</span>`);
   if (d.state?.app) badges.push(`<span class="badge">${escapeHtml(d.state.app)}</span>`);
   if (d.raw?.discovered_via) badges.push(`<span class="badge" title="Found via ${d.raw.discovered_via}">${d.raw.discovered_via.includes("probe") ? "Direct probe" : "mDNS"}</span>`);
@@ -625,7 +978,43 @@ function renderCard(d) {
           ${hasNext ? `<button class="trans-btn" data-id="${d.id}" data-action="next" ${online ? "" : "disabled"} title="Next">⏭</button>` : ""}
           ${hasStop ? `<button class="trans-btn small" data-id="${d.id}" data-action="stop" ${online ? "" : "disabled"} title="Stop">⏹</button>` : ""}
         </div>` : ""}
+      ${_renderAtvRemote(d, online)}
     </div>
+  `;
+}
+
+// Apple TV full remote — D-pad + menu/home/screensaver. Only renders for
+// paired Apple TVs (devices with a screen). HomePods get the regular
+// transport controls above instead since they have no UI to navigate.
+function _renderAtvRemote(d, online) {
+  if (d.type !== "appletv") return "";
+  if (!d.paired && !d.is_sample) return "";
+  const model = (d.model || "").toLowerCase();
+  if (model.includes("homepod")) return "";  // HomePods: no screen → no d-pad
+  const dis = online ? "" : "disabled";
+  const a = (act, glyph, title, cls = "") =>
+    `<button class="atv-btn ${cls}" data-id="${d.id}" data-action="${act}" ${dis} title="${title}">${glyph}</button>`;
+  return `
+    <details class="atv-remote" ${d.is_sample ? "" : "open"}>
+      <summary>📺 Apple TV remote</summary>
+      <div class="atv-remote-body">
+        <div class="atv-dpad">
+          <div></div>${a("up", "▲", "Up", "atv-dir")}<div></div>
+          ${a("left", "◀", "Left", "atv-dir")}${a("select", "●", "Select / OK", "atv-select")}${a("right", "▶", "Right", "atv-dir")}
+          <div></div>${a("down", "▼", "Down", "atv-dir")}<div></div>
+        </div>
+        <div class="atv-row">
+          ${a("menu", "☰ Menu", "Back / Menu")}
+          ${a("home", "⌂ Home", "Home")}
+          ${a("top_menu", "▲▲ Top", "Top Menu")}
+        </div>
+        <div class="atv-keyboard">
+          <input type="text" class="atv-kb-input" placeholder="⌨️  Type here, press Enter to send to ${escapeHtml(d.name)}" data-id="${d.id}" ${dis} autocomplete="off" />
+          <button class="atv-btn atv-kb-send" data-id="${d.id}" data-action="__keyboard_send" ${dis} title="Send the typed text to the Apple TV's focused text field">Send</button>
+          <button class="atv-btn atv-kb-clear" data-id="${d.id}" data-action="__keyboard_clear" ${dis} title="Clear the Apple TV's focused text field">Clear</button>
+        </div>
+      </div>
+    </details>
   `;
 }
 
@@ -1307,6 +1696,13 @@ setInterval(() => {
 }, 1000);
 
 // ---------- Boot ----------
-
-loadDevices();
+// Every page load starts in sample-data mode so the dashboard demos
+// consistently for any visitor — no matter what's in the backend cache
+// from a prior Live Cast run. Hitting "Start Live Cast" replaces the
+// sample with real data within the session; refreshing brings it back.
+(async () => {
+  try { await fetch("/api/devices/sample", { method: "POST" }); }
+  catch (e) { /* backend down — fall through, loadDevices handles it */ }
+  loadDevices();
+})();
 setInterval(loadDevices, 12000); // gentle auto-refresh
