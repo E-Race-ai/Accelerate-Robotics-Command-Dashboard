@@ -163,6 +163,69 @@ router.get('/meta/team', requireAuth, (req, res) => {
   res.json(TEAM_MEMBERS);
 });
 
+// ── GET /property-search — autofill from hotels_saved + facilities ──
+// WHY: When creating a new assessment, typing a property name should offer
+// matches from hotel research and existing facilities so the rep doesn't
+// have to re-enter address, brand, rooms, floors, GM info, etc.
+router.get('/property-search', requireAuth, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q || q.length < 2) return res.json([]);
+
+  const pattern = `%${q}%`;
+  try {
+    // WHY: hotels_saved has the richest prospect data (brand, operator, stars,
+    // rooms, floors, DM contacts, ADR). Facilities adds elevator and GM info.
+    const hotels = await db.all(
+      `SELECT id, 'hotel' AS source, name, address, city, state, zip,
+              brand, operator, stars, rooms, total_floors AS floors,
+              phone, dm_name, dm_email, dm_phone,
+              est_adr_dollars, year_opened
+       FROM hotels_saved
+       WHERE name LIKE ?
+       ORDER BY name
+       LIMIT 10`,
+      [pattern],
+    );
+
+    const facilities = await db.all(
+      `SELECT id, 'facility' AS source, name,
+              address, city, state, NULL AS zip,
+              brand, operator, stars, rooms_or_units AS rooms, floors,
+              phone, gm_name, gm_email, gm_phone,
+              eng_name, eng_email,
+              elevator_count, elevator_brand, type AS facility_type
+       FROM facilities
+       WHERE name LIKE ?
+       ORDER BY name
+       LIMIT 10`,
+      [pattern],
+    );
+
+    // WHY: De-duplicate by name (case-insensitive) — if a hotel exists in both
+    // tables, prefer the facility record since it has elevator/engineering data.
+    const seen = new Set();
+    const results = [];
+
+    for (const f of facilities) {
+      const key = f.name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push(f);
+    }
+    for (const h of hotels) {
+      const key = h.name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push(h);
+    }
+
+    res.json(results.slice(0, 15));
+  } catch (e) {
+    console.error('[assessments] property search failed:', e);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
 // ── GET / — List assessments ───────────────────────────────────
 router.get('/', requireAuth, async (req, res) => {
   const { assigned_to, status, deal_id } = req.query;
