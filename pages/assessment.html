@@ -1106,6 +1106,105 @@ let currentAnnotationTool = 'pin';
 let currentAnnotations = [];
 let arrowStartPoint = null; // for 2-tap arrow placement
 
+// ── Property Name Autofill ──
+// WHY: When creating/editing an assessment, typing a property name searches
+// hotels_saved and facilities so the rep can autofill address, brand, rooms,
+// floors, GM info, etc. Only fills empty fields to avoid overwriting manual edits.
+let propSearchTimeout = null;
+let propSearchResults = [];
+
+function debouncePropSearch(q) {
+  clearTimeout(propSearchTimeout);
+  if (!q || q.length < 2) { closePropSearch(); return; }
+  propSearchTimeout = setTimeout(() => searchProperties(q), 300);
+}
+
+async function searchProperties(q) {
+  try {
+    const res = await fetch(`/api/assessments/property-search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+    if (!res.ok) return;
+    const results = await res.json();
+    propSearchResults = results;
+    const el = document.getElementById('propSearchResults');
+    if (!el) return;
+    if (!results.length) { closePropSearch(); return; }
+    el.innerHTML = results.map((r, i) => {
+      const addr = [r.address, r.city, r.state].filter(Boolean).join(', ');
+      const badge = r.source === 'facility'
+        ? '<span style="font-size:0.65rem;padding:1px 4px;border-radius:3px;background:#059669;color:#fff;margin-left:6px;">Facility</span>'
+        : '<span style="font-size:0.65rem;padding:1px 4px;border-radius:3px;background:#2563eb;color:#fff;margin-left:6px;">Hotel Research</span>';
+      return `<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''" onclick="pickProperty(${i})">
+        <div style="font-weight:600;font-size:0.88rem;">${esc(r.name)}${badge}</div>
+        <div style="font-size:0.78rem;color:#6b7280;">${esc(addr)}${r.brand ? ' · ' + esc(r.brand) : ''}${r.rooms ? ' · ' + r.rooms + ' rooms' : ''}</div>
+      </div>`;
+    }).join('');
+    el.style.display = 'block';
+  } catch (e) {
+    console.warn('property search failed:', e);
+  }
+}
+
+function pickProperty(idx) {
+  const r = propSearchResults[idx];
+  if (!r) return;
+  closePropSearch();
+
+  // WHY: Only fill empty fields — don't overwrite data the rep already entered.
+  const fillIfEmpty = (key, val) => {
+    if (val != null && val !== '' && (!state[key] && state[key] !== 0)) {
+      state[key] = val;
+    }
+  };
+
+  // Always set property name to the selected match
+  state.property_name = r.name;
+  document.getElementById('propertyNameInput').value = r.name;
+
+  // Address: combine parts if address field is empty
+  const fullAddr = [r.address, r.city, r.state, r.zip].filter(Boolean).join(', ');
+  fillIfEmpty('property_address', fullAddr);
+  fillIfEmpty('brand_flag', r.brand);
+  fillIfEmpty('management_company', r.operator);
+  fillIfEmpty('star_rating', r.stars);
+  fillIfEmpty('rooms', r.rooms);
+  fillIfEmpty('floors', r.floors);
+  fillIfEmpty('facility_type', r.facility_type || 'hotel');
+
+  if (r.source === 'facility') {
+    fillIfEmpty('elevators', r.elevator_count);
+    fillIfEmpty('elevator_make', r.elevator_brand);
+    fillIfEmpty('gm_name', r.gm_name);
+    fillIfEmpty('gm_email', r.gm_email);
+    fillIfEmpty('gm_phone', r.gm_phone);
+    fillIfEmpty('engineering_contact', r.eng_name);
+    fillIfEmpty('engineering_email', r.eng_email);
+  } else {
+    // hotels_saved: DM fields map to GM fields
+    fillIfEmpty('gm_name', r.dm_name);
+    fillIfEmpty('gm_email', r.dm_email);
+    fillIfEmpty('gm_phone', r.dm_phone || r.phone);
+    fillIfEmpty('avg_daily_rate', r.est_adr_dollars);
+    fillIfEmpty('year_built', r.year_opened);
+  }
+
+  markDirty();
+  // WHY: Re-render the active tab so all autofilled fields appear in the form
+  renderActiveTab();
+  showToast('Autofilled from ' + (r.source === 'facility' ? 'facility' : 'hotel research') + ' data');
+}
+
+function closePropSearch() {
+  const el = document.getElementById('propSearchResults');
+  if (el) el.style.display = 'none';
+}
+
+// WHY: Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#propNameSearch') && !e.target.closest('#propSearchResults')) {
+    closePropSearch();
+  }
+});
+
 // ── Initialization ──
 document.addEventListener('DOMContentLoaded', initPage);
 
@@ -1830,9 +1929,11 @@ function renderOverviewTab() {
       <span class="section-chevron">&#9660;</span>
     </div>
     <div class="section-body">
-      <div class="field-group">
+      <div class="field-group" style="position:relative;">
         <label>Property Name</label>
-        <input type="text" value="${esc(s.property_name)}" oninput="state.property_name = this.value; document.getElementById('propertyNameInput').value = this.value; markDirty();">
+        <input type="text" id="propNameSearch" value="${esc(s.property_name)}" autocomplete="off"
+          oninput="state.property_name = this.value; document.getElementById('propertyNameInput').value = this.value; markDirty(); debouncePropSearch(this.value);">
+        <div id="propSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);max-height:240px;overflow-y:auto;"></div>
       </div>
       <div class="field-group">
         <label>Address</label>
