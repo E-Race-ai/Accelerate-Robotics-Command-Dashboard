@@ -329,6 +329,10 @@ body { transition: background-color .35s ease, color .35s ease; }
 .livecast-btn .lc-label { fill: var(--accent); }
 .livecast-btn:hover .lc-rect { stroke-width: 2; opacity: 1; }
 
+/* "may take up to 60 seconds" subtitle — only visible during SCANNING state */
+.livecast-btn .lc-sublabel { fill: #f59e0b; transition: opacity .25s ease; }
+.livecast-btn.is-scanning .lc-sublabel { opacity: 1 !important; }
+
 /* SCANNING state — amber pulse to signal "discovery in progress, hold tight" */
 .livecast-btn.is-scanning .lc-rect {
   stroke: #f59e0b;
@@ -456,6 +460,50 @@ body { transition: background-color .35s ease, color .35s ease; }
 .chip:hover { background: var(--bg-card-hover); }
 .chip input { margin: 0; cursor: pointer; }
 .chip.active { background: var(--accent); color: #0b0f1a; border-color: var(--accent); }
+/* Filter-action row — small Check all / Clear all buttons that sit
+   right under the "FILTER BY TYPE" label, above the chip grid.
+   flex-basis: 100% forces the row onto its own line so the chips
+   below wrap normally. */
+.filter-actions {
+  flex-basis: 100%;
+  display: flex; gap: 6px;
+  margin-bottom: 4px;
+}
+.chip-action {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px dashed var(--ink-dim);
+  color: var(--ink-dim);
+  font: inherit; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.chip-action-check:hover {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(124, 249, 255, 0.08);
+}
+.chip-action-clear:hover {
+  border-style: solid;
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  background: rgba(176, 132, 255, 0.08);
+}
+/* Disabled state — no-op (everything already checked / unchecked).
+   Stays in the row so the pair is visually symmetric. */
+.chip-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.chip-action:disabled:hover {
+  border-style: dashed;
+  border-color: var(--ink-dim);
+  color: var(--ink-dim);
+  background: transparent;
+}
 
 /* Toggle switch */
 .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
@@ -491,6 +539,380 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 }
 .btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--accent); text-decoration: none; }
 .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.sidebar-divider {
+  height: 1px; margin: 8px 4px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.sidebar-demo {
+  display: flex; flex-direction: column; gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+/* Sticky "SAMPLE DATA" banner — visible whenever sample devices are loaded */
+.sample-banner {
+  position: sticky; top: 49px;     /* sits right under the cmd-bar */
+  z-index: 90;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 22px;
+  /* Bumped amber — amber-200→300 fills clearly on A/V Cast's flat background.
+     (The pale amber-100→200 from the WiFi Audit page disappears here.) */
+  background: linear-gradient(90deg, #fde68a, #fcd34d);
+  color: #78350f;
+  border-bottom: 1px solid #f59e0b;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, .18);
+  animation: sample-banner-pulse 3s ease-in-out infinite;
+}
+.sample-banner[hidden] { display: none; }
+.sample-banner .sb-icon { font-size: 18px; }
+.sample-banner strong { letter-spacing: 1.5px; font-weight: 800; font-size: 12px; }
+.sample-banner .sb-text { color: #92400e; }
+.sample-banner .sb-clear-btn {
+  margin-left: auto;
+  padding: 5px 12px;
+  background: rgba(120, 53, 15, 0.08);
+  border: 1px solid rgba(120, 53, 15, 0.30);
+  border-radius: 999px;
+  color: #78350f; font: inherit; font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.sample-banner .sb-clear-btn:hover { background: rgba(120, 53, 15, 0.16); border-color: rgba(120, 53, 15, 0.55); }
+@keyframes sample-banner-pulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(245, 158, 11, .18); }
+  50%      { box-shadow: 0 4px 16px rgba(245, 158, 11, .35); }
+}
+.btn-secondary.btn-demo:hover { border-color: var(--accent-3); color: var(--accent-3); }
+.btn-secondary.btn-clear:hover:not(:disabled) {
+  border-color: #b8324b; color: #b8324b; background: rgba(255, 235, 240, 0.5);
+}
+/* Disabled state — only when there's nothing left to clear */
+/* Apple TV remote — d-pad + menu/home/screensaver */
+.atv-remote {
+  margin-top: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0;
+}
+.atv-remote summary {
+  cursor: pointer; user-select: none;
+  padding: 10px 14px;
+  font-size: 12px; font-weight: 700;
+  color: var(--ink-dim); letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.atv-remote summary:hover { color: var(--ink); }
+.atv-remote[open] summary { border-bottom: 1px solid var(--border); }
+.atv-remote-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.atv-dpad {
+  display: grid;
+  grid-template-columns: 50px 50px 50px;
+  grid-template-rows: 50px 50px 50px;
+  gap: 4px;
+  margin: 0 auto;
+  width: max-content;
+}
+.atv-btn {
+  display: grid; place-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 50px;
+  transition: background .12s, border-color .12s, transform .08s;
+}
+.atv-btn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Spotify Connect badge — green pill matching Spotify brand. Lower-key
+   than the gradient Pair badge since it isn't actionable. */
+.badge.spotify-badge {
+  background: rgba(30, 215, 96, 0.12);
+  border: 1px solid rgba(30, 215, 96, 0.45);
+  color: #1ed760;
+  font-weight: 600;
+  cursor: help;
+}
+
+/* ── Password challenge modal ──────────────────────────────────────────
+   Used by Live Cast (A/V Cast) and the WiFi Audit rescan. Replaces the
+   browser's native prompt() — frosted overlay, gradient-bordered card,
+   amber warning callout, inline error + shake on wrong password (the
+   modal STAYS OPEN on auth failure so the user can retry without
+   re-clicking the button). */
+.pw-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(6, 9, 18, 0.65);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  backdrop-filter: blur(10px) saturate(1.3);
+  display: grid; place-items: center; padding: 16px;
+  animation: pw-fade .15s ease;
+}
+@keyframes pw-fade { from { opacity: 0; } to { opacity: 1; } }
+.pw-modal {
+  width: min(480px, 100%); position: relative;
+  background: linear-gradient(165deg, var(--bg-card) 0%, var(--bg-elev) 100%);
+  border-radius: 18px;
+  padding: 24px 26px 22px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(124,249,255,.20);
+  animation: pw-pop .22s cubic-bezier(.18,.89,.32,1.28);
+}
+.pw-modal::before {
+  content: ""; position: absolute; inset: -1px; border-radius: 19px;
+  padding: 1px; pointer-events: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;        mask-composite: exclude;
+}
+@keyframes pw-pop {
+  from { transform: scale(.92) translateY(8px); opacity: 0; }
+  to   { transform: scale(1)    translateY(0);  opacity: 1; }
+}
+.pw-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+.pw-icon {
+  flex: 0 0 46px; height: 46px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: grid; place-items: center; font-size: 22px; color: #0b0f1a;
+  box-shadow: 0 6px 18px rgba(124,249,255,.35);
+}
+.pw-head-text { flex: 1; min-width: 0; }
+.pw-modal h2 {
+  margin: 0 0 3px; font-size: 17px; font-weight: 700; line-height: 1.2;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: var(--accent);
+}
+.pw-intent { margin: 0; font-size: 13px; color: var(--ink-dim); line-height: 1.45; }
+.pw-modal .btn-close {
+  background: transparent; border: 0; color: var(--ink-dim);
+  font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  transition: color .15s, background .15s;
+}
+.pw-modal .btn-close:hover { color: var(--ink); background: rgba(255,255,255,.08); }
+.pw-warning {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: linear-gradient(135deg, rgba(255,184,77,.13), rgba(255,184,77,.04));
+  border: 1px solid rgba(255,184,77,.35); border-left: 3px solid var(--warn);
+  border-radius: 10px; padding: 11px 13px;
+  font-size: 12.5px; line-height: 1.5; color: var(--ink); margin-bottom: 18px;
+}
+.pw-warn-icon { flex: 0 0 auto; font-size: 16px; color: var(--warn); line-height: 1.2; margin-top: 1px; }
+.pw-warning strong { color: var(--warn); }
+.pw-label {
+  display: block; font-size: 11px; color: var(--ink-dim);
+  text-transform: uppercase; letter-spacing: .9px; margin-bottom: 6px; font-weight: 600;
+}
+.pw-input {
+  width: 100%; box-sizing: border-box;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(124,249,255,.20);
+  color: var(--ink); padding: 11px 14px; border-radius: 10px;
+  font-size: 15px; font-family: "SF Mono", "Menlo", monospace; letter-spacing: 2px;
+  outline: none;
+  transition: border-color .15s, box-shadow .2s, background .15s;
+}
+[data-theme="light"] .pw-input { background: rgba(0,0,0,.03); border-color: rgba(10,130,255,.25); }
+.pw-input::placeholder { color: var(--ink-faint); letter-spacing: 1px; font-family: inherit; opacity: .8; }
+.pw-input:focus {
+  border-color: var(--accent);
+  background: rgba(124,249,255,.06);
+  box-shadow: 0 0 0 4px rgba(124,249,255,.15);
+}
+.pw-error {
+  margin-top: 10px;
+  background: rgba(255,77,109,.10);
+  border: 1px solid rgba(255,77,109,.45);
+  color: #ff7b94;
+  padding: 9px 12px; border-radius: 8px;
+  font-size: 13px; display: flex; align-items: center; gap: 8px;
+  animation: pw-err-in .25s ease;
+}
+/* `display: flex` above outranks the hidden attribute's UA `display: none`,
+   so we'd see an empty red pill before the user even typed. Force it. */
+.pw-error[hidden] { display: none !important; }
+.pw-error::before { content: "⚠"; font-size: 14px; }
+@keyframes pw-err-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+.pw-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+.pw-actions .pw-cancel,
+.pw-actions .pw-submit {
+  padding: 9px 16px; border-radius: 8px; cursor: pointer;
+  font-size: 13.5px; font-weight: 600; transition: all .15s;
+}
+.pw-actions .pw-cancel { background: transparent; border: 1px solid rgba(255,255,255,.15); color: var(--ink); }
+[data-theme="light"] .pw-actions .pw-cancel { border-color: rgba(0,0,0,.15); }
+.pw-actions .pw-cancel:hover { border-color: var(--ink-dim); background: rgba(255,255,255,.05); }
+[data-theme="light"] .pw-actions .pw-cancel:hover { background: rgba(0,0,0,.04); }
+.pw-actions .pw-submit {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: 0; color: #0b0f1a; font-weight: 700; padding: 9px 18px;
+  box-shadow: 0 4px 14px rgba(124,249,255,.25);
+}
+.pw-actions .pw-submit:hover:not(:disabled) {
+  filter: brightness(1.1); transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(124,249,255,.40);
+}
+.pw-actions .pw-submit:disabled { opacity: .5; cursor: wait; transform: none; }
+.pw-shake { animation: pw-shake .42s cubic-bezier(.36,.07,.19,.97); }
+@keyframes pw-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+
+.atv-btn:active:not(:disabled) { transform: translateY(1px); }
+.atv-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Brief "just clicked" pulse — JS toggles this class for ~300ms after every
+   remote button press so the user always sees a tactile confirmation. */
+.atv-btn.atv-just-clicked { animation: atv-press-flash .32s ease; }
+@keyframes atv-press-flash {
+  0%   { transform: scale(1);    filter: brightness(1); }
+  40%  { transform: scale(0.88); filter: brightness(1.45); }
+  100% { transform: scale(1);    filter: brightness(1); }
+}
+.atv-btn.atv-dir { font-size: 18px; padding: 0; }
+.atv-btn.atv-select {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border-color: transparent; font-size: 22px;
+  border-radius: 999px;
+}
+.atv-btn.atv-select:hover:not(:disabled) {
+  filter: brightness(1.1); color: #fff; border-color: transparent;
+}
+/* Override the global disabled-fade on the center pill — the white ●
+   icon disappears against the half-transparent gradient otherwise. Keep
+   the icon fully visible while the click is in flight. */
+.atv-btn.atv-select:disabled {
+  opacity: 1;
+  filter: brightness(0.85);
+  cursor: wait;
+}
+.atv-btn.atv-select.atv-just-clicked {
+  animation: atv-select-flash .32s ease;
+}
+@keyframes atv-select-flash {
+  0%   { transform: scale(1);    filter: brightness(1)   saturate(1); }
+  40%  { transform: scale(0.85); filter: brightness(1.3) saturate(1.3); }
+  100% { transform: scale(1);    filter: brightness(1)   saturate(1); }
+}
+.atv-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.atv-row .atv-btn { flex: 1; min-width: 0; height: 38px; font-size: 12px; padding: 0 10px; }
+
+/* Keyboard input row — for typing into Apple TV text fields */
+.atv-keyboard {
+  display: flex; gap: 6px; align-items: center;
+  margin-top: 4px;
+}
+.atv-keyboard .atv-kb-input {
+  flex: 1; min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit; font-size: 13px;
+  outline: none;
+  transition: border-color .12s, background .12s;
+}
+.atv-keyboard .atv-kb-input:focus {
+  border-color: var(--accent);
+  background: var(--bg-elev);
+}
+.atv-keyboard .atv-kb-input::placeholder { color: var(--ink-faint); }
+.atv-keyboard .atv-kb-input:disabled { opacity: 0.5; cursor: not-allowed; }
+.atv-keyboard .atv-kb-send {
+  height: 38px; padding: 0 14px; font-size: 12px; flex: 0 0 auto;
+}
+.atv-keyboard .atv-kb-send {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border-color: transparent;
+}
+.atv-keyboard .atv-kb-send:hover:not(:disabled) {
+  filter: brightness(1.1); color: #fff; border-color: transparent;
+}
+.atv-keyboard .atv-kb-clear {
+  height: 38px; padding: 0 12px; font-size: 12px; flex: 0 0 auto;
+}
+
+/* Apple-device pairing flow — modal that opens after clicking "Pair to control" */
+.badge.pair-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border: 0; cursor: pointer;
+  font: inherit; font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 999px;
+  transition: filter .15s, transform .12s;
+}
+.badge.pair-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.badge.unpair-btn {
+  background: rgba(94, 255, 158, 0.10);
+  color: var(--good);
+  border: 1px solid var(--good);
+  cursor: pointer; font: inherit; font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 999px;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.badge.unpair-btn:hover {
+  background: rgba(184, 50, 75, 0.12);
+  color: #b8324b; border-color: #b8324b;
+}
+.atv-pair-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(10, 17, 38, 0.55);
+  backdrop-filter: blur(6px);
+  display: grid; place-items: center;
+  animation: fade-in .15s ease;
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.atv-pair-modal {
+  width: min(440px, 92vw);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 24px 64px rgba(10, 17, 38, .35);
+  padding: 24px 28px;
+}
+.atv-pair-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.atv-pair-head h2 { margin: 0; font-size: 16px; font-weight: 800; color: var(--ink); }
+.atv-pair-head .btn-close { background: transparent; border: 0; color: var(--ink-dim); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+.atv-pair-head .btn-close:hover { background: var(--bg-elev); color: var(--ink); }
+.atv-pair-msg { color: var(--ink); font-size: 13.5px; line-height: 1.5; margin: 6px 0 12px; }
+.atv-pair-hint { color: var(--ink-dim); font-size: 13px; line-height: 1.5; margin: 0 0 14px; }
+.atv-pair-pin {
+  display: block; width: 100%; box-sizing: border-box;
+  text-align: center; letter-spacing: 12px; font-weight: 800;
+  font-size: 28px; padding: 12px 14px;
+  background: var(--bg-elev); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 12px;
+  outline: none; transition: border-color .15s;
+}
+.atv-pair-pin:focus { border-color: var(--accent); }
+.atv-pair-status { color: #b8324b; font-size: 12.5px; margin: 8px 0 0; min-height: 18px; }
+.atv-pair-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+.atv-pair-actions .btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border: 0; padding: 8px 18px; border-radius: 8px;
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.atv-pair-actions .btn-primary:hover { filter: brightness(1.08); }
+.atv-pair-actions .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-secondary.btn-clear:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
 
 /* Speed-check result card (sidebar) */
 .speed-check-result {
@@ -614,9 +1036,10 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 .card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow); }
 .card.offline { opacity: 0.55; }
 
-/* Spotlight mode (Playing Now toggle) — playing cards pop, others fade. */
-body.playing-spotlight .card { transition: opacity .25s ease, box-shadow .25s ease, border-color .25s ease; }
-body.playing-spotlight .card:not(.playing) { opacity: 0.35; filter: saturate(0.6); }
+/* Spotlight mode (Playing Now toggle) — playing cards get a highlight, but
+   non-playing cards stay full-strength so controllable but-idle devices
+   (Sonos, Apple TV) don't look disabled. */
+body.playing-spotlight .card { transition: box-shadow .25s ease, border-color .25s ease; }
 body.playing-spotlight .card.playing {
   border-color: var(--accent-3);
   box-shadow: 0 0 0 1px var(--accent-3), 0 0 28px color-mix(in srgb, var(--accent-3) 55%, transparent);

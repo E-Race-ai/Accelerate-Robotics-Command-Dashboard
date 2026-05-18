@@ -442,6 +442,79 @@ def enrich_chromecast(timeout: float = 4.0) -> list[Device]:
     return devs
 
 
+# ---------- UPnP MediaRenderer enrichment ----------
+
+def enrich_upnp_renderer(d: Device) -> dict | None:
+    """Fetch a UPnP device's description XML, parse out AVTransport +
+    RenderingControl service URLs. Returns a dict with friendly_name, model,
+    manufacturer, av_url, rc_url + device_desc_url. Returns None if the
+    device isn't a media renderer (no AVTransport/RenderingControl services).
+    The returned dict is stashed on the device's raw.upnp so the SOAP
+    controllers can address the service URLs directly."""
+    import requests
+    import xml.etree.ElementTree as ET
+    from urllib.parse import urljoin
+
+    ssdp = (d.raw.get("ssdp") or {}) if isinstance(d.raw.get("ssdp"), dict) else {}
+    loc = ssdp.get("LOCATION") or ssdp.get("Location") or ssdp.get("location")
+    if not loc:
+        return None
+
+    try:
+        r = requests.get(loc, timeout=3)
+        if r.status_code != 200:
+            return None
+        xml_text = r.text
+    except Exception:
+        return None
+
+    try:
+        root = ET.fromstring(xml_text)
+    except Exception:
+        return None
+
+    ns = "{urn:schemas-upnp-org:device-1-0}"
+    device_elem = root.find(f"{ns}device")
+    if device_elem is None:
+        return None
+
+    friendly = (device_elem.findtext(f"{ns}friendlyName") or "").strip() or None
+    model    = (device_elem.findtext(f"{ns}modelName")    or "").strip() or None
+    manuf    = (device_elem.findtext(f"{ns}manufacturer") or "").strip() or None
+
+    # UPnP devices can embed sub-devices; walk recursively.
+    def _walk(dev_elem, out):
+        for svc in dev_elem.findall(f"{ns}serviceList/{ns}service"):
+            stype = (svc.findtext(f"{ns}serviceType") or "").strip()
+            curl  = (svc.findtext(f"{ns}controlURL")  or "").strip()
+            if stype and curl:
+                out.append((stype, curl))
+        for sub in dev_elem.findall(f"{ns}deviceList/{ns}device"):
+            _walk(sub, out)
+
+    services: list[tuple[str, str]] = []
+    _walk(device_elem, services)
+
+    av_url = rc_url = None
+    for stype, curl in services:
+        if "AVTransport" in stype and not av_url:
+            av_url = urljoin(loc, curl)
+        elif "RenderingControl" in stype and not rc_url:
+            rc_url = urljoin(loc, curl)
+
+    if not (av_url or rc_url):
+        return None  # not a media renderer
+
+    return {
+        "name": friendly,
+        "model": model,
+        "manufacturer": manuf,
+        "av_url": av_url,
+        "rc_url": rc_url,
+        "device_desc_url": loc,
+    }
+
+
 # ---------- Roku enrichment ----------
 
 def enrich_roku(host: str) -> dict | None:
@@ -549,6 +622,95 @@ def _reclassify_by_model(devs: list[Device]) -> None:
             d.capabilities = ["status"]
 
 
+def _reclassify_by_hostname(devs: list[Device]) -> None:
+    """Catch devices that announce only via _raop._tcp (no `am=` model tag) by
+    looking at their mDNS hostname. Sonos players announce as `Sonos-XXXXXX.local`,
+    Rokus as `roku-XXXXXX.local`, etc. Without this, those devices stay
+    type=airplay forever and end up duplicating the real Sonos/Roku entries."""
+    for d in devs:
+        if d.type != "airplay":
+            continue
+        server = (d.raw.get("server") or "").lower().rstrip(".")
+        host_label = server.split(".", 1)[0]
+        # Sonos
+        if host_label.startswith("sonos-") or "rincon_" in d.id.lower() or "sonos" in d.name.lower():
+            d.type = "sonos"
+            d.manufacturer = "Sonos"
+            # Caps are filled in properly by enrich_sonos when available; leave bare here
+            # so the absorption pass can prefer the SoCo-enriched entry.
+            d.capabilities = ["status"]
+        # Roku (some Rokus broadcast on _airplay._tcp without a Roku model code)
+        elif host_label.startswith("roku-") or host_label.startswith("rokutv-"):
+            d.type = "roku"
+            d.manufacturer = "Roku"
+            d.capabilities = ["volume", "mute", "play", "pause", "next", "previous", "status"]
+
+
+# Priority order used by _absorb_secondary_services(). LOWER index = higher
+# priority. When several devices share an IP, the one with the smallest index
+# wins; the rest get absorbed into its raw.absorbed_services list and dropped.
+PRIMARY_PRIORITY = [
+    "sonos", "chromecast", "roku", "appletv", "hue", "printer",
+    "upnp-renderer", "airplay", "homekit", "spotify-connect",
+    "upnp", "smarttv", "personal-airplay", "bluetooth",
+]
+
+
+def _absorb_secondary_services(devs: list[Device]) -> list[Device]:
+    """Final dedup pass — collapse multiple device entries at the same IP into
+    a single primary by type-priority. The classic case: a single Sonos
+    announces on _sonos._tcp + _airplay._tcp + _spotify-connect._tcp, so we
+    end up with three cards for one device. Same for Apple TVs that also
+    advertise _homekit._tcp, Lenovo Smart Displays that also speak UPnP, etc.
+
+    Also unconditionally drops `airplay-host:*` unicast-probe ghosts (the
+    "AirPlay device @ 10.x.x.x" placeholders) when any other entry exists at
+    the same IP — those are always duplicates of a richer entry."""
+    from collections import defaultdict
+    by_host: dict[str, list[Device]] = defaultdict(list)
+    no_host: list[Device] = []
+    for d in devs:
+        (by_host[d.host] if d.host else no_host).append(d)
+
+    keep_ids: set[int] = set()
+    for d in no_host:
+        keep_ids.add(id(d))
+
+    for host, group in by_host.items():
+        if len(group) == 1:
+            keep_ids.add(id(group[0]))
+            continue
+        # Drop airplay-host:* probe ghosts when something better exists.
+        non_ghosts = [d for d in group if not d.id.startswith("airplay-host:")]
+        if non_ghosts and len(non_ghosts) < len(group):
+            group = non_ghosts
+        if len(group) == 1:
+            keep_ids.add(id(group[0]))
+            continue
+        # Pick the highest-priority device as primary; absorb the rest.
+        def _prio(d: Device) -> int:
+            try:
+                return PRIMARY_PRIORITY.index(d.type)
+            except ValueError:
+                return 999
+        group.sort(key=_prio)
+        primary = group[0]
+        absorbed = group[1:]
+        # Stash absorbed type names + services on the primary so the operator
+        # can still see "this Sonos also speaks AirPlay 2 and Spotify Connect".
+        primary.raw.setdefault("absorbed_services", [])
+        for sec in absorbed:
+            entry = {
+                "type": sec.type,
+                "name": sec.name,
+                "service": (sec.raw.get("service_type") or sec.raw.get("server") or sec.id),
+            }
+            primary.raw["absorbed_services"].append(entry)
+        keep_ids.add(id(primary))
+
+    return [d for d in devs if id(d) in keep_ids]
+
+
 def probe_subnets_for_roku(subnets: list[str], timeout: float = 1.0,
                             concurrency: int = 64) -> list[Device]:
     """Direct unicast probe of port 8060 across given /24 subnets — finds Rokus
@@ -625,15 +787,27 @@ def probe_subnets_for_appletv(subnets: list[str], timeout: float = 1.0,
             s.close()
         except Exception:
             return None
+        # Reverse-DNS to get a friendlier label than "AirPlay device @ 10.x.x.x".
+        # The mDNS host part (e.g. "Lobby" from "Lobby.local") shows up here when
+        # the device is sticky in the local resolver, even if mDNS browsing missed it.
+        nice_name = None
+        try:
+            hostname = socket.gethostbyaddr(host)[0]
+            label = hostname.split(".", 1)[0]
+            # Reject IP-pattern fallbacks ("10-1-10-102" or just the IP)
+            if label and not label.replace("-", ".").replace("_", ".").startswith(host[:5]):
+                nice_name = label.replace("-", " ")
+        except Exception:
+            pass
         return Device(
             id=f"airplay-host:{host}",
-            name=f"AirPlay device @ {host}",
+            name=nice_name or f"AirPlay receiver @ {host}",
             type="airplay",
             host=host,
             port=7000,
             manufacturer="Apple/AirPlay",
             capabilities=["status"],
-            state={"online": True},
+            state={"online": True, "note": "Discovered via direct port-7000 probe — limited metadata"},
             raw={"discovered_via": "unicast-probe-7000"},
         )
 
@@ -645,9 +819,70 @@ def probe_subnets_for_appletv(subnets: list[str], timeout: float = 1.0,
     return devs
 
 
-# Default subnets to sweep — read from env or fall back to the user's known network.
+# Subnets to sweep. Order of precedence:
+#   1. Explicit `subnets` arg to discover_all() (rare — used by tests)
+#   2. AVCAST_SUBNETS env var (manual override for unusual setups)
+#   3. Auto-detected from local network interfaces (the normal case —
+#      adapts as the laptop moves between networks)
+#   4. Hardcoded fallback (only if everything else fails)
 import os as _os
-DEFAULT_SUBNETS = (_os.environ.get("AVCAST_SUBNETS") or "10.1.10.0/24,10.1.11.0/24").split(",")
+import re as _re_subnets
+import socket as _socket_subnets
+import subprocess as _sub_subnets
+import ipaddress as _ipaddr_subnets
+
+
+def detect_local_subnets() -> list[str]:
+    """IPv4 /24 (or narrower) subnets covering every active, non-loopback,
+    non-link-local interface. Parsed from ifconfig on macOS/Linux."""
+    subnets: set = set()
+    try:
+        out = _sub_subnets.run(["ifconfig"], capture_output=True, text=True, timeout=3).stdout
+        for m in _re_subnets.finditer(
+            r"inet (\d+\.\d+\.\d+\.\d+)\s+netmask\s+(0x[0-9a-fA-F]+|\d+\.\d+\.\d+\.\d+)", out
+        ):
+            ip_str, nm_str = m.group(1), m.group(2)
+            if ip_str.startswith("127.") or ip_str.startswith("169.254."):
+                continue
+            try:
+                if nm_str.startswith("0x"):
+                    nm = _ipaddr_subnets.IPv4Address(int(nm_str, 16))
+                else:
+                    nm = _ipaddr_subnets.IPv4Address(nm_str)
+                prefix = _ipaddr_subnets.IPv4Network(f"0.0.0.0/{nm}").prefixlen
+                prefix = max(prefix, 24)   # never sweep wider than /24
+                net = _ipaddr_subnets.ip_interface(f"{ip_str}/{prefix}").network
+                subnets.add(str(net))
+            except Exception:
+                continue
+    except Exception:
+        pass
+    if not subnets:
+        try:
+            s = _socket_subnets.socket(_socket_subnets.AF_INET, _socket_subnets.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            subnets.add(str(_ipaddr_subnets.ip_interface(f"{ip}/24").network))
+        except Exception:
+            pass
+    return sorted(subnets)
+
+
+def default_subnets() -> list[str]:
+    """Resolved at call time — env override > local detection > hardcoded."""
+    env = (_os.environ.get("AVCAST_SUBNETS") or "").strip()
+    if env:
+        return [s.strip() for s in env.split(",") if s.strip()]
+    detected = detect_local_subnets()
+    if detected:
+        return detected
+    return ["10.1.10.0/24", "10.1.11.0/24"]
+
+
+# Kept for backwards compatibility — callers that imported the constant.
+# Computed once at module load; prefer default_subnets() for fresh detection.
+DEFAULT_SUBNETS = default_subnets()
 
 
 def discover_all(mdns_timeout: float = 4.0, ssdp_timeout: float = 2.5,
@@ -663,6 +898,11 @@ def discover_all(mdns_timeout: float = 4.0, ssdp_timeout: float = 2.5,
         if "RINCON_" in n: score -= 30
         if "._tcp" in n: score -= 30
         if n.startswith("upnp") or n.startswith("airplay"): score -= 10
+        # Heavy penalty for the unicast-probe fallback names — they're better
+        # than nothing but always lose to the real mDNS friendly name (e.g.
+        # "Living Room HomePod" should win over "AirPlay device @ 10.1.10.42").
+        if "device @ " in n.lower() or n.lower().startswith("apple device"):
+            score -= 60
         # readable names full of words score higher
         score += min(len(n.split()), 4) * 3
         return score
@@ -689,7 +929,8 @@ def discover_all(mdns_timeout: float = 4.0, ssdp_timeout: float = 2.5,
                 merged[d.id] = d
 
     if subnets is None:
-        subnets = [s.strip() for s in DEFAULT_SUBNETS if s.strip()]
+        # Re-detect on every discovery so we follow the laptop between networks.
+        subnets = default_subnets()
 
     merge(discover_mdns(timeout=mdns_timeout))
     merge(discover_ssdp(timeout=ssdp_timeout))
@@ -702,7 +943,10 @@ def discover_all(mdns_timeout: float = 4.0, ssdp_timeout: float = 2.5,
         merge(probe_subnets_for_roku(subnets))
         merge(probe_subnets_for_appletv(subnets))
 
-    # Reclassify airplay devices into appletv/roku/personal-airplay based on model
+    # Reclassify airplay devices into appletv/roku/sonos/etc.
+    # Hostname-based runs first — catches Sonos/Roku that announced via _raop._tcp
+    # only and have no `am=` model tag. Then the model-based pass handles the rest.
+    _reclassify_by_hostname(list(merged.values()))
     _reclassify_by_model(list(merged.values()))
 
     # After reclassification, re-merge any duplicates that now have the same id+type
@@ -733,7 +977,27 @@ def discover_all(mdns_timeout: float = 4.0, ssdp_timeout: float = 2.5,
                 d.state["powered"] = info.get("powered")
                 d.raw["roku"] = info
 
-    return list(final.values())
+    # UPnP MediaRenderer enrichment — for each type=upnp device, fetch its
+    # device-desc.xml and check for AVTransport/RenderingControl services.
+    # If present, reclassify to upnp-renderer with full caps + service URLs
+    # stashed in raw so controllers can issue SOAP commands.
+    for d in list(final.values()):
+        if d.type == "upnp" and d.host:
+            try:
+                renderer_info = enrich_upnp_renderer(d)
+                if renderer_info:
+                    d.type = "upnp-renderer"
+                    d.name = renderer_info.get("name") or d.name
+                    d.model = renderer_info.get("model") or d.model
+                    d.manufacturer = renderer_info.get("manufacturer") or d.manufacturer
+                    d.capabilities = ["volume", "mute", "play", "pause", "stop", "status"]
+                    d.raw["upnp"] = renderer_info
+            except Exception:
+                pass
+
+    # Final dedup: collapse same-IP duplicates (the canonical case is one
+    # Sonos showing up as sonos + airplay + spotify-connect simultaneously).
+    return _absorb_secondary_services(list(final.values()))
 
 
 if __name__ == "__main__":
