@@ -337,6 +337,28 @@ router.delete('/:portalId/content/:itemId', requireAdmin, adminWriteLimit, async
   } catch (err) { next(err); }
 });
 
+// GET /:portalId/content/:itemId/file — admin file download/view.
+// WHY: the public download route requires portal session auth, so admins
+// viewing content from the dashboard had no way to open uploaded files.
+router.get('/:portalId/content/:itemId/file', requireAdmin, async (req, res, next) => {
+  try {
+    const item = await getContentItem(req.params.itemId);
+    if (!item || item.portal_id !== req.portal.id || !item.file_path) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    const absolutePath = resolveStoredPath(item.file_path);
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({ error: 'File missing on disk' });
+    }
+    // Inline display for PDFs/images so the browser opens them directly;
+    // attachment for everything else so they download.
+    const inline = /^(application\/pdf|image\/)/.test(item.file_type || '');
+    res.set('Content-Type', item.file_type || 'application/octet-stream');
+    res.set('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename="${encodeURIComponent(item.title)}"`);
+    fs.createReadStream(absolutePath).pipe(res);
+  } catch (err) { next(err); }
+});
+
 router.post('/:portalId/content/:itemId/pin', requireAdmin, adminWriteLimit, async (req, res, next) => {
   try {
     const item = await getContentItem(req.params.itemId);
