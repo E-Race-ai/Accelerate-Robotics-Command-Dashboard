@@ -573,18 +573,29 @@
        the explicit hide list. The blanket selector below catches any
        new chrome we add later — only .label-shell prints. */
     @media print {
-      body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .pg { padding: 0; max-width: none; }
+      /* WHY: Safari ignores @page size — it uses the print dialog's
+         paper size. Even with display:none on siblings, Safari computes
+         phantom height from hidden elements. Fix: position the label
+         absolutely so it's removed from flow, and cap body height. */
+      html { height: 100mm; overflow: hidden; }
+      body { margin: 0 !important; padding: 0 !important;
+             width: 100mm; height: 150mm; overflow: hidden;
+             background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+             position: relative; }
+      .pg { padding: 0 !important; margin: 0 !important; max-width: none;
+            position: absolute; top: 0; left: 0; width: 100mm; height: 150mm; overflow: hidden; }
       .pg > *:not(.label-shell) { display: none !important; }
+      body > *:not(.pg) { display: none !important; }
       .label-shell {
-        margin: 0; box-shadow: none; border-radius: 0;
-        page-break-after: avoid;
-        /* WHY 100%: fill the @page exactly — the @page rule already
-           sets the correct metric size, so the shell just stretches
-           to fit rather than using its own inch-based dimensions. */
-        width: 100%;
-        height: 100%;
+        margin: 0 !important; padding: 0; box-shadow: none; border-radius: 0;
+        width: 100mm !important;
+        height: 150mm !important;
+        overflow: hidden;
+        position: absolute; top: 0; left: 0;
       }
+      .label-shell[data-size="4x3"]   { width: 100mm !important; height: 75mm !important; }
+      .label-shell[data-size="2x4"]   { width: 50mm !important;  height: 100mm !important; }
+      .label-shell[data-size="letter"] { width: 8.5in !important; height: 11in !important; }
       *, *::before, *::after { animation: none !important; transition: none !important; }
     }
 
@@ -677,7 +688,7 @@
          Two SVG hairlines cut the body into three triangular wedges:
          A (top-left), B (right, largest), C (bottom-left). Each zone is
          absolutely positioned so the diagonals never cross live text. -->
-    <div class="label-shell" id="labelShell" data-size="letter">
+    <div class="label-shell" id="labelShell" data-size="4x6">
       <div class="lbl-body">
 
         <!-- Diagonal guides. viewBox 0 0 100 100 + preserveAspectRatio
