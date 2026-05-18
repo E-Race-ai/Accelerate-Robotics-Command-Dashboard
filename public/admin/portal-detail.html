@@ -317,7 +317,7 @@ function fileRow(c) {
     const inside = portalState.content.filter(x => x.parent_folder_id === c.id).length;
     return `<div class="file-row"><div class="ic">📁</div><div class="info"><div class="name">${escape(c.title)}</div><div class="meta">${inside} item${inside!==1?'s':''}</div></div><div></div><div></div><div class="flex gap-8"><button class="btn btn-sm btn-ghost btn-danger" onclick="deleteItem('${c.id}')">×</button></div></div>`;
   }
-  return `<div class="file-row"><div class="ic">${fileIcon(c.file_type)}</div><div class="info"><div class="name">${escape(c.title)} ${c.is_pinned?'<span class="pin">📌 pinned</span>':''}</div><div class="meta">${fmtBytes(c.file_size_bytes)} · uploaded by ${escape(c.uploaded_by_email)} · ${ago(c.created_at)}</div>${c.description?`<div class="desc">${escape(c.description)}</div>`:''}</div><div>${c.source_tool?`<span class="pubsource">${escape(c.source_tool.replace('_',' '))}</span>`:''}</div><div class="muted" style="font-size:11px;">${c.kind === 'published_snapshot' ? '🔗 published' : '📎 uploaded'}</div><div class="flex gap-8"><button class="btn btn-sm btn-ghost" onclick="togglePin('${c.id}')" title="${c.is_pinned?'Unpin':'Pin'}">${c.is_pinned?'📌':'📍'}</button><button class="btn btn-sm btn-ghost btn-danger" onclick="deleteItem('${c.id}')">×</button></div></div>`;
+  return `<div class="file-row" onclick="viewFile('${c.id}')" style="cursor:pointer;" title="Click to view"><div class="ic">${fileIcon(c.file_type)}</div><div class="info"><div class="name">${escape(c.title)} ${c.is_pinned?'<span class="pin">📌 pinned</span>':''}</div><div class="meta">${fmtBytes(c.file_size_bytes)} · uploaded by ${escape(c.uploaded_by_email)} · ${ago(c.created_at)}</div>${c.description?`<div class="desc">${escape(c.description)}</div>`:''}</div><div>${c.source_tool?`<span class="pubsource">${escape(c.source_tool.replace('_',' '))}</span>`:''}</div><div class="muted" style="font-size:11px;">${c.kind === 'published_snapshot' ? '🔗 published' : '📎 uploaded'}</div><div class="flex gap-8"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();togglePin('${c.id}')" title="${c.is_pinned?'Unpin':'Pin'}">${c.is_pinned?'📌':'📍'}</button><button class="btn btn-sm btn-ghost btn-danger" onclick="event.stopPropagation();deleteItem('${c.id}')">×</button></div></div>`;
 }
 
 function renderParticipants() {
@@ -423,6 +423,10 @@ async function archivePortal() {
   try { await api(`/api/portals/${portalId}/archive`, { method: 'POST' }); window.location.href = '/admin/portals.html'; }
   catch (err) { toast(err.message, true); }
 }
+function viewFile(id) {
+  window.open(`/api/portals/${portalId}/content/${id}/file`, '_blank');
+}
+
 async function deleteItem(id) {
   if (!confirm('Delete this item? Cannot be undone.')) return;
   try { await api(`/api/portals/${portalId}/content/${id}`, { method: 'DELETE' }); loadAll(); }
