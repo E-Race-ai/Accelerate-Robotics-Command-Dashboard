@@ -587,7 +587,9 @@
 
     /* @page rules — only the active size prints. The body's class is
        toggled by the size selector so the matching rule wins. */
-    @page { size: 4in 6in; margin: 0; }
+    /* WHY 100mm×150mm: matches JADENS thermal label stock exactly.
+       4in×6in = 101.6×152.4mm which overflows onto a second page. */
+    @page { size: 100mm 150mm; margin: 0; }
   </style>
 </head>
 <body class="size-4x6">
@@ -918,10 +920,12 @@ $('ctrlManualHotel').addEventListener('input', () => {
 // rule whenever the size changes. This is what makes the print dialog
 // open at the *exact* paper size of the selected option, with no
 // browser scaling.
+// WHY metric: JADENS labels are exactly 100×150mm. Imperial 4×6 inches
+// (101.6×152.4mm) overflows by ~2mm, pushing content onto a second page.
 const SIZE_PAGE = {
-  '4x6':    '4in 6in',
-  '4x3':    '4in 3in',
-  '2x4':    '2in 4in',
+  '4x6':    '100mm 150mm',
+  '4x3':    '100mm 75mm',
+  '2x4':    '50mm 100mm',
   'letter': 'letter',
 };
 let _pageStyleEl;
@@ -1181,13 +1185,16 @@ function applyHealthState(state) {
     reset.style.display = 'none';
     return;
   }
-  PRINT_MODE = 'server';
   if (state && state.ok) {
+    PRINT_MODE = 'server';
     badge.dataset.state = 'ready';
     label.textContent = `${state.printer || 'Printer'} ready`;
     reset.style.display = 'none';
     return;
   }
+  // WHY: fall back to browser print (OS dialog) when the server-side
+  // printer is unhealthy — lets the rep pick a working printer themselves.
+  PRINT_MODE = 'browser';
   // Not ok → recoverable or hard-stop. Both surface a Reset button; the
   // distinction is only the colour/label, since either way the user might
   // want to try recovery.
