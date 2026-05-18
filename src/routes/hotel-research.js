@@ -1663,8 +1663,8 @@ router.get('/triage/alignment', requireAuth, async (_req, res) => {
 });
 
 // GET /triage/queue — returns saved hotels with no triage decision yet,
-// sorted submarket-then-id so reps can sweep zone-by-zone. Powers the
-// game-mode card-stack UI.
+// grouped by region (submarket → city → state) so reps can sweep zone-by-zone,
+// best-fit-first within each region. Powers the game-mode card-stack UI.
 router.get('/triage/queue', requireAuth, async (req, res) => {
   // Multi-rater alignment: each player swipes through their own queue
   // independently. The same hotel can be voted on by Ben AND Celia AND
@@ -1688,9 +1688,9 @@ router.get('/triage/queue', requireAuth, async (req, res) => {
            SELECT 1 FROM hotel_triage_votes v
            WHERE v.hotel_saved_id = h.id AND v.player = ?
          )
-         ORDER BY (h.ai_fit_score IS NULL) ASC,
+         ORDER BY COALESCE(h.submarket, h.city, h.state, 'zzz') ASC,
+                  (h.ai_fit_score IS NULL) ASC,
                   h.ai_fit_score DESC,
-                  h.submarket ASC,
                   h.id ASC`,
         [player],
       );
@@ -1706,9 +1706,9 @@ router.get('/triage/queue', requireAuth, async (req, res) => {
                 h.enrichment_depth, h.chain_description, h.chain_url
          FROM hotels_saved h
          WHERE h.triage IS NULL
-         ORDER BY (h.ai_fit_score IS NULL) ASC,
+         ORDER BY COALESCE(h.submarket, h.city, h.state, 'zzz') ASC,
+                  (h.ai_fit_score IS NULL) ASC,
                   h.ai_fit_score DESC,
-                  h.submarket ASC,
                   h.id ASC`,
         [],
       );
