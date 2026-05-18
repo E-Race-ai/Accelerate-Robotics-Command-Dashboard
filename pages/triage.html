@@ -464,6 +464,31 @@
     font: inherit; font-weight: 600; width: 100%; margin-top: 8px;
   }
 
+  /* Region banner — shown above the card when entering a new submarket */
+  .region-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; margin-bottom: 8px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 0.82rem; letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.08);
+    border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+  }
+  .region-banner .region-label {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .region-banner .region-count {
+    font-weight: 500; font-size: 0.72rem; opacity: 0.6; margin-left: 6px;
+  }
+  .region-skip-btn {
+    background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85);
+    border: 1px solid rgba(255,255,255,0.18); padding: 4px 12px;
+    border-radius: 100px; font: inherit; font-size: 0.72rem; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .region-skip-btn:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); }
+  .region-skip-btn:active { transform: scale(0.96); }
+
   /* Confetti for the all-done moment */
   .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
   .confetti span {
@@ -578,6 +603,7 @@
     </div>
   </div>
 
+  <div class="region-banner" id="regionBanner" style="display:none"></div>
   <div class="stack" id="stack"></div>
 
   <div class="actions">
@@ -619,6 +645,7 @@ let TOTALS = { total: 0, sorted: 0, yes: 0, maybe: 0, needs_research: 0, no: 0 }
 let HISTORY = [];   // [{ id, name, decision, prev_status }]
 let LOCK = false;
 let SISTERS_BY_KEY = new Map(); // chainKey → { count, avgFit, others:[{name,score}] }
+let CURRENT_REGION = null; // tracks which region we're swiping through
 
 const TIER_LABELS = { XS: 'XS', S: 'S', M: 'M', L: 'L', XL: 'XL' };
 
@@ -1035,6 +1062,29 @@ function tierFor(h) {
   return 'XS';
 }
 
+// WHY: region = submarket || city || state — mirrors the COALESCE in the SQL
+// ORDER BY so the banner matches the grouping the server applied.
+function regionFor(h) {
+  return h.submarket || h.city || h.state || null;
+}
+
+// Skip all remaining hotels in the current region and jump to the next one.
+// WHY: lets reps focus on regions they care about without swiping through
+// every hotel in a low-priority submarket.
+function skipToNextRegion() {
+  if (QUEUE.length === 0) return;
+  const cur = regionFor(QUEUE[0]);
+  // Find the index of the first hotel in the next region
+  const nextIdx = QUEUE.findIndex(q => regionFor(q) !== cur);
+  if (nextIdx <= 0) return; // no next region
+  // Move skipped hotels to the end so they're not lost — the rep can
+  // circle back after finishing the regions they care about.
+  const skipped = QUEUE.splice(0, nextIdx);
+  QUEUE.push(...skipped);
+  renderTopCard();
+  renderProgress();
+}
+
 function renderTopCard() {
   const stack = document.getElementById('stack');
   stack.innerHTML = '';
@@ -1043,6 +1093,22 @@ function renderTopCard() {
     return;
   }
   const h = QUEUE[0];
+
+  // Region banner — show when entering a new submarket cluster
+  const region = regionFor(h);
+  const bannerEl = document.getElementById('regionBanner');
+  if (region) {
+    const remaining = QUEUE.filter(q => regionFor(q) === region).length;
+    const hasNext = QUEUE.some(q => regionFor(q) !== region);
+    const nextRegion = hasNext ? regionFor(QUEUE.find(q => regionFor(q) !== region)) : null;
+    bannerEl.innerHTML = `
+      <span class="region-label">📍 ${escHtml(region)}<span class="region-count">${remaining} remaining</span></span>
+      ${hasNext ? `<button class="region-skip-btn" onclick="skipToNextRegion()">${escHtml(nextRegion || 'Next')} ›</button>` : ''}`;
+    bannerEl.style.display = '';
+  } else {
+    bannerEl.style.display = 'none';
+  }
+  CURRENT_REGION = region;
   const card = document.createElement('div');
   card.className = 'card simple';
   card.id = 'topCard';
@@ -1245,6 +1311,8 @@ function revLabel(h) {
 }
 
 function renderDone() {
+  // Hide region banner when all hotels are sorted
+  document.getElementById('regionBanner').style.display = 'none';
   const stack = document.getElementById('stack');
   stack.innerHTML = `
     <div class="done-card">
